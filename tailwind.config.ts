@@ -90,6 +90,13 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      // ADDED FOR A4 PRINTING
+      width: {
+        'a4': '210mm',
+      },
+      minHeight: {
+        'a4': '297mm',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

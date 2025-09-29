@@ -59,11 +59,11 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     if (!payslipDesignSettings.showEarningsBreakdown) return null;
     return (
       <div>
-        <h4 className="font-semibold text-sm mb-1">Earnings</h4>
+        <h4 className="font-semibold text-sm mb-1 print:text-base">Earnings</h4>
         {payslip.earningsBreakdown.map((item, idx) => (
-          <p key={idx} className="text-xs">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+          <p key={idx} className="text-xs print:text-sm">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
         ))}
-        <p className="text-xs font-semibold mt-1">Gross Earnings: R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+        <p className="text-xs font-semibold mt-1 print:text-sm">Gross Earnings: R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
       </div>
     );
   };
@@ -72,11 +72,11 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     if (!payslipDesignSettings.showDeductionsBreakdown) return null;
     return (
       <div>
-        <h4 className="font-semibold text-sm mb-1">Deductions</h4>
+        <h4 className="font-semibold text-sm mb-1 print:text-base">Deductions</h4>
         {payslip.deductionsBreakdown.map((item, idx) => (
-          <p key={idx} className="text-xs">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+          <p key={idx} className="text-xs print:text-sm">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
         ))}
-        <p className="text-xs font-semibold mt-1">Total Deductions: R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+        <p className="text-xs font-semibold mt-1 print:text-sm">Total Deductions: R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
       </div>
     );
   };
@@ -85,47 +85,52 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     if (!payslipDesignSettings.showLeaveSummary) return null;
     return (
       <div>
-        <h4 className="font-semibold text-sm mb-1">Leave Summary</h4>
-        <p className="text-xs">Annual Leave Remaining: {payslip.leaveSummary.annual} days</p>
-        <p className="text-xs">Sick Leave Remaining: {payslip.leaveSummary.sick} days</p>
+        <h4 className="font-semibold text-sm mb-1 print:text-base">Leave Summary</h4>
+        <p className="text-xs print:text-sm">Annual Leave Remaining: {payslip.leaveSummary.annual} days</p>
+        <p className="text-xs print:text-sm">Sick Leave Remaining: {payslip.leaveSummary.sick} days</p>
         {payslip.leaveSummary.unpaid > 0 && (
-          <p className="text-xs">Unpaid Leave Taken: {payslip.leaveSummary.unpaid} days</p>
+          <p className="text-xs print:text-sm">Unpaid Leave Taken: {payslip.leaveSummary.unpaid} days</p>
         )}
       </div>
     );
   };
 
   return (
-    <div id={`payslip-${payslip.id}`} className="p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-      <h3 className="text-lg font-bold mb-3 text-center">Payslip</h3>
-      <div className="border p-4 rounded-md space-y-3 text-sm">
+    <div 
+      id={`payslip-${payslip.id}`} 
+      className="p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 
+                 mx-auto max-w-lg 
+                 print:w-a4 print:min-h-a4 print:p-8 print:shadow-none print:border-none print:bg-white print:text-black"
+    >
+      <h3 className="text-lg font-bold mb-3 text-center print:text-xl print:mb-6">Payslip</h3>
+      <div className="border p-4 rounded-md space-y-3 text-sm print:border-none print:p-0 print:space-y-4 print:text-base">
         {/* Header */}
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-4 print:mb-6">
           {payslipDesignSettings.showCompanyLogo && companyLogoUrl && (
             <img
               src={companyLogoUrl}
               alt="Company Logo"
               style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-              className="rounded-md"
+              className="rounded-md print:w-[60px] print:h-[60px]" // Adjust logo size for print
             />
           )}
           <div className={cn("text-right", !payslipDesignSettings.showCompanyLogo && "w-full")}>
-            <h2 className="text-md font-bold">{companyTradingName}</h2>
+            <h2 className="text-md font-bold print:text-lg">{companyTradingName}</h2>
             {payslipDesignSettings.showCompanyDetails && (
               <>
-                <p className="text-xs">123 Corporate Ave, Business City, 1234</p>
-                <p className="text-xs">Reg. No: 2023/123456/07</p>
-                <p className="text-xs">Tax No: 9876543210</p>
+                <p className="text-xs print:text-sm">123 Corporate Ave, Business City, 1234</p>
+                <p className="text-xs print:text-sm">Reg. No: 2023/123456/07</p>
+                <p className="text-xs print:text-sm">Tax No: 9876543210</p>
               </>
             )}
           </div>
         </div>
 
-        <Separator />
+        <Separator className="print:my-4" />
 
         {/* Employee Details */}
         {payslipDesignSettings.showEmployeeDetails && (
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 gap-2 text-xs print:text-sm print:gap-4">
             <div>
               <p><span className="font-semibold">Employee Name:</span> {getEmployeeName(payslip.employeeId)}</p>
               <p><span className="font-semibold">Employee ID:</span> {payslip.employeeId}</p>
@@ -139,17 +144,17 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           </div>
         )}
 
-        <Separator />
+        <Separator className="print:my-4" />
 
         {/* Charts: Below company/employee info, above pay info */}
         {(payslipDesignSettings.showEarningsBreakdown && payslip.earningsBreakdown.length > 0) ||
          (payslipDesignSettings.showDeductionsBreakdown && payslip.deductionsBreakdown.length > 0) ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 print:mt-6">
               {/* Earnings Breakdown Chart */}
               {payslipDesignSettings.showEarningsBreakdown && payslip.earningsBreakdown.length > 0 && (
-                <div className="h-[150px]">
-                  <h4 className="font-semibold text-sm mb-2 text-center">Earnings Breakdown</h4>
+                <div className="h-[150px] print:h-[180px]">
+                  <h4 className="font-semibold text-sm mb-2 text-center print:text-base">Earnings Breakdown</h4>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -175,8 +180,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
               {/* Deductions Breakdown Chart */}
               {payslipDesignSettings.showDeductionsBreakdown && payslip.deductionsBreakdown.length > 0 && (
-                <div className="h-[150px]">
-                  <h4 className="font-semibold text-sm mb-2 text-center">Deductions Breakdown</h4>
+                <div className="h-[150px] print:h-[180px]">
+                  <h4 className="font-semibold text-sm mb-2 text-center print:text-base">Deductions Breakdown</h4>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -200,13 +205,13 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
                 </div>
               )}
             </div>
-            <Separator />
+            <Separator className="print:my-4" />
           </>
         ) : null}
 
 
         {/* Main Pay Information: Deductions on left, Earnings on right */}
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-2 gap-4 mt-4 print:mt-6 print:gap-8">
           {/* Deductions Column (Left) */}
           <div>
             {renderDeductionsContent()}
@@ -220,7 +225,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         {/* Leave Summary (if enabled, below earnings/deductions) */}
         {payslipDesignSettings.showLeaveSummary && (
           <>
-            <Separator />
+            <Separator className="print:my-4" />
             {renderLeaveSummaryContent()}
           </>
         )}
@@ -228,22 +233,22 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         {/* Bank Details */}
         {payslipDesignSettings.showBankDetails && (
           <>
-            <Separator />
-            <div className="border-t pt-2 mt-2">
-              <h4 className="font-semibold text-sm mb-1">Bank Details</h4>
-              <p className="text-xs">Bank: FNB</p>
-              <p className="text-xs">Account No: *********1234</p>
-              <p className="text-xs">Branch Code: 250655</p>
+            <Separator className="print:my-4" />
+            <div className="border-t pt-2 mt-2 print:border-t-0 print:pt-0 print:mt-0">
+              <h4 className="font-semibold text-sm mb-1 print:text-base">Bank Details</h4>
+              <p className="text-xs print:text-sm">Bank: FNB</p>
+              <p className="text-xs print:text-sm">Account No: *********1234</p>
+              <p className="text-xs print:text-sm">Branch Code: 250655</p>
             </div>
           </>
         )}
 
-        <Separator />
+        <Separator className="print:my-4" />
 
         {/* Net Pay (Always at bottom) */}
-        <div className="flex justify-between items-center pt-2 mt-2">
-          <h3 className="text-md font-bold">Net Pay</h3>
-          <h3 className="text-md font-bold">R {payslip.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</h3>
+        <div className="flex justify-between items-center pt-2 mt-2 print:pt-4 print:mt-4">
+          <h3 className="text-md font-bold print:text-lg">Net Pay</h3>
+          <h3 className="text-md font-bold print:text-lg">R {payslip.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</h3>
         </div>
       </div>
     </div>
