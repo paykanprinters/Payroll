@@ -32,7 +32,8 @@ interface PayslipDesignSettings {
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
   sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
-  layoutSize?: "Letter" | "A4" | "A5"; // New layout size setting
+  layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
+  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
 }
 
 interface IndividualPayslipCardProps {
@@ -108,6 +109,10 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     }
   };
 
+  const mainContentOrder = payslipDesignSettings.earningsDeductionsLayout === "earnings-left-deductions-right"
+    ? [renderEarningsContent(), renderDeductionsContent()]
+    : [renderDeductionsContent(), renderEarningsContent()];
+
   return (
     <div 
       id={`payslip-${payslip.id}`} 
@@ -161,80 +166,11 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
         <Separator className="print:my-4" />
 
-        {/* Charts: Below company/employee info, above pay info */}
-        {(payslipDesignSettings.showEarningsBreakdown && payslip.earningsBreakdown.length > 0) ||
-         (payslipDesignSettings.showDeductionsBreakdown && payslip.deductionsBreakdown.length > 0) ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 print:mt-6">
-              {/* Earnings Breakdown Chart */}
-              {payslipDesignSettings.showEarningsBreakdown && payslip.earningsBreakdown.length > 0 && (
-                <div className="h-[150px] print:h-[180px]">
-                  <h4 className="font-semibold text-sm mb-2 text-center print:text-base">Earnings Breakdown</h4>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={payslip.earningsBreakdown}
-                        dataKey="amount"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={60}
-                        fill="#8884d8"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {payslip.earningsBreakdown.map((entry, index) => (
-                          <Cell key={`cell-earnings-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {/* Deductions Breakdown Chart */}
-              {payslipDesignSettings.showDeductionsBreakdown && payslip.deductionsBreakdown.length > 0 && (
-                <div className="h-[150px] print:h-[180px]">
-                  <h4 className="font-semibold text-sm mb-2 text-center print:text-base">Deductions Breakdown</h4>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={payslip.deductionsBreakdown}
-                        dataKey="amount"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={60}
-                        fill="#82ca9d"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {payslip.deductionsBreakdown.map((entry, index) => (
-                          <Cell key={`cell-deductions-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-            <Separator className="print:my-4" />
-          </>
-        ) : null}
-
-
         {/* Main Pay Information: Deductions on left, Earnings on right */}
         <div className="grid grid-cols-2 gap-4 mt-4 print:mt-6 print:gap-8">
-          {/* Deductions Column (Left) */}
-          <div>
-            {renderDeductionsContent()}
-          </div>
-          {/* Earnings Column (Right) */}
-          <div>
-            {renderEarningsContent()}
-          </div>
+          {mainContentOrder.map((content, index) => (
+            <div key={index}>{content}</div>
+          ))}
         </div>
 
         {/* Leave Summary (if enabled, below earnings/deductions) */}

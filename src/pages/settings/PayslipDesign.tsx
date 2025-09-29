@@ -21,7 +21,8 @@ const defaultPayslipSettings = {
   showLeaveSummary: true,
   showBankDetails: true,
   sectionOrder: ["Earnings", "Deductions", "Leave"] as ("Earnings" | "Deductions" | "Leave")[], // Orderable sections
-  layoutSize: "A4" as "Letter" | "A4" | "A5", // New layout size setting
+  layoutSize: "A4" as "Letter" | "A4" | "A5", // Layout size setting
+  earningsDeductionsLayout: "deductions-left-earnings-right" as "deductions-left-earnings-right" | "earnings-left-deductions-right", // New layout setting
 };
 
 type PayslipSettings = typeof defaultPayslipSettings;
@@ -39,6 +40,10 @@ const PayslipDesign: React.FC = () => {
 
   const handleLayoutSizeChange = (value: "Letter" | "A4" | "A5") => {
     setSettings((prev) => ({ ...prev, layoutSize: value }));
+  };
+
+  const handleEarningsDeductionsLayoutChange = (value: "deductions-left-earnings-right" | "earnings-left-deductions-right") => {
+    setSettings((prev) => ({ ...prev, earningsDeductionsLayout: value }));
   };
 
   const handleMoveSection = (index: number, direction: "up" | "down") => {
@@ -72,7 +77,7 @@ const PayslipDesign: React.FC = () => {
     switch (section) {
       case "Earnings":
         return settings.showEarningsBreakdown && (
-          <div key="earnings" className="border-t pt-2 mt-2">
+          <div key="earnings" className="pt-2 mt-2">
             <h4 className="font-semibold text-sm mb-1">Earnings</h4>
             <p className="text-xs">Basic Salary: R 20,000.00</p>
             <p className="text-xs">Travel Allowance: R 2,000.00</p>
@@ -82,7 +87,7 @@ const PayslipDesign: React.FC = () => {
         );
       case "Deductions":
         return settings.showDeductionsBreakdown && (
-          <div key="deductions" className="border-t pt-2 mt-2">
+          <div key="deductions" className="pt-2 mt-2">
             <h4 className="font-semibold text-sm mb-1">Deductions</h4>
             <p className="text-xs">PAYE: R 3,000.00</p>
             <p className="text-xs">UIF: R 177.12</p>
@@ -93,7 +98,7 @@ const PayslipDesign: React.FC = () => {
         );
       case "Leave":
         return settings.showLeaveSummary && (
-          <div key="leave" className="border-t pt-2 mt-2">
+          <div key="leave" className="pt-2 mt-2">
             <h4 className="font-semibold text-sm mb-1">Leave Summary</h4>
             <p className="text-xs">Annual Leave: 15 days (Available)</p>
             <p className="text-xs">Sick Leave: 10 days (Available)</p>
@@ -114,6 +119,30 @@ const PayslipDesign: React.FC = () => {
       default:
         return "w-[210mm] min-h-[297mm] p-8"; // A4
     }
+  };
+
+  const renderMainContentPreview = () => {
+    const content = [];
+    const earningsContent = renderSection("Earnings");
+    const deductionsContent = renderSection("Deductions");
+
+    if (settings.earningsDeductionsLayout === "deductions-left-earnings-right") {
+      content.push(deductionsContent);
+      content.push(earningsContent);
+    } else {
+      content.push(earningsContent);
+      content.push(deductionsContent);
+    }
+
+    return (
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        {content.map((item, index) => (
+          <div key={index} className="border-t pt-2">
+            {item}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -140,6 +169,18 @@ const PayslipDesign: React.FC = () => {
                     <SelectItem value="Letter">US Letter (8.5 x 11 in)</SelectItem>
                     <SelectItem value="A4">A4 (210 x 297 mm)</SelectItem>
                     <SelectItem value="A5">A5 (148 x 210 mm)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="earningsDeductionsLayout">Earnings/Deductions Layout</Label>
+                <Select onValueChange={handleEarningsDeductionsLayoutChange} value={settings.earningsDeductionsLayout}>
+                  <SelectTrigger id="earningsDeductionsLayout" className="mt-1 w-[250px]">
+                    <SelectValue placeholder="Select layout" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="deductions-left-earnings-right">Deductions Left, Earnings Right</SelectItem>
+                    <SelectItem value="earnings-left-deductions-right">Earnings Left, Deductions Right</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -294,7 +335,8 @@ const PayslipDesign: React.FC = () => {
               <Separator />
 
               {/* Dynamic Sections */}
-              {settings.sectionOrder.map(renderSection)}
+              {renderMainContentPreview()} {/* Render Earnings/Deductions based on new layout setting */}
+              {settings.showLeaveSummary && <div className="border-t pt-2 mt-2">{renderSection("Leave")}</div>}
 
               <Separator />
 

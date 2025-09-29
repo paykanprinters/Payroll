@@ -48,7 +48,8 @@ interface PayslipDesignSettings {
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
   sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
-  layoutSize?: "Letter" | "A4" | "A5"; // New layout size setting
+  layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
+  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
 }
 
 // Define default settings for payslip elements (should match PayslipDesign.tsx)
@@ -62,6 +63,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showBankDetails: true,
   sectionOrder: ["Earnings", "Deductions", "Leave"],
   layoutSize: "A4", // Default to A4
+  earningsDeductionsLayout: "deductions-left-earnings-right", // Default layout
 };
 
 const Payslips: React.FC = () => {
