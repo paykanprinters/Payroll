@@ -24,10 +24,6 @@ const sidebarNavItems = [
     href: "/settings/payslip-design",
   },
   {
-    title: "Savings", // New item
-    href: "/settings/savings", // New href
-  },
-  {
     title: "Mock Data",
     href: "/settings/mock-data",
   },

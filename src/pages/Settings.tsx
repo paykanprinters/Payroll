@@ -8,7 +8,7 @@ import BiometricDevices from "./settings/BiometricDevices";
 import TaxLiabilities from "./settings/TaxLiabilities";
 import PayslipDesign from "./settings/PayslipDesign";
 import MockData from "./settings/MockData";
-import Savings from "./settings/Savings"; // Import the new component
+// import Savings from "./settings/Savings"; // Removed import as it's now a top-level page
 
 const Settings: React.FC = () => {
   return (
@@ -20,7 +20,7 @@ const Settings: React.FC = () => {
         <Route path="biometric-devices" element={<BiometricDevices />} />
         <Route path="tax-liabilities" element={<TaxLiabilities />} />
         <Route path="payslip-design" element={<PayslipDesign />} />
-        <Route path="savings" element={<Savings />} /> {/* New route for savings */}
+        {/* <Route path="savings" element={<Savings />} /> Removed route for savings */}
         <Route path="mock-data" element={<MockData />} />
         {/* Add more settings sub-routes here */}
       </Route>

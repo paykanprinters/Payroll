@@ -12,6 +12,7 @@ import {
   Settings,
   Menu,
   Landmark, // Using Landmark icon for Loans & Advancements
+  PiggyBank, // New icon for Savings
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -81,7 +82,8 @@ const Sidebar: React.FC = () => {
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/payslips", icon: ReceiptText, label: "Payslips" },
-    { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" }, // New nav item
+    { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
+    { to: "/savings", icon: PiggyBank, label: "Savings" }, // New nav item
     { to: "/reports", icon: BarChart, label: "Reports" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];

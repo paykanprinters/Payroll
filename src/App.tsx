@@ -9,7 +9,8 @@ import Employees from "./pages/Employees";
 import Payslips from "./pages/Payslips";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
-import LoansAndAdvancements from "./pages/LoansAndAdvancements"; // Import the new component
+import LoansAndAdvancements from "./pages/LoansAndAdvancements";
+import Savings from "./pages/Savings"; // Import the new top-level Savings component
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +28,8 @@ const App = () => (
             <Route path="/employees" element={<Employees />} />
             <Route path="/payslips" element={<Payslips />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/loans-advancements" element={<LoansAndAdvancements />} /> {/* New route */}
+            <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
+            <Route path="/savings" element={<Savings />} /> {/* New top-level route */}
             <Route path="/settings/*" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
