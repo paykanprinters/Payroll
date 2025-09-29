@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer,
   BarChart,
@@ -16,6 +17,20 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
+import { showSuccess, showError } from "@/utils/toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 interface MockEmployee {
   id: string;
@@ -33,6 +48,11 @@ const Employees: React.FC = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<MockEmployee | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
+
 
   const loadEmployees = () => {
     const storedEmployees = localStorage.getItem("mockEmployees");
@@ -79,6 +99,54 @@ const Employees: React.FC = () => {
     };
   }, []);
 
+  const handleAddEmployeeClick = () => {
+    setEditingEmployee(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEditEmployeeClick = (employee: MockEmployee) => {
+    setEditingEmployee(employee);
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteEmployeeClick = (employee: MockEmployee) => {
+    setEmployeeToDelete(employee);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteEmployee = () => {
+    if (employeeToDelete) {
+      const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
+      setEmployees(updatedEmployees);
+      localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+      showSuccess(`Employee ${employeeToDelete.firstName} ${employeeToDelete.lastName} removed.`);
+      loadEmployees(); // Recalculate charts
+      setIsDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+      window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
+    }
+  };
+
+  const handleSaveEmployee = (employeeData: EmployeeFormValues) => {
+    let updatedEmployees: MockEmployee[];
+    if (employeeData.id) {
+      // Update existing employee
+      updatedEmployees = employees.map(emp =>
+        emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
+      );
+    } else {
+      // Add new employee
+      const newId = `EMP${String(employees.length + 1).padStart(3, '0')}`;
+      updatedEmployees = [...employees, { ...employeeData, id: newId }];
+    }
+    setEmployees(updatedEmployees);
+    localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+    loadEmployees(); // Recalculate charts
+    setIsFormOpen(false);
+    setEditingEmployee(null);
+    window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Employees Management</h1>
@@ -86,6 +154,12 @@ const Employees: React.FC = () => {
         Manage all employee records, personal details, and employment information here.
       </p>
       
+      <div className="flex justify-end">
+        <Button onClick={handleAddEmployeeClick}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Add New Employee
+        </Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -142,42 +216,79 @@ const Employees: React.FC = () => {
         </CardHeader>
         <CardContent>
           {employees.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Job Title</TableHead>
-                  <TableHead className="text-right">Salary</TableHead>
-                  <TableHead>Start Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell className="font-medium">{employee.id}</TableCell>
-                    <TableCell>{employee.firstName} {employee.lastName}</TableCell>
-                    <TableCell>{employee.email}</TableCell>
-                    <TableCell>{employee.jobTitle}</TableCell>
-                    <TableCell className="text-right">R {employee.salary.toLocaleString('en-ZA')}</TableCell>
-                    <TableCell>{employee.startDate}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Job Title</TableHead>
+                    <TableHead className="text-right">Salary</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell className="font-medium">{employee.id}</TableCell>
+                      <TableCell>{employee.firstName} {employee.lastName}</TableCell>
+                      <TableCell>{employee.email}</TableCell>
+                      <TableCell>{employee.jobTitle}</TableCell>
+                      <TableCell className="text-right">R {employee.salary.toLocaleString('en-ZA')}</TableCell>
+                      <TableCell>{employee.startDate}</TableCell>
+                      <TableCell className="flex justify-center gap-2">
+                        <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No employee data available. Please enable mock data in settings or add employees.
+              No employee data available. Please add employees using the button above or enable mock data in settings.
             </div>
           )}
         </CardContent>
       </Card>
 
+      <EmployeeFormDialog
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onSave={handleSaveEmployee}
+        initialEmployee={editingEmployee}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently remove the employee{" "}
+              <span className="font-semibold">{employeeToDelete?.firstName} {employeeToDelete?.lastName}</span>{" "}
+              and their associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Employee Data Section</h3>
         <p className="text-sm">
-          This section would typically feature a table of employees, options to add/edit/delete employees, and view detailed profiles.
+          This section allows for full CRUD operations on employee records. In a real application, these actions would interact with a backend database.
         </p>
       </div>
     </div>
