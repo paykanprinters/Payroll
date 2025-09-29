@@ -40,6 +40,22 @@ interface MockEmployee {
   jobTitle: string;
   salary: number;
   startDate: string;
+  // New fields
+  idNumber?: string;
+  phoneNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactNumber?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  taxReferenceNumber?: string;
+  bankName?: string;
+  bankAccountHolder?: string;
+  bankAccountNumber?: string;
+  bankBranchCode?: string;
+  bankAccountType?: "Cheque" | "Savings" | "Business";
 }
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
@@ -222,8 +238,10 @@ const Employees: React.FC = () => {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Job Title</TableHead>
+                    <TableHead>ID Number</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Address</TableHead>
                     <TableHead className="text-right">Salary</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
@@ -234,8 +252,12 @@ const Employees: React.FC = () => {
                     <TableRow key={employee.id}>
                       <TableCell className="font-medium">{employee.id}</TableCell>
                       <TableCell>{employee.firstName} {employee.lastName}</TableCell>
-                      <TableCell>{employee.email}</TableCell>
                       <TableCell>{employee.jobTitle}</TableCell>
+                      <TableCell>{employee.idNumber || "N/A"}</TableCell>
+                      <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
+                      <TableCell>
+                        {employee.addressLine1}, {employee.city}, {employee.province}
+                      </TableCell>
                       <TableCell className="text-right">R {employee.salary.toLocaleString('en-ZA')}</TableCell>
                       <TableCell>{employee.startDate}</TableCell>
                       <TableCell className="flex justify-center gap-2">

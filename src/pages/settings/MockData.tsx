@@ -42,6 +42,22 @@ interface MockEmployee {
   jobTitle: string;
   salary: number;
   startDate: string;
+  // New fields
+  idNumber?: string;
+  phoneNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactNumber?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  taxReferenceNumber?: string;
+  bankName?: string;
+  bankAccountHolder?: string;
+  bankAccountNumber?: string;
+  bankBranchCode?: string;
+  bankAccountType?: "Cheque" | "Savings" | "Business";
 }
 
 interface Loan {
@@ -128,12 +144,145 @@ const generateMockCompanyDetails = (): MockCompanyDetails => ({
 });
 
 const generateMockEmployees = (): MockEmployee[] => [
-  { id: "EMP001", firstName: "John", lastName: "Doe", email: "john.doe@acmecorp.co.za", jobTitle: "Software Engineer", salary: 45000, startDate: "2022-01-15" },
-  { id: "EMP002", firstName: "Jane", lastName: "Smith", email: "jane.smith@acmecorp.co.za", jobTitle: "HR Manager", salary: 38000, startDate: "2021-03-01" },
-  { id: "EMP003", firstName: "Peter", lastName: "Jones", email: "peter.jones@acmecorp.co.za", jobTitle: "Accountant", salary: 32000, startDate: "2023-07-20" },
-  { id: "EMP004", firstName: "Sarah", lastName: "Brown", email: "sarah.brown@acmecorp.co.za", jobTitle: "Marketing Specialist", salary: 28000, startDate: "2022-11-10" },
-  { id: "EMP005", firstName: "David", lastName: "Green", email: "david.green@acmecorp.co.za", jobTitle: "Operations Manager", salary: 40000, startDate: "2021-05-01" },
-  { id: "EMP006", firstName: "Emily", lastName: "White", email: "emily.white@acmecorp.co.za", jobTitle: "Customer Support", salary: 25000, startDate: "2023-02-28" },
+  {
+    id: "EMP001",
+    firstName: "John",
+    lastName: "Doe",
+    email: "john.doe@acmecorp.co.za",
+    jobTitle: "Software Engineer",
+    salary: 45000,
+    startDate: "2022-01-15",
+    idNumber: "9001015000087",
+    phoneNumber: "0821234567",
+    emergencyContactName: "Jane Doe",
+    emergencyContactNumber: "0729876543",
+    addressLine1: "15 Tech Street",
+    addressLine2: "Unit 10",
+    city: "Johannesburg",
+    province: "Gauteng",
+    postalCode: "2001",
+    taxReferenceNumber: "1234567890",
+    bankName: "FNB",
+    bankAccountHolder: "John Doe",
+    bankAccountNumber: "62000000001",
+    bankBranchCode: "250655",
+    bankAccountType: "Cheque",
+  },
+  {
+    id: "EMP002",
+    firstName: "Jane",
+    lastName: "Smith",
+    email: "jane.smith@acmecorp.co.za",
+    jobTitle: "HR Manager",
+    salary: 38000,
+    startDate: "2021-03-01",
+    idNumber: "8505055000088",
+    phoneNumber: "0712345678",
+    emergencyContactName: "John Smith",
+    emergencyContactNumber: "0831234567",
+    addressLine1: "22 Oak Avenue",
+    city: "Cape Town",
+    province: "Western Cape",
+    postalCode: "8001",
+    taxReferenceNumber: "0987654321",
+    bankName: "Standard Bank",
+    bankAccountHolder: "Jane Smith",
+    bankAccountNumber: "07000000002",
+    bankBranchCode: "051001",
+    bankAccountType: "Savings",
+  },
+  {
+    id: "EMP003",
+    firstName: "Peter",
+    lastName: "Jones",
+    email: "peter.jones@acmecorp.co.za",
+    jobTitle: "Accountant",
+    salary: 32000,
+    startDate: "2023-07-20",
+    idNumber: "9203035000089",
+    phoneNumber: "0601112233",
+    emergencyContactName: "Mary Jones",
+    emergencyContactNumber: "0769998877",
+    addressLine1: "789 Finance Street",
+    city: "Durban",
+    province: "KwaZulu-Natal",
+    postalCode: "4001",
+    taxReferenceNumber: "1122334455",
+    bankName: "Absa",
+    bankAccountHolder: "Peter Jones",
+    bankAccountNumber: "90000000003",
+    bankBranchCode: "632005",
+    bankAccountType: "Cheque",
+  },
+  {
+    id: "EMP004",
+    firstName: "Sarah",
+    lastName: "Brown",
+    email: "sarah.brown@acmecorp.co.za",
+    jobTitle: "Marketing Specialist",
+    salary: 28000,
+    startDate: "2022-11-10",
+    idNumber: "9507075000090",
+    phoneNumber: "0845556677",
+    emergencyContactName: "David Brown",
+    emergencyContactNumber: "0612223344",
+    addressLine1: "321 Creative Lane",
+    city: "Pretoria",
+    province: "Gauteng",
+    postalCode: "0001",
+    taxReferenceNumber: "2233445566",
+    bankName: "Nedbank",
+    bankAccountHolder: "Sarah Brown",
+    bankAccountNumber: "10000000004",
+    bankBranchCode: "198765",
+    bankAccountType: "Savings",
+  },
+  {
+    id: "EMP005",
+    firstName: "David",
+    lastName: "Green",
+    email: "david.green@acmecorp.co.za",
+    jobTitle: "Operations Manager",
+    salary: 40000,
+    startDate: "2021-05-01",
+    idNumber: "8802025000091",
+    phoneNumber: "0798889900",
+    emergencyContactName: "Emily Green",
+    emergencyContactNumber: "0827776655",
+    addressLine1: "65 Industrial Park",
+    city: "Port Elizabeth",
+    province: "Eastern Cape",
+    postalCode: "6001",
+    taxReferenceNumber: "3344556677",
+    bankName: "Capitec",
+    bankAccountHolder: "David Green",
+    bankAccountNumber: "45000000005",
+    bankBranchCode: "470010",
+    bankAccountType: "Cheque",
+  },
+  {
+    id: "EMP006",
+    firstName: "Emily",
+    lastName: "White",
+    email: "emily.white@acmecorp.co.za",
+    jobTitle: "Customer Support",
+    salary: 25000,
+    startDate: "2023-02-28",
+    idNumber: "9810105000092",
+    phoneNumber: "0671112233",
+    emergencyContactName: "Michael White",
+    emergencyContactNumber: "0743334455",
+    addressLine1: "101 Help Desk Road",
+    city: "Bloemfontein",
+    province: "Free State",
+    postalCode: "9301",
+    taxReferenceNumber: "4455667788",
+    bankName: "FNB",
+    bankAccountHolder: "Emily White",
+    bankAccountNumber: "62000000006",
+    bankBranchCode: "250655",
+    bankAccountType: "Savings",
+  },
 ];
 
 const generateMockLoans = (): Loan[] => [
