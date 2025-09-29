@@ -137,9 +137,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyLegalName")}
                 className="mt-1"
               />
-              {form.formState.errors.companyLegalName && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyLegalName.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="companyTradingName">Company Trading Name</Label>
@@ -148,9 +146,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyTradingName")}
                 className="mt-1"
               />
-              {form.formState.errors.companyTradingName && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyTradingName.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="companyRegistrationNumber">Company Registration Number</Label>
@@ -159,9 +155,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyRegistrationNumber")}
                 className="mt-1"
               />
-              {form.formState.errors.companyRegistrationNumber && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyRegistrationNumber.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="companyTaxNumber">Company Tax Number</Label>
@@ -170,9 +164,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyTaxNumber")}
                 className="mt-1"
               />
-              {form.formState.errors.companyTaxNumber && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyTaxNumber.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="vatRegistrationNumber">VAT Registration Number</Label>
@@ -240,9 +232,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("physicalAddress")}
                 className="mt-1"
               />
-              {form.formState.errors.physicalAddress && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.physicalAddress.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="postalAddress">Postal Address (if different)</Label>
@@ -259,9 +249,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("mainContactNumber")}
                 className="mt-1"
               />
-              {form.formState.errors.mainContactNumber && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.mainContactNumber.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="alternativeContactNumber">Alternative Contact Number</Label>
@@ -308,9 +296,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("bankName")}
                 className="mt-1"
               />
-              {form.formState.errors.bankName && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.bankName.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="accountHolderName">Account Holder Name</Label>
@@ -319,9 +305,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("accountHolderName")}
                 className="mt-1"
               />
-              {form.formState.errors.accountHolderName && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.accountHolderName.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="accountNumber">Account Number</Label>
@@ -330,9 +314,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("accountNumber")}
                 className="mt-1"
               />
-              {form.formState.errors.accountNumber && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.accountNumber.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="branchCode">Branch Code</Label>
@@ -341,9 +323,7 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("branchCode")}
                 className="mt-1"
               />
-              {form.formState.errors.branchCode && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.branchCode.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="accountType">Account Type</Label>
@@ -357,9 +337,7 @@ const CompanyDetails: React.FC = () => {
                   <SelectItem value="Business">Business</SelectItem>
                 </SelectContent>
               </Select>
-              {form.formState.errors.accountType && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.accountType.message}</p>
-              )}
+              {/* Removed error message for optional field */}
             </div>
           </div>
 

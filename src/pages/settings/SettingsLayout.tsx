@@ -15,6 +15,10 @@ const sidebarNavItems = [
     title: "Biometric Devices",
     href: "/settings/biometric-devices",
   },
+  {
+    title: "Tax Liabilities", // New item
+    href: "/settings/tax-liabilities", // New href
+  },
   // Add more settings sub-menus here
   // {
   //   title: "User Management",
