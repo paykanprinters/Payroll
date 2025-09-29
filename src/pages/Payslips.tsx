@@ -5,6 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Printer, Download } from "lucide-react";
+import { showSuccess, showError } from "@/utils/toast";
+import html2pdf from 'html2pdf.js';
 import {
   ResponsiveContainer,
   BarChart,
@@ -48,6 +54,11 @@ const Payslips: React.FC = () => {
   });
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
+
+  // State for single payslip generation
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
+  const [filteredPayslipsForEmployee, setFilteredPayslipsForEmployee] = useState<MockPayslip[]>([]);
 
   const loadPayslipsAndEmployees = () => {
     const storedPayslips = localStorage.getItem("mockPayslips");
@@ -103,6 +114,21 @@ const Payslips: React.FC = () => {
     };
   }, []);
 
+  // Effect to filter payslips when employee selection changes
+  useEffect(() => {
+    if (selectedEmployeeId) {
+      const employeePayslips = payslips.filter(p => p.employeeId === selectedEmployeeId);
+      setFilteredPayslipsForEmployee(employeePayslips);
+      // Reset selected payslip if the current one is not in the new list
+      if (!employeePayslips.some(p => p.id === selectedPayslipId)) {
+        setSelectedPayslipId("");
+      }
+    } else {
+      setFilteredPayslipsForEmployee([]);
+      setSelectedPayslipId("");
+    }
+  }, [selectedEmployeeId, payslips]);
+
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
@@ -151,12 +177,140 @@ const Payslips: React.FC = () => {
     }
   };
 
+  const handlePrintPayslip = () => {
+    if (!selectedPayslipId) {
+      showError("Please select a payslip to print.");
+      return;
+    }
+    const payslipElement = document.getElementById(`payslip-${selectedPayslipId}`);
+    if (payslipElement) {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write('<html><head><title>Payslip</title>');
+        // Include global styles for printing
+        printWindow.document.write('<link rel="stylesheet" href="/src/globals.css">');
+        printWindow.document.write('<style>');
+        printWindow.document.write('@media print { body { margin: 0; } .no-print { display: none; } }');
+        printWindow.document.write('</style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write(payslipElement.outerHTML);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+        showSuccess("Payslip sent to printer.");
+      } else {
+        showError("Could not open print window.");
+      }
+    } else {
+      showError("Selected payslip not found for printing.");
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (!selectedPayslipId) {
+      showError("Please select a payslip to download.");
+      return;
+    }
+    const payslipElement = document.getElementById(`payslip-${selectedPayslipId}`);
+    if (payslipElement) {
+      showSuccess("Generating PDF, please wait...");
+      html2pdf().from(payslipElement).set({
+        margin: [10, 10, 10, 10],
+        filename: `payslip-${selectedEmployeeId}-${selectedPayslipId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).save();
+    } else {
+      showError("Selected payslip not found for PDF download.");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Payslip Generation & History</h1>
       <p className="text-lg text-muted-foreground">
         Generate new payslips, view historical payslips, and manage payroll periods.
       </p>
+
+      {/* New: Generate Single Payslip Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Generate a Single Payslip</CardTitle>
+          <CardDescription>
+            Select an employee and a specific payslip to print or download.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-end">
+            <div>
+              <label htmlFor="employee-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Select Employee
+              </label>
+              <Select onValueChange={setSelectedEmployeeId} value={selectedEmployeeId}>
+                <SelectTrigger id="employee-select" className="mt-1">
+                  <SelectValue placeholder="Select an employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.length > 0 ? (
+                    employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName} ({emp.id})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-employees" disabled>
+                      No employees available (enable mock data)
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="payslip-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Select Payslip
+              </label>
+              <Select onValueChange={setSelectedPayslipId} value={selectedPayslipId} disabled={!selectedEmployeeId || filteredPayslipsForEmployee.length === 0}>
+                <SelectTrigger id="payslip-select" className="mt-1">
+                  <SelectValue placeholder="Select a payslip" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredPayslipsForEmployee.length > 0 ? (
+                    filteredPayslipsForEmployee.map((payslip) => (
+                      <SelectItem key={payslip.id} value={payslip.id}>
+                        {payslip.payPeriod}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-payslips" disabled>
+                      No payslips for this employee
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-full" disabled={!selectedPayslipId}>
+                  Generate Payslip
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handlePrintPayslip} disabled={!selectedPayslipId}>
+                  <Printer className="mr-2 h-4 w-4" /> Print Payslip
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadPdf} disabled={!selectedPayslipId}>
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
@@ -217,7 +371,7 @@ const Payslips: React.FC = () => {
           {payslips.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {payslips.map((payslip) => (
-                <div key={payslip.id} className="p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <div key={payslip.id} id={`payslip-${payslip.id}`} className="p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                   <h3 className="text-lg font-bold mb-3 text-center">Payslip</h3>
                   <div className="border p-4 rounded-md space-y-3 text-sm">
                     {/* Header */}
