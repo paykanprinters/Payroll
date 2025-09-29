@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError } from "@/utils/toast";
 
 // Define the schema for form validation
@@ -37,6 +38,8 @@ const companyDetailsSchema = z.object({
   accountType: z.enum(["Cheque", "Savings", "Business"], {
     required_error: "Account Type is required",
   }),
+  logoUrl: z.string().optional(),
+  logoSize: z.number().min(20).max(100).default(40),
 });
 
 type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
@@ -66,14 +69,44 @@ const CompanyDetails: React.FC = () => {
       accountNumber: "",
       branchCode: "",
       accountType: "Cheque", // Default value
+      logoUrl: localStorage.getItem('companyLogoUrl') || '',
+      logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
     },
   });
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        form.setValue("logoUrl", dataUrl);
+        localStorage.setItem('companyLogoUrl', dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLogoSizeChange = (value: number[]) => {
+    form.setValue("logoSize", value[0]);
+    localStorage.setItem('companyLogoSize', value[0].toString());
+  };
 
   const onSubmit = (data: CompanyDetailsFormValues) => {
     console.log("Company Details submitted:", data);
     // Here you would typically send this data to your backend
+    localStorage.setItem('companyTradingName', data.companyTradingName);
+    localStorage.setItem('companyLogoUrl', data.logoUrl || '');
+    localStorage.setItem('companyLogoSize', data.logoSize.toString());
+
+    // Dispatch a custom event to notify other components (like Sidebar)
+    window.dispatchEvent(new Event('companyDetailsUpdated'));
+
     showSuccess("Company details saved successfully!");
   };
+
+  const logoUrl = form.watch("logoUrl");
+  const logoSize = form.watch("logoSize");
 
   return (
     <Card>
@@ -305,7 +338,7 @@ const CompanyDetails: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="accountType">Account Type</Label>
-              <Select onValueChange={form.setValue("accountType")} defaultValue={form.getValues("accountType")}>
+              <Select onValueChange={(value) => form.setValue("accountType", value as "Cheque" | "Savings" | "Business")} defaultValue={form.getValues("accountType")}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select account type" />
                 </SelectTrigger>
@@ -319,6 +352,46 @@ const CompanyDetails: React.FC = () => {
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.accountType.message}</p>
               )}
             </div>
+          </div>
+
+          {/* Company Logo */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Company Logo</h3>
+            <div>
+              <Label htmlFor="companyLogo">Upload Logo</Label>
+              <Input
+                id="companyLogo"
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                className="mt-1"
+              />
+            </div>
+            {logoUrl && (
+              <div className="mt-4">
+                <Label>Logo Preview</Label>
+                <div className="flex items-center space-x-4 mt-2">
+                  <img
+                    src={logoUrl}
+                    alt="Company Logo"
+                    style={{ width: logoSize, height: logoSize, objectFit: 'contain' }}
+                    className="rounded-md border p-1"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="logoSize">Logo Size ({logoSize}px)</Label>
+                    <Slider
+                      id="logoSize"
+                      min={20}
+                      max={100}
+                      step={1}
+                      value={[logoSize]}
+                      onValueChange={handleLogoSizeChange}
+                      className="mt-2"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <Button type="submit">Save Company Details</Button>

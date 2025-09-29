@@ -41,6 +41,31 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
 const Sidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [companyTradingName, setCompanyTradingName] = React.useState<string>(
+    localStorage.getItem('companyTradingName') || "Payroll System"
+  );
+  const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
+    localStorage.getItem('companyLogoUrl')
+  );
+  const [companyLogoSize, setCompanyLogoSize] = React.useState<number>(
+    parseFloat(localStorage.getItem('companyLogoSize') || '40')
+  );
+
+  React.useEffect(() => {
+    const updateCompanyDetails = () => {
+      setCompanyTradingName(localStorage.getItem('companyTradingName') || "Payroll System");
+      setCompanyLogoUrl(localStorage.getItem('companyLogoUrl'));
+      setCompanyLogoSize(parseFloat(localStorage.getItem('companyLogoSize') || '40'));
+    };
+
+    window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
+    // Initial load in case it was set before the component mounted
+    updateCompanyDetails();
+
+    return () => {
+      window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
+    };
+  }, []);
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -49,6 +74,47 @@ const Sidebar: React.FC = () => {
     { to: "/reports", icon: BarChart, label: "Reports" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
+
+  const renderSidebarContent = (isMobileView: boolean) => (
+    <>
+      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground">
+          {companyLogoUrl && (
+            <img
+              src={companyLogoUrl}
+              alt="Company Logo"
+              style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+              className="rounded-md"
+            />
+          )}
+          {!isCollapsed && <span className="">{companyTradingName}</span>}
+        </Link>
+        {!isMobileView && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto h-8 w-8"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      <div className="flex-1 overflow-auto py-2">
+        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label}
+              isCollapsed={isCollapsed && !isMobileView}
+            />
+          ))}
+        </nav>
+      </div>
+    </>
+  );
 
   if (isMobile) {
     return (
@@ -60,25 +126,7 @@ const Sidebar: React.FC = () => {
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
-            <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-              <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground">
-                <ReceiptText className="h-6 w-6" />
-                <span className="">Payroll System</span>
-              </Link>
-            </div>
-            <div className="flex-1 overflow-auto py-2">
-              <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    icon={item.icon}
-                    label={item.label}
-                    isCollapsed={false} // Mobile sidebar is never collapsed
-                  />
-                ))}
-              </nav>
-            </div>
+            {renderSidebarContent(true)}
           </div>
         </SheetContent>
       </Sheet>
@@ -92,33 +140,7 @@ const Sidebar: React.FC = () => {
         isCollapsed ? "w-[70px]" : "w-[240px]"
       )}
     >
-      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground">
-          <ReceiptText className="h-6 w-6" />
-          {!isCollapsed && <span className="">Payroll System</span>}
-        </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto h-8 w-8"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="flex-1 overflow-auto py-2">
-        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              icon={item.icon}
-              label={item.label}
-              isCollapsed={isCollapsed}
-            />
-          ))}
-        </nav>
-      </div>
+      {renderSidebarContent(false)}
     </div>
   );
 };
