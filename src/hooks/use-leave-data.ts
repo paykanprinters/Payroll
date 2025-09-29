@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { eachDayOfInterval, isWeekend, format } from "date-fns";
+import { format } from "date-fns";
+import { calculateWorkingDays } from "@/lib/utils"; // Import helper from shared utility
 
 interface MockEmployee {
   id: string;
@@ -20,18 +21,6 @@ interface LeaveEntry {
   reason?: string;
   documentUrl?: string;
 }
-
-// Helper to calculate working days (excluding weekends)
-export const calculateWorkingDays = (start: Date, end: Date): number => {
-  let count = 0;
-  const days = eachDayOfInterval({ start, end });
-  for (const day of days) {
-    if (!isWeekend(day)) {
-      count++;
-    }
-  }
-  return count;
-};
 
 export const useLeaveData = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
@@ -66,14 +55,18 @@ export const useLeaveData = () => {
     loadedLeaveRecords.forEach(record => {
       const start = new Date(record.startDate);
       const end = new Date(record.endDate);
-      const daysInInterval = eachDayOfInterval({ start, end });
+      
+      // Ensure interval is valid before calculating days
+      if (start <= end) {
+        const daysInInterval = eachDayOfInterval({ start, end });
 
-      daysInInterval.forEach(day => {
-        if (!isWeekend(day)) {
-          const monthYear = format(day, "MMM yyyy");
-          monthlyLeaveMap.set(monthYear, (monthlyLeaveMap.get(monthYear) || 0) + 1);
-        }
-      });
+        daysInInterval.forEach(day => {
+          if (!isWeekend(day)) {
+            const monthYear = format(day, "MMM yyyy");
+            monthlyLeaveMap.set(monthYear, (monthlyLeaveMap.get(monthYear) || 0) + 1);
+          }
+        });
+      }
     });
 
     const sortedMonthlyLeaveData = Array.from(monthlyLeaveMap.entries())
