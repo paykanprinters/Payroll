@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Define default settings for payslip elements
 const defaultPayslipSettings = {
@@ -20,6 +21,7 @@ const defaultPayslipSettings = {
   showLeaveSummary: true,
   showBankDetails: true,
   sectionOrder: ["Earnings", "Deductions", "Leave"] as ("Earnings" | "Deductions" | "Leave")[], // Orderable sections
+  layoutSize: "A4" as "Letter" | "A4" | "A5", // New layout size setting
 };
 
 type PayslipSettings = typeof defaultPayslipSettings;
@@ -33,6 +35,10 @@ const PayslipDesign: React.FC = () => {
 
   const handleToggleChange = (key: keyof PayslipSettings, checked: boolean) => {
     setSettings((prev) => ({ ...prev, [key]: checked }));
+  };
+
+  const handleLayoutSizeChange = (value: "Letter" | "A4" | "A5") => {
+    setSettings((prev) => ({ ...prev, layoutSize: value }));
   };
 
   const handleMoveSection = (index: number, direction: "up" | "down") => {
@@ -98,6 +104,18 @@ const PayslipDesign: React.FC = () => {
     }
   };
 
+  const getPreviewCardClasses = (layoutSize: "Letter" | "A4" | "A5") => {
+    switch (layoutSize) {
+      case "Letter":
+        return "w-[215.9mm] min-h-[279.4mm] p-6"; // US Letter
+      case "A5":
+        return "w-[148mm] min-h-[210mm] p-4 text-xs"; // A5
+      case "A4":
+      default:
+        return "w-[210mm] min-h-[297mm] p-8"; // A4
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -110,6 +128,25 @@ const PayslipDesign: React.FC = () => {
         <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Controls Section */}
           <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Layout Options</h3>
+              <div>
+                <Label htmlFor="layoutSize">Paper Size</Label>
+                <Select onValueChange={handleLayoutSizeChange} value={settings.layoutSize}>
+                  <SelectTrigger id="layoutSize" className="mt-1 w-[180px]">
+                    <SelectValue placeholder="Select paper size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Letter">US Letter (8.5 x 11 in)</SelectItem>
+                    <SelectItem value="A4">A4 (210 x 297 mm)</SelectItem>
+                    <SelectItem value="A5">A5 (148 x 210 mm)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Separator />
+
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Visibility Options</h3>
               <div className="flex items-center justify-between">
@@ -208,7 +245,10 @@ const PayslipDesign: React.FC = () => {
           </div>
 
           {/* Payslip Preview */}
-          <div className="p-6 border rounded-lg shadow-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <div className={cn(
+            "p-6 border rounded-lg shadow-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mx-auto",
+            getPreviewCardClasses(settings.layoutSize)
+          )}>
             <h3 className="text-xl font-bold mb-4 text-center">Payslip Preview</h3>
             <div className="border p-4 rounded-md space-y-3 text-sm">
               {/* Header */}

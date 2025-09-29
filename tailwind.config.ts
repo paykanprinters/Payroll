@@ -90,12 +90,15 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
-      // ADDED FOR A4 PRINTING
       width: {
         'a4': '210mm',
+        'a5': '148mm',
+        'letter': '215.9mm', // 8.5 inches
       },
       minHeight: {
         'a4': '297mm',
+        'a5': '210mm',
+        'letter': '279.4mm', // 11 inches
       },
     },
   },

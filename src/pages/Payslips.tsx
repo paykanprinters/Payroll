@@ -48,6 +48,7 @@ interface PayslipDesignSettings {
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
   sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
+  layoutSize?: "Letter" | "A4" | "A5"; // New layout size setting
 }
 
 // Define default settings for payslip elements (should match PayslipDesign.tsx)
@@ -60,6 +61,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showLeaveSummary: true,
   showBankDetails: true,
   sectionOrder: ["Earnings", "Deductions", "Leave"],
+  layoutSize: "A4", // Default to A4
 };
 
 const Payslips: React.FC = () => {
@@ -67,7 +69,7 @@ const Payslips: React.FC = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
-    return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings; // FIX APPLIED HERE
+    return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
   });
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
@@ -114,7 +116,7 @@ const Payslips: React.FC = () => {
 
   const loadPayslipDesignSettings = () => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
-    setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings); // FIX APPLIED HERE
+    setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings);
   };
 
   useEffect(() => {

@@ -32,6 +32,7 @@ interface PayslipDesignSettings {
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
   sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
+  layoutSize?: "Letter" | "A4" | "A5"; // New layout size setting
 }
 
 interface IndividualPayslipCardProps {
@@ -95,15 +96,29 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     );
   };
 
+  const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
+    switch (layoutSize) {
+      case "Letter":
+        return "print:w-letter print:min-h-letter print:p-6 print:text-sm";
+      case "A5":
+        return "print:w-a5 print:min-h-a5 print:p-4 print:text-xs";
+      case "A4":
+      default:
+        return "print:w-a4 print:min-h-a4 print:p-8 print:text-base";
+    }
+  };
+
   return (
     <div 
       id={`payslip-${payslip.id}`} 
-      className="p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 
-                 mx-auto max-w-lg 
-                 print:w-a4 print:min-h-a4 print:p-8 print:shadow-none print:border-none print:bg-white print:text-black"
+      className={cn(
+        "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mx-auto max-w-lg",
+        "print:shadow-none print:border-none print:bg-white print:text-black",
+        getPrintClasses(payslipDesignSettings.layoutSize)
+      )}
     >
       <h3 className="text-lg font-bold mb-3 text-center print:text-xl print:mb-6">Payslip</h3>
-      <div className="border p-4 rounded-md space-y-3 text-sm print:border-none print:p-0 print:space-y-4 print:text-base">
+      <div className="border p-4 rounded-md space-y-3 text-sm print:border-none print:p-0 print:space-y-4">
         {/* Header */}
         <div className="flex justify-between items-start mb-4 print:mb-6">
           {payslipDesignSettings.showCompanyLogo && companyLogoUrl && (
