@@ -15,29 +15,27 @@ import { showSuccess, showError } from "@/utils/toast";
 
 // Define the schema for form validation
 const companyDetailsSchema = z.object({
-  companyLegalName: z.string().min(1, "Company Legal Name is required"),
-  companyTradingName: z.string().min(1, "Company Trading Name is required"),
-  companyRegistrationNumber: z.string().min(1, "Registration Number is required"),
-  companyTaxNumber: z.string().min(1, "Tax Number is required"),
+  companyLegalName: z.string().optional(),
+  companyTradingName: z.string().optional(),
+  companyRegistrationNumber: z.string().optional(),
+  companyTaxNumber: z.string().optional(),
   vatRegistrationNumber: z.string().optional(),
   industry: z.string().optional(),
   payeReferenceNumber: z.string().optional(),
   uifReferenceNumber: z.string().optional(),
   sdlReferenceNumber: z.string().optional(),
   coidaRegistrationNumber: z.string().optional(),
-  physicalAddress: z.string().min(1, "Physical Address is required"),
+  physicalAddress: z.string().optional(),
   postalAddress: z.string().optional(),
-  mainContactNumber: z.string().min(1, "Main Contact Number is required"),
+  mainContactNumber: z.string().optional(),
   alternativeContactNumber: z.string().optional(),
-  companyEmail: z.string().email("Invalid email address").min(1, "Company Email is required"),
+  companyEmail: z.string().email("Invalid email address").optional().or(z.literal('')),
   companyWebsite: z.string().url("Invalid URL").optional().or(z.literal('')),
-  bankName: z.string().min(1, "Bank Name is required"),
-  accountHolderName: z.string().min(1, "Account Holder Name is required"),
-  accountNumber: z.string().min(1, "Account Number is required"),
-  branchCode: z.string().min(1, "Branch Code is required"),
-  accountType: z.enum(["Cheque", "Savings", "Business"], {
-    required_error: "Account Type is required",
-  }),
+  bankName: z.string().optional(),
+  accountHolderName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  branchCode: z.string().optional(),
+  accountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
   logoUrl: z.string().optional(),
   logoSize: z.number().min(20).max(100).default(40),
 });
@@ -68,7 +66,7 @@ const CompanyDetails: React.FC = () => {
       accountHolderName: "",
       accountNumber: "",
       branchCode: "",
-      accountType: "Cheque", // Default value
+      accountType: "Cheque", // Default value, but now optional
       logoUrl: localStorage.getItem('companyLogoUrl') || '',
       logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
     },
@@ -106,7 +104,7 @@ const CompanyDetails: React.FC = () => {
   const onSubmit = (data: CompanyDetailsFormValues) => {
     console.log("Company Details submitted:", data);
     // Here you would typically send this data to your backend
-    localStorage.setItem('companyTradingName', data.companyTradingName);
+    localStorage.setItem('companyTradingName', data.companyTradingName || '');
     localStorage.setItem('companyLogoUrl', data.logoUrl || '');
     localStorage.setItem('companyLogoSize', data.logoSize.toString());
 
