@@ -18,15 +18,15 @@ const defaultPayslipSettings = {
   showEmployeeDetails: true,
   showEarningsBreakdown: true,
   showDeductionsBreakdown: true,
-  showLeaveSummary: true,
-  showBankDetails: true,
-  sectionOrder: ["Earnings", "Deductions", "Leave"] as ("Earnings" | "Deductions" | "Leave")[], // Orderable sections
+  showLeaveSummary: true, // Now controlled by a toggle
+  showBankDetails: true, // Now controlled by a toggle
+  sectionOrder: ["Earnings", "Deductions"] as ("Earnings" | "Deductions")[], // Only Earnings and Deductions are orderable
   layoutSize: "A4" as "Letter" | "A4" | "A5", // Layout size setting
   earningsDeductionsLayout: "deductions-left-earnings-right" as "deductions-left-earnings-right" | "earnings-left-deductions-right", // New layout setting
 };
 
 type PayslipSettings = typeof defaultPayslipSettings;
-type SectionName = "Earnings" | "Deductions" | "Leave";
+type SectionName = "Earnings" | "Deductions"; // Only Earnings and Deductions are orderable
 
 const PayslipDesign: React.FC = () => {
   const [settings, setSettings] = useState<PayslipSettings>(() => {
@@ -94,14 +94,6 @@ const PayslipDesign: React.FC = () => {
             <p className="text-xs">SDL: R 200.00</p>
             <p className="text-xs">Provident Fund: R 1,500.00</p>
             <p className="text-xs font-semibold mt-1">Total Deductions: R 4,877.12</p>
-          </div>
-        );
-      case "Leave":
-        return settings.showLeaveSummary && (
-          <div key="leave" className="pt-2 mt-2">
-            <h4 className="font-semibold text-sm mb-1">Leave Summary</h4>
-            <p className="text-xs">Annual Leave: 15 days (Available)</p>
-            <p className="text-xs">Sick Leave: 10 days (Available)</p>
           </div>
         );
       default:
@@ -323,32 +315,34 @@ const PayslipDesign: React.FC = () => {
                     <p><span className="font-semibold">Employee Name:</span> John Doe</p>
                     <p><span className="font-semibold">Employee ID:</span> EMP001</p>
                     <p><span className="font-semibold">Job Title:</span> Software Developer</p>
+                    {settings.showBankDetails && (
+                      <div className="mt-2">
+                        <p className="font-semibold">Bank Details:</p>
+                        <p>Bank: FNB</p>
+                        <p>Account No: *********1234</p>
+                        <p>Branch Code: 250655</p>
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <p><span className="font-semibold">Pay Period:</span> 01/07/2024 - 31/07/2024</p>
                     <p><span className="font-semibold">Pay Date:</span> 25/07/2024</p>
                     <p><span className="font-semibold">Tax Ref No:</span> 123456789</p>
+                    {settings.showLeaveSummary && (
+                      <div className="mt-2">
+                        <p className="font-semibold">Leave Summary:</p>
+                        <p>Annual Leave: 15 days (Available)</p>
+                        <p>Sick Leave: 10 days (Available)</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               <Separator />
 
-              {/* Dynamic Sections */}
-              {renderMainContentPreview()} {/* Render Earnings/Deductions based on new layout setting */}
-              {settings.showLeaveSummary && <div className="border-t pt-2 mt-2">{renderSection("Leave")}</div>}
-
-              <Separator />
-
-              {/* Bank Details */}
-              {settings.showBankDetails && (
-                <div className="border-t pt-2 mt-2">
-                  <h4 className="font-semibold text-sm mb-1">Bank Details</h4>
-                  <p className="text-xs">Bank: FNB</p>
-                  <p className="text-xs">Account No: *********1234</p>
-                  <p className="text-xs">Branch Code: 250655</p>
-                </div>
-              )}
+              {/* Dynamic Sections (Earnings/Deductions) */}
+              {renderMainContentPreview()}
 
               <Separator />
 

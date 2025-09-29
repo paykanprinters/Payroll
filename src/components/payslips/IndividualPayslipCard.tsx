@@ -29,9 +29,9 @@ interface PayslipDesignSettings {
   showEmployeeDetails?: boolean;
   showEarningsBreakdown?: boolean;
   showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
+  showLeaveSummary?: boolean; // Now controlled by a toggle
+  showBankDetails?: boolean; // Now controlled by a toggle
+  sectionOrder?: ("Earnings" | "Deductions")[]; // Only Earnings and Deductions are orderable
   layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
   earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
 }
@@ -97,6 +97,18 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     );
   };
 
+  const renderBankDetailsContent = () => {
+    if (!payslipDesignSettings.showBankDetails) return null;
+    return (
+      <div className="mt-2">
+        <p className="font-semibold print:text-base">Bank Details:</p>
+        <p className="text-xs print:text-sm">Bank: FNB</p>
+        <p className="text-xs print:text-sm">Account No: *********1234</p>
+        <p className="text-xs print:text-sm">Branch Code: 250655</p>
+      </div>
+    );
+  };
+
   const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
     switch (layoutSize) {
       case "Letter":
@@ -155,44 +167,25 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
               <p><span className="font-semibold">Employee Name:</span> {getEmployeeName(payslip.employeeId)}</p>
               <p><span className="font-semibold">Employee ID:</span> {payslip.employeeId}</p>
               <p><span className="font-semibold">Job Title:</span> Software Developer</p> {/* Placeholder */}
+              {renderBankDetailsContent()} {/* Bank details moved here */}
             </div>
             <div className="text-right">
               <p><span className="font-semibold">Pay Period:</span> {payslip.payPeriod}</p>
               <p><span className="font-semibold">Pay Date:</span> 25/07/2024</p> {/* Placeholder */}
               <p><span className="font-semibold">Tax Ref No:</span> 123456789</p> {/* Placeholder */}
+              {renderLeaveSummaryContent()} {/* Leave summary moved here */}
             </div>
           </div>
         )}
 
         <Separator className="print:my-4" />
 
-        {/* Main Pay Information: Deductions on left, Earnings on right */}
+        {/* Main Pay Information: Earnings/Deductions */}
         <div className="grid grid-cols-2 gap-4 mt-4 print:mt-6 print:gap-8">
           {mainContentOrder.map((content, index) => (
             <div key={index}>{content}</div>
           ))}
         </div>
-
-        {/* Leave Summary (if enabled, below earnings/deductions) */}
-        {payslipDesignSettings.showLeaveSummary && (
-          <>
-            <Separator className="print:my-4" />
-            {renderLeaveSummaryContent()}
-          </>
-        )}
-
-        {/* Bank Details */}
-        {payslipDesignSettings.showBankDetails && (
-          <>
-            <Separator className="print:my-4" />
-            <div className="border-t pt-2 mt-2 print:border-t-0 print:pt-0 print:mt-0">
-              <h4 className="font-semibold text-sm mb-1 print:text-base">Bank Details</h4>
-              <p className="text-xs print:text-sm">Bank: FNB</p>
-              <p className="text-xs print:text-sm">Account No: *********1234</p>
-              <p className="text-xs print:text-sm">Branch Code: 250655</p>
-            </div>
-          </>
-        )}
 
         <Separator className="print:my-4" />
 

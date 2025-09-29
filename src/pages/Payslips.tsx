@@ -45,9 +45,9 @@ interface PayslipDesignSettings {
   showEmployeeDetails?: boolean;
   showEarningsBreakdown?: boolean;
   showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
+  showLeaveSummary?: boolean; // Now controlled by a toggle
+  showBankDetails?: boolean; // Now controlled by a toggle
+  sectionOrder?: ("Earnings" | "Deductions")[]; // Only Earnings and Deductions are orderable
   layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
   earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
 }
@@ -61,7 +61,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showDeductionsBreakdown: true,
   showLeaveSummary: true,
   showBankDetails: true,
-  sectionOrder: ["Earnings", "Deductions", "Leave"],
+  sectionOrder: ["Earnings", "Deductions"], // Only Earnings and Deductions are orderable
   layoutSize: "A4", // Default to A4
   earningsDeductionsLayout: "deductions-left-earnings-right", // Default layout
 };
