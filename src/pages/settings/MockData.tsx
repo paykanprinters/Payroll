@@ -53,6 +53,16 @@ interface Loan {
   remainingBalance: number;
 }
 
+interface SavingPlan {
+  id: string;
+  employeeId: string;
+  amount: number;
+  frequency: "monthly" | "weekly";
+  startDate: string;
+  endDate?: string;
+  status: "active" | "completed";
+}
+
 interface MockPayslip {
   id: string;
   employeeId: string;
@@ -121,9 +131,31 @@ const generateMockLoans = (): Loan[] => [
   },
 ];
 
-const generateMockPayslips = (employees: MockEmployee[], loans: Loan[]): MockPayslip[] => {
+const generateMockSavingPlans = (): SavingPlan[] => [
+  {
+    id: "SAV001",
+    employeeId: "EMP001",
+    amount: 200,
+    frequency: "monthly",
+    startDate: "2024-07-01",
+    endDate: "2025-06-30",
+    status: "active",
+  },
+  {
+    id: "SAV002",
+    employeeId: "EMP003",
+    amount: 50,
+    frequency: "weekly",
+    startDate: "2024-07-15",
+    status: "active",
+  },
+];
+
+const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], savingPlans: SavingPlan[]): MockPayslip[] => {
   const payslips: MockPayslip[] = [];
   const payPeriod = "2024-07-01 - 2024-07-31"; // Current mock pay period
+  const currentMonth = "2024-07"; // For monthly deductions
+  const currentWeekStart = "2024-07-01"; // Simplified for weekly deductions
 
   employees.forEach(emp => {
     let grossEarnings = emp.salary;
@@ -153,14 +185,14 @@ const generateMockPayslips = (employees: MockEmployee[], loans: Loan[]): MockPay
     // Loan Deductions
     const employeeLoans = loans.filter(loan => loan.employeeId === emp.id);
     employeeLoans.forEach(loan => {
-      // For simplicity, assume monthly deductions apply to monthly payslips
-      // and weekly deductions are aggregated for the month.
       let deductionAmount = 0;
-      if (loan.frequency === "monthly" && payPeriod.includes(loan.startDate.substring(0, 7))) {
-        deductionAmount = Math.min(loan.repaymentAmount, loan.remainingBalance);
-      } else if (loan.frequency === "weekly" && payPeriod.includes(loan.startDate.substring(0, 7))) {
-        // Assuming 4 weeks in a month for weekly deductions for simplicity
-        deductionAmount = Math.min(loan.repaymentAmount * 4, loan.remainingBalance);
+      if (loan.status !== "completed" && loan.startDate.substring(0, 7) <= currentMonth) {
+        if (loan.frequency === "monthly") {
+          deductionAmount = Math.min(loan.repaymentAmount, loan.remainingBalance);
+        } else if (loan.frequency === "weekly") {
+          // Assuming 4 weeks in a month for weekly deductions for simplicity
+          deductionAmount = Math.min(loan.repaymentAmount * 4, loan.remainingBalance);
+        }
       }
 
       if (deductionAmount > 0) {
@@ -168,6 +200,28 @@ const generateMockPayslips = (employees: MockEmployee[], loans: Loan[]): MockPay
         totalDeductions += deductionAmount;
       }
     });
+
+    // Savings Deductions
+    const employeeSavingPlans = savingPlans.filter(plan => plan.employeeId === emp.id);
+    employeeSavingPlans.forEach(plan => {
+      let deductionAmount = 0;
+      if (plan.status === "active" && plan.startDate.substring(0, 7) <= currentMonth) {
+        if (!plan.endDate || plan.endDate >= currentMonth) { // Check if plan is still active
+          if (plan.frequency === "monthly") {
+            deductionAmount = plan.amount;
+          } else if (plan.frequency === "weekly") {
+            // Assuming 4 weeks in a month for weekly deductions for simplicity
+            deductionAmount = plan.amount * 4;
+          }
+        }
+      }
+
+      if (deductionAmount > 0) {
+        deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: deductionAmount });
+        totalDeductions += deductionAmount;
+      }
+    });
+
 
     const netPay = grossEarnings - totalDeductions;
 
@@ -193,8 +247,9 @@ const MockData: React.FC = () => {
   const applyMockData = () => {
     const mockCompany = generateMockCompanyDetails();
     const mockEmployees = generateMockEmployees();
-    const mockLoans = generateMockLoans(); // Generate mock loans
-    const mockPayslips = generateMockPayslips(mockEmployees, mockLoans); // Pass loans to payslip generation
+    const mockLoans = generateMockLoans();
+    const mockSavingPlans = generateMockSavingPlans(); // Generate mock saving plans
+    const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans); // Pass saving plans to payslip generation
 
     // Save company details
     Object.entries(mockCompany).forEach(([key, value]) => {
@@ -202,7 +257,8 @@ const MockData: React.FC = () => {
     });
     localStorage.setItem("isMockDataEnabled", "true");
     localStorage.setItem("mockEmployees", JSON.stringify(mockEmployees));
-    localStorage.setItem("mockLoans", JSON.stringify(mockLoans)); // Save mock loans
+    localStorage.setItem("mockLoans", JSON.stringify(mockLoans));
+    localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans)); // Save mock saving plans
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
     localStorage.setItem("applyPAYE", "true"); // Enable PAYE for mock data
     localStorage.setItem("applySDL", "true"); // Enable SDL for mock data
@@ -222,7 +278,8 @@ const MockData: React.FC = () => {
     });
     localStorage.removeItem("isMockDataEnabled");
     localStorage.removeItem("mockEmployees");
-    localStorage.removeItem("mockLoans"); // Clear mock loans
+    localStorage.removeItem("mockLoans");
+    localStorage.removeItem("mockSavingPlans"); // Clear mock saving plans
     localStorage.removeItem("mockPayslips");
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
