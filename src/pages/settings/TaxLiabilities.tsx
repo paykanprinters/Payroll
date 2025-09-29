@@ -38,6 +38,23 @@ const TaxLiabilities: React.FC = () => {
     },
   });
 
+  // Effect to update form defaults when mock data is toggled
+  React.useEffect(() => {
+    const updateFormDefaults = () => {
+      form.reset({
+        ...form.getValues(), // Keep current taxYear selection
+        applyPAYE: localStorage.getItem('applyPAYE') === 'true',
+        applySDL: localStorage.getItem('applySDL') === 'true',
+      });
+    };
+
+    window.addEventListener('mockDataUpdated', updateFormDefaults);
+    updateFormDefaults(); // Call on mount to ensure initial state reflects current localStorage
+    return () => {
+      window.removeEventListener('mockDataUpdated', updateFormDefaults);
+    };
+  }, [form]);
+
   const selectedTaxYear = form.watch("taxYear");
 
   const handleFetchTaxTables = async () => {

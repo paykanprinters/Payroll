@@ -41,28 +41,29 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
 const Sidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [companyTradingName, setCompanyTradingName] = React.useState<string>(
-    localStorage.getItem('companyTradingName') || "Payroll System"
-  );
-  const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
-    localStorage.getItem('companyLogoUrl')
-  );
-  const [companyLogoSize, setCompanyLogoSize] = React.useState<number>(
-    parseFloat(localStorage.getItem('companyLogoSize') || '40')
-  );
+  const [companyTradingName, setCompanyTradingName] = React.useState<string>("");
+  const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(null);
+  const [companyLogoSize, setCompanyLogoSize] = React.useState<number>(40);
 
   React.useEffect(() => {
     const updateCompanyDetails = () => {
-      setCompanyTradingName(localStorage.getItem('companyTradingName') || "Payroll System");
-      setCompanyLogoUrl(localStorage.getItem('companyLogoUrl'));
-      setCompanyLogoSize(parseFloat(localStorage.getItem('companyLogoSize') || '40'));
+      const name = localStorage.getItem('companyTradingName');
+      setCompanyTradingName(name && name.trim() !== '' ? name : "Payroll System");
+
+      const logo = localStorage.getItem('companyLogoUrl');
+      setCompanyLogoUrl(logo && logo.trim() !== '' ? logo : null);
+
+      const sizeStr = localStorage.getItem('companyLogoSize');
+      const size = parseFloat(sizeStr || '40');
+      setCompanyLogoSize(isNaN(size) ? 40 : size);
+      
+      console.log("Sidebar: Received update. Current localStorage values:", { name, logo, size });
     };
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
-    window.addEventListener('mockDataUpdated', updateCompanyDetails); // Listen for mock data changes too
-    // Initial load in case it was set before the component mounted
-    updateCompanyDetails();
-
+    window.addEventListener('mockDataUpdated', updateCompanyDetails);
+    updateCompanyDetails(); // Call on mount to ensure initial state reflects current localStorage
+    
     return () => {
       window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
       window.removeEventListener('mockDataUpdated', updateCompanyDetails);
@@ -89,7 +90,7 @@ const Sidebar: React.FC = () => {
               className="rounded-md"
             />
           )}
-          {!isCollapsed && <span className="">{companyTradingName}</span>}
+          {!isCollapsed && companyTradingName && <span className="">{companyTradingName}</span>}
         </Link>
         {!isMobileView && (
           <Button

@@ -147,6 +147,7 @@ const MockData: React.FC = () => {
     // Dispatch events to update components
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('mockDataUpdated')); // Generic event for other components
+    console.log("MockData: Dispatched 'mockDataUpdated' event.");
     showSuccess("Mock data populated successfully!");
   };
 
@@ -165,6 +166,7 @@ const MockData: React.FC = () => {
     // Dispatch events to update components
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('mockDataUpdated')); // Generic event for other components
+    console.log("MockData: Dispatched 'mockDataUpdated' event (cleared).");
     showSuccess("Mock data cleared successfully!");
   };
 
