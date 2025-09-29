@@ -5,7 +5,8 @@ import { Outlet, Route, Routes, Navigate } from "react-router-dom";
 import SettingsLayout from "./settings/SettingsLayout";
 import CompanyDetails from "./settings/CompanyDetails";
 import BiometricDevices from "./settings/BiometricDevices";
-import TaxLiabilities from "./settings/TaxLiabilities"; // Import the new component
+import TaxLiabilities from "./settings/TaxLiabilities";
+import PayslipDesign from "./settings/PayslipDesign"; // Import the new component
 
 const Settings: React.FC = () => {
   return (
@@ -15,7 +16,8 @@ const Settings: React.FC = () => {
         <Route index element={<Navigate to="company-details" replace />} />
         <Route path="company-details" element={<CompanyDetails />} />
         <Route path="biometric-devices" element={<BiometricDevices />} />
-        <Route path="tax-liabilities" element={<TaxLiabilities />} /> {/* New route for tax liabilities */}
+        <Route path="tax-liabilities" element={<TaxLiabilities />} />
+        <Route path="payslip-design" element={<PayslipDesign />} /> {/* New route for payslip design */}
         {/* Add more settings sub-routes here */}
       </Route>
     </Routes>
