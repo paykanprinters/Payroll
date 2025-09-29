@@ -82,14 +82,25 @@ const CompanyDetails: React.FC = () => {
         const dataUrl = reader.result as string;
         form.setValue("logoUrl", dataUrl);
         localStorage.setItem('companyLogoUrl', dataUrl);
+        window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleRemoveLogo = () => {
+    form.setValue("logoUrl", "");
+    form.setValue("logoSize", 40); // Reset to default size
+    localStorage.removeItem('companyLogoUrl');
+    localStorage.removeItem('companyLogoSize');
+    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
+    showSuccess("Company logo removed successfully!");
+  };
+
   const handleLogoSizeChange = (value: number[]) => {
     form.setValue("logoSize", value[0]);
     localStorage.setItem('companyLogoSize', value[0].toString());
+    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
   };
 
   const onSubmit = (data: CompanyDetailsFormValues) => {
@@ -357,15 +368,20 @@ const CompanyDetails: React.FC = () => {
           {/* Company Logo */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Company Logo</h3>
-            <div>
+            <div className="flex items-center gap-2">
               <Label htmlFor="companyLogo">Upload Logo</Label>
               <Input
                 id="companyLogo"
                 type="file"
                 accept="image/*"
                 onChange={handleLogoUpload}
-                className="mt-1"
+                className="mt-1 flex-1"
               />
+              {logoUrl && (
+                <Button type="button" variant="outline" onClick={handleRemoveLogo} className="mt-1">
+                  Remove Logo
+                </Button>
+              )}
             </div>
             {logoUrl && (
               <div className="mt-4">
