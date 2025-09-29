@@ -70,6 +70,13 @@ const PayslipDesign: React.FC = () => {
 
   // Placeholder for company details from localStorage (for preview)
   const companyTradingName = localStorage.getItem('companyTradingName') || "Your Company Name";
+  const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
+  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
+  const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
+  const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
+  const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
+  const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
+  const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
   const companyLogoUrl = localStorage.getItem('companyLogoUrl');
   const companyLogoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
 
@@ -77,23 +84,23 @@ const PayslipDesign: React.FC = () => {
     switch (section) {
       case "Earnings":
         return settings.showEarningsBreakdown && (
-          <div key="earnings" className="pt-2 mt-2">
-            <h4 className="font-semibold text-sm mb-1">Earnings</h4>
-            <p className="text-xs">Basic Salary: R 20,000.00</p>
-            <p className="text-xs">Travel Allowance: R 2,000.00</p>
-            <p className="text-xs">Overtime: R 500.00</p>
-            <p className="text-xs font-semibold mt-1">Gross Earnings: R 22,500.00</p>
+          <div key="earnings" className="space-y-1">
+            <h4 className="font-bold text-sm mb-1 underline">EARNINGS</h4>
+            <p className="text-xs flex justify-between"><span>Basic Salary:</span> <span>R 20,000.00</span></p>
+            <p className="text-xs flex justify-between"><span>Travel Allowance:</span> <span>R 2,000.00</span></p>
+            <p className="text-xs flex justify-between"><span>Overtime:</span> <span>R 500.00</span></p>
+            <p className="text-xs font-bold mt-2 flex justify-between border-t pt-1"><span>GROSS EARNINGS</span> <span>R 22,500.00</span></p>
           </div>
         );
       case "Deductions":
         return settings.showDeductionsBreakdown && (
-          <div key="deductions" className="pt-2 mt-2">
-            <h4 className="font-semibold text-sm mb-1">Deductions</h4>
-            <p className="text-xs">PAYE: R 3,000.00</p>
-            <p className="text-xs">UIF: R 177.12</p>
-            <p className="text-xs">SDL: R 200.00</p>
-            <p className="text-xs">Provident Fund: R 1,500.00</p>
-            <p className="text-xs font-semibold mt-1">Total Deductions: R 4,877.12</p>
+          <div key="deductions" className="space-y-1">
+            <h4 className="font-bold text-sm mb-1 underline">DEDUCTIONS</h4>
+            <p className="text-xs flex justify-between"><span>PAYE:</span> <span>R 3,000.00</span></p>
+            <p className="text-xs flex justify-between"><span>UIF:</span> <span>R 177.12</span></p>
+            <p className="text-xs flex justify-between"><span>SDL:</span> <span>R 200.00</span></p>
+            <p className="text-xs flex justify-between"><span>Provident Fund:</span> <span>R 1,500.00</span></p>
+            <p className="text-xs font-bold mt-2 flex justify-between border-t pt-1"><span>TOTAL DEDUCTIONS</span> <span>R 4,877.12</span></p>
           </div>
         );
       default:
@@ -121,11 +128,11 @@ const PayslipDesign: React.FC = () => {
     const rightColumnContent = settings.earningsDeductionsLayout === "deductions-left-earnings-right" ? earningsContent : deductionsContent;
 
     return (
-      <div className="grid grid-cols-2 gap-4 mt-4">
-        <div className="border-t pt-2 text-left"> {/* Left column always text-left */}
+      <div className="grid grid-cols-2 gap-6 mt-4">
+        <div className="text-left">
           {leftColumnContent}
         </div>
-        <div className="border-t pt-2 text-right"> {/* Right column always text-right */}
+        <div className="text-left">
           {rightColumnContent}
         </div>
       </div>
@@ -277,75 +284,84 @@ const PayslipDesign: React.FC = () => {
             "p-6 border rounded-lg shadow-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mx-auto",
             getPreviewCardClasses(settings.layoutSize)
           )}>
-            <h3 className="text-xl font-bold mb-4 text-center">Payslip Preview</h3>
-            <div className="border p-4 rounded-md space-y-3 text-sm">
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                {settings.showCompanyLogo && companyLogoUrl && (
-                  <img
-                    src={companyLogoUrl}
-                    alt="Company Logo"
-                    style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-                    className="rounded-md"
-                  />
-                )}
-                <div className={cn("text-right flex-grow", !settings.showCompanyLogo && "w-full")}>
-                  <h2 className="text-lg font-bold">{companyTradingName}</h2>
-                  {settings.showCompanyDetails && (
-                    <>
-                      <p className="text-xs">123 Corporate Ave, Business City, 1234</p>
-                      <p className="text-xs">Reg. No: 2023/123456/07</p>
-                      <p className="text-xs">Tax No: 9876543210</p>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Employee Details */}
-              {settings.showEmployeeDetails && (
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p><span className="font-semibold">Employee Name:</span> John Doe</p>
-                    <p><span className="font-semibold">Employee ID:</span> EMP001</p>
-                    <p><span className="font-semibold">Job Title:</span> Software Developer</p>
-                    {settings.showBankDetails && (
-                      <div className="mt-2">
-                        <p className="font-semibold">Bank Details:</p>
-                        <p>Bank: FNB</p>
-                        <p>Account No: *********1234</p>
-                        <p>Branch Code: 250655</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p><span className="font-semibold">Pay Period:</span> 01/07/2024 - 31/07/2024</p>
-                    <p><span className="font-semibold">Pay Date:</span> 25/07/2024</p>
-                    <p><span className="font-semibold">Tax Ref No:</span> 123456789</p>
-                    {settings.showLeaveSummary && (
-                      <div className="mt-2">
-                        <p className="font-semibold">Leave Summary:</p>
-                        <p>Annual Leave: 15 days (Available)</p>
-                        <p>Sick Leave: 10 days (Available)</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {/* Company Header */}
+            <div className="flex justify-between items-start mb-4">
+              {settings.showCompanyLogo && companyLogoUrl && (
+                <img
+                  src={companyLogoUrl}
+                  alt="Company Logo"
+                  style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+                  className="rounded-md"
+                />
               )}
-
-              <Separator />
-
-              {/* Dynamic Sections (Earnings/Deductions) */}
-              {renderMainContentPreview()}
-
-              <Separator />
-
-              {/* Net Pay (Always at bottom) */}
-              <div className="flex justify-between items-center pt-2 mt-2">
-                <h3 className="text-md font-bold">Net Pay</h3>
-                <h3 className="text-md font-bold">R 17,622.88</h3>
+              <div className={cn("text-right text-xs", !settings.showCompanyLogo && "w-full")}>
+                <h2 className="text-md font-bold">{companyTradingName}</h2>
+                {settings.showCompanyDetails && (
+                  <>
+                    <p>{physicalAddress}</p>
+                    <p>Reg. No: {companyRegistrationNumber}</p>
+                    <p>VAT No: {vatRegistrationNumber}</p>
+                    <p>Tel: {mainContactNumber}</p>
+                    <p>Email: {companyEmail}</p>
+                    <p>Web: {companyWebsite}</p>
+                  </>
+                )}
               </div>
+            </div>
+
+            <Separator className="my-4" />
+
+            <h3 className="text-lg font-bold text-center mb-3">PAYSLIP</h3>
+            <div className="text-center text-sm mb-4">
+              <p><span className="font-semibold">PAY PERIOD:</span> 01/07/2024 - 31/07/2024</p>
+              <p><span className="font-semibold">PAY DATE:</span> 25/07/2024</p>
+            </div>
+
+            <Separator className="my-4" />
+
+            {/* Employee & Bank Details */}
+            {settings.showEmployeeDetails && (
+              <div className="grid grid-cols-2 gap-4 text-xs mb-4">
+                <div className="space-y-1">
+                  <p><span className="font-semibold">Employee Name:</span> John Doe</p>
+                  <p><span className="font-semibold">Employee No:</span> EMP001</p>
+                  <p><span className="font-semibold">ID No:</span> 9001015000087</p>
+                  <p><span className="font-semibold">Job Title:</span> Software Developer</p>
+                  <p><span className="font-semibold">Tax No:</span> 1234567890</p>
+                </div>
+                {settings.showBankDetails && (
+                  <div className="space-y-1 text-right">
+                    <p><span className="font-semibold">Bank Name:</span> FNB</p>
+                    <p><span className="font-semibold">Account No:</span> *********1234</p>
+                    <p><span className="font-semibold">Branch Code:</span> 250655</p>
+                    <p><span className="font-semibold">Account Type:</span> Cheque</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Separator className="my-4" />
+
+            {/* Dynamic Sections (Earnings/Deductions) */}
+            {renderMainContentPreview()}
+
+            {/* Leave Summary */}
+            {settings.showLeaveSummary && (
+              <div className="mt-4 pt-2 border-t border-dashed">
+                <h4 className="font-bold text-sm mb-1 underline">LEAVE SUMMARY</h4>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <p>Annual Leave Remaining:</p> <p className="text-right">15 days</p>
+                  <p>Sick Leave Remaining:</p> <p className="text-right">10 days</p>
+                </div>
+              </div>
+            )}
+
+            <Separator className="my-4" />
+
+            {/* Net Pay (Always at bottom) */}
+            <div className="flex justify-between items-center pt-2 mt-2">
+              <h3 className="text-lg font-bold">NET PAY</h3>
+              <h3 className="text-lg font-bold">R 17,622.88</h3>
             </div>
           </div>
         </CardContent>

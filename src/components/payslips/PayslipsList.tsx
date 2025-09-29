@@ -3,6 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import IndividualPayslipCard from "./IndividualPayslipCard";
+import { MockEmployee } from "@/lib/mock-data"; // Import MockEmployee interface
 
 interface MockPayslip {
   id: string;
@@ -25,6 +26,8 @@ interface PayslipDesignSettings {
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
   sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
+  layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
+  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
 }
 
 interface PayslipsListProps {
@@ -33,6 +36,7 @@ interface PayslipsListProps {
   companyTradingName: string;
   companyLogoUrl: string | null;
   companyLogoSize: number;
+  employees: MockEmployee[]; // Add employees prop
   getEmployeeName: (employeeId: string) => string;
 }
 
@@ -42,6 +46,7 @@ const PayslipsList: React.FC<PayslipsListProps> = ({
   companyTradingName,
   companyLogoUrl,
   companyLogoSize,
+  employees, // Destructure employees
   getEmployeeName,
 }) => {
   return (
@@ -60,6 +65,7 @@ const PayslipsList: React.FC<PayslipsListProps> = ({
                 companyTradingName={companyTradingName}
                 companyLogoUrl={companyLogoUrl}
                 companyLogoSize={companyLogoSize}
+                employees={employees} // Pass employees down
                 getEmployeeName={getEmployeeName}
               />
             ))}

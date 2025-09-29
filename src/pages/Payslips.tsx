@@ -20,6 +20,7 @@ import {
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import PayslipsList from "@/components/payslips/PayslipsList";
+import { MockEmployee } from "@/lib/mock-data"; // Import MockEmployee interface
 
 interface MockPayslip {
   id: string;
@@ -31,12 +32,6 @@ interface MockPayslip {
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
   leaveSummary: { annual: number; sick: number; unpaid: number };
-}
-
-interface MockEmployee {
-  id: string;
-  firstName: string;
-  lastName: string;
 }
 
 interface PayslipDesignSettings {
@@ -182,6 +177,7 @@ const Payslips: React.FC = () => {
         companyTradingName={companyTradingName}
         companyLogoUrl={companyLogoUrl}
         companyLogoSize={companyLogoSize}
+        employees={employees} // Pass employees down
         getEmployeeName={getEmployeeName}
       />
 
