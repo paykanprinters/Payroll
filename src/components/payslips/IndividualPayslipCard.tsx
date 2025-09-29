@@ -55,43 +55,44 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 }) => {
 
   // Helper to render specific content for earnings, deductions, or leave
-  const renderContent = (sectionType: "Earnings" | "Deductions" | "Leave") => {
-    const settings = payslipDesignSettings;
-    switch (sectionType) {
-      case "Earnings":
-        return settings.showEarningsBreakdown && (
-          <div key="earnings-content">
-            <h4 className="font-semibold text-sm mb-1">Earnings</h4>
-            {payslip.earningsBreakdown.map((item, idx) => (
-              <p key={idx} className="text-xs">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
-            ))}
-            <p className="text-xs font-semibold mt-1">Gross Earnings: R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
-          </div>
-        );
-      case "Deductions":
-        return settings.showDeductionsBreakdown && (
-          <div key="deductions-content">
-            <h4 className="font-semibold text-sm mb-1">Deductions</h4>
-            {payslip.deductionsBreakdown.map((item, idx) => (
-              <p key={idx} className="text-xs">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
-            ))}
-            <p className="text-xs font-semibold mt-1">Total Deductions: R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
-          </div>
-        );
-      case "Leave":
-        return settings.showLeaveSummary && (
-          <div key="leave-content">
-            <h4 className="font-semibold text-sm mb-1">Leave Summary</h4>
-            <p className="text-xs">Annual Leave Remaining: {payslip.leaveSummary.annual} days</p>
-            <p className="text-xs">Sick Leave Remaining: {payslip.leaveSummary.sick} days</p>
-            {payslip.leaveSummary.unpaid > 0 && (
-              <p className="text-xs">Unpaid Leave Taken: {payslip.leaveSummary.unpaid} days</p>
-            )}
-          </div>
-        );
-      default:
-        return null;
-    }
+  const renderEarningsContent = () => {
+    if (!payslipDesignSettings.showEarningsBreakdown) return null;
+    return (
+      <div>
+        <h4 className="font-semibold text-sm mb-1">Earnings</h4>
+        {payslip.earningsBreakdown.map((item, idx) => (
+          <p key={idx} className="text-xs">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+        ))}
+        <p className="text-xs font-semibold mt-1">Gross Earnings: R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+      </div>
+    );
+  };
+
+  const renderDeductionsContent = () => {
+    if (!payslipDesignSettings.showDeductionsBreakdown) return null;
+    return (
+      <div>
+        <h4 className="font-semibold text-sm mb-1">Deductions</h4>
+        {payslip.deductionsBreakdown.map((item, idx) => (
+          <p key={idx} className="text-xs">{item.name}: R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+        ))}
+        <p className="text-xs font-semibold mt-1">Total Deductions: R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+      </div>
+    );
+  };
+
+  const renderLeaveSummaryContent = () => {
+    if (!payslipDesignSettings.showLeaveSummary) return null;
+    return (
+      <div>
+        <h4 className="font-semibold text-sm mb-1">Leave Summary</h4>
+        <p className="text-xs">Annual Leave Remaining: {payslip.leaveSummary.annual} days</p>
+        <p className="text-xs">Sick Leave Remaining: {payslip.leaveSummary.sick} days</p>
+        {payslip.leaveSummary.unpaid > 0 && (
+          <p className="text-xs">Unpaid Leave Taken: {payslip.leaveSummary.unpaid} days</p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -140,75 +141,79 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
         <Separator />
 
-        {/* NEW LOCATION FOR CHARTS: Below company/employee info, above pay info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          {/* Earnings Breakdown Chart */}
-          {payslipDesignSettings.showEarningsBreakdown && payslip.earningsBreakdown.length > 0 && (
-            <div className="h-[150px]">
-              <h4 className="font-semibold text-sm mb-2 text-center">Earnings Breakdown</h4>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={payslip.earningsBreakdown}
-                    dataKey="amount"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={60}
-                    fill="#8884d8"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {payslip.earningsBreakdown.map((entry, index) => (
-                      <Cell key={`cell-earnings-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+        {/* Charts: Below company/employee info, above pay info */}
+        {(payslipDesignSettings.showEarningsBreakdown && payslip.earningsBreakdown.length > 0) ||
+         (payslipDesignSettings.showDeductionsBreakdown && payslip.deductionsBreakdown.length > 0) ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {/* Earnings Breakdown Chart */}
+              {payslipDesignSettings.showEarningsBreakdown && payslip.earningsBreakdown.length > 0 && (
+                <div className="h-[150px]">
+                  <h4 className="font-semibold text-sm mb-2 text-center">Earnings Breakdown</h4>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={payslip.earningsBreakdown}
+                        dataKey="amount"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={60}
+                        fill="#8884d8"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {payslip.earningsBreakdown.map((entry, index) => (
+                          <Cell key={`cell-earnings-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
 
-          {/* Deductions Breakdown Chart */}
-          {payslipDesignSettings.showDeductionsBreakdown && payslip.deductionsBreakdown.length > 0 && (
-            <div className="h-[150px]">
-              <h4 className="font-semibold text-sm mb-2 text-center">Deductions Breakdown</h4>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={payslip.deductionsBreakdown}
-                    dataKey="amount"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={60}
-                    fill="#82ca9d"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {payslip.deductionsBreakdown.map((entry, index) => (
-                      <Cell key={`cell-deductions-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
-                </PieChart>
-              </ResponsiveContainer>
+              {/* Deductions Breakdown Chart */}
+              {payslipDesignSettings.showDeductionsBreakdown && payslip.deductionsBreakdown.length > 0 && (
+                <div className="h-[150px]">
+                  <h4 className="font-semibold text-sm mb-2 text-center">Deductions Breakdown</h4>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={payslip.deductionsBreakdown}
+                        dataKey="amount"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={60}
+                        fill="#82ca9d"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {payslip.deductionsBreakdown.map((entry, index) => (
+                          <Cell key={`cell-deductions-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-
-        {(payslipDesignSettings.showEarningsBreakdown || payslipDesignSettings.showDeductionsBreakdown) && <Separator />}
+            <Separator />
+          </>
+        ) : null}
 
 
         {/* Main Pay Information: Deductions on left, Earnings on right */}
         <div className="grid grid-cols-2 gap-4 mt-4">
           {/* Deductions Column (Left) */}
           <div>
-            {renderContent("Deductions")}
+            {renderDeductionsContent()}
           </div>
           {/* Earnings Column (Right) */}
           <div>
-            {renderContent("Earnings")}
+            {renderEarningsContent()}
           </div>
         </div>
 
@@ -216,20 +221,21 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         {payslipDesignSettings.showLeaveSummary && (
           <>
             <Separator />
-            {renderContent("Leave")}
+            {renderLeaveSummaryContent()}
           </>
         )}
 
-        <Separator />
-
         {/* Bank Details */}
         {payslipDesignSettings.showBankDetails && (
-          <div className="border-t pt-2 mt-2">
-            <h4 className="font-semibold text-sm mb-1">Bank Details</h4>
-            <p className="text-xs">Bank: FNB</p>
-            <p className="text-xs">Account No: *********1234</p>
-            <p className="text-xs">Branch Code: 250655</p>
-          </div>
+          <>
+            <Separator />
+            <div className="border-t pt-2 mt-2">
+              <h4 className="font-semibold text-sm mb-1">Bank Details</h4>
+              <p className="text-xs">Bank: FNB</p>
+              <p className="text-xs">Account No: *********1234</p>
+              <p className="text-xs">Branch Code: 250655</p>
+            </div>
+          </>
         )}
 
         <Separator />
