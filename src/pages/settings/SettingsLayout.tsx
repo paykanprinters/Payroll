@@ -11,6 +11,10 @@ const sidebarNavItems = [
     title: "Company Details",
     href: "/settings/company-details",
   },
+  {
+    title: "Biometric Devices",
+    href: "/settings/biometric-devices",
+  },
   // Add more settings sub-menus here
   // {
   //   title: "User Management",
