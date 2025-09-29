@@ -46,31 +46,68 @@ const CompanyDetails: React.FC = () => {
   const form = useForm<CompanyDetailsFormValues>({
     resolver: zodResolver(companyDetailsSchema),
     defaultValues: {
-      companyLegalName: "",
-      companyTradingName: "",
-      companyRegistrationNumber: "",
-      companyTaxNumber: "",
-      vatRegistrationNumber: "",
-      industry: "",
-      payeReferenceNumber: "",
-      uifReferenceNumber: "",
-      sdlReferenceNumber: "",
-      coidaRegistrationNumber: "",
-      physicalAddress: "",
-      postalAddress: "",
-      mainContactNumber: "",
-      alternativeContactNumber: "",
-      companyEmail: "",
-      companyWebsite: "",
-      bankName: "",
-      accountHolderName: "",
-      accountNumber: "",
-      branchCode: "",
-      accountType: "Cheque", // Default value, but now optional
+      companyLegalName: localStorage.getItem('companyLegalName') || "",
+      companyTradingName: localStorage.getItem('companyTradingName') || "",
+      companyRegistrationNumber: localStorage.getItem('companyRegistrationNumber') || "",
+      companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
+      vatRegistrationNumber: localStorage.getItem('vatRegistrationNumber') || "",
+      industry: localStorage.getItem('industry') || "",
+      payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
+      uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
+      sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
+      coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
+      physicalAddress: localStorage.getItem('physicalAddress') || "",
+      postalAddress: localStorage.getItem('postalAddress') || "",
+      mainContactNumber: localStorage.getItem('mainContactNumber') || "",
+      alternativeContactNumber: localStorage.getItem('alternativeContactNumber') || "",
+      companyEmail: localStorage.getItem('companyEmail') || "",
+      companyWebsite: localStorage.getItem('companyWebsite') || "",
+      bankName: localStorage.getItem('bankName') || "",
+      accountHolderName: localStorage.getItem('accountHolderName') || "",
+      accountNumber: localStorage.getItem('accountNumber') || "",
+      branchCode: localStorage.getItem('branchCode') || "",
+      accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
       logoUrl: localStorage.getItem('companyLogoUrl') || '',
       logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
     },
   });
+
+  // Effect to update form defaults when mock data is toggled
+  React.useEffect(() => {
+    const updateFormDefaults = () => {
+      form.reset({
+        companyLegalName: localStorage.getItem('companyLegalName') || "",
+        companyTradingName: localStorage.getItem('companyTradingName') || "",
+        companyRegistrationNumber: localStorage.getItem('companyRegistrationNumber') || "",
+        companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
+        vatRegistrationNumber: localStorage.getItem('vatRegistrationNumber') || "",
+        industry: localStorage.getItem('industry') || "",
+        payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
+        uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
+        sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
+        coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
+        physicalAddress: localStorage.getItem('physicalAddress') || "",
+        postalAddress: localStorage.getItem('postalAddress') || "",
+        mainContactNumber: localStorage.getItem('mainContactNumber') || "",
+        alternativeContactNumber: localStorage.getItem('alternativeContactNumber') || "",
+        companyEmail: localStorage.getItem('companyEmail') || "",
+        companyWebsite: localStorage.getItem('companyWebsite') || "",
+        bankName: localStorage.getItem('bankName') || "",
+        accountHolderName: localStorage.getItem('accountHolderName') || "",
+        accountNumber: localStorage.getItem('accountNumber') || "",
+        branchCode: localStorage.getItem('branchCode') || "",
+        accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
+        logoUrl: localStorage.getItem('companyLogoUrl') || '',
+        logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
+      });
+    };
+
+    window.addEventListener('mockDataUpdated', updateFormDefaults);
+    return () => {
+      window.removeEventListener('mockDataUpdated', updateFormDefaults);
+    };
+  }, [form]);
+
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -104,9 +141,13 @@ const CompanyDetails: React.FC = () => {
   const onSubmit = (data: CompanyDetailsFormValues) => {
     console.log("Company Details submitted:", data);
     // Here you would typically send this data to your backend
-    localStorage.setItem('companyTradingName', data.companyTradingName || '');
-    localStorage.setItem('companyLogoUrl', data.logoUrl || '');
-    localStorage.setItem('companyLogoSize', data.logoSize.toString());
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        localStorage.setItem(key, String(value));
+      } else {
+        localStorage.removeItem(key);
+      }
+    });
 
     // Dispatch a custom event to notify other components (like Sidebar)
     window.dispatchEvent(new Event('companyDetailsUpdated'));
@@ -137,7 +178,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyLegalName")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="companyTradingName">Company Trading Name</Label>
@@ -146,7 +186,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyTradingName")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="companyRegistrationNumber">Company Registration Number</Label>
@@ -155,7 +194,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyRegistrationNumber")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="companyTaxNumber">Company Tax Number</Label>
@@ -164,7 +202,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("companyTaxNumber")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="vatRegistrationNumber">VAT Registration Number</Label>
@@ -232,7 +269,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("physicalAddress")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="postalAddress">Postal Address (if different)</Label>
@@ -249,7 +285,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("mainContactNumber")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="alternativeContactNumber">Alternative Contact Number</Label>
@@ -296,7 +331,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("bankName")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="accountHolderName">Account Holder Name</Label>
@@ -305,7 +339,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("accountHolderName")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="accountNumber">Account Number</Label>
@@ -314,7 +347,6 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("accountNumber")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="branchCode">Branch Code</Label>
@@ -323,11 +355,10 @@ const CompanyDetails: React.FC = () => {
                 {...form.register("branchCode")}
                 className="mt-1"
               />
-              {/* Removed error message for optional field */}
             </div>
             <div>
               <Label htmlFor="accountType">Account Type</Label>
-              <Select onValueChange={(value) => form.setValue("accountType", value as "Cheque" | "Savings" | "Business")} defaultValue={form.getValues("accountType")}>
+              <Select onValueChange={(value) => form.setValue("accountType", value as "Cheque" | "Savings" | "Business")} value={form.watch("accountType")}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select account type" />
                 </SelectTrigger>
@@ -337,7 +368,6 @@ const CompanyDetails: React.FC = () => {
                   <SelectItem value="Business">Business</SelectItem>
                 </SelectContent>
               </Select>
-              {/* Removed error message for optional field */}
             </div>
           </div>
 

@@ -20,8 +20,12 @@ const sidebarNavItems = [
     href: "/settings/tax-liabilities",
   },
   {
-    title: "Payslip Design", // New item
-    href: "/settings/payslip-design", // New href
+    title: "Payslip Design",
+    href: "/settings/payslip-design",
+  },
+  {
+    title: "Mock Data", // New item
+    href: "/settings/mock-data", // New href
   },
   // Add more settings sub-menus here
   // {
