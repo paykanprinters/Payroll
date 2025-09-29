@@ -12,8 +12,9 @@ import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast
 
 // Define the schema for form validation
 const biometricDeviceSchema = z.object({
-  devicePort: z.string().min(1, "Device Port is required"),
-  deviceNumber: z.string().min(1, "Device Number is required"),
+  areaName: z.string().min(1, "Area Name is required"),
+  ipAddress: z.string().ip({ message: "Invalid IP Address format" }).min(1, "IP Address is required"),
+  portNumber: z.string().regex(/^\d+$/, "Port Number must be a number").min(1, "Port Number is required"),
 });
 
 type BiometricDeviceFormValues = z.infer<typeof biometricDeviceSchema>;
@@ -22,20 +23,21 @@ const BiometricDevices: React.FC = () => {
   const form = useForm<BiometricDeviceFormValues>({
     resolver: zodResolver(biometricDeviceSchema),
     defaultValues: {
-      devicePort: "",
-      deviceNumber: "",
+      areaName: "",
+      ipAddress: "",
+      portNumber: "",
     },
   });
 
   const handleTestConnectivity = async () => {
-    const { devicePort, deviceNumber } = form.getValues();
-    if (!devicePort || !deviceNumber) {
-      showError("Please enter both Device Port and Device Number to test connectivity.");
+    const { areaName, ipAddress, portNumber } = form.getValues();
+    if (!areaName || !ipAddress || !portNumber) {
+      showError("Please enter Area Name, IP Address, and Port Number to test connectivity.");
       return;
     }
 
-    const toastId = showLoading("Testing connectivity...");
-    console.log(`Attempting to test connectivity to device on port: ${devicePort}, number: ${deviceNumber}`);
+    const toastId = showLoading(`Testing connectivity to device at ${ipAddress}:${portNumber} in ${areaName}...`);
+    console.log(`Attempting to test connectivity to device at IP: ${ipAddress}, Port: ${portNumber}, Area: ${areaName}`);
 
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -45,9 +47,9 @@ const BiometricDevices: React.FC = () => {
 
     dismissToast(toastId);
     if (isConnected) {
-      showSuccess(`Successfully connected to device on port ${devicePort}, number ${deviceNumber}!`);
+      showSuccess(`Successfully connected to device at ${ipAddress}:${portNumber} in ${areaName}!`);
     } else {
-      showError(`Failed to connect to device on port ${devicePort}, number ${deviceNumber}. Please check settings.`);
+      showError(`Failed to connect to device at ${ipAddress}:${portNumber} in ${areaName}. Please check settings.`);
     }
   };
 
@@ -63,10 +65,10 @@ const BiometricDevices: React.FC = () => {
 
     dismissToast(toastId);
     if (isAdded) {
-      showSuccess(`Biometric device ${data.deviceNumber} added successfully!`);
+      showSuccess(`Biometric device in ${data.areaName} (${data.ipAddress}:${data.portNumber}) added successfully!`);
       form.reset(); // Clear form after successful addition
     } else {
-      showError(`Failed to add biometric device ${data.deviceNumber}. Please try again.`);
+      showError(`Failed to add biometric device in ${data.areaName}. Please try again.`);
     }
   };
 
@@ -83,27 +85,39 @@ const BiometricDevices: React.FC = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Device Connection Details</h3>
             <div>
-              <Label htmlFor="devicePort">Device Port</Label>
+              <Label htmlFor="areaName">Area Name</Label>
               <Input
-                id="devicePort"
-                {...form.register("devicePort")}
+                id="areaName"
+                {...form.register("areaName")}
                 className="mt-1"
-                placeholder="e.g., COM1, /dev/ttyUSB0, 8080"
+                placeholder="e.g., Main Office, Factory Floor, Branch A"
               />
-              {form.formState.errors.devicePort && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.devicePort.message}</p>
+              {form.formState.errors.areaName && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.areaName.message}</p>
               )}
             </div>
             <div>
-              <Label htmlFor="deviceNumber">Device Number / ID</Label>
+              <Label htmlFor="ipAddress">IP Address</Label>
               <Input
-                id="deviceNumber"
-                {...form.register("deviceNumber")}
+                id="ipAddress"
+                {...form.register("ipAddress")}
                 className="mt-1"
-                placeholder="e.g., 1, 101, ABC-123"
+                placeholder="e.g., 192.168.1.200"
               />
-              {form.formState.errors.deviceNumber && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.deviceNumber.message}</p>
+              {form.formState.errors.ipAddress && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.ipAddress.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="portNumber">Port Number</Label>
+              <Input
+                id="portNumber"
+                {...form.register("portNumber")}
+                className="mt-1"
+                placeholder="e.g., 4370 (common for ZKTeco)"
+              />
+              {form.formState.errors.portNumber && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.portNumber.message}</p>
               )}
             </div>
           </div>
