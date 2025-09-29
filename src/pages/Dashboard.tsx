@@ -1,11 +1,47 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, CreditCard, Activity } from "lucide-react";
-import { Button } from "@/components/ui/button"; // Added import for Button
+import { Button } from "@/components/ui/button";
+
+interface MockEmployee {
+  id: string;
+  salary: number;
+}
+
+interface MockPayslip {
+  id: string;
+  grossEarnings: number;
+}
 
 const Dashboard: React.FC = () => {
+  const [employeeCount, setEmployeeCount] = useState(0);
+  const [upcomingPayrollAmount, setUpcomingPayrollAmount] = useState(0);
+  const [recentPayslipCount, setRecentPayslipCount] = useState(0);
+
+  const loadDashboardData = () => {
+    const storedEmployees = localStorage.getItem("mockEmployees");
+    const employees: MockEmployee[] = storedEmployees ? JSON.parse(storedEmployees) : [];
+    setEmployeeCount(employees.length);
+
+    const storedPayslips = localStorage.getItem("mockPayslips");
+    const payslips: MockPayslip[] = storedPayslips ? JSON.parse(storedPayslips) : [];
+    setRecentPayslipCount(payslips.length);
+
+    // Calculate upcoming payroll amount (sum of all employee salaries for simplicity)
+    const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
+    setUpcomingPayrollAmount(totalSalaries);
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+    window.addEventListener('mockDataUpdated', loadDashboardData);
+    return () => {
+      window.removeEventListener('mockDataUpdated', loadDashboardData);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Payroll Dashboard</h1>
@@ -16,9 +52,9 @@ const Dashboard: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">25</div>
+            <div className="text-2xl font-bold">{employeeCount}</div>
             <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+              {employeeCount > 0 ? "+20.1% from last month (mock)" : "No employees (mock)"}
             </p>
           </CardContent>
         </Card>
@@ -28,9 +64,9 @@ const Dashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R 150,000</div>
+            <div className="text-2xl font-bold">R {upcomingPayrollAmount.toLocaleString('en-ZA')}</div>
             <p className="text-xs text-muted-foreground">
-              Due: 25th of the month
+              Due: 25th of the month (mock)
             </p>
           </CardContent>
         </Card>
@@ -40,9 +76,9 @@ const Dashboard: React.FC = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">120</div>
+            <div className="text-2xl font-bold">{recentPayslipCount}</div>
             <p className="text-xs text-muted-foreground">
-              Generated this month
+              Generated this month (mock)
             </p>
           </CardContent>
         </Card>
@@ -54,7 +90,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">Good</div>
             <p className="text-xs text-muted-foreground">
-              All regulations met
+              All regulations met (mock)
             </p>
           </CardContent>
         </Card>

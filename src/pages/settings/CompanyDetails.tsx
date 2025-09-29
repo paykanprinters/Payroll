@@ -103,6 +103,8 @@ const CompanyDetails: React.FC = () => {
     };
 
     window.addEventListener('mockDataUpdated', updateFormDefaults);
+    // Call on mount to ensure initial state reflects mock data if already enabled
+    updateFormDefaults(); 
     return () => {
       window.removeEventListener('mockDataUpdated', updateFormDefaults);
     };

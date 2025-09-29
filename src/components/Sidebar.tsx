@@ -59,11 +59,13 @@ const Sidebar: React.FC = () => {
     };
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
+    window.addEventListener('mockDataUpdated', updateCompanyDetails); // Listen for mock data changes too
     // Initial load in case it was set before the component mounted
     updateCompanyDetails();
 
     return () => {
       window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
+      window.removeEventListener('mockDataUpdated', updateCompanyDetails);
     };
   }, []);
 
