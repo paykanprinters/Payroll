@@ -1,0 +1,331 @@
+"use client";
+
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { showSuccess, showError } from "@/utils/toast";
+
+// Define the schema for form validation
+const companyDetailsSchema = z.object({
+  companyLegalName: z.string().min(1, "Company Legal Name is required"),
+  companyTradingName: z.string().min(1, "Company Trading Name is required"),
+  companyRegistrationNumber: z.string().min(1, "Registration Number is required"),
+  companyTaxNumber: z.string().min(1, "Tax Number is required"),
+  vatRegistrationNumber: z.string().optional(),
+  industry: z.string().optional(),
+  payeReferenceNumber: z.string().optional(),
+  uifReferenceNumber: z.string().optional(),
+  sdlReferenceNumber: z.string().optional(),
+  coidaRegistrationNumber: z.string().optional(),
+  physicalAddress: z.string().min(1, "Physical Address is required"),
+  postalAddress: z.string().optional(),
+  mainContactNumber: z.string().min(1, "Main Contact Number is required"),
+  alternativeContactNumber: z.string().optional(),
+  companyEmail: z.string().email("Invalid email address").min(1, "Company Email is required"),
+  companyWebsite: z.string().url("Invalid URL").optional().or(z.literal('')),
+  bankName: z.string().min(1, "Bank Name is required"),
+  accountHolderName: z.string().min(1, "Account Holder Name is required"),
+  accountNumber: z.string().min(1, "Account Number is required"),
+  branchCode: z.string().min(1, "Branch Code is required"),
+  accountType: z.enum(["Cheque", "Savings", "Business"], {
+    required_error: "Account Type is required",
+  }),
+});
+
+type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
+
+const CompanyDetails: React.FC = () => {
+  const form = useForm<CompanyDetailsFormValues>({
+    resolver: zodResolver(companyDetailsSchema),
+    defaultValues: {
+      companyLegalName: "",
+      companyTradingName: "",
+      companyRegistrationNumber: "",
+      companyTaxNumber: "",
+      vatRegistrationNumber: "",
+      industry: "",
+      payeReferenceNumber: "",
+      uifReferenceNumber: "",
+      sdlReferenceNumber: "",
+      coidaRegistrationNumber: "",
+      physicalAddress: "",
+      postalAddress: "",
+      mainContactNumber: "",
+      alternativeContactNumber: "",
+      companyEmail: "",
+      companyWebsite: "",
+      bankName: "",
+      accountHolderName: "",
+      accountNumber: "",
+      branchCode: "",
+      accountType: "Cheque", // Default value
+    },
+  });
+
+  const onSubmit = (data: CompanyDetailsFormValues) => {
+    console.log("Company Details submitted:", data);
+    // Here you would typically send this data to your backend
+    showSuccess("Company details saved successfully!");
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Company Details</CardTitle>
+        <CardDescription>
+          Manage your company's legal, contact, statutory, and banking information.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Legal & Trade Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Legal & Trade Information</h3>
+            <div>
+              <Label htmlFor="companyLegalName">Company Legal Name</Label>
+              <Input
+                id="companyLegalName"
+                {...form.register("companyLegalName")}
+                className="mt-1"
+              />
+              {form.formState.errors.companyLegalName && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyLegalName.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="companyTradingName">Company Trading Name</Label>
+              <Input
+                id="companyTradingName"
+                {...form.register("companyTradingName")}
+                className="mt-1"
+              />
+              {form.formState.errors.companyTradingName && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyTradingName.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="companyRegistrationNumber">Company Registration Number</Label>
+              <Input
+                id="companyRegistrationNumber"
+                {...form.register("companyRegistrationNumber")}
+                className="mt-1"
+              />
+              {form.formState.errors.companyRegistrationNumber && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyRegistrationNumber.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="companyTaxNumber">Company Tax Number</Label>
+              <Input
+                id="companyTaxNumber"
+                {...form.register("companyTaxNumber")}
+                className="mt-1"
+              />
+              {form.formState.errors.companyTaxNumber && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyTaxNumber.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="vatRegistrationNumber">VAT Registration Number</Label>
+              <Input
+                id="vatRegistrationNumber"
+                {...form.register("vatRegistrationNumber")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="industry">Industry / Business Type</Label>
+              <Input
+                id="industry"
+                {...form.register("industry")}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Statutory Registration Numbers (South Africa) */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Statutory Registration Numbers (South Africa)</h3>
+            <p className="text-sm text-muted-foreground">These numbers are essential for SARS and other regulatory bodies.</p>
+            <div>
+              <Label htmlFor="payeReferenceNumber">PAYE Reference Number</Label>
+              <Input
+                id="payeReferenceNumber"
+                {...form.register("payeReferenceNumber")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="uifReferenceNumber">UIF Reference Number</Label>
+              <Input
+                id="uifReferenceNumber"
+                {...form.register("uifReferenceNumber")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="sdlReferenceNumber">SDL Reference Number</Label>
+              <Input
+                id="sdlReferenceNumber"
+                {...form.register("sdlReferenceNumber")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="coidaRegistrationNumber">COIDA Registration Number</Label>
+              <Input
+                id="coidaRegistrationNumber"
+                {...form.register("coidaRegistrationNumber")}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Company Contact Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Company Contact Details</h3>
+            <div>
+              <Label htmlFor="physicalAddress">Physical Address</Label>
+              <Textarea
+                id="physicalAddress"
+                {...form.register("physicalAddress")}
+                className="mt-1"
+              />
+              {form.formState.errors.physicalAddress && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.physicalAddress.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="postalAddress">Postal Address (if different)</Label>
+              <Textarea
+                id="postalAddress"
+                {...form.register("postalAddress")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mainContactNumber">Main Contact Number</Label>
+              <Input
+                id="mainContactNumber"
+                {...form.register("mainContactNumber")}
+                className="mt-1"
+              />
+              {form.formState.errors.mainContactNumber && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.mainContactNumber.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="alternativeContactNumber">Alternative Contact Number</Label>
+              <Input
+                id="alternativeContactNumber"
+                {...form.register("alternativeContactNumber")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="companyEmail">Company Email Address</Label>
+              <Input
+                id="companyEmail"
+                type="email"
+                {...form.register("companyEmail")}
+                className="mt-1"
+              />
+              {form.formState.errors.companyEmail && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyEmail.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="companyWebsite">Company Web Address</Label>
+              <Input
+                id="companyWebsite"
+                type="url"
+                {...form.register("companyWebsite")}
+                className="mt-1"
+              />
+              {form.formState.errors.companyWebsite && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyWebsite.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Banking Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Banking Information</h3>
+            <p className="text-sm text-muted-foreground">Bank details for payroll disbursements.</p>
+            <div>
+              <Label htmlFor="bankName">Bank Name</Label>
+              <Input
+                id="bankName"
+                {...form.register("bankName")}
+                className="mt-1"
+              />
+              {form.formState.errors.bankName && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.bankName.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="accountHolderName">Account Holder Name</Label>
+              <Input
+                id="accountHolderName"
+                {...form.register("accountHolderName")}
+                className="mt-1"
+              />
+              {form.formState.errors.accountHolderName && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.accountHolderName.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="accountNumber">Account Number</Label>
+              <Input
+                id="accountNumber"
+                {...form.register("accountNumber")}
+                className="mt-1"
+              />
+              {form.formState.errors.accountNumber && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.accountNumber.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="branchCode">Branch Code</Label>
+              <Input
+                id="branchCode"
+                {...form.register("branchCode")}
+                className="mt-1"
+              />
+              {form.formState.errors.branchCode && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.branchCode.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="accountType">Account Type</Label>
+              <Select onValueChange={form.setValue("accountType")} defaultValue={form.getValues("accountType")}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select account type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Savings">Savings</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.accountType && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.accountType.message}</p>
+              )}
+            </div>
+          </div>
+
+          <Button type="submit">Save Company Details</Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default CompanyDetails;
