@@ -11,6 +11,7 @@ import {
   BarChart,
   Settings,
   Menu,
+  Landmark, // Using Landmark icon for Loans & Advancements
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -41,9 +42,15 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
 const Sidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [companyTradingName, setCompanyTradingName] = React.useState<string>("");
-  const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(null);
-  const [companyLogoSize, setCompanyLogoSize] = React.useState<number>(40);
+  const [companyTradingName, setCompanyTradingName] = React.useState<string>(
+    localStorage.getItem('companyTradingName') || "Payroll System"
+  );
+  const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
+    localStorage.getItem('companyLogoUrl')
+  );
+  const [companyLogoSize, setCompanyLogoSize] = React.useState<number>(
+    parseFloat(localStorage.getItem('companyLogoSize') || '40')
+  );
 
   React.useEffect(() => {
     const updateCompanyDetails = () => {
@@ -74,6 +81,7 @@ const Sidebar: React.FC = () => {
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/payslips", icon: ReceiptText, label: "Payslips" },
+    { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" }, // New nav item
     { to: "/reports", icon: BarChart, label: "Reports" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
@@ -90,7 +98,7 @@ const Sidebar: React.FC = () => {
               className="rounded-md"
             />
           )}
-          {!isCollapsed && companyTradingName && <span className="">{companyTradingName}</span>}
+          {!isCollapsed && <span className="">{companyTradingName}</span>}
         </Link>
         {!isMobileView && (
           <Button
