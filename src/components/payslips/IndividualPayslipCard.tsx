@@ -3,13 +3,6 @@
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from "recharts";
 
 interface MockPayslip {
   id: string;
@@ -29,9 +22,9 @@ interface PayslipDesignSettings {
   showEmployeeDetails?: boolean;
   showEarningsBreakdown?: boolean;
   showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean; // Now controlled by a toggle
-  showBankDetails?: boolean; // Now controlled by a toggle
-  sectionOrder?: ("Earnings" | "Deductions")[]; // Only Earnings and Deductions are orderable
+  showLeaveSummary?: boolean;
+  showBankDetails?: boolean;
+  sectionOrder?: ("Earnings" | "Deductions")[];
   layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
   earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
 }
@@ -44,8 +37,6 @@ interface IndividualPayslipCardProps {
   companyLogoSize: number;
   getEmployeeName: (employeeId: string) => string;
 }
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   payslip,
@@ -87,7 +78,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     if (!payslipDesignSettings.showLeaveSummary) return null;
     return (
       <div>
-        <h4 className="font-semibold text-sm mb-1 print:text-base">Leave Summary</h4>
+        <p className="font-semibold print:text-base">Leave Summary:</p>
         <p className="text-xs print:text-sm">Annual Leave Remaining: {payslip.leaveSummary.annual} days</p>
         <p className="text-xs print:text-sm">Sick Leave Remaining: {payslip.leaveSummary.sick} days</p>
         {payslip.leaveSummary.unpaid > 0 && (
@@ -122,8 +113,14 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   };
 
   const mainContentOrder = payslipDesignSettings.earningsDeductionsLayout === "earnings-left-deductions-right"
-    ? [renderEarningsContent(), renderDeductionsContent()]
-    : [renderDeductionsContent(), renderEarningsContent()];
+    ? [
+        { content: renderEarningsContent(), align: "text-left" },
+        { content: renderDeductionsContent(), align: "text-right" }
+      ]
+    : [
+        { content: renderDeductionsContent(), align: "text-left" },
+        { content: renderEarningsContent(), align: "text-right" }
+      ];
 
   return (
     <div 
@@ -146,7 +143,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
               className="rounded-md print:w-[60px] print:h-[60px]" // Adjust logo size for print
             />
           )}
-          <div className={cn("text-right", !payslipDesignSettings.showCompanyLogo && "w-full")}>
+          <div className={cn("text-right flex-grow", !payslipDesignSettings.showCompanyLogo && "w-full")}>
             <h2 className="text-md font-bold print:text-lg">{companyTradingName}</h2>
             {payslipDesignSettings.showCompanyDetails && (
               <>
@@ -182,8 +179,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
         {/* Main Pay Information: Earnings/Deductions */}
         <div className="grid grid-cols-2 gap-4 mt-4 print:mt-6 print:gap-8">
-          {mainContentOrder.map((content, index) => (
-            <div key={index}>{content}</div>
+          {mainContentOrder.map((item, index) => (
+            <div key={index} className={item.align}>{item.content}</div>
           ))}
         </div>
 

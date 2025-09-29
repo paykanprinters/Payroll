@@ -114,25 +114,20 @@ const PayslipDesign: React.FC = () => {
   };
 
   const renderMainContentPreview = () => {
-    const content = [];
     const earningsContent = renderSection("Earnings");
     const deductionsContent = renderSection("Deductions");
 
-    if (settings.earningsDeductionsLayout === "deductions-left-earnings-right") {
-      content.push(deductionsContent);
-      content.push(earningsContent);
-    } else {
-      content.push(earningsContent);
-      content.push(deductionsContent);
-    }
+    const leftColumnContent = settings.earningsDeductionsLayout === "deductions-left-earnings-right" ? deductionsContent : earningsContent;
+    const rightColumnContent = settings.earningsDeductionsLayout === "deductions-left-earnings-right" ? earningsContent : deductionsContent;
 
     return (
       <div className="grid grid-cols-2 gap-4 mt-4">
-        {content.map((item, index) => (
-          <div key={index} className="border-t pt-2">
-            {item}
-          </div>
-        ))}
+        <div className="border-t pt-2 text-left"> {/* Left column always text-left */}
+          {leftColumnContent}
+        </div>
+        <div className="border-t pt-2 text-right"> {/* Right column always text-right */}
+          {rightColumnContent}
+        </div>
       </div>
     );
   };
@@ -294,7 +289,7 @@ const PayslipDesign: React.FC = () => {
                     className="rounded-md"
                   />
                 )}
-                <div className={cn("text-right", !settings.showCompanyLogo && "w-full")}>
+                <div className={cn("text-right flex-grow", !settings.showCompanyLogo && "w-full")}>
                   <h2 className="text-lg font-bold">{companyTradingName}</h2>
                   {settings.showCompanyDetails && (
                     <>
