@@ -50,12 +50,24 @@ interface PayslipDesignSettings {
   sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
 }
 
+// Define default settings for payslip elements (should match PayslipDesign.tsx)
+const defaultPayslipSettings: PayslipDesignSettings = {
+  showCompanyLogo: true,
+  showCompanyDetails: true,
+  showEmployeeDetails: true,
+  showEarningsBreakdown: true,
+  showDeductionsBreakdown: true,
+  showLeaveSummary: true,
+  showBankDetails: true,
+  sectionOrder: ["Earnings", "Deductions", "Leave"],
+};
+
 const Payslips: React.FC = () => {
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
-    return savedSettings ? JSON.parse(savedSettings) : {};
+    return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings; // FIX APPLIED HERE
   });
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
@@ -102,7 +114,7 @@ const Payslips: React.FC = () => {
 
   const loadPayslipDesignSettings = () => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
-    setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : {});
+    setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings); // FIX APPLIED HERE
   };
 
   useEffect(() => {
