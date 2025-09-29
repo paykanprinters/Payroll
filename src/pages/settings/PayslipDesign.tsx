@@ -345,7 +345,15 @@ const PayslipDesign: React.FC = () => {
             {/* Dynamic Sections (Earnings/Deductions) */}
             {renderMainContentPreview()}
 
-            {/* Leave Summary */}
+            <Separator className="my-4" />
+
+            {/* Net Pay (Always at bottom) */}
+            <div className="flex justify-between items-center pt-2 mt-2">
+              <h3 className="text-lg font-bold">NET PAY</h3>
+              <h3 className="text-lg font-bold">R 17,622.88</h3>
+            </div>
+            
+            {/* Leave Summary (Moved below Net Pay) */}
             {settings.showLeaveSummary && (
               <div className="mt-4 pt-2 border-t border-dashed">
                 <h4 className="font-bold text-sm mb-1 underline">LEAVE SUMMARY</h4>
@@ -355,14 +363,6 @@ const PayslipDesign: React.FC = () => {
                 </div>
               </div>
             )}
-
-            <Separator className="my-4" />
-
-            {/* Net Pay (Always at bottom) */}
-            <div className="flex justify-between items-center pt-2 mt-2">
-              <h3 className="text-lg font-bold">NET PAY</h3>
-              <h3 className="text-lg font-bold">R 17,622.88</h3>
-            </div>
           </div>
         </CardContent>
       </Card>

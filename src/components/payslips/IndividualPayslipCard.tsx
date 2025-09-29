@@ -214,9 +214,6 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         ))}
       </div>
 
-      {/* Leave Summary */}
-      {renderLeaveSummaryContent()}
-
       <Separator className="my-4 print:my-4" />
 
       {/* Net Pay (Always at bottom) */}
@@ -224,6 +221,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         <h3 className="text-lg font-bold print:text-xl">NET PAY</h3>
         <h3 className="text-lg font-bold print:text-xl">R {payslip.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</h3>
       </div>
+      
+      {/* Leave Summary (Moved below Net Pay) */}
+      {renderLeaveSummaryContent()}
     </div>
   );
 };
