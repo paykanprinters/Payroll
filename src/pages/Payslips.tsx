@@ -269,6 +269,58 @@ const Payslips: React.FC = () => {
 
                     <Separator />
 
+                    {/* New: Individual Payslip Earnings Breakdown Chart */}
+                    <div className="mt-4">
+                      <h4 className="font-semibold text-sm mb-2">Earnings Breakdown</h4>
+                      <ResponsiveContainer width="100%" height={150}>
+                        <PieChart>
+                          <Pie
+                            data={payslip.earningsBreakdown}
+                            dataKey="amount"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={60}
+                            fill="#8884d8"
+                            labelLine={false}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {payslip.earningsBreakdown.map((entry, index) => (
+                              <Cell key={`cell-earnings-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* New: Individual Payslip Deductions Breakdown Chart */}
+                    <div className="mt-4">
+                      <h4 className="font-semibold text-sm mb-2">Deductions Breakdown</h4>
+                      <ResponsiveContainer width="100%" height={150}>
+                        <PieChart>
+                          <Pie
+                            data={payslip.deductionsBreakdown}
+                            dataKey="amount"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={60}
+                            fill="#82ca9d"
+                            labelLine={false}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {payslip.deductionsBreakdown.map((entry, index) => (
+                              <Cell key={`cell-deductions-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <Separator />
+
                     {/* Bank Details */}
                     {payslipDesignSettings.showBankDetails && (
                       <div className="border-t pt-2 mt-2">
