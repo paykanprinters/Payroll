@@ -3,6 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, CreditCard, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button"; // Added import for Button
 
 const Dashboard: React.FC = () => {
   return (
