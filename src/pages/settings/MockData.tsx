@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { showSuccess, showError } from "@/utils/toast";
+import { eachDayOfInterval, isWeekend } from "date-fns";
 
 // Define mock data structures
 interface MockCompanyDetails {
@@ -63,6 +64,30 @@ interface SavingPlan {
   status: "active" | "completed";
 }
 
+interface LeaveEntry {
+  id: string;
+  employeeId: string;
+  leaveType: "Annual Leave" | "Sick Leave" | "Unpaid Leave" | "Family Responsibility Leave" | "Maternity Leave";
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  workingDays: number;
+  reason?: string;
+  documentUrl?: string;
+}
+
+// Helper to calculate working days (excluding weekends)
+const calculateWorkingDays = (start: Date, end: Date): number => {
+  let count = 0;
+  const days = eachDayOfInterval({ start, end });
+  for (const day of days) {
+    if (!isWeekend(day)) {
+      count++;
+    }
+  }
+  return count;
+};
+
 interface MockPayslip {
   id: string;
   employeeId: string;
@@ -72,6 +97,7 @@ interface MockPayslip {
   netPay: number;
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
+  leaveSummary: { annual: number; sick: number; unpaid: number }; // Added leave summary
 }
 
 // Mock data generation functions
@@ -151,7 +177,32 @@ const generateMockSavingPlans = (): SavingPlan[] => [
   },
 ];
 
-const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], savingPlans: SavingPlan[]): MockPayslip[] => {
+const generateMockLeaveRecords = (): LeaveEntry[] => [
+  {
+    id: "LEAVE001",
+    employeeId: "EMP001",
+    leaveType: "Annual Leave",
+    startDate: "2024-08-05",
+    endDate: "2024-08-09",
+    totalDays: 5,
+    workingDays: 5,
+    reason: "Summer vacation",
+    documentUrl: undefined,
+  },
+  {
+    id: "LEAVE002",
+    employeeId: "EMP002",
+    leaveType: "Sick Leave",
+    startDate: "2024-07-22",
+    endDate: "2024-07-23",
+    totalDays: 2,
+    workingDays: 2,
+    reason: "Flu",
+    documentUrl: "data:application/pdf;base64,JVBERi0xLjQKJcOvxo... (mock base64 PDF)", // Mock document
+  },
+];
+
+const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], savingPlans: SavingPlan[], leaveRecords: LeaveEntry[]): MockPayslip[] => {
   const payslips: MockPayslip[] = [];
   const payPeriod = "2024-07-01 - 2024-07-31"; // Current mock pay period
   const currentMonth = "2024-07"; // For monthly deductions
@@ -222,6 +273,29 @@ const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], savingPl
       }
     });
 
+    // Leave Summary (simplified for mock)
+    let annualLeaveTaken = 0;
+    let sickLeaveTaken = 0;
+    let unpaidLeaveTaken = 0;
+
+    const employeeLeave = leaveRecords.filter(rec => rec.employeeId === emp.id);
+    employeeLeave.forEach(rec => {
+      const leaveStart = new Date(rec.startDate);
+      const leaveEnd = new Date(rec.endDate);
+      const periodStart = new Date(payPeriod.split(' - ')[0]);
+      const periodEnd = new Date(payPeriod.split(' - ')[1]);
+
+      // Only count leave within the current pay period
+      if (leaveStart <= periodEnd && leaveEnd >= periodStart) {
+        const overlapStart = leaveStart > periodStart ? leaveStart : periodStart;
+        const overlapEnd = leaveEnd < periodEnd ? leaveEnd : periodEnd;
+        const daysInPeriod = calculateWorkingDays(overlapStart, overlapEnd);
+
+        if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInPeriod;
+        else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInPeriod;
+        else if (rec.leaveType === "Unpaid Leave") unpaidLeaveTaken += daysInPeriod;
+      }
+    });
 
     const netPay = grossEarnings - totalDeductions;
 
@@ -234,6 +308,11 @@ const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], savingPl
       netPay: netPay,
       earningsBreakdown: earningsBreakdown,
       deductionsBreakdown: deductionsBreakdown,
+      leaveSummary: {
+        annual: 20 - annualLeaveTaken, // Mock total annual leave 20 days
+        sick: 10 - sickLeaveTaken,   // Mock total sick leave 10 days
+        unpaid: unpaidLeaveTaken,
+      },
     });
   });
   return payslips;
@@ -248,8 +327,9 @@ const MockData: React.FC = () => {
     const mockCompany = generateMockCompanyDetails();
     const mockEmployees = generateMockEmployees();
     const mockLoans = generateMockLoans();
-    const mockSavingPlans = generateMockSavingPlans(); // Generate mock saving plans
-    const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans); // Pass saving plans to payslip generation
+    const mockSavingPlans = generateMockSavingPlans();
+    const mockLeaveRecords = generateMockLeaveRecords(); // Generate mock leave records
+    const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords); // Pass leave records to payslip generation
 
     // Save company details
     Object.entries(mockCompany).forEach(([key, value]) => {
@@ -258,7 +338,8 @@ const MockData: React.FC = () => {
     localStorage.setItem("isMockDataEnabled", "true");
     localStorage.setItem("mockEmployees", JSON.stringify(mockEmployees));
     localStorage.setItem("mockLoans", JSON.stringify(mockLoans));
-    localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans)); // Save mock saving plans
+    localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans));
+    localStorage.setItem("mockLeaveRecords", JSON.stringify(mockLeaveRecords)); // Save mock leave records
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
     localStorage.setItem("applyPAYE", "true"); // Enable PAYE for mock data
     localStorage.setItem("applySDL", "true"); // Enable SDL for mock data
@@ -279,7 +360,8 @@ const MockData: React.FC = () => {
     localStorage.removeItem("isMockDataEnabled");
     localStorage.removeItem("mockEmployees");
     localStorage.removeItem("mockLoans");
-    localStorage.removeItem("mockSavingPlans"); // Clear mock saving plans
+    localStorage.removeItem("mockSavingPlans");
+    localStorage.removeItem("mockLeaveRecords"); // Clear mock leave records
     localStorage.removeItem("mockPayslips");
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");

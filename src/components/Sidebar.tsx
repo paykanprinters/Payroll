@@ -11,8 +11,9 @@ import {
   BarChart,
   Settings,
   Menu,
-  Landmark, // Using Landmark icon for Loans & Advancements
-  PiggyBank, // New icon for Savings
+  Landmark,
+  PiggyBank,
+  CalendarDays, // New icon for Vacation & Absence
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -83,7 +84,8 @@ const Sidebar: React.FC = () => {
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/payslips", icon: ReceiptText, label: "Payslips" },
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
-    { to: "/savings", icon: PiggyBank, label: "Savings" }, // New nav item
+    { to: "/savings", icon: PiggyBank, label: "Savings" },
+    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" }, // New nav item
     { to: "/reports", icon: BarChart, label: "Reports" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];

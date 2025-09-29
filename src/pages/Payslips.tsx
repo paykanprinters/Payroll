@@ -15,6 +15,7 @@ interface MockPayslip {
   netPay: number;
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
+  leaveSummary: { annual: number; sick: number; unpaid: number }; // Added leave summary
 }
 
 interface MockEmployee {
@@ -99,8 +100,11 @@ const Payslips: React.FC = () => {
         return settings.showLeaveSummary && (
           <div key="leave" className="border-t pt-2 mt-2">
             <h4 className="font-semibold text-sm mb-1">Leave Summary</h4>
-            <p className="text-xs">Annual Leave: 15 days (Available)</p>
-            <p className="text-xs">Sick Leave: 10 days (Available)</p>
+            <p className="text-xs">Annual Leave Remaining: {payslip.leaveSummary.annual} days</p>
+            <p className="text-xs">Sick Leave Remaining: {payslip.leaveSummary.sick} days</p>
+            {payslip.leaveSummary.unpaid > 0 && (
+              <p className="text-xs">Unpaid Leave Taken: {payslip.leaveSummary.unpaid} days</p>
+            )}
           </div>
         );
       default:
