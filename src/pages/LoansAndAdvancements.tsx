@@ -11,6 +11,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { showSuccess, showError } from "@/utils/toast";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 interface MockEmployee {
   id: string;
@@ -38,9 +51,13 @@ const loanSchema = z.object({
 
 type LoanFormValues = z.infer<typeof loanSchema>;
 
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+
 const LoansAndAdvancements: React.FC = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [loanSummaryData, setLoanSummaryData] = useState<{ name: string; totalLoan: number; remaining: number }[]>([]);
+  const [loansByEmployeeData, setLoansByEmployeeData] = useState<{ name: string; value: number }[]>([]);
 
   const form = useForm<LoanFormValues>({
     resolver: zodResolver(loanSchema),
@@ -63,9 +80,34 @@ const LoansAndAdvancements: React.FC = () => {
 
     const storedLoans = localStorage.getItem("mockLoans");
     if (storedLoans) {
-      setLoans(JSON.parse(storedLoans));
+      const loadedLoans: Loan[] = JSON.parse(storedLoans);
+      setLoans(loadedLoans);
+
+      // Calculate loan summary for BarChart
+      const totalLoanAmount = loadedLoans.reduce((sum, loan) => sum + loan.loanAmount, 0);
+      const totalRemainingBalance = loadedLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
+      setLoanSummaryData([
+        { name: "All Loans", totalLoan: totalLoanAmount, remaining: totalRemainingBalance },
+      ]);
+
+      // Calculate loans by employee for PieChart (top 5 employees with highest remaining balance)
+      const employeeLoanBalances = new Map<string, number>();
+      loadedLoans.forEach(loan => {
+        const employeeName = getEmployeeName(loan.employeeId);
+        employeeLoanBalances.set(employeeName, (employeeLoanBalances.get(employeeName) || 0) + loan.remainingBalance);
+      });
+
+      const sortedEmployeeLoans = Array.from(employeeLoanBalances.entries())
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5) // Top 5
+        .map(([name, value]) => ({ name, value }));
+      
+      setLoansByEmployeeData(sortedEmployeeLoans);
+
     } else {
       setLoans([]);
+      setLoanSummaryData([]);
+      setLoansByEmployeeData([]);
     }
   };
 
@@ -107,6 +149,57 @@ const LoansAndAdvancements: React.FC = () => {
       <p className="text-lg text-muted-foreground">
         Manage employee loans and advancements, including repayment schedules.
       </p>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loan Overview</CardTitle>
+            <CardDescription>Total loan amounts vs. remaining balances.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={loanSummaryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Legend />
+                <Bar dataKey="totalLoan" fill="#8884d8" name="Total Loan Amount" />
+                <Bar dataKey="remaining" fill="#82ca9d" name="Remaining Balance" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Loans by Employee (Top 5)</CardTitle>
+            <CardDescription>Distribution of remaining loan balances among employees.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={loansByEmployeeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {loansByEmployeeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>

@@ -9,13 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, isWeekend, eachDayOfInterval } from "date-fns";
+import { format, isWeekend, eachDayOfInterval, getMonth, getYear } from "date-fns";
 import { CalendarIcon, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { showSuccess, showError } from "@/utils/toast";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 interface MockEmployee {
   id: string;
@@ -61,10 +74,14 @@ const leaveSchema = z.object({
 
 type LeaveFormValues = z.infer<typeof leaveSchema>;
 
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+
 const VacationAbsence: React.FC = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
+  const [leaveTypeDistribution, setLeaveTypeDistribution] = useState<{ name: string; value: number }[]>([]);
+  const [monthlyLeaveData, setMonthlyLeaveData] = useState<{ name: string; days: number }[]>([]);
 
   const form = useForm<LeaveFormValues>({
     resolver: zodResolver(leaveSchema),
@@ -88,9 +105,46 @@ const VacationAbsence: React.FC = () => {
 
     const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
     if (storedLeaveRecords) {
-      setLeaveRecords(JSON.parse(storedLeaveRecords));
+      const loadedLeaveRecords: LeaveEntry[] = JSON.parse(storedLeaveRecords);
+      setLeaveRecords(loadedLeaveRecords);
+
+      // Calculate leave type distribution for PieChart
+      const leaveTypeMap = new Map<string, number>();
+      loadedLeaveRecords.forEach(record => {
+        leaveTypeMap.set(record.leaveType, (leaveTypeMap.get(record.leaveType) || 0) + record.workingDays);
+      });
+      setLeaveTypeDistribution(
+        Array.from(leaveTypeMap.entries()).map(([name, value]) => ({ name, value }))
+      );
+
+      // Calculate monthly leave data for BarChart
+      const monthlyLeaveMap = new Map<string, number>();
+      loadedLeaveRecords.forEach(record => {
+        const start = new Date(record.startDate);
+        const end = new Date(record.endDate);
+        const daysInInterval = eachDayOfInterval({ start, end });
+
+        daysInInterval.forEach(day => {
+          if (!isWeekend(day)) {
+            const monthYear = format(day, "MMM yyyy");
+            monthlyLeaveMap.set(monthYear, (monthlyLeaveMap.get(monthYear) || 0) + 1);
+          }
+        });
+      });
+
+      const sortedMonthlyLeaveData = Array.from(monthlyLeaveMap.entries())
+        .map(([name, days]) => ({ name, days }))
+        .sort((a, b) => {
+          const dateA = new Date(a.name);
+          const dateB = new Date(b.name);
+          return dateA.getTime() - dateB.getTime();
+        });
+      setMonthlyLeaveData(sortedMonthlyLeaveData);
+
     } else {
       setLeaveRecords([]);
+      setLeaveTypeDistribution([]);
+      setMonthlyLeaveData([]);
     }
   };
 
@@ -343,6 +397,56 @@ const VacationAbsence: React.FC = () => {
               onDayClick={setSelectedCalendarDate}
               className="rounded-md border"
             />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Leave Type Distribution</CardTitle>
+            <CardDescription>Breakdown of total working days taken by leave type.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={leaveTypeDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {leaveTypeDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => `${value} days`} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Leave Trends</CardTitle>
+            <CardDescription>Total working days taken per month.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyLeaveData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => `${value} days`} />
+                <Legend />
+                <Bar dataKey="days" fill="#82ca9d" name="Working Days Taken" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>

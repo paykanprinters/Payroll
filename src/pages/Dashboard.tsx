@@ -4,10 +4,24 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, CreditCard, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 interface MockEmployee {
   id: string;
   salary: number;
+  jobTitle: string; // Added for visualization
 }
 
 interface MockPayslip {
@@ -15,10 +29,14 @@ interface MockPayslip {
   grossEarnings: number;
 }
 
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+
 const Dashboard: React.FC = () => {
   const [employeeCount, setEmployeeCount] = useState(0);
   const [upcomingPayrollAmount, setUpcomingPayrollAmount] = useState(0);
   const [recentPayslipCount, setRecentPayslipCount] = useState(0);
+  const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
+  const [monthlyPayrollData, setMonthlyPayrollData] = useState<{ name: string; payroll: number }[]>([]);
 
   const loadDashboardData = () => {
     const storedEmployees = localStorage.getItem("mockEmployees");
@@ -32,6 +50,26 @@ const Dashboard: React.FC = () => {
     // Calculate upcoming payroll amount (sum of all employee salaries for simplicity)
     const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
     setUpcomingPayrollAmount(totalSalaries);
+
+    // Process employee job title data for PieChart
+    const jobTitleMap = new Map<string, number>();
+    employees.forEach((emp) => {
+      jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
+    });
+    setEmployeeJobTitleData(
+      Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
+    );
+
+    // Mock monthly payroll data for BarChart
+    setMonthlyPayrollData([
+      { name: "Jan", payroll: 300000 },
+      { name: "Feb", payroll: 320000 },
+      { name: "Mar", payroll: 310000 },
+      { name: "Apr", payroll: 330000 },
+      { name: "May", payroll: 350000 },
+      { name: "Jun", payroll: 340000 },
+      { name: "Jul", payroll: totalSalaries }, // Current month reflects actual mock data
+    ]);
   };
 
   useEffect(() => {
@@ -92,6 +130,56 @@ const Dashboard: React.FC = () => {
             <p className="text-xs text-muted-foreground">
               All regulations met (mock)
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Payroll Overview</CardTitle>
+            <CardDescription>Total gross payroll amount per month.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyPayrollData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Legend />
+                <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Employee Distribution by Job Title</CardTitle>
+            <CardDescription>Breakdown of employees across different roles.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={employeeJobTitleData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {employeeJobTitleData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>

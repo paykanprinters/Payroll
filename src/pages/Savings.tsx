@@ -11,6 +11,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { showSuccess, showError } from "@/utils/toast";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 interface MockEmployee {
   id: string;
@@ -38,9 +51,13 @@ const savingPlanSchema = z.object({
 
 type SavingPlanFormValues = z.infer<typeof savingPlanSchema>;
 
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+
 const Savings: React.FC = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
+  const [totalSavingsData, setTotalSavingsData] = useState<{ name: string; amount: number }[]>([]);
+  const [savingsByFrequencyData, setSavingsByFrequencyData] = useState<{ name: string; value: number }[]>([]);
 
   const form = useForm<SavingPlanFormValues>({
     resolver: zodResolver(savingPlanSchema),
@@ -63,9 +80,28 @@ const Savings: React.FC = () => {
 
     const storedSavingPlans = localStorage.getItem("mockSavingPlans");
     if (storedSavingPlans) {
-      setSavingPlans(JSON.parse(storedSavingPlans));
+      const loadedSavingPlans: SavingPlan[] = JSON.parse(storedSavingPlans);
+      setSavingPlans(loadedSavingPlans);
+
+      // Calculate total savings for BarChart
+      const totalAmount = loadedSavingPlans.reduce((sum, plan) => sum + plan.amount, 0);
+      setTotalSavingsData([
+        { name: "Total Active Savings", amount: totalAmount },
+      ]);
+
+      // Calculate savings by frequency for PieChart
+      const frequencyMap = new Map<string, number>();
+      loadedSavingPlans.forEach(plan => {
+        frequencyMap.set(plan.frequency, (frequencyMap.get(plan.frequency) || 0) + 1);
+      });
+      setSavingsByFrequencyData(
+        Array.from(frequencyMap.entries()).map(([name, value]) => ({ name, value }))
+      );
+
     } else {
       setSavingPlans([]);
+      setTotalSavingsData([]);
+      setSavingsByFrequencyData([]);
     }
   };
 
@@ -107,6 +143,56 @@ const Savings: React.FC = () => {
       <p className="text-lg text-muted-foreground">
         Manage employee savings deductions from their salaries.
       </p>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Active Savings Contributions</CardTitle>
+            <CardDescription>Overview of the total amount being saved by employees.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={totalSavingsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Legend />
+                <Bar dataKey="amount" fill="#8884d8" name="Total Savings" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Savings Plans by Frequency</CardTitle>
+            <CardDescription>Distribution of savings plans based on their deduction frequency.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={savingsByFrequencyData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {savingsByFrequencyData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>

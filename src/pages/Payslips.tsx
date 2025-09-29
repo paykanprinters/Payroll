@@ -1,10 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 interface MockPayslip {
   id: string;
@@ -24,6 +37,8 @@ interface MockEmployee {
   lastName: string;
 }
 
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+
 const Payslips: React.FC = () => {
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
@@ -31,13 +46,37 @@ const Payslips: React.FC = () => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     return savedSettings ? JSON.parse(savedSettings) : {};
   });
+  const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
+  const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
 
   const loadPayslipsAndEmployees = () => {
     const storedPayslips = localStorage.getItem("mockPayslips");
     if (storedPayslips) {
-      setPayslips(JSON.parse(storedPayslips));
+      const loadedPayslips: MockPayslip[] = JSON.parse(storedPayslips);
+      setPayslips(loadedPayslips);
+
+      // Calculate payroll summary for BarChart
+      const totalGross = loadedPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+      const totalNet = loadedPayslips.reduce((sum, p) => sum + p.netPay, 0);
+      setPayrollSummaryData([
+        { name: "Total Payroll", gross: totalGross, net: totalNet },
+      ]);
+
+      // Calculate deductions breakdown for PieChart
+      const deductionsMap = new Map<string, number>();
+      loadedPayslips.forEach(payslip => {
+        payslip.deductionsBreakdown.forEach(deduction => {
+          deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
+        });
+      });
+      setDeductionsBreakdownData(
+        Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
+      );
+
     } else {
       setPayslips([]);
+      setPayrollSummaryData([]);
+      setDeductionsBreakdownData([]);
     }
 
     const storedEmployees = localStorage.getItem("mockEmployees");
@@ -118,6 +157,57 @@ const Payslips: React.FC = () => {
       <p className="text-lg text-muted-foreground">
         Generate new payslips, view historical payslips, and manage payroll periods.
       </p>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Gross vs. Net Pay</CardTitle>
+            <CardDescription>Comparison of total gross earnings and net pay across all generated payslips.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={payrollSummaryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Legend />
+                <Bar dataKey="gross" fill="#8884d8" name="Gross Pay" />
+                <Bar dataKey="net" fill="#82ca9d" name="Net Pay" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Deductions Breakdown</CardTitle>
+            <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={deductionsBreakdownData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {deductionsBreakdownData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
