@@ -13,7 +13,7 @@ import {
   Menu,
   Landmark,
   PiggyBank,
-  CalendarDays, // New icon for Vacation & Absence
+  CalendarDays,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -41,9 +41,13 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
   </Button>
 );
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isCollapsed: boolean;
+  setIsCollapsed: (collapsed: boolean) => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const isMobile = useIsMobile();
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
   // Initialize state directly from localStorage
   const [companyTradingName, setCompanyTradingName] = React.useState<string>(
     localStorage.getItem('companyTradingName') || ""
@@ -95,7 +99,7 @@ const Sidebar: React.FC = () => {
     { to: "/payslips", icon: ReceiptText, label: "Payslips" },
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
     { to: "/savings", icon: PiggyBank, label: "Savings" },
-    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" }, // New nav item
+    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
     { to: "/reports", icon: BarChart, label: "Reports" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
