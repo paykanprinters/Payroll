@@ -102,7 +102,7 @@ const Sidebar: React.FC = () => {
 
   const renderSidebarContent = (isMobileView: boolean) => (
     <>
-      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+      <div className="flex min-h-14 items-center border-b px-4 lg:min-h-[60px] lg:px-6">
         <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-foreground flex-1 min-w-0">
           {companyLogoUrl && (
             <img
@@ -113,7 +113,7 @@ const Sidebar: React.FC = () => {
             />
           )}
           {!isCollapsed && (
-            <span className="text-lg font-bold whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0">
+            <span className="text-lg font-bold flex-1 min-w-0">
               {displayCompanyName}
             </span>
           )}
