@@ -16,6 +16,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
 
@@ -27,10 +29,29 @@ interface MockEmployee {
 
 interface MockPayslip {
   id: string;
+  employeeId: string;
+  payPeriod: string;
   grossEarnings: number;
+  totalDeductions: number;
+  netPay: number;
+  earningsBreakdown: { name: string; amount: number }[];
+  deductionsBreakdown: { name: string; amount: number }[];
+  leaveSummary: { annual: number; sick: number; unpaid: number };
 }
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+interface LeaveEntry {
+  id: string;
+  employeeId: string;
+  leaveType: "Annual Leave" | "Sick Leave" | "Unpaid Leave" | "Family Responsibility Leave" | "Maternity Leave";
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  workingDays: number;
+  reason?: string;
+  documentUrl?: string;
+}
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
@@ -39,6 +60,11 @@ const Dashboard: React.FC = () => {
   const [recentPayslipCount, setRecentPayslipCount] = useState(0);
   const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
   const [monthlyPayrollData, setMonthlyPayrollData] = useState<{ name: string; payroll: number }[]>([]);
+  const [totalDeductionsBreakdown, setTotalDeductionsBreakdown] = useState<{ name: string; value: number }[]>([]);
+  const [averageNetPayTrend, setAverageNetPayTrend] = useState<{ name: string; avgNetPay: number }[]>([]);
+  const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
+  const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
+
 
   const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
 
@@ -50,6 +76,9 @@ const Dashboard: React.FC = () => {
     const storedPayslips = localStorage.getItem("mockPayslips");
     const payslips: MockPayslip[] = storedPayslips ? JSON.parse(storedPayslips) : [];
     setRecentPayslipCount(payslips.length);
+
+    const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
+    const leaveRecords: LeaveEntry[] = storedLeaveRecords ? JSON.parse(storedLeaveRecords) : [];
 
     // Calculate upcoming payroll amount (sum of all employee salaries for simplicity)
     const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
@@ -74,6 +103,66 @@ const Dashboard: React.FC = () => {
       { name: "Jun", payroll: 340000 },
       { name: "Jul", payroll: totalSalaries }, // Current month reflects actual mock data
     ]);
+
+    // Calculate Total Deductions Breakdown (Pie Chart)
+    const deductionsMap = new Map<string, number>();
+    payslips.forEach(p => {
+      p.deductionsBreakdown.forEach(deduction => {
+        deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
+      });
+    });
+    setTotalDeductionsBreakdown(
+      Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
+    );
+
+    // Calculate Average Net Pay Trend (Line Chart)
+    const monthlyNetPayMap = new Map<string, { totalNetPay: number; employeeCount: number }>();
+    payslips.forEach(p => {
+      const monthYear = p.payPeriod.substring(0, 7); // "YYYY-MM"
+      const current = monthlyNetPayMap.get(monthYear) || { totalNetPay: 0, employeeCount: 0 };
+      monthlyNetPayMap.set(monthYear, {
+        totalNetPay: current.totalNetPay + p.netPay,
+        employeeCount: current.employeeCount + 1, // Assuming one payslip per employee per month
+      });
+    });
+    const sortedAverageNetPay = Array.from(monthlyNetPayMap.entries())
+      .map(([monthYear, data]) => ({
+        name: new Date(monthYear).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+        avgNetPay: data.employeeCount > 0 ? data.totalNetPay / data.employeeCount : 0,
+      }))
+      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+    setAverageNetPayTrend(sortedAverageNetPay);
+
+    // Calculate Employee Salary Distribution (Bar Chart)
+    const salaryRanges = [
+      { range: "R0 - R20k", min: 0, max: 20000, count: 0 },
+      { range: "R20k - R40k", min: 20001, max: 40000, count: 0 },
+      { range: "R40k - R60k", min: 40001, max: 60000, count: 0 },
+      { range: "R60k+", min: 60001, max: Infinity, count: 0 },
+    ];
+    employees.forEach(emp => {
+      for (const range of salaryRanges) {
+        if (emp.salary >= range.min && emp.salary <= range.max) {
+          range.count++;
+          break;
+        }
+      }
+    });
+    setEmployeeSalaryDistribution(salaryRanges.map(r => ({ range: r.range, count: r.count })));
+
+    // Calculate Leave Days Taken Trend (Bar Chart)
+    const monthlyLeaveDaysMap = new Map<string, number>();
+    leaveRecords.forEach(record => {
+      const monthYear = record.startDate.substring(0, 7); // "YYYY-MM"
+      monthlyLeaveDaysMap.set(monthYear, (monthlyLeaveDaysMap.get(monthYear) || 0) + record.workingDays);
+    });
+    const sortedLeaveDaysTrend = Array.from(monthlyLeaveDaysMap.entries())
+      .map(([monthYear, days]) => ({
+        name: new Date(monthYear).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+        days: days,
+      }))
+      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+    setLeaveDaysTakenTrend(sortedLeaveDaysTrend);
   };
 
   const loadCompanyDetails = () => {
@@ -199,6 +288,99 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Charts */}
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Deductions Breakdown</CardTitle>
+            <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={totalDeductionsBreakdown}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  style={{ fontSize: dataVisualsFontSize }}
+                >
+                  {totalDeductionsBreakdown.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Average Net Pay Trend</CardTitle>
+            <CardDescription>Average net pay per employee over recent months.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={averageNetPayTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Line type="monotone" dataKey="avgNetPay" stroke="#82ca9d" name="Average Net Pay" activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Employee Salary Distribution</CardTitle>
+            <CardDescription>Number of employees within different salary ranges.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={employeeSalaryDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Leave Days Taken</CardTitle>
+            <CardDescription>Total working days taken as leave per month.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={leaveDaysTakenTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Bar dataKey="days" fill="#00C49F" name="Working Days Taken" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
 
       <Card className="mt-4">
         <CardHeader>
