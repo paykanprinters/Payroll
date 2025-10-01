@@ -44,9 +44,8 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
 const Sidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [companyTradingName, setCompanyTradingName] = React.useState<string>(
-    localStorage.getItem('companyTradingName') || "Your Company Name" // Changed fallback to "Your Company Name"
-  );
+  const [companyTradingName, setCompanyTradingName] = React.useState<string>("");
+  const [companyLegalName, setCompanyLegalName] = React.useState<string>("");
   const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
     localStorage.getItem('companyLogoUrl')
   );
@@ -56,8 +55,11 @@ const Sidebar: React.FC = () => {
 
   React.useEffect(() => {
     const updateCompanyDetails = () => {
-      const name = localStorage.getItem('companyTradingName');
-      setCompanyTradingName(name && name.trim() !== '' ? name : "Your Company Name"); // Changed fallback to "Your Company Name"
+      const tradingName = localStorage.getItem('companyTradingName');
+      const legalName = localStorage.getItem('companyLegalName');
+
+      setCompanyTradingName(tradingName && tradingName.trim() !== '' ? tradingName : "");
+      setCompanyLegalName(legalName && legalName.trim() !== '' ? legalName : "");
 
       const logo = localStorage.getItem('companyLogoUrl');
       setCompanyLogoUrl(logo && logo.trim() !== '' ? logo : null);
@@ -66,7 +68,7 @@ const Sidebar: React.FC = () => {
       const size = parseFloat(sizeStr || '40');
       setCompanyLogoSize(isNaN(size) ? 40 : size);
       
-      console.log("Sidebar: Received update. Current localStorage values:", { name, logo, size });
+      console.log("Sidebar: Received update. Current localStorage values:", { tradingName, legalName, logo, size });
     };
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
@@ -78,6 +80,8 @@ const Sidebar: React.FC = () => {
       window.removeEventListener('mockDataUpdated', updateCompanyDetails);
     };
   }, []);
+
+  const displayCompanyName = companyTradingName || companyLegalName || "Your Company Name";
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -93,16 +97,20 @@ const Sidebar: React.FC = () => {
   const renderSidebarContent = (isMobileView: boolean) => (
     <>
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground">
+        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground overflow-hidden">
           {companyLogoUrl && (
             <img
               src={companyLogoUrl}
               alt="Company Logo"
               style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-              className="rounded-md"
+              className="rounded-md flex-shrink-0"
             />
           )}
-          {!isCollapsed && <span className="">{companyTradingName}</span>}
+          {!isCollapsed && (
+            <span className="text-lg font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+              {displayCompanyName}
+            </span>
+          )}
         </Link>
         {!isMobileView && (
           <Button
