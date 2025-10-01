@@ -27,6 +27,7 @@ const MockData: React.FC = () => {
     const mockLoans = generateMockLoans();
     const mockSavingPlans = generateMockSavingPlans();
     const mockLeaveRecords = generateMockLeaveRecords();
+    console.log("MockData: Generated mockLeaveRecords:", mockLeaveRecords); // Added log
     const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords);
 
     // Save company details
@@ -38,6 +39,7 @@ const MockData: React.FC = () => {
     localStorage.setItem("mockLoans", JSON.stringify(mockLoans));
     localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans));
     localStorage.setItem("mockLeaveRecords", JSON.stringify(mockLeaveRecords));
+    console.log("MockData: Saved mockLeaveRecords to localStorage:", JSON.parse(localStorage.getItem("mockLeaveRecords") || '[]')); // Added log
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
     localStorage.setItem("applyPAYE", "true"); // Enable PAYE for mock data
     localStorage.setItem("applySDL", "true"); // Enable SDL for mock data
@@ -69,6 +71,7 @@ const MockData: React.FC = () => {
     localStorage.removeItem("mockLoans");
     localStorage.removeItem("mockSavingPlans");
     localStorage.removeItem("mockLeaveRecords");
+    console.log("MockData: Cleared mockLeaveRecords from localStorage."); // Added log
     localStorage.removeItem("mockPayslips");
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");

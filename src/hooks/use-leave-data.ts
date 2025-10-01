@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+import { format, eachDayOfInterval, isWeekend } from "date-fns"; // Added eachDayOfInterval, isWeekend
 import { calculateWorkingDays } from "@/lib/utils"; // Import helper from shared utility
 
 interface MockEmployee {
@@ -36,10 +36,13 @@ export const useLeaveData = () => {
   const loadData = useCallback(() => {
     const storedEmployees = localStorage.getItem("mockEmployees");
     setEmployees(storedEmployees ? JSON.parse(storedEmployees) : []);
+    console.log("useLeaveData: Loaded employees:", storedEmployees ? JSON.parse(storedEmployees) : []); // Added log
 
     const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
+    console.log("useLeaveData: Raw storedLeaveRecords:", storedLeaveRecords); // Added log
     const loadedLeaveRecords: LeaveEntry[] = storedLeaveRecords ? JSON.parse(storedLeaveRecords) : [];
     setLeaveRecords(loadedLeaveRecords);
+    console.log("useLeaveData: Parsed loadedLeaveRecords:", loadedLeaveRecords); // Added log
 
     // Calculate leave type distribution for PieChart
     const leaveTypeMap = new Map<string, number>();
