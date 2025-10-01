@@ -103,7 +103,7 @@ const Sidebar: React.FC = () => {
   const renderSidebarContent = (isMobileView: boolean) => (
     <>
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground flex-1 min-w-0">
+        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-foreground flex-1 min-w-0">
           {companyLogoUrl && (
             <img
               src={companyLogoUrl}
