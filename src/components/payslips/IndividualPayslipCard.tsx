@@ -53,8 +53,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
   // Placeholder for company details from localStorage (for preview)
   const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-  const companyRegistrationNumber = localStorage.getItem('companyRegistrationRegistrationNumber') || "Reg. No: N/A";
-  const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "VAT No: N/A";
+  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A"; // Corrected key
+  const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
   const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
   const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
   const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";

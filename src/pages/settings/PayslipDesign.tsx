@@ -71,7 +71,7 @@ const PayslipDesign: React.FC = () => {
   // Placeholder for company details from localStorage (for preview)
   const companyTradingName = localStorage.getItem('companyTradingName') || "Your Company Name";
   const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
+  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A"; // Corrected key
   const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
   const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
   const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";

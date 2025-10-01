@@ -45,7 +45,7 @@ const Sidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [companyTradingName, setCompanyTradingName] = React.useState<string>(
-    localStorage.getItem('companyTradingName') || "Payroll System"
+    localStorage.getItem('companyTradingName') || "Your Company Name" // Changed fallback to "Your Company Name"
   );
   const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
     localStorage.getItem('companyLogoUrl')
@@ -57,7 +57,7 @@ const Sidebar: React.FC = () => {
   React.useEffect(() => {
     const updateCompanyDetails = () => {
       const name = localStorage.getItem('companyTradingName');
-      setCompanyTradingName(name && name.trim() !== '' ? name : "Payroll System");
+      setCompanyTradingName(name && name.trim() !== '' ? name : "Your Company Name"); // Changed fallback to "Your Company Name"
 
       const logo = localStorage.getItem('companyLogoUrl');
       setCompanyLogoUrl(logo && logo.trim() !== '' ? logo : null);
