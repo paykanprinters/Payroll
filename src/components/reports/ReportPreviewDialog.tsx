@@ -53,6 +53,12 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   companyLogoSize,
   reportDesignSettings, // Destructure reportDesignSettings
 }) => {
+  React.useEffect(() => {
+    if (isOpen) {
+      console.log("ReportPreviewDialog: Current reportDesignSettings:", reportDesignSettings);
+    }
+  }, [isOpen, reportDesignSettings]);
+
   const handlePrintReport = () => {
     const reportElement = document.getElementById("report-preview-content");
     if (reportElement) {
@@ -122,17 +128,18 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
             getPrintClasses(reportDesignSettings.defaultReportPaperSize) // Apply dynamic print classes from report settings
           )}>
             {/* Report Header with Company Details */}
-            <div className="flex justify-between items-start mb-6 print:mb-8">
-              {reportDesignSettings.includeCompanyLogo && companyLogoUrl && (
-                <img
-                  src={companyLogoUrl}
-                  alt="Company Logo"
-                  style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-                  className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
-                />
-              )}
-              {reportDesignSettings.includeCompanyDetails && (
-                <div className={cn("text-right text-[13px] print:text-[13px]", !reportDesignSettings.includeCompanyLogo && "w-full")}>
+            {(reportDesignSettings.includeCompanyLogo && companyLogoUrl) || reportDesignSettings.includeCompanyDetails ? (
+              <div className="flex justify-between items-start mb-6 print:mb-8">
+                {reportDesignSettings.includeCompanyLogo && companyLogoUrl && (
+                  <img
+                    src={companyLogoUrl}
+                    alt="Company Logo"
+                    style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+                    className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
+                  />
+                )}
+                {reportDesignSettings.includeCompanyDetails && (
+                  <div className="text-right text-[13px] print:text-[13px] w-full">
                     <h2 className="text-md font-bold print:text-lg">{displayCompanyName}</h2>
                     {companyTradingName && companyTradingName !== companyLegalName && (
                       <p className="text-[13px] print:text-[13px]">{companyTradingName}</p>
@@ -143,9 +150,10 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
                     <p>Tel: {mainContactNumber}</p>
                     <p>Email: {companyEmail}</p>
                     <p>Web: {companyWebsite}</p>
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <Separator className="my-4 print:my-4" />
 
