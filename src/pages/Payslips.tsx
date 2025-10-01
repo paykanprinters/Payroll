@@ -2,25 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 
 // Import new modular components
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
-import PayslipsList from "@/components/payslips/PayslipsList";
-import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces"; // Updated import
+import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard directly
+import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -30,13 +17,12 @@ interface PayslipDesignSettings {
   showDeductionsBreakdown?: boolean;
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
-  showYTD?: boolean; // New setting for YTD calculations
-  sectionOrder?: ("Earnings" | "Deductions")[]; // Only Earnings and Deductions are orderable
-  layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
-  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
+  showYTD?: boolean;
+  sectionOrder?: ("Earnings" | "Deductions")[];
+  layoutSize?: "Letter" | "A4" | "A5";
+  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
 }
 
-// Define default settings for payslip elements (should match PayslipDesign.tsx)
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
   showCompanyDetails: true,
@@ -45,10 +31,10 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showDeductionsBreakdown: true,
   showLeaveSummary: true,
   showBankDetails: true,
-  showYTD: true, // Default to true
-  sectionOrder: ["Earnings", "Deductions"], // Only Earnings and Deductions are orderable
-  layoutSize: "A4", // Default to A4
-  earningsDeductionsLayout: "deductions-left-earnings-right", // Default layout
+  showYTD: true,
+  sectionOrder: ["Earnings", "Deductions"],
+  layoutSize: "A4",
+  earningsDeductionsLayout: "deductions-left-earnings-right",
 };
 
 const Payslips: React.FC = () => {
@@ -61,7 +47,6 @@ const Payslips: React.FC = () => {
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
 
-  // State for single payslip generation
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
 
@@ -139,6 +124,8 @@ const Payslips: React.FC = () => {
   const companyLogoUrl = localStorage.getItem('companyLogoUrl');
   const companyLogoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
 
+  const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Payslip Generation & History</h1>
@@ -156,19 +143,31 @@ const Payslips: React.FC = () => {
         getEmployeeName={getEmployeeName}
       />
 
+      {selectedPayslipForPreview && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Payslip Preview</CardTitle>
+            <CardDescription>
+              Preview of the selected payslip for {getEmployeeName(selectedPayslipForPreview.employeeId)} - {selectedPayslipForPreview.payPeriod}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <IndividualPayslipCard
+              payslip={selectedPayslipForPreview}
+              payslipDesignSettings={payslipDesignSettings}
+              companyTradingName={companyTradingName}
+              companyLogoUrl={companyLogoUrl}
+              companyLogoSize={companyLogoSize}
+              employees={employees}
+              getEmployeeName={getEmployeeName}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <PayslipSummaryCharts
         payrollSummaryData={payrollSummaryData}
         deductionsBreakdownData={deductionsBreakdownData}
-      />
-
-      <PayslipsList
-        payslips={payslips}
-        payslipDesignSettings={payslipDesignSettings}
-        companyTradingName={companyTradingName}
-        companyLogoUrl={companyLogoUrl}
-        companyLogoSize={companyLogoSize}
-        employees={employees} // Pass employees down
-        getEmployeeName={getEmployeeName}
       />
 
       <div className="mt-4 p-4 border rounded-lg bg-green-50 text-green-800">

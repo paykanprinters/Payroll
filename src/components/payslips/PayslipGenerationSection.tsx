@@ -42,6 +42,21 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 }) => {
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
 
+  // Effect to automatically select the most recent payslip when an employee is selected
+  React.useEffect(() => {
+    if (selectedEmployeeId && filteredPayslipsForEmployee.length > 0) {
+      // Sort payslips by pay period (assuming 'payPeriod' is sortable string like 'YYYY-MM-DD - YYYY-MM-DD')
+      const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
+      if (mostRecentPayslip && mostRecentPayslip.id !== selectedPayslipId) {
+        setSelectedPayslipId(mostRecentPayslip.id);
+      }
+    } else if (!selectedEmployeeId && selectedPayslipId) {
+      // Clear selected payslip if no employee is selected
+      setSelectedPayslipId("");
+    }
+  }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
+
+
   const handlePrintPayslip = () => {
     if (!selectedPayslipId) {
       showError("Please select a payslip to print.");
