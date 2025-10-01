@@ -113,7 +113,7 @@ const Sidebar: React.FC = () => {
             />
           )}
           {!isCollapsed && (
-            <span className="text-lg font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+            <span className="text-lg font-bold whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0">
               {displayCompanyName}
             </span>
           )}
