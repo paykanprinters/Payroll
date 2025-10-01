@@ -32,6 +32,7 @@ interface MockPayslip {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const Dashboard: React.FC = () => {
+  const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
   const [upcomingPayrollAmount, setUpcomingPayrollAmount] = useState(0);
   const [recentPayslipCount, setRecentPayslipCount] = useState(0);
@@ -72,17 +73,28 @@ const Dashboard: React.FC = () => {
     ]);
   };
 
+  const loadCompanyDetails = () => {
+    const legalName = localStorage.getItem('companyLegalName');
+    setCompanyLegalName(legalName || "");
+  };
+
   useEffect(() => {
     loadDashboardData();
+    loadCompanyDetails();
     window.addEventListener('mockDataUpdated', loadDashboardData);
+    window.addEventListener('companyDetailsUpdated', loadCompanyDetails); // Listen for company detail updates
     return () => {
       window.removeEventListener('mockDataUpdated', loadDashboardData);
+      window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
     };
   }, []);
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Payroll Dashboard</h1>
+      <h1 className="text-3xl font-bold">
+        {companyLegalName && <span className="text-muted-foreground mr-2">{companyLegalName}</span>}
+        Payroll Dashboard
+      </h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
