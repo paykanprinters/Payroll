@@ -15,6 +15,8 @@ interface MockPayslip {
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
   leaveSummary: { annual: number; sick: number; unpaid: number };
+  ytdGrossEarnings: number; // New YTD field
+  ytdTotalDeductions: number; // New YTD field
 }
 
 interface PayslipDesignSettings {
@@ -25,6 +27,7 @@ interface PayslipDesignSettings {
   showDeductionsBreakdown?: boolean;
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
+  showYTD?: boolean; // New setting for YTD calculations
   sectionOrder?: ("Earnings" | "Deductions" | "Leave")[];
   layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
   earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting

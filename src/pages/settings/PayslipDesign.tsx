@@ -20,6 +20,7 @@ const defaultPayslipSettings = {
   showDeductionsBreakdown: true,
   showLeaveSummary: true, // Now controlled by a toggle
   showBankDetails: true, // Now controlled by a toggle
+  showYTD: true, // New setting for YTD calculations
   sectionOrder: ["Earnings", "Deductions"] as ("Earnings" | "Deductions")[], // Only Earnings and Deductions are orderable
   layoutSize: "A4" as "Letter" | "A4" | "A5", // Layout size setting
   earningsDeductionsLayout: "deductions-left-earnings-right" as "deductions-left-earnings-right" | "earnings-left-deductions-right", // New layout setting
@@ -240,6 +241,14 @@ const PayslipDesign: React.FC = () => {
                   onCheckedChange={(checked) => handleToggleChange("showBankDetails", checked)}
                 />
               </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="showYTD">Show YTD Calculations</Label>
+                <Switch
+                  id="showYTD"
+                  checked={settings.showYTD}
+                  onCheckedChange={(checked) => handleToggleChange("showYTD", checked)}
+                />
+              </div>
             </div>
 
             <Separator />
@@ -363,6 +372,17 @@ const PayslipDesign: React.FC = () => {
                 <div className="grid grid-cols-2 gap-1 text-xs">
                   <p>Annual Leave Remaining:</p> <p className="text-right">15 days</p>
                   <p>Sick Leave Remaining:</p> <p className="text-right">10 days</p>
+                </div>
+              </div>
+            )}
+
+            {/* YTD Calculations */}
+            {settings.showYTD && (
+              <div className="mt-4 pt-2 border-t border-dashed">
+                <h4 className="font-bold text-sm mb-1 underline">YEAR TO DATE (YTD)</h4>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <p>Gross Earnings YTD:</p> <p className="text-right">R 157,500.00</p>
+                  <p>Total Deductions YTD:</p> <p className="text-right">R 43,877.12</p>
                 </div>
               </div>
             )}

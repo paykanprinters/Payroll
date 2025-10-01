@@ -15,6 +15,8 @@ interface MockPayslip {
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
   leaveSummary: { annual: number; sick: number; unpaid: number };
+  ytdGrossEarnings: number; // New YTD field
+  ytdTotalDeductions: number; // New YTD field
 }
 
 interface PayslipDesignSettings {
@@ -25,6 +27,7 @@ interface PayslipDesignSettings {
   showDeductionsBreakdown?: boolean;
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
+  showYTD?: boolean; // New setting for YTD calculations
   sectionOrder?: ("Earnings" | "Deductions")[]; // Only Earnings and Deductions are orderable
   layoutSize?: "Letter" | "A4" | "A5"; // Layout size setting
   earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right"; // New layout setting
@@ -113,6 +116,19 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
               <p>Unpaid Leave Taken:</p> <p className="text-right">{payslip.leaveSummary.unpaid} days</p>
             </>
           )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderYTDContent = () => {
+    if (!payslipDesignSettings.showYTD) return null;
+    return (
+      <div className="mt-4 pt-2 border-t border-dashed">
+        <h4 className="font-bold text-sm mb-1 underline print:text-base">YEAR TO DATE (YTD)</h4>
+        <div className="grid grid-cols-2 gap-1 text-xs print:text-sm">
+          <p>Gross Earnings YTD:</p> <p className="text-right">R {payslip.ytdGrossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+          <p>Total Deductions YTD:</p> <p className="text-right">R {payslip.ytdTotalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
     );
@@ -227,6 +243,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       
       {/* Leave Summary (Moved below Net Pay) */}
       {renderLeaveSummaryContent()}
+
+      {/* YTD Calculations */}
+      {renderYTDContent()}
     </div>
   );
 };

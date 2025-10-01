@@ -1,6 +1,6 @@
 "use client";
 
-import { eachDayOfInterval, isWeekend } from "date-fns";
+import { eachDayOfInterval, isWeekend, format } from "date-fns";
 
 // Interfaces for Mock Data
 export interface MockCompanyDetails {
@@ -97,6 +97,8 @@ export interface MockPayslip {
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
   leaveSummary: { annual: number; sick: number; unpaid: number };
+  ytdGrossEarnings: number; // New YTD field
+  ytdTotalDeductions: number; // New YTD field
 }
 
 // Helper to calculate working days (excluding weekends) - moved here for payslip generation
@@ -349,116 +351,133 @@ export const generateMockLeaveRecords = (): LeaveEntry[] => [
 ];
 
 export const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], savingPlans: SavingPlan[], leaveRecords: LeaveEntry[]): MockPayslip[] => {
-  const payslips: MockPayslip[] = [];
-  const payPeriod = "2024-07-01 - 2024-07-31"; // Current mock pay period
-  const currentMonth = "2024-07"; // For monthly deductions
+  const allPayslips: MockPayslip[] = [];
+  const currentYear = new Date().getFullYear();
+  const currentMonthIndex = new Date().getMonth(); // 0 for Jan, 6 for July
 
   employees.forEach(emp => {
-    let grossEarnings = emp.salary;
-    let totalDeductions = 0;
-    const earningsBreakdown = [{ name: "Basic Salary", amount: emp.salary }];
-    const deductionsBreakdown: { name: string; amount: number }[] = [];
+    let ytdGrossEarnings = 0;
+    let ytdTotalDeductions = 0;
 
-    // Statutory Deductions (simplified)
-    const paye = grossEarnings * 0.15; // Simplified PAYE
-    const uif = Math.min(grossEarnings * 0.01, 177.12); // Simplified UIF cap
-    const sdl = grossEarnings * 0.01; // Simplified SDL
-    const providentFund = grossEarnings * 0.075; // Simplified Provident Fund
+    for (let month = 0; month <= currentMonthIndex; month++) {
+      const monthDate = new Date(currentYear, month, 1);
+      const payPeriodStart = format(monthDate, "yyyy-MM-01");
+      const payPeriodEnd = format(new Date(currentYear, month + 1, 0), "yyyy-MM-dd"); // Last day of the month
+      const payPeriod = `${payPeriodStart} - ${payPeriodEnd}`;
+      const monthString = format(monthDate, "yyyy-MM");
 
-    if (localStorage.getItem('applyPAYE') === 'true') {
-      deductionsBreakdown.push({ name: "PAYE", amount: paye });
-      totalDeductions += paye;
-    }
-    deductionsBreakdown.push({ name: "UIF", amount: uif });
-    totalDeductions += uif;
-    if (localStorage.getItem('applySDL') === 'true') {
-      deductionsBreakdown.push({ name: "SDL", amount: sdl });
-      totalDeductions += sdl;
-    }
-    deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
-    totalDeductions += providentFund;
+      let grossEarnings = emp.salary;
+      let totalDeductions = 0;
+      const earningsBreakdown = [{ name: "Basic Salary", amount: emp.salary }];
+      const deductionsBreakdown: { name: string; amount: number }[] = [];
 
-    // Loan Deductions
-    const employeeLoans = loans.filter(loan => loan.employeeId === emp.id);
-    employeeLoans.forEach(loan => {
-      let deductionAmount = 0;
-      if (loan.status !== "completed" && loan.startDate.substring(0, 7) <= currentMonth) {
-        if (loan.frequency === "monthly") {
-          deductionAmount = Math.min(loan.repaymentAmount, loan.remainingBalance);
-        } else if (loan.frequency === "weekly") {
-          // Assuming 4 weeks in a month for weekly deductions for simplicity
-          deductionAmount = Math.min(loan.repaymentAmount * 4, loan.remainingBalance);
-        }
+      // Statutory Deductions (simplified)
+      const payeRate = 0.15; // Simplified PAYE rate
+      const uifCap = 177.12; // Simplified UIF cap
+      const sdlRate = 0.01; // Simplified SDL rate
+      const providentFundRate = 0.075; // Simplified Provident Fund rate
+
+      const paye = grossEarnings * payeRate;
+      const uif = Math.min(grossEarnings * 0.01, uifCap);
+      const sdl = grossEarnings * sdlRate;
+      const providentFund = grossEarnings * providentFundRate;
+
+      if (localStorage.getItem('applyPAYE') === 'true') {
+        deductionsBreakdown.push({ name: "PAYE", amount: paye });
+        totalDeductions += paye;
       }
-
-      if (deductionAmount > 0) {
-        deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: deductionAmount });
-        totalDeductions += deductionAmount;
+      deductionsBreakdown.push({ name: "UIF", amount: uif });
+      totalDeductions += uif;
+      if (localStorage.getItem('applySDL') === 'true') {
+        deductionsBreakdown.push({ name: "SDL", amount: sdl });
+        totalDeductions += sdl;
       }
-    });
+      deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
+      totalDeductions += providentFund;
 
-    // Savings Deductions
-    const employeeSavingPlans = savingPlans.filter(plan => plan.employeeId === emp.id);
-    employeeSavingPlans.forEach(plan => {
-      let deductionAmount = 0;
-      if (plan.status === "active" && plan.startDate.substring(0, 7) <= currentMonth) {
-        if (!plan.endDate || plan.endDate >= currentMonth) { // Check if plan is still active
-          if (plan.frequency === "monthly") {
-            deductionAmount = plan.amount;
-          } else if (plan.frequency === "weekly") {
-            // Assuming 4 weeks in a month for weekly deductions for simplicity
-            deductionAmount = plan.amount * 4;
+      // Loan Deductions for this month
+      const employeeLoans = loans.filter(loan => loan.employeeId === emp.id);
+      employeeLoans.forEach(loan => {
+        let deductionAmount = 0;
+        if (loan.status !== "completed" && loan.startDate.substring(0, 7) <= monthString) {
+          if (loan.frequency === "monthly") {
+            deductionAmount = Math.min(loan.repaymentAmount, loan.remainingBalance);
+          } else if (loan.frequency === "weekly") {
+            deductionAmount = Math.min(loan.repaymentAmount * 4, loan.remainingBalance); // Approx 4 weeks
           }
         }
-      }
+        if (deductionAmount > 0) {
+          deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: deductionAmount });
+          totalDeductions += deductionAmount;
+        }
+      });
 
-      if (deductionAmount > 0) {
-        deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: deductionAmount });
-        totalDeductions += deductionAmount;
-      }
-    });
+      // Savings Deductions for this month
+      const employeeSavingPlans = savingPlans.filter(plan => plan.employeeId === emp.id);
+      employeeSavingPlans.forEach(plan => {
+        let deductionAmount = 0;
+        if (plan.status === "active" && plan.startDate.substring(0, 7) <= monthString) {
+          if (!plan.endDate || plan.endDate.substring(0, 7) >= monthString) {
+            if (plan.frequency === "monthly") {
+              deductionAmount = plan.amount;
+            } else if (plan.frequency === "weekly") {
+              deductionAmount = plan.amount * 4; // Approx 4 weeks
+            }
+          }
+        }
+        if (deductionAmount > 0) {
+          deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: deductionAmount });
+          totalDeductions += deductionAmount;
+        }
+      });
 
-    // Leave Summary (simplified for mock)
-    let annualLeaveTaken = 0;
-    let sickLeaveTaken = 0;
-    let unpaidLeaveTaken = 0;
+      // Leave Summary (simplified for mock)
+      let annualLeaveTaken = 0;
+      let sickLeaveTaken = 0;
+      let unpaidLeaveTaken = 0;
 
-    const employeeLeave = leaveRecords.filter(rec => rec.employeeId === emp.id);
-    employeeLeave.forEach(rec => {
-      const leaveStart = new Date(rec.startDate);
-      const leaveEnd = new Date(rec.endDate);
-      const periodStart = new Date(payPeriod.split(' - ')[0]);
-      const periodEnd = new Date(payPeriod.split(' - ')[1]);
+      const employeeLeave = leaveRecords.filter(rec => rec.employeeId === emp.id);
+      employeeLeave.forEach(rec => {
+        const leaveStart = new Date(rec.startDate);
+        const leaveEnd = new Date(rec.endDate);
+        const periodStart = new Date(payPeriod.split(' - ')[0]);
+        const periodEnd = new Date(payPeriod.split(' - ')[1]);
 
-      // Only count leave within the current pay period
-      if (leaveStart <= periodEnd && leaveEnd >= periodStart) {
-        const overlapStart = leaveStart > periodStart ? leaveStart : periodStart;
-        const overlapEnd = leaveEnd < periodEnd ? leaveEnd : periodEnd;
-        const daysInPeriod = calculateWorkingDays(overlapStart, overlapEnd);
+        if (leaveStart <= periodEnd && leaveEnd >= periodStart) {
+          const overlapStart = leaveStart > periodStart ? leaveStart : periodStart;
+          const overlapEnd = leaveEnd < periodEnd ? leaveEnd : periodEnd;
+          const daysInPeriod = calculateWorkingDays(overlapStart, overlapEnd);
 
-        if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInPeriod;
-        else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInPeriod;
-        else if (rec.leaveType === "Unpaid Leave") unpaidLeaveTaken += daysInPeriod;
-      }
-    });
+          if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInPeriod;
+          else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInPeriod;
+          else if (rec.leaveType === "Unpaid Leave") unpaidLeaveTaken += daysInPeriod;
+        }
+      });
 
-    const netPay = grossEarnings - totalDeductions;
+      const netPay = grossEarnings - totalDeductions;
 
-    payslips.push({
-      id: `PS-${emp.id}-202407`,
-      employeeId: emp.id,
-      payPeriod: payPeriod,
-      grossEarnings: grossEarnings,
-      totalDeductions: totalDeductions,
-      netPay: netPay,
-      earningsBreakdown: earningsBreakdown,
-      deductionsBreakdown: deductionsBreakdown,
-      leaveSummary: {
-        annual: 20 - annualLeaveTaken, // Mock total annual leave 20 days
-        sick: 10 - sickLeaveTaken,   // Mock total sick leave 10 days
-        unpaid: unpaidLeaveTaken,
-      },
-    });
+      // Update YTD values
+      ytdGrossEarnings += grossEarnings;
+      ytdTotalDeductions += totalDeductions;
+
+      allPayslips.push({
+        id: `PS-${emp.id}-${monthString}`,
+        employeeId: emp.id,
+        payPeriod: payPeriod,
+        grossEarnings: grossEarnings,
+        totalDeductions: totalDeductions,
+        netPay: netPay,
+        earningsBreakdown: earningsBreakdown,
+        deductionsBreakdown: deductionsBreakdown,
+        leaveSummary: {
+          annual: 20 - annualLeaveTaken, // Mock total annual leave 20 days
+          sick: 10 - sickLeaveTaken,   // Mock total sick leave 10 days
+          unpaid: unpaidLeaveTaken,
+        },
+        ytdGrossEarnings: ytdGrossEarnings,
+        ytdTotalDeductions: ytdTotalDeductions,
+      });
+    }
   });
-  return payslips;
+  return allPayslips;
 };
