@@ -13,8 +13,8 @@ import LoansAndAdvancements from "./pages/LoansAndAdvancements";
 import Savings from "./pages/Savings";
 import VacationAbsence from "./pages/VacationAbsence";
 import NotFound from "./pages/NotFound";
-import PayrollLayout from "./pages/payroll/PayrollLayout"; // Import the new PayrollLayout
-import UpcomingPayrollCard from "./components/payroll/UpcomingPayrollCard"; // Import the new component
+import PayrollLayout from "./pages/payroll/PayrollLayout";
+import UpcomingPayrollCard from "./components/payroll/UpcomingPayrollCard";
 
 const queryClient = new QueryClient();
 
@@ -29,18 +29,15 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
-            <Route path="/payslips" element={<Payslips />} /> {/* Payslips moved back to top-level */}
+            <Route path="/payslips" element={<Payslips />} />
             <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
             <Route path="/savings" element={<Savings />} />
             <Route path="/vacation-absence" element={<VacationAbsence />} />
             <Route path="/reports" element={<Reports />} />
             
-            {/* Payroll Routes */}
-            <Route path="/payroll/*" element={<PayrollLayout />}>
-              <Route index element={<UpcomingPayrollCard />} /> {/* Default to Upcoming Payroll under /payroll */}
-              <Route path="upcoming" element={<UpcomingPayrollCard />} />
-              {/* Payslips route removed from here */}
-              {/* Add more payroll sub-routes here */}
+            {/* Payroll Route - now directly renders UpcomingPayrollCard */}
+            <Route path="/payroll" element={<PayrollLayout />}>
+              <Route index element={<UpcomingPayrollCard />} />
             </Route>
 
             <Route path="/settings/*" element={<Settings />} />
