@@ -8,6 +8,10 @@ import { Separator } from "@/components/ui/separator";
 
 const sidebarNavItems = [
   {
+    title: "Upcoming Payroll",
+    href: "/payroll/upcoming",
+  },
+  {
     title: "Payslips",
     href: "/payroll/payslips",
   },

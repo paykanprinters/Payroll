@@ -14,6 +14,7 @@ import Savings from "./pages/Savings";
 import VacationAbsence from "./pages/VacationAbsence";
 import NotFound from "./pages/NotFound";
 import PayrollLayout from "./pages/payroll/PayrollLayout"; // Import the new PayrollLayout
+import UpcomingPayrollCard from "./components/payroll/UpcomingPayrollCard"; // Import the new component
 
 const queryClient = new QueryClient();
 
@@ -35,7 +36,8 @@ const App = () => (
             
             {/* New Payroll Routes */}
             <Route path="/payroll/*" element={<PayrollLayout />}>
-              <Route index element={<Payslips />} /> {/* Default to Payslips under /payroll */}
+              <Route index element={<UpcomingPayrollCard />} /> {/* Default to Upcoming Payroll under /payroll */}
+              <Route path="upcoming" element={<UpcomingPayrollCard />} />
               <Route path="payslips" element={<Payslips />} />
               {/* Add more payroll sub-routes here */}
             </Route>
