@@ -68,10 +68,10 @@ const PayslipDesign: React.FC = () => {
     window.dispatchEvent(new Event('payslipDesignUpdated'));
   };
 
-  // Placeholder for company details from localStorage (for preview)
+  // Retrieve company details from localStorage for preview
   const companyTradingName = localStorage.getItem('companyTradingName') || "Your Company Name";
   const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A"; // Corrected key
+  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
   const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
   const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
   const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
@@ -295,7 +295,10 @@ const PayslipDesign: React.FC = () => {
                 />
               )}
               <div className={cn("text-right text-xs", !settings.showCompanyLogo && "w-full")}>
-                <h2 className="text-md font-bold">{companyTradingName}</h2>
+                <h2 className="text-md font-bold">{companyLegalName}</h2>
+                {companyTradingName && companyTradingName !== companyLegalName && (
+                  <p className="text-sm">{companyTradingName}</p>
+                )}
                 {settings.showCompanyDetails && (
                   <>
                     <p>{physicalAddress}</p>

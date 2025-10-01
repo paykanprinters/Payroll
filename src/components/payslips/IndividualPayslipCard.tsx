@@ -51,9 +51,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 }) => {
   const employee = employees.find(emp => emp.id === payslip.employeeId);
 
-  // Placeholder for company details from localStorage (for preview)
+  // Retrieve company details from localStorage for display
   const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A"; // Corrected key
+  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
   const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
   const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
   const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
@@ -160,7 +160,10 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           />
         )}
         <div className={cn("text-right text-xs print:text-sm", !payslipDesignSettings.showCompanyLogo && "w-full")}>
-          <h2 className="text-md font-bold print:text-lg">{companyTradingName}</h2>
+          <h2 className="text-md font-bold print:text-lg">{companyLegalName}</h2>
+          {companyTradingName && companyTradingName !== companyLegalName && (
+            <p className="text-sm print:text-base">{companyTradingName}</p>
+          )}
           {payslipDesignSettings.showCompanyDetails && (
             <>
               <p>{physicalAddress}</p>
