@@ -15,6 +15,14 @@ import {
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
+import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+
+const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
+  defaultReportPaperSize: "A4",
+  includeCompanyLogo: true,
+  includeCompanyDetails: true,
+  reportContentFontSize: 14,
+};
 
 const Reports: React.FC = () => {
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
@@ -33,6 +41,8 @@ const Reports: React.FC = () => {
   const [vatRegistrationNumber, setVatRegistrationNumber] = useState<string>("");
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
   const [companyLogoSize, setCompanyLogoSize] = useState<number>(40);
+
+  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
 
   const dataVisualsFontSize = useDataVisualsFontSize();
@@ -86,15 +96,27 @@ const Reports: React.FC = () => {
     setVatRegistrationNumber(localStorage.getItem('vatRegistrationNumber') || "N/A");
     setCompanyLogoUrl(localStorage.getItem('companyLogoUrl'));
     setCompanyLogoSize(parseFloat(localStorage.getItem('companyLogoSize') || '40'));
+
+    // Load report design settings
+    const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
+    if (savedReportDesignSettings) {
+      setReportDesignSettings(JSON.parse(savedReportDesignSettings));
+    } else {
+      // If no settings saved, initialize with defaults and save them
+      localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
+      setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
+    }
   };
 
   useEffect(() => {
     loadReportData();
     window.addEventListener('mockDataUpdated', loadReportData);
     window.addEventListener('companyDetailsUpdated', loadReportData); // Listen for company detail updates
+    window.addEventListener('reportDesignUpdated', loadReportData); // Listen for report design updates
     return () => {
       window.removeEventListener('mockDataUpdated', loadReportData);
       window.removeEventListener('companyDetailsUpdated', loadReportData);
+      window.removeEventListener('reportDesignUpdated', loadReportData);
     };
   }, []);
 
@@ -119,6 +141,7 @@ const Reports: React.FC = () => {
         vatRegistrationNumber={vatRegistrationNumber}
         companyLogoUrl={companyLogoUrl}
         companyLogoSize={companyLogoSize}
+        reportDesignSettings={reportDesignSettings} // Pass report design settings
       />
 
       <Card>

@@ -8,7 +8,8 @@ import BiometricDevices from "./settings/BiometricDevices";
 import TaxLiabilities from "./settings/TaxLiabilities";
 import PayslipDesign from "./settings/PayslipDesign";
 import MockData from "./settings/MockData";
-import DataVisuals from "./settings/DataVisuals"; // New import
+import DataVisuals from "./settings/DataVisuals";
+import ReportDesign from "./settings/ReportDesign"; // New import
 
 const Settings: React.FC = () => {
   return (
@@ -20,8 +21,9 @@ const Settings: React.FC = () => {
         <Route path="biometric-devices" element={<BiometricDevices />} />
         <Route path="tax-liabilities" element={<TaxLiabilities />} />
         <Route path="payslip-design" element={<PayslipDesign />} />
+        <Route path="report-design" element={<ReportDesign />} /> {/* New route */}
         <Route path="mock-data" element={<MockData />} />
-        <Route path="data-visuals" element={<DataVisuals />} /> {/* New route */}
+        <Route path="data-visuals" element={<DataVisuals />} />
         {/* Add more settings sub-routes here */}
       </Route>
     </Routes>

@@ -20,6 +20,7 @@ import {
   generateAuditTrailReportContent,
 } from "@/lib/report-generators"; // Updated import path
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
+import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
 interface ReportItemProps {
   icon: React.ElementType;
@@ -79,6 +80,7 @@ interface CorePayrollReportsSectionProps {
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
   companyLogoSize: number;
+  reportDesignSettings: ReportDesignSettings; // New prop
 }
 
 const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
@@ -95,27 +97,11 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   vatRegistrationNumber,
   companyLogoUrl,
   companyLogoSize,
+  reportDesignSettings, // Destructure new prop
 }) => {
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
   const [currentReportTitle, setCurrentReportTitle] = React.useState("");
   const [currentReportContent, setCurrentReportContent] = React.useState("");
-  const [payslipLayoutSize, setPayslipLayoutSize] = React.useState<"Letter" | "A4" | "A5">("A4");
-
-  React.useEffect(() => {
-    const loadPayslipDesignSettings = () => {
-      const savedSettings = localStorage.getItem("payslipDesignSettings");
-      if (savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        setPayslipLayoutSize(settings.layoutSize || "A4");
-      }
-    };
-
-    loadPayslipDesignSettings();
-    window.addEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
-    return () => {
-      window.removeEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
-    };
-  }, []);
 
   const handleOpenReportPreview = (title: string, content: string) => {
     setCurrentReportTitle(title);
@@ -264,7 +250,7 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
         vatRegistrationNumber={vatRegistrationNumber}
         companyLogoUrl={companyLogoUrl}
         companyLogoSize={companyLogoSize}
-        layoutSize={payslipLayoutSize} // Pass the layout size
+        reportDesignSettings={reportDesignSettings} // Pass the report design settings
       />
     </>
   );

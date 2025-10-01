@@ -16,6 +16,7 @@ import html2pdf from 'html2pdf.js';
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getPrintClasses } from "@/lib/utils"; // Import getPrintClasses
+import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ interface ReportPreviewDialogProps {
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
   companyLogoSize: number;
-  layoutSize: "Letter" | "A4" | "A5"; // New prop for layout size
+  reportDesignSettings: ReportDesignSettings; // New prop for report design settings
 }
 
 const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
@@ -50,7 +51,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   vatRegistrationNumber,
   companyLogoUrl,
   companyLogoSize,
-  layoutSize, // Destructure new prop
+  reportDesignSettings, // Destructure new prop
 }) => {
   const handlePrintReport = () => {
     const reportElement = document.getElementById("report-preview-content");
@@ -90,8 +91,8 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       showSuccess("Generating PDF, please wait...");
 
       let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
-      if (layoutSize === 'Letter') pdfFormat = 'letter';
-      else if (layoutSize === 'A5') pdfFormat = 'a5';
+      if (reportDesignSettings.defaultReportPaperSize === 'Letter') pdfFormat = 'letter';
+      else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
 
       html2pdf().from(reportElement).set({
         margin: [10, 10, 10, 10],
@@ -118,38 +119,45 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <div id="report-preview-content" className={cn(
             "p-4 bg-white text-gray-900 text-[13px]",
             "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
-            getPrintClasses(layoutSize) // Apply dynamic print classes
+            getPrintClasses(reportDesignSettings.defaultReportPaperSize) // Apply dynamic print classes from report settings
           )}>
             {/* Report Header with Company Details */}
-            <div className="flex justify-between items-start mb-6 print:mb-8">
-              {companyLogoUrl && (
-                <img
-                  src={companyLogoUrl}
-                  alt="Company Logo"
-                  style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-                  className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
-                />
-              )}
-              <div className={cn("text-right text-[13px] print:text-[13px]", !companyLogoUrl && "w-full")}>
-                <h2 className="text-md font-bold print:text-lg">{displayCompanyName}</h2>
-                {companyTradingName && companyTradingName !== companyLegalName && (
-                  <p className="text-[13px] print:text-[13px]">{companyTradingName}</p>
+            {(reportDesignSettings.includeCompanyLogo || reportDesignSettings.includeCompanyDetails) && (
+              <div className="flex justify-between items-start mb-6 print:mb-8">
+                {reportDesignSettings.includeCompanyLogo && companyLogoUrl && (
+                  <img
+                    src={companyLogoUrl}
+                    alt="Company Logo"
+                    style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+                    className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
+                  />
                 )}
-                <p>{physicalAddress}</p>
-                <p>Reg. No: {companyRegistrationNumber}</p>
-                <p>VAT No: {vatRegistrationNumber}</p>
-                <p>Tel: {mainContactNumber}</p>
-                <p>Email: {companyEmail}</p>
-                <p>Web: {companyWebsite}</p>
+                {reportDesignSettings.includeCompanyDetails && (
+                  <div className={cn("text-right text-[13px] print:text-[13px]", !reportDesignSettings.includeCompanyLogo && "w-full")}>
+                    <h2 className="text-md font-bold print:text-lg">{displayCompanyName}</h2>
+                    {companyTradingName && companyTradingName !== companyLegalName && (
+                      <p className="text-[13px] print:text-[13px]">{companyTradingName}</p>
+                    )}
+                    <p>{physicalAddress}</p>
+                    <p>Reg. No: {companyRegistrationNumber}</p>
+                    <p>VAT No: {vatRegistrationNumber}</p>
+                    <p>Tel: {mainContactNumber}</p>
+                    <p>Email: {companyEmail}</p>
+                    <p>Web: {companyWebsite}</p>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
 
             <Separator className="my-4 print:my-4" />
 
             <h3 className="text-lg font-bold text-center mb-4 print:text-xl print:mb-6">{reportTitle}</h3>
 
             {/* Report Content */}
-            <div dangerouslySetInnerHTML={{ __html: reportContent }} />
+            <div
+              dangerouslySetInnerHTML={{ __html: reportContent }}
+              style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }} // Apply dynamic font size
+            />
           </div>
         </ScrollArea>
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
