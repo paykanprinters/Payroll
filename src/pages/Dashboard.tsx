@@ -211,8 +211,11 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Upcoming Payroll Card - Moved here */}
-      <UpcomingPayrollCard />
+      {/* Upcoming Payroll Card and Top To-Dos Card side-by-side */}
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <UpcomingPayrollCard />
+        <TopToDosCard />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
@@ -233,9 +236,6 @@ const Dashboard: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        {/* Top To-Dos Card - New component */}
-        <TopToDosCard />
 
         <Card>
           <CardHeader>
@@ -310,7 +310,7 @@ const Dashboard: React.FC = () => {
               <LineChart data={averageNetPayTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Line type="monotone" dataKey="avgNetPay" stroke="#82ca9d" name="Average Net Pay" activeDot={{ r: 8 }} />
