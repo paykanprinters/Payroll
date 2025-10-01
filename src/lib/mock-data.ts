@@ -367,8 +367,19 @@ export const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], s
       const monthString = format(monthDate, "yyyy-MM");
 
       let grossEarnings = emp.salary;
-      let totalDeductions = 0;
       const earningsBreakdown = [{ name: "Basic Salary", amount: emp.salary }];
+
+      // Add mock Overtime and Bonus for some employees/months
+      if (emp.id === "EMP001" && month % 2 === 0) { // John Doe gets overtime every other month
+        earningsBreakdown.push({ name: "Overtime", amount: 1500 });
+        grossEarnings += 1500;
+      }
+      if (emp.id === "EMP004" && month === currentMonthIndex) { // Sarah Brown gets a bonus this month
+        earningsBreakdown.push({ name: "Bonus", amount: 2000 });
+        grossEarnings += 2000;
+      }
+
+      let totalDeductions = 0;
       const deductionsBreakdown: { name: string; amount: number }[] = [];
 
       // Statutory Deductions (simplified)
@@ -394,6 +405,17 @@ export const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], s
       }
       deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
       totalDeductions += providentFund;
+
+      // Add mock Benefit Deductions for some employees/months
+      if (emp.id === "EMP002" && month % 3 === 0) { // Jane Smith has medical aid every third month
+        deductionsBreakdown.push({ name: "Medical Aid", amount: 1200 });
+        totalDeductions += 1200;
+      }
+      if (emp.id === "EMP005" && month % 4 === 1) { // David Green has a retirement fund deduction
+        deductionsBreakdown.push({ name: "Retirement Fund", amount: 800 });
+        totalDeductions += 800;
+      }
+
 
       // Loan Deductions for this month
       const employeeLoans = loans.filter(loan => loan.employeeId === emp.id);

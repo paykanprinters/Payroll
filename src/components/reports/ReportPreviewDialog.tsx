@@ -102,7 +102,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <DialogDescription>Preview and manage your report.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-4">
-          <div id="report-preview-content" className="p-4 bg-white text-gray-900 print:p-8 print:w-a4 print:min-h-a4 print:text-base">
+          <div id="report-preview-content" className="p-4 bg-white text-gray-900 text-[13px] print:p-8 print:w-a4 print:min-h-a4 print:text-[13px]">
             {/* Report Header with Company Details */}
             <div className="flex justify-between items-start mb-6 print:mb-8">
               {companyLogoUrl && (
@@ -113,10 +113,10 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
                   className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
                 />
               )}
-              <div className={cn("text-right text-xs print:text-sm", !companyLogoUrl && "w-full")}>
+              <div className={cn("text-right text-[13px] print:text-[13px]", !companyLogoUrl && "w-full")}>
                 <h2 className="text-md font-bold print:text-lg">{displayCompanyName}</h2>
                 {companyTradingName && companyTradingName !== companyLegalName && (
-                  <p className="text-sm print:text-base">{companyTradingName}</p>
+                  <p className="text-[13px] print:text-[13px]">{companyTradingName}</p>
                 )}
                 <p>{physicalAddress}</p>
                 <p>Reg. No: {companyRegistrationNumber}</p>
@@ -132,7 +132,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
             <h3 className="text-lg font-bold text-center mb-4 print:text-xl print:mb-6">{reportTitle}</h3>
 
             {/* Report Content */}
-            <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: reportContent }} />
+            <div dangerouslySetInnerHTML={{ __html: reportContent }} />
           </div>
         </ScrollArea>
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
