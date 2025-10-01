@@ -78,15 +78,16 @@ const Sidebar: React.FC = () => {
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
     window.addEventListener('mockDataUpdated', updateCompanyDetails);
-    // No need to call updateCompanyDetails() here on mount, as state is initialized from localStorage
+    updateCompanyDetails(); // Call on mount to ensure initial state reflects current localStorage
     
     return () => {
       window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
       window.removeEventListener('mockDataUpdated', updateCompanyDetails);
     };
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, []);
 
-  const displayCompanyName = companyTradingName || companyLegalName || "Your Company Name";
+  // Prioritize companyLegalName as requested, then companyTradingName
+  const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
