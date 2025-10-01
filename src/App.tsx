@@ -11,8 +11,9 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import LoansAndAdvancements from "./pages/LoansAndAdvancements";
 import Savings from "./pages/Savings";
-import VacationAbsence from "./pages/VacationAbsence"; // Import the new component
+import VacationAbsence from "./pages/VacationAbsence";
 import NotFound from "./pages/NotFound";
+import PayrollLayout from "./pages/payroll/PayrollLayout"; // Import the new PayrollLayout
 
 const queryClient = new QueryClient();
 
@@ -27,11 +28,18 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
-            <Route path="/payslips" element={<Payslips />} />
-            <Route path="/reports" element={<Reports />} />
             <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
             <Route path="/savings" element={<Savings />} />
-            <Route path="/vacation-absence" element={<VacationAbsence />} /> {/* New top-level route */}
+            <Route path="/vacation-absence" element={<VacationAbsence />} />
+            <Route path="/reports" element={<Reports />} />
+            
+            {/* New Payroll Routes */}
+            <Route path="/payroll/*" element={<PayrollLayout />}>
+              <Route index element={<Payslips />} /> {/* Default to Payslips under /payroll */}
+              <Route path="payslips" element={<Payslips />} />
+              {/* Add more payroll sub-routes here */}
+            </Route>
+
             <Route path="/settings/*" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

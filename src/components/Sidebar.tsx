@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +14,7 @@ import {
   Landmark,
   PiggyBank,
   CalendarDays,
+  Wallet, // New icon for Payroll
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -25,21 +26,27 @@ interface NavLinkProps {
   isCollapsed: boolean;
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed }) => (
-  <Button
-    asChild
-    variant="ghost"
-    className={cn(
-      "w-full justify-start",
-      isCollapsed ? "h-9 w-9 p-0" : "px-4 py-2"
-    )}
-  >
-    <Link to={to}>
-      <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-      {!isCollapsed && label}
-    </Link>
-  </Button>
-);
+const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed }) => {
+  const location = useLocation();
+  const isActive = location.pathname.startsWith(to); // Check if current path starts with the link's path
+
+  return (
+    <Button
+      asChild
+      variant="ghost"
+      className={cn(
+        "w-full justify-start",
+        isCollapsed ? "h-9 w-9 p-0" : "px-4 py-2",
+        isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline"
+      )}
+    >
+      <Link to={to}>
+        <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+        {!isCollapsed && label}
+      </Link>
+    </Button>
+  );
+};
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -96,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/employees", icon: Users, label: "Employees" },
-    { to: "/payslips", icon: ReceiptText, label: "Payslips" },
+    { to: "/payroll/payslips", icon: Wallet, label: "Payroll" }, // New Payroll item, links to Payslips by default
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
     { to: "/savings", icon: PiggyBank, label: "Savings" },
     { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
