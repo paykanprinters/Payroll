@@ -21,10 +21,18 @@ interface AbsenceCalendarProps {
 }
 
 const AbsenceCalendar: React.FC<AbsenceCalendarProps> = ({ leaveRecords }) => {
-  const highlightedDates = leaveRecords.map(record => ({
+  const leaveRanges = leaveRecords.map(record => ({
     from: new Date(record.startDate),
     to: new Date(record.endDate),
   }));
+
+  const modifiers = {
+    leaveDays: leaveRanges, // Pass array of DateRange objects to modifier
+  };
+
+  const modifiersClassNames = {
+    leaveDays: "bg-blue-200 text-blue-900 rounded-md", // Default style for the entire range
+  };
 
   return (
     <Card>
@@ -36,8 +44,10 @@ const AbsenceCalendar: React.FC<AbsenceCalendarProps> = ({ leaveRecords }) => {
       </CardHeader>
       <CardContent className="flex justify-center">
         <Calendar
-          mode="range"
-          selected={highlightedDates}
+          mode="range" // Keep range mode for visual consistency, but no active selection
+          selected={undefined} // No active selection for display calendar
+          modifiers={modifiers}
+          modifiersClassNames={modifiersClassNames}
           className="rounded-md border"
         />
       </CardContent>

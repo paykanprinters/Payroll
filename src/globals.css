@@ -99,3 +99,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Styles for react-day-picker modifiers */
+.rdp-day_leaveDays {
+  @apply bg-blue-200 text-blue-900;
+}
+
+.rdp-day_leaveDays.rdp-day_range_start {
+  @apply rounded-l-md;
+}
+
+.rdp-day_leaveDays.rdp-day_range_end {
+  @apply rounded-r-md;
+}
+
+.rdp-day_leaveDays.rdp-day_range_middle {
+  @apply rounded-none;
+}
+
+/* If a single day is a range, it gets both start and end */
+.rdp-day_leaveDays.rdp-day_range_start.rdp-day_range_end {
+  @apply rounded-md;
+}
