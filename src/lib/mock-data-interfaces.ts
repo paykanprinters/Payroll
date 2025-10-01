@@ -45,9 +45,23 @@ export interface MockEmployee {
   taxReferenceNumber?: string;
   bankName?: string;
   bankAccountHolder?: string;
-  bankAccountNumber?: string;
-  bankBranchCode?: string;
+  ibanNumber?: string; // Renamed from bankAccountNumber
+  routingSwiftCode?: string; // Renamed from bankBranchCode
   bankAccountType?: "Cheque" | "Savings" | "Business";
+  
+  // New fields from screenshot
+  dateOfBirth?: string;
+  gender?: "Male" | "Female" | "Other";
+  department?: string;
+  workLocation?: string;
+  dateOfConfirmation?: string;
+  originCountry?: string;
+  employmentType?: "Permanent" | "Contract" | "Temporary";
+  portalAccess?: boolean;
+  fathersName?: string;
+  molId?: string;
+  permanentAddress?: string;
+  paymentMode?: "Bank Transfer" | "Cash" | "Cheque";
 }
 
 export interface Loan {

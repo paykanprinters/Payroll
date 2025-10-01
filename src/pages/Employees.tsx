@@ -225,11 +225,11 @@ const Employees: React.FC = () => {
                     <TableHead>ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Job Title</TableHead>
-                    <TableHead>ID Number</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead className="text-right">Salary</TableHead>
+                    <TableHead>Department</TableHead> {/* New */}
+                    <TableHead>Email</TableHead>
+                    <TableHead>Mobile</TableHead> {/* Renamed */}
                     <TableHead>Start Date</TableHead>
+                    <TableHead className="text-right">Salary</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -239,13 +239,11 @@ const Employees: React.FC = () => {
                       <TableCell className="font-medium">{employee.id}</TableCell>
                       <TableCell>{employee.firstName} {employee.lastName}</TableCell>
                       <TableCell>{employee.jobTitle}</TableCell>
-                      <TableCell>{employee.idNumber || "N/A"}</TableCell>
-                      <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
-                      <TableCell>
-                        {employee.addressLine1}, {employee.city}, {employee.province}
-                      </TableCell>
-                      <TableCell className="text-right">R {employee.salary.toLocaleString('en-ZA')}</TableCell>
+                      <TableCell>{employee.department || "N/A"}</TableCell> {/* New */}
+                      <TableCell>{employee.email}</TableCell>
+                      <TableCell>{employee.phoneNumber || "N/A"}</TableCell> {/* Renamed */}
                       <TableCell>{employee.startDate}</TableCell>
+                      <TableCell className="text-right">R {employee.salary.toLocaleString('en-ZA')}</TableCell>
                       <TableCell className="flex justify-center gap-2">
                         <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)}>
                           <Edit className="h-4 w-4" />
