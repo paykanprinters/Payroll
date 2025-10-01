@@ -15,28 +15,11 @@ import { CalendarIcon, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
 import { calculateWorkingDays } from "@/lib/utils"; // Corrected import path
-
-interface MockEmployee {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
+import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 
 interface VacationAbsenceFormProps {
   employees: MockEmployee[];
   onAddLeave: (leave: Omit<LeaveEntry, 'id'>) => void;
-}
-
-interface LeaveEntry {
-  id: string;
-  employeeId: string;
-  leaveType: "Annual Leave" | "Sick Leave" | "Unpaid Leave" | "Family Responsibility Leave" | "Maternity Leave";
-  startDate: string;
-  endDate: string;
-  totalDays: number;
-  workingDays: number;
-  reason?: string;
-  documentUrl?: string;
 }
 
 const leaveSchema = z.object({

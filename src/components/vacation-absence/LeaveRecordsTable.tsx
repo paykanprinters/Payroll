@@ -3,24 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-interface MockEmployee {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface LeaveEntry {
-  id: string;
-  employeeId: string;
-  leaveType: "Annual Leave" | "Sick Leave" | "Unpaid Leave" | "Family Responsibility Leave" | "Maternity Leave";
-  startDate: string;
-  endDate: string;
-  totalDays: number;
-  workingDays: number;
-  reason?: string;
-  documentUrl?: string;
-}
+import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 
 interface LeaveRecordsTableProps {
   leaveRecords: LeaveEntry[];

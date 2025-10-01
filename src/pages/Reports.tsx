@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection";
-import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data"; // Import necessary mock data interfaces
+import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 
 const Reports: React.FC = () => {
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);

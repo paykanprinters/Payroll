@@ -24,23 +24,8 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
-
-interface MockEmployee {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface Loan {
-  id: string;
-  employeeId: string;
-  loanAmount: number;
-  repaymentAmount: number;
-  frequency: "monthly" | "weekly";
-  startDate: string;
-  remainingBalance: number;
-}
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import { MockEmployee, Loan } from "@/lib/mock-data-interfaces"; // Updated import
 
 const loanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -60,7 +45,7 @@ const LoansAndAdvancements: React.FC = () => {
   const [loanSummaryData, setLoanSummaryData] = useState<{ name: string; totalLoan: number; remaining: number }[]>([]);
   const [loansByEmployeeData, setLoansByEmployeeData] = useState<{ name: string; value: number }[]>([]);
 
-  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
+  const dataVisualsFontSize = useDataVisualsFontSize();
 
   const form = useForm<LoanFormValues>({
     resolver: zodResolver(loanSchema),

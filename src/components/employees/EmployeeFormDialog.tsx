@@ -20,6 +20,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { MockEmployee } from "@/lib/mock-data-interfaces"; // Updated import
 
 // Define the schema for employee form validation
 const employeeSchema = z.object({
@@ -55,7 +56,7 @@ interface EmployeeFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (employee: EmployeeFormValues) => void;
-  initialEmployee?: EmployeeFormValues | null;
+  initialEmployee?: MockEmployee | null; // Use MockEmployee interface
 }
 
 const provinces = [
@@ -174,7 +175,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="startDate" className="text-right">Start Date</Label>
                 <Input id="startDate" type="date" {...form.register("startDate")} className="col-span-3" />
-                {form.formState.errors.startDate && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.startDate.message}</p>)}
+                {form.formState.errors.startDate && (<p className className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.startDate.message}</p>)}
               </div>
             </div>
 

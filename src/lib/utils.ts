@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { eachDayOfInterval, isWeekend } from "date-fns";
-import { MockEmployee } from "./mock-data"; // Import MockEmployee for type safety
+import { MockEmployee } from "./mock-data-interfaces"; // Updated import
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

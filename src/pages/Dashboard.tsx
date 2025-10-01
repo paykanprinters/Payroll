@@ -19,37 +19,8 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
-
-interface MockEmployee {
-  id: string;
-  salary: number;
-  jobTitle: string; // Added for visualization
-}
-
-interface MockPayslip {
-  id: string;
-  employeeId: string;
-  payPeriod: string;
-  grossEarnings: number;
-  totalDeductions: number;
-  netPay: number;
-  earningsBreakdown: { name: string; amount: number }[];
-  deductionsBreakdown: { name: string; amount: number }[];
-  leaveSummary: { annual: number; sick: number; unpaid: number };
-}
-
-interface LeaveEntry {
-  id: string;
-  employeeId: string;
-  leaveType: "Annual Leave" | "Sick Leave" | "Unpaid Leave" | "Family Responsibility Leave" | "Maternity Leave";
-  startDate: string;
-  endDate: string;
-  totalDays: number;
-  workingDays: number;
-  reason?: string;
-  documentUrl?: string;
-}
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -66,7 +37,7 @@ const Dashboard: React.FC = () => {
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
 
 
-  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
+  const dataVisualsFontSize = useDataVisualsFontSize();
 
   const loadDashboardData = () => {
     const storedEmployees = localStorage.getItem("mockEmployees");

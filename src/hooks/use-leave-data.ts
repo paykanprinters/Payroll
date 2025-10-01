@@ -1,26 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format, eachDayOfInterval, isWeekend } from "date-fns"; // Added eachDayOfInterval, isWeekend
-import { calculateWorkingDays } from "@/lib/utils"; // Import helper from shared utility
-
-interface MockEmployee {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface LeaveEntry {
-  id: string;
-  employeeId: string;
-  leaveType: "Annual Leave" | "Sick Leave" | "Unpaid Leave" | "Family Responsibility Leave" | "Maternity Leave";
-  startDate: string;
-  endDate: string;
-  totalDays: number;
-  workingDays: number;
-  reason?: string;
-  documentUrl?: string;
-}
+import { format, eachDayOfInterval, isWeekend } from "date-fns";
+import { calculateWorkingDays } from "@/lib/utils";
+import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 
 export const useLeaveData = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
@@ -36,13 +19,13 @@ export const useLeaveData = () => {
   const loadData = useCallback(() => {
     const storedEmployees = localStorage.getItem("mockEmployees");
     setEmployees(storedEmployees ? JSON.parse(storedEmployees) : []);
-    console.log("useLeaveData: Loaded employees:", storedEmployees ? JSON.parse(storedEmployees) : []); // Added log
+    console.log("useLeaveData: Loaded employees:", storedEmployees ? JSON.parse(storedEmployees) : []);
 
     const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
-    console.log("useLeaveData: Raw storedLeaveRecords:", storedLeaveRecords); // Added log
+    console.log("useLeaveData: Raw storedLeaveRecords:", storedLeaveRecords);
     const loadedLeaveRecords: LeaveEntry[] = storedLeaveRecords ? JSON.parse(storedLeaveRecords) : [];
     setLeaveRecords(loadedLeaveRecords);
-    console.log("useLeaveData: Parsed loadedLeaveRecords:", loadedLeaveRecords); // Added log
+    console.log("useLeaveData: Parsed loadedLeaveRecords:", loadedLeaveRecords);
 
     // Calculate leave type distribution for PieChart
     const leaveTypeMap = new Map<string, number>();

@@ -3,21 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import IndividualPayslipCard from "./IndividualPayslipCard";
-import { MockEmployee } from "@/lib/mock-data"; // Import MockEmployee interface
-
-interface MockPayslip {
-  id: string;
-  employeeId: string;
-  payPeriod: string;
-  grossEarnings: number;
-  totalDeductions: number;
-  netPay: number;
-  earningsBreakdown: { name: string; amount: number }[];
-  deductionsBreakdown: { name: string; amount: number }[];
-  leaveSummary: { annual: number; sick: number; unpaid: number };
-  ytdGrossEarnings: number; // New YTD field
-  ytdTotalDeductions: number; // New YTD field
-}
+import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces"; // Updated import
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;

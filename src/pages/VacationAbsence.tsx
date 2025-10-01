@@ -7,6 +7,7 @@ import VacationAbsenceForm from "@/components/vacation-absence/VacationAbsenceFo
 import AbsenceCalendar from "@/components/vacation-absence/AbsenceCalendar";
 import LeaveAnalytics from "@/components/vacation-absence/LeaveAnalytics";
 import LeaveRecordsTable from "@/components/vacation-absence/LeaveRecordsTable";
+import { LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 
 const VacationAbsence: React.FC = () => {
   const {

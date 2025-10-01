@@ -30,34 +30,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import { MockEmployee } from "@/lib/mock-data-interfaces"; // Updated import
 
-
-interface MockEmployee {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  jobTitle: string;
-  salary: number;
-  startDate: string;
-  // New fields
-  idNumber?: string;
-  phoneNumber?: string;
-  emergencyContactName?: string;
-  emergencyContactNumber?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  province?: string;
-  postalCode?: string;
-  taxReferenceNumber?: string;
-  bankName?: string;
-  bankAccountHolder?: string;
-  bankAccountNumber?: string;
-  bankBranchCode?: string;
-  bankAccountType?: "Cheque" | "Savings" | "Business";
-}
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
@@ -70,7 +45,7 @@ const Employees: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
 
-  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
+  const dataVisualsFontSize = useDataVisualsFontSize();
 
   const loadEmployees = () => {
     const storedEmployees = localStorage.getItem("mockEmployees");
