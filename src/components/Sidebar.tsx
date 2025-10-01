@@ -44,13 +44,8 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
 const Sidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  // Initialize states directly from localStorage for immediate display
-  const [companyTradingName, setCompanyTradingName] = React.useState<string>(
-    localStorage.getItem('companyTradingName') || ""
-  );
-  const [companyLegalName, setCompanyLegalName] = React.useState<string>(
-    localStorage.getItem('companyLegalName') || ""
-  );
+  const [companyTradingName, setCompanyTradingName] = React.useState<string>("");
+  const [companyLegalName, setCompanyLegalName] = React.useState<string>("");
   const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
     localStorage.getItem('companyLogoUrl')
   );
@@ -63,38 +58,28 @@ const Sidebar: React.FC = () => {
       const tradingName = localStorage.getItem('companyTradingName');
       const legalName = localStorage.getItem('companyLegalName');
 
-      // Update state only if values have changed to avoid unnecessary re-renders
-      if ((tradingName || "") !== companyTradingName) { // Compare with current state
-        setCompanyTradingName(tradingName && tradingName.trim() !== '' ? tradingName : "");
-      }
-      if ((legalName || "") !== companyLegalName) { // Compare with current state
-        setCompanyLegalName(legalName && legalName.trim() !== '' ? legalName : "");
-      }
+      setCompanyTradingName(tradingName && tradingName.trim() !== '' ? tradingName : "");
+      setCompanyLegalName(legalName && legalName.trim() !== '' ? legalName : "");
 
       const logo = localStorage.getItem('companyLogoUrl');
-      if ((logo || null) !== companyLogoUrl) { // Compare with current state
-        setCompanyLogoUrl(logo && logo.trim() !== '' ? logo : null);
-      }
+      setCompanyLogoUrl(logo && logo.trim() !== '' ? logo : null);
 
       const sizeStr = localStorage.getItem('companyLogoSize');
-      const newSize = parseFloat(sizeStr || '40');
-      if ((isNaN(newSize) ? 40 : newSize) !== companyLogoSize) { // Compare with current state
-        setCompanyLogoSize(isNaN(newSize) ? 40 : newSize);
-      }
+      const size = parseFloat(sizeStr || '40');
+      setCompanyLogoSize(isNaN(size) ? 40 : size);
       
-      console.log("Sidebar: Received update. Current localStorage values:", { tradingName, legalName, logo, newSize });
+      console.log("Sidebar: Received update. Current localStorage values:", { tradingName, legalName, logo, size });
     };
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
     window.addEventListener('mockDataUpdated', updateCompanyDetails);
-    // Call on mount to ensure initial state reflects current localStorage, even if already initialized
-    updateCompanyDetails(); 
+    updateCompanyDetails(); // Call on mount to ensure initial state reflects current localStorage
     
     return () => {
       window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
       window.removeEventListener('mockDataUpdated', updateCompanyDetails);
     };
-  }, [companyTradingName, companyLegalName, companyLogoUrl, companyLogoSize]); // Add dependencies to useEffect
+  }, []);
 
   const displayCompanyName = companyTradingName || companyLegalName || "Your Company Name";
 
@@ -112,7 +97,7 @@ const Sidebar: React.FC = () => {
   const renderSidebarContent = (isMobileView: boolean) => (
     <>
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground overflow-hidden flex-grow min-w-0">
+        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground overflow-hidden">
           {companyLogoUrl && (
             <img
               src={companyLogoUrl}
