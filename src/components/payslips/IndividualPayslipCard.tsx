@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { cn, getPrintClasses } from "@/lib/utils"; // Import getPrintClasses
 import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces"; // Updated import
 
 interface PayslipDesignSettings {
@@ -120,18 +120,6 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     );
   };
 
-  const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
-    switch (layoutSize) {
-      case "Letter":
-        return "print:w-letter print:min-h-letter print:p-6 print:text-sm";
-      case "A5":
-        return "print:w-a5 print:min-h-a5 print:p-4 print:text-xs";
-      case "A4":
-      default:
-        return "print:w-a4 print:min-h-a4 print:p-8 print:text-base";
-    }
-  };
-
   const mainContentOrder = payslipDesignSettings.earningsDeductionsLayout === "earnings-left-deductions-right"
     ? [
         { content: renderEarningsContent(), align: "text-left" },
@@ -148,7 +136,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       className={cn(
         "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mx-auto max-w-lg",
         "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
-        getPrintClasses(payslipDesignSettings.layoutSize)
+        getPrintClasses(payslipDesignSettings.layoutSize) // Apply dynamic print classes
       )}
     >
       {/* Company Header */}

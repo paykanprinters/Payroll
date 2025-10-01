@@ -15,7 +15,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { cn, getPrintClasses } from "@/lib/utils"; // Import getPrintClasses
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -32,6 +32,7 @@ interface ReportPreviewDialogProps {
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
   companyLogoSize: number;
+  layoutSize: "Letter" | "A4" | "A5"; // New prop for layout size
 }
 
 const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
@@ -49,6 +50,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   vatRegistrationNumber,
   companyLogoUrl,
   companyLogoSize,
+  layoutSize, // Destructure new prop
 }) => {
   const handlePrintReport = () => {
     const reportElement = document.getElementById("report-preview-content");
@@ -56,7 +58,13 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write('<html><head><title>' + reportTitle + '</title>');
-        printWindow.document.write('<link rel="stylesheet" href="/src/globals.css">'); // Include global styles
+
+        // Copy all stylesheets and style tags from the current document's head
+        const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+          .map(node => node.outerHTML)
+          .join('');
+        printWindow.document.write(stylesheets);
+
         printWindow.document.write('<style>');
         printWindow.document.write('@media print { body { margin: 0; } .no-print { display: none; } }');
         printWindow.document.write('</style>');
@@ -80,12 +88,17 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     const reportElement = document.getElementById("report-preview-content");
     if (reportElement) {
       showSuccess("Generating PDF, please wait...");
+
+      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+      if (layoutSize === 'Letter') pdfFormat = 'letter';
+      else if (layoutSize === 'A5') pdfFormat = 'a5';
+
       html2pdf().from(reportElement).set({
         margin: [10, 10, 10, 10],
         filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' } // Dynamic format
       }).save();
     } else {
       showError("Report content not found for PDF download.");
@@ -102,7 +115,11 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <DialogDescription>Preview and manage your report.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-4">
-          <div id="report-preview-content" className="p-4 bg-white text-gray-900 text-[13px] print:p-8 print:w-a4 print:min-h-a4 print:text-[13px]">
+          <div id="report-preview-content" className={cn(
+            "p-4 bg-white text-gray-900 text-[13px]",
+            "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
+            getPrintClasses(layoutSize) // Apply dynamic print classes
+          )}>
             {/* Report Header with Company Details */}
             <div className="flex justify-between items-start mb-6 print:mb-8">
               {companyLogoUrl && (

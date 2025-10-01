@@ -99,6 +99,23 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
   const [currentReportTitle, setCurrentReportTitle] = React.useState("");
   const [currentReportContent, setCurrentReportContent] = React.useState("");
+  const [payslipLayoutSize, setPayslipLayoutSize] = React.useState<"Letter" | "A4" | "A5">("A4");
+
+  React.useEffect(() => {
+    const loadPayslipDesignSettings = () => {
+      const savedSettings = localStorage.getItem("payslipDesignSettings");
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        setPayslipLayoutSize(settings.layoutSize || "A4");
+      }
+    };
+
+    loadPayslipDesignSettings();
+    window.addEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
+    return () => {
+      window.removeEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
+    };
+  }, []);
 
   const handleOpenReportPreview = (title: string, content: string) => {
     setCurrentReportTitle(title);
@@ -247,6 +264,7 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
         vatRegistrationNumber={vatRegistrationNumber}
         companyLogoUrl={companyLogoUrl}
         companyLogoSize={companyLogoSize}
+        layoutSize={payslipLayoutSize} // Pass the layout size
       />
     </>
   );
