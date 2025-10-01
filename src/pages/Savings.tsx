@@ -24,6 +24,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
 
 interface MockEmployee {
   id: string;
@@ -58,6 +59,8 @@ const Savings: React.FC = () => {
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
   const [totalSavingsData, setTotalSavingsData] = useState<{ name: string; amount: number }[]>([]);
   const [savingsByFrequencyData, setSavingsByFrequencyData] = useState<{ name: string; value: number }[]>([]);
+
+  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
 
   const form = useForm<SavingPlanFormValues>({
     resolver: zodResolver(savingPlanSchema),
@@ -154,10 +157,10 @@ const Savings: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={totalSavingsData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-                <Legend />
+                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="amount" fill="#8884d8" name="Total Savings" />
               </BarChart>
             </ResponsiveContainer>
@@ -181,13 +184,14 @@ const Savings: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  style={{ fontSize: dataVisualsFontSize }}
                 >
                   {savingsByFrequencyData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>

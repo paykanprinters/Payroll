@@ -15,6 +15,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
 
 interface LeaveAnalyticsProps {
   leaveTypeDistribution: { name: string; value: number }[];
@@ -24,6 +25,8 @@ interface LeaveAnalyticsProps {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, monthlyLeaveData }) => {
+  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
+
   return (
     <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 mt-6">
       <Card>
@@ -43,13 +46,14 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
                 fill="#8884d8"
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                style={{ fontSize: dataVisualsFontSize }}
               >
                 {leaveTypeDistribution.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => `${value} days`} />
-              <Legend />
+              <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
@@ -64,10 +68,10 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyLeaveData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip formatter={(value: number) => `${value} days`} />
-              <Legend />
+              <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+              <YAxis style={{ fontSize: dataVisualsFontSize }} />
+              <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               <Bar dataKey="days" fill="#82ca9d" name="Working Days Taken" />
             </BarChart>
           </ResponsiveContainer>

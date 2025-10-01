@@ -27,11 +27,11 @@ const sidebarNavItems = [
     title: "Mock Data",
     href: "/settings/mock-data",
   },
+  {
+    title: "Data Visuals", // New sub-menu item
+    href: "/settings/data-visuals",
+  },
   // Add more settings sub-menus here
-  // {
-  //   title: "User Management",
-  //   href: "/settings/user-management",
-  // },
 ];
 
 const SettingsLayout: React.FC = () => {

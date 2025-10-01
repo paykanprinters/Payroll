@@ -17,6 +17,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
 
 interface MockEmployee {
   id: string;
@@ -38,6 +39,8 @@ const Dashboard: React.FC = () => {
   const [recentPayslipCount, setRecentPayslipCount] = useState(0);
   const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
   const [monthlyPayrollData, setMonthlyPayrollData] = useState<{ name: string; payroll: number }[]>([]);
+
+  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
 
   const loadDashboardData = () => {
     const storedEmployees = localStorage.getItem("mockEmployees");
@@ -156,10 +159,10 @@ const Dashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyPayrollData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-                <Legend />
+                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
               </BarChart>
             </ResponsiveContainer>
@@ -183,13 +186,14 @@ const Dashboard: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  style={{ fontSize: dataVisualsFontSize }}
                 >
                   {employeeJobTitleData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>

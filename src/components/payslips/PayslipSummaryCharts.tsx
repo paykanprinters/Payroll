@@ -15,6 +15,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
 
 interface PayrollSummaryData {
   name: string;
@@ -38,6 +39,8 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
   payrollSummaryData,
   deductionsBreakdownData,
 }) => {
+  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
+
   return (
     <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
       <Card>
@@ -49,10 +52,10 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={payrollSummaryData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-              <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-              <Legend />
+              <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+              <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+              <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               <Bar dataKey="gross" fill="#8884d8" name="Gross Pay" />
               <Bar dataKey="net" fill="#82ca9d" name="Net Pay" />
             </BarChart>
@@ -77,13 +80,14 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
                 fill="#8884d8"
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                style={{ fontSize: dataVisualsFontSize }}
               >
                 {deductionsBreakdownData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-              <Legend />
+              <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>

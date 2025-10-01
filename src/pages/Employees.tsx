@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
 
 
 interface MockEmployee {
@@ -69,6 +70,7 @@ const Employees: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
 
+  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
 
   const loadEmployees = () => {
     const storedEmployees = localStorage.getItem("mockEmployees");
@@ -194,13 +196,14 @@ const Employees: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  style={{ fontSize: dataVisualsFontSize }}
                 >
                   {jobTitleDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -215,10 +218,10 @@ const Employees: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={averageSalaryByJobTitle}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
-                <Legend />
+                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="salary" fill="#82ca9d" name="Average Salary" />
               </BarChart>
             </ResponsiveContainer>
