@@ -44,8 +44,13 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
 const Sidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [companyTradingName, setCompanyTradingName] = React.useState<string>("");
-  const [companyLegalName, setCompanyLegalName] = React.useState<string>("");
+  // Initialize state directly from localStorage
+  const [companyTradingName, setCompanyTradingName] = React.useState<string>(
+    localStorage.getItem('companyTradingName') || ""
+  );
+  const [companyLegalName, setCompanyLegalName] = React.useState<string>(
+    localStorage.getItem('companyLegalName') || ""
+  );
   const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
     localStorage.getItem('companyLogoUrl')
   );
@@ -73,13 +78,13 @@ const Sidebar: React.FC = () => {
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
     window.addEventListener('mockDataUpdated', updateCompanyDetails);
-    updateCompanyDetails(); // Call on mount to ensure initial state reflects current localStorage
+    // No need to call updateCompanyDetails() here on mount, as state is initialized from localStorage
     
     return () => {
       window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
       window.removeEventListener('mockDataUpdated', updateCompanyDetails);
     };
-  }, []);
+  }, []); // Empty dependency array means this effect runs once on mount
 
   const displayCompanyName = companyTradingName || companyLegalName || "Your Company Name";
 
@@ -97,7 +102,7 @@ const Sidebar: React.FC = () => {
   const renderSidebarContent = (isMobileView: boolean) => (
     <>
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground overflow-hidden">
+        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground flex-1 min-w-0">
           {companyLogoUrl && (
             <img
               src={companyLogoUrl}
