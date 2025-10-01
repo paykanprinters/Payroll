@@ -13,6 +13,7 @@ import {
   Legend,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
+import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection"; // Import the new component
 
 interface MockPayslip {
   id: string;
@@ -71,6 +72,8 @@ const Reports: React.FC = () => {
         Access various payroll reports, including tax summaries, deduction reports, and financial overviews.
       </p>
       
+      <CorePayrollReportsSection /> {/* New component added here */}
+
       <Card>
         <CardHeader>
           <CardTitle>Monthly Payroll Trend</CardTitle>
