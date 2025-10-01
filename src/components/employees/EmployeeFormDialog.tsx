@@ -135,7 +135,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[600px] lg:max-w-4xl max-h-[90vh] flex flex-col"> {/* Increased max-w */}
         <DialogHeader>
           <DialogTitle>{initialEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
           <DialogDescription>
@@ -147,35 +147,37 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             {/* Personal & Employment Details */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Personal & Employment Details</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="firstName" className="text-right">First Name</Label>
-                <Input id="firstName" {...form.register("firstName")} className="col-span-3" />
-                {form.formState.errors.firstName && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.firstName.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="lastName" className="text-right">Last Name</Label>
-                <Input id="lastName" {...form.register("lastName")} className="col-span-3" />
-                {form.formState.errors.lastName && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.lastName.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="idNumber" className="text-right">ID Number</Label>
-                <Input id="idNumber" {...form.register("idNumber")} className="col-span-3" />
-                {form.formState.errors.idNumber && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.idNumber.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="jobTitle" className="text-right">Job Title</Label>
-                <Input id="jobTitle" {...form.register("jobTitle")} className="col-span-3" />
-                {form.formState.errors.jobTitle && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.jobTitle.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="salary" className="text-right">Salary (R)</Label>
-                <Input id="salary" type="number" step="0.01" {...form.register("salary", { valueAsNumber: true })} className="col-span-3" />
-                {form.formState.errors.salary && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.salary.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="startDate" className="text-right">Start Date</Label>
-                <Input id="startDate" type="date" {...form.register("startDate")} className="col-span-3" />
-                {form.formState.errors.startDate && (<p className className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.startDate.message}</p>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Two-column grid for fields */}
+                <div className="space-y-1">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input id="firstName" {...form.register("firstName")} />
+                  {form.formState.errors.firstName && (<p className="text-red-500 text-sm">{form.formState.errors.firstName.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input id="lastName" {...form.register("lastName")} />
+                  {form.formState.errors.lastName && (<p className="text-red-500 text-sm">{form.formState.errors.lastName.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="idNumber">ID Number</Label>
+                  <Input id="idNumber" {...form.register("idNumber")} />
+                  {form.formState.errors.idNumber && (<p className="text-red-500 text-sm">{form.formState.errors.idNumber.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="jobTitle">Job Title</Label>
+                  <Input id="jobTitle" {...form.register("jobTitle")} />
+                  {form.formState.errors.jobTitle && (<p className="text-red-500 text-sm">{form.formState.errors.jobTitle.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="salary">Salary (R)</Label>
+                  <Input id="salary" type="number" step="0.01" {...form.register("salary", { valueAsNumber: true })} />
+                  {form.formState.errors.salary && (<p className="text-red-500 text-sm">{form.formState.errors.salary.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input id="startDate" type="date" {...form.register("startDate")} />
+                  {form.formState.errors.startDate && (<p className="text-red-500 text-sm">{form.formState.errors.startDate.message}</p>)}
+                </div>
               </div>
             </div>
 
@@ -184,25 +186,27 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             {/* Contact Details */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Contact Details</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">Email</Label>
-                <Input id="email" type="email" {...form.register("email")} className="col-span-3" />
-                {form.formState.errors.email && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.email.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phoneNumber" className="text-right">Phone Number</Label>
-                <Input id="phoneNumber" {...form.register("phoneNumber")} className="col-span-3" />
-                {form.formState.errors.phoneNumber && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.phoneNumber.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="emergencyContactName" className="text-right">Emergency Contact Name</Label>
-                <Input id="emergencyContactName" {...form.register("emergencyContactName")} className="col-span-3" />
-                {form.formState.errors.emergencyContactName && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.emergencyContactName.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="emergencyContactNumber" className="text-right">Emergency Contact Number</Label>
-                <Input id="emergencyContactNumber" {...form.register("emergencyContactNumber")} className="col-span-3" />
-                {form.formState.errors.emergencyContactNumber && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.emergencyContactNumber.message}</p>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" {...form.register("email")} />
+                  {form.formState.errors.email && (<p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input id="phoneNumber" {...form.register("phoneNumber")} />
+                  {form.formState.errors.phoneNumber && (<p className="text-red-500 text-sm">{form.formState.errors.phoneNumber.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
+                  <Input id="emergencyContactName" {...form.register("emergencyContactName")} />
+                  {form.formState.errors.emergencyContactName && (<p className="text-red-500 text-sm">{form.formState.errors.emergencyContactName.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="emergencyContactNumber">Emergency Contact Number</Label>
+                  <Input id="emergencyContactNumber" {...form.register("emergencyContactNumber")} />
+                  {form.formState.errors.emergencyContactNumber && (<p className="text-red-500 text-sm">{form.formState.errors.emergencyContactNumber.message}</p>)}
+                </div>
               </div>
             </div>
 
@@ -211,39 +215,41 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             {/* Address Details */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Address Details</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="addressLine1" className="text-right">Address Line 1</Label>
-                <Input id="addressLine1" {...form.register("addressLine1")} className="col-span-3" />
-                {form.formState.errors.addressLine1 && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.addressLine1.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="addressLine2" className="text-right">Address Line 2</Label>
-                <Input id="addressLine2" {...form.register("addressLine2")} className="col-span-3" />
-                {form.formState.errors.addressLine2 && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.addressLine2.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="city" className="text-right">City</Label>
-                <Input id="city" {...form.register("city")} className="col-span-3" />
-                {form.formState.errors.city && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.city.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="province" className="text-right">Province</Label>
-                <Select onValueChange={(value) => form.setValue("province", value)} value={form.watch("province")}>
-                  <SelectTrigger id="province" className="col-span-3">
-                    <SelectValue placeholder="Select province" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {provinces.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.province && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.province.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="postalCode" className="text-right">Postal Code</Label>
-                <Input id="postalCode" {...form.register("postalCode")} className="col-span-3" />
-                {form.formState.errors.postalCode && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.postalCode.message}</p>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="addressLine1">Address Line 1</Label>
+                  <Input id="addressLine1" {...form.register("addressLine1")} />
+                  {form.formState.errors.addressLine1 && (<p className="text-red-500 text-sm">{form.formState.errors.addressLine1.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="addressLine2">Address Line 2</Label>
+                  <Input id="addressLine2" {...form.register("addressLine2")} />
+                  {form.formState.errors.addressLine2 && (<p className="text-red-500 text-sm">{form.formState.errors.addressLine2.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="city">City</Label>
+                  <Input id="city" {...form.register("city")} />
+                  {form.formState.errors.city && (<p className="text-red-500 text-sm">{form.formState.errors.city.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="province">Province</Label>
+                  <Select onValueChange={(value) => form.setValue("province", value)} value={form.watch("province")}>
+                    <SelectTrigger id="province">
+                      <SelectValue placeholder="Select province" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {provinces.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.province && (<p className="text-red-500 text-sm">{form.formState.errors.province.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="postalCode">Postal Code</Label>
+                  <Input id="postalCode" {...form.register("postalCode")} />
+                  {form.formState.errors.postalCode && (<p className="text-red-500 text-sm">{form.formState.errors.postalCode.message}</p>)}
+                </div>
               </div>
             </div>
 
@@ -252,10 +258,12 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             {/* Tax Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Tax Information</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="taxReferenceNumber" className="text-right">Tax Reference Number</Label>
-                <Input id="taxReferenceNumber" {...form.register("taxReferenceNumber")} className="col-span-3" />
-                {form.formState.errors.taxReferenceNumber && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.taxReferenceNumber.message}</p>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="taxReferenceNumber">Tax Reference Number</Label>
+                  <Input id="taxReferenceNumber" {...form.register("taxReferenceNumber")} />
+                  {form.formState.errors.taxReferenceNumber && (<p className="text-red-500 text-sm">{form.formState.errors.taxReferenceNumber.message}</p>)}
+                </div>
               </div>
             </div>
 
@@ -264,39 +272,41 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             {/* Banking Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Banking Information</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="bankName" className="text-right">Bank Name</Label>
-                <Input id="bankName" {...form.register("bankName")} className="col-span-3" />
-                {form.formState.errors.bankName && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.bankName.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="bankAccountHolder" className="text-right">Account Holder</Label>
-                <Input id="bankAccountHolder" {...form.register("bankAccountHolder")} className="col-span-3" />
-                {form.formState.errors.bankAccountHolder && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.bankAccountHolder.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="bankAccountNumber" className="text-right">Account Number</Label>
-                <Input id="bankAccountNumber" {...form.register("bankAccountNumber")} className="col-span-3" />
-                {form.formState.errors.bankAccountNumber && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.bankAccountNumber.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="bankBranchCode" className="text-right">Branch Code</Label>
-                <Input id="bankBranchCode" {...form.register("bankBranchCode")} className="col-span-3" />
-                {form.formState.errors.bankBranchCode && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.bankBranchCode.message}</p>)}
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="bankAccountType" className="text-right">Account Type</Label>
-                <Select onValueChange={(value) => form.setValue("bankAccountType", value as "Cheque" | "Savings" | "Business")} value={form.watch("bankAccountType")}>
-                  <SelectTrigger id="bankAccountType" className="col-span-3">
-                    <SelectValue placeholder="Select account type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Cheque">Cheque</SelectItem>
-                    <SelectItem value="Savings">Savings</SelectItem>
-                    <SelectItem value="Business">Business</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.bankAccountType && (<p className="col-span-4 text-right text-red-500 text-sm">{form.formState.errors.bankAccountType.message}</p>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="bankName">Bank Name</Label>
+                  <Input id="bankName" {...form.register("bankName")} />
+                  {form.formState.errors.bankName && (<p className="text-red-500 text-sm">{form.formState.errors.bankName.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bankAccountHolder">Account Holder</Label>
+                  <Input id="bankAccountHolder" {...form.register("bankAccountHolder")} />
+                  {form.formState.errors.bankAccountHolder && (<p className="text-red-500 text-sm">{form.formState.errors.bankAccountHolder.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bankAccountNumber">Account Number</Label>
+                  <Input id="bankAccountNumber" {...form.register("bankAccountNumber")} />
+                  {form.formState.errors.bankAccountNumber && (<p className="text-red-500 text-sm">{form.formState.errors.bankAccountNumber.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bankBranchCode">Branch Code</Label>
+                  <Input id="bankBranchCode" {...form.register("bankBranchCode")} />
+                  {form.formState.errors.bankBranchCode && (<p className="text-red-500 text-sm">{form.formState.errors.bankBranchCode.message}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bankAccountType">Account Type</Label>
+                  <Select onValueChange={(value) => form.setValue("bankAccountType", value as "Cheque" | "Savings" | "Business")} value={form.watch("bankAccountType")}>
+                    <SelectTrigger id="bankAccountType">
+                      <SelectValue placeholder="Select account type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Cheque">Cheque</SelectItem>
+                      <SelectItem value="Savings">Savings</SelectItem>
+                      <SelectItem value="Business">Business</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.bankAccountType && (<p className="text-red-500 text-sm">{form.formState.errors.bankAccountType.message}</p>)}
+                </div>
               </div>
             </div>
           </form>
