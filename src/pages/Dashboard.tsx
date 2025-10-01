@@ -23,6 +23,7 @@ import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard"; // Import UpcomingPayrollCard
 import TopToDosCard from "@/components/dashboard/TopToDosCard"; // Import new TopToDosCard
+import { Calendar } from "@/components/ui/calendar"; // Import Calendar component
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -37,7 +38,7 @@ const Dashboard: React.FC = () => {
   const [averageNetPayTrend, setAverageNetPayTrend] = useState<{ name: string; avgNetPay: number }[]>([]);
   const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
-
+  const [date, setDate] = React.useState<Date | undefined>(new Date()); // State for the calendar
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
@@ -243,7 +244,27 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Top To-Dos Card - New component */}
+        {/* Fixed Calendar Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Current Date</CardTitle>
+            <CardDescription>A quick view of the current date.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="rounded-md border"
+              fixedWeeks // Ensures the calendar always displays 6 weeks
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* New row for Top To-Dos and other charts */}
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        {/* Top To-Dos Card - Moved here */}
         <TopToDosCard />
 
         <Card>
