@@ -31,6 +31,11 @@ const VacationAbsence: React.FC = () => {
         Manage employee vacation, sick leave, and other absences.
       </p>
 
+      <LeaveAnalytics
+        leaveTypeDistribution={leaveTypeDistribution}
+        monthlyLeaveData={monthlyLeaveData}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -46,11 +51,6 @@ const VacationAbsence: React.FC = () => {
 
         <AbsenceCalendar leaveRecords={leaveRecords} />
       </div>
-
-      <LeaveAnalytics
-        leaveTypeDistribution={leaveTypeDistribution}
-        monthlyLeaveData={monthlyLeaveData}
-      />
 
       <LeaveRecordsTable leaveRecords={leaveRecords} getEmployeeName={getEmployeeName} />
 
