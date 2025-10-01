@@ -15,7 +15,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, getPrintClasses } from "@/lib/utils"; // Import getPrintClasses
+import { cn, getPrintClasses } from "@/lib/utils";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
 interface ReportPreviewDialogProps {
@@ -33,7 +33,7 @@ interface ReportPreviewDialogProps {
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
   companyLogoSize: number;
-  reportDesignSettings: ReportDesignSettings; // New prop for report design settings
+  reportDesignSettings: ReportDesignSettings; // Prop for report design settings
 }
 
 const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
@@ -51,7 +51,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   vatRegistrationNumber,
   companyLogoUrl,
   companyLogoSize,
-  reportDesignSettings, // Destructure new prop
+  reportDesignSettings, // Destructure reportDesignSettings
 }) => {
   const handlePrintReport = () => {
     const reportElement = document.getElementById("report-preview-content");

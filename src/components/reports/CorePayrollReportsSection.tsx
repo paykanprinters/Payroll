@@ -18,7 +18,7 @@ import {
   generateEmployeeDemographicsReportContent,
   generateBenefitDeductionsReportContent,
   generateAuditTrailReportContent,
-} from "@/lib/report-generators"; // Updated import path
+} from "@/lib/report-generators";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
@@ -80,7 +80,7 @@ interface CorePayrollReportsSectionProps {
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
   companyLogoSize: number;
-  reportDesignSettings: ReportDesignSettings; // New prop
+  reportDesignSettings: ReportDesignSettings; // Prop for report design settings
 }
 
 const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
@@ -97,7 +97,7 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   vatRegistrationNumber,
   companyLogoUrl,
   companyLogoSize,
-  reportDesignSettings, // Destructure new prop
+  reportDesignSettings, // Destructure reportDesignSettings
 }) => {
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
   const [currentReportTitle, setCurrentReportTitle] = React.useState("");

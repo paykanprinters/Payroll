@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection";
-import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
+import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
