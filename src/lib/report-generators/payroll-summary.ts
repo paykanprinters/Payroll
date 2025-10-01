@@ -1,0 +1,77 @@
+import { MockEmployee, MockPayslip } from "../mock-data";
+import { getEmployeeName } from "../utils"; // Import from shared utils
+
+export const generatePayrollSummaryReportContent = (payslips: MockPayslip[], employees: MockEmployee[]): string => {
+  if (payslips.length === 0) {
+    return "<p>No payslip data available to generate this report.</p>";
+  }
+
+  const totalGross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+  const totalDeductions = payslips.reduce((sum, p) => sum + p.totalDeductions, 0);
+  const totalNet = payslips.reduce((sum, p) => sum + p.netPay, 0);
+
+  const uniquePayPeriods = Array.from(new Set(payslips.map(p => p.payPeriod))).sort();
+
+  let html = `
+    <p><strong>Report Period:</strong> ${uniquePayPeriods[0]} to ${uniquePayPeriods[uniquePayPeriods.length - 1]}</p>
+    <p><strong>Total Employees Paid:</strong> ${new Set(payslips.map(p => p.employeeId)).size}</p>
+    <br/>
+    <h4 class="text-md font-semibold mb-2">Overall Summary</h4>
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="border-b">
+          <th class="py-2 px-4">Metric</th>
+          <th class="py-2 px-4 text-right">Amount (R)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b">
+          <td class="py-2 px-4">Total Gross Earnings</td>
+          <td class="py-2 px-4 text-right">${totalGross.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-2 px-4">Total Deductions</td>
+          <td class="py-2 px-4 text-right">${totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-2 px-4 font-bold">Total Net Pay</td>
+          <td class="py-2 px-4 text-right font-bold">${totalNet.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        </tr>
+      </tbody>
+    </table>
+    <br/>
+    <h4 class="text-md font-semibold mb-2">Summary by Pay Period</h4>
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="border-b">
+          <th class="py-2 px-4">Pay Period</th>
+          <th class="py-2 px-4 text-right">Gross Pay</th>
+          <th class="py-2 px-4 text-right">Deductions</th>
+          <th class="py-2 px-4 text-right">Net Pay</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  uniquePayPeriods.forEach(period => {
+    const periodPayslips = payslips.filter(p => p.payPeriod === period);
+    const periodGross = periodPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+    const periodDeductions = periodPayslips.reduce((sum, p) => sum + p.totalDeductions, 0);
+    const periodNet = periodPayslips.reduce((sum, p) => sum + p.netPay, 0);
+    html += `
+      <tr class="border-b">
+        <td class="py-2 px-4">${period}</td>
+        <td class="py-2 px-4 text-right">${periodGross.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-4 text-right">${periodDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-4 text-right">${periodNet.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+      </tbody>
+    </table>
+  `;
+
+  return html;
+};

@@ -18,7 +18,7 @@ import {
   generateEmployeeDemographicsReportContent,
   generateBenefitDeductionsReportContent,
   generateAuditTrailReportContent,
-} from "@/lib/report-generators";
+} from "@/lib/report-generators"; // Updated import path
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
 
 interface ReportItemProps {
