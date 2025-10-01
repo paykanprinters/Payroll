@@ -133,6 +133,11 @@ const Payslips: React.FC = () => {
         Generate new payslips, view historical payslips, and manage payroll periods.
       </p>
 
+      <PayslipSummaryCharts
+        payrollSummaryData={payrollSummaryData}
+        deductionsBreakdownData={deductionsBreakdownData}
+      />
+
       <PayslipGenerationSection
         employees={employees}
         payslips={payslips}
@@ -164,11 +169,6 @@ const Payslips: React.FC = () => {
           </CardContent>
         </Card>
       )}
-
-      <PayslipSummaryCharts
-        payrollSummaryData={payrollSummaryData}
-        deductionsBreakdownData={deductionsBreakdownData}
-      />
 
       <div className="mt-4 p-4 border rounded-lg bg-green-50 text-green-800">
         <h3 className="font-semibold text-lg mb-2">Payslip Management Area</h3>
