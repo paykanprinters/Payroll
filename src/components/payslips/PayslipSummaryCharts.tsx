@@ -75,11 +75,12 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
                 data={deductionsBreakdownData}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
+                innerRadius={60} // Added for Doughnut
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                labelLine={false} // Ensure no lines to labels
+                // label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} // Removed label
                 style={{ fontSize: dataVisualsFontSize }}
               >
                 {deductionsBreakdownData.map((entry, index) => (
