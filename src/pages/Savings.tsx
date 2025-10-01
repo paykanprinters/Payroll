@@ -125,6 +125,14 @@ const Savings: React.FC = () => {
     window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components that data has changed
   };
 
+  // Helper for PieChart legend formatter
+  const renderLegendText = (value: string, entry: any, total: number) => {
+    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+    return `${value} (${percentage}%)`;
+  };
+
+  const totalSavingsFrequency = savingsByFrequencyData.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Employee Savings</h1>
@@ -169,7 +177,6 @@ const Savings: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                   labelLine={false} // Ensure no lines to labels
-                  // label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} // Removed label
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {savingsByFrequencyData.map((entry, index) => (
@@ -177,7 +184,7 @@ const Savings: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalSavingsFrequency)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>

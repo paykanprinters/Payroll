@@ -154,6 +154,15 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
+  // Helper for PieChart legend formatter
+  const renderLegendText = (value: string, entry: any, total: number) => {
+    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+    return `${value} (${percentage}%)`;
+  };
+
+  const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
+  const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">
@@ -254,7 +263,6 @@ const Dashboard: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                   labelLine={false} // Ensure no lines to labels
-                  // label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} // Removed label
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {employeeJobTitleData.map((entry, index) => (
@@ -262,7 +270,7 @@ const Dashboard: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -288,7 +296,6 @@ const Dashboard: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                   labelLine={false} // Ensure no lines to labels
-                  // label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} // Removed label
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {totalDeductionsBreakdown.map((entry, index) => (
@@ -296,7 +303,7 @@ const Dashboard: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>

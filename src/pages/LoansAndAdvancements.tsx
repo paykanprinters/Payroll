@@ -131,6 +131,14 @@ const LoansAndAdvancements: React.FC = () => {
     window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components that data has changed
   };
 
+  // Helper for PieChart legend formatter
+  const renderLegendText = (value: string, entry: any, total: number) => {
+    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+    return `${value} (${percentage}%)`;
+  };
+
+  const totalLoansByEmployee = loansByEmployeeData.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Loans & Advancements</h1>
@@ -176,7 +184,6 @@ const LoansAndAdvancements: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                   labelLine={false} // Ensure no lines to labels
-                  // label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} // Removed label
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {loansByEmployeeData.map((entry, index) => (
@@ -184,7 +191,7 @@ const LoansAndAdvancements: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLoansByEmployee)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -333,7 +340,7 @@ const LoansAndAdvancements: React.FC = () => {
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Important Note on Loan Deductions:</h3>
-        <p className="text-sm">
+        <p className className="text-sm">
           This interface allows you to record loans and their repayment schedules. The actual deduction from an employee's salary and the update of the remaining balance would be handled by the backend payroll processing logic when payslips are generated. This front-end provides the configuration.
         </p>
       </div>

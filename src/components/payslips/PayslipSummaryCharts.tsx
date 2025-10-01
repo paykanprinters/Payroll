@@ -41,6 +41,14 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
 }) => {
   const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
 
+  // Helper for PieChart legend formatter
+  const renderLegendText = (value: string, entry: any, total: number) => {
+    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+    return `${value} (${percentage}%)`;
+  };
+
+  const totalDeductions = deductionsBreakdownData.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
     <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
       <Card>
@@ -80,7 +88,6 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
                 fill="#8884d8"
                 dataKey="value"
                 labelLine={false} // Ensure no lines to labels
-                // label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} // Removed label
                 style={{ fontSize: dataVisualsFontSize }}
               >
                 {deductionsBreakdownData.map((entry, index) => (
@@ -88,7 +95,7 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
                 ))}
               </Pie>
               <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>

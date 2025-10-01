@@ -27,6 +27,14 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"
 const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, monthlyLeaveData }) => {
   const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
 
+  // Helper for PieChart legend formatter
+  const renderLegendText = (value: string, entry: any, total: number) => {
+    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+    return `${value} (${percentage}%)`;
+  };
+
+  const totalLeaveDays = leaveTypeDistribution.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
     <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 mt-6">
       <Card>
@@ -46,7 +54,6 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
                 fill="#8884d8"
                 dataKey="value"
                 labelLine={false} // Ensure no lines to labels
-                // label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} // Removed label
                 style={{ fontSize: dataVisualsFontSize }}
               >
                 {leaveTypeDistribution.map((entry, index) => (
@@ -54,7 +61,7 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
                 ))}
               </Pie>
               <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLeaveDays)} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
