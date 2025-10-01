@@ -21,6 +21,8 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
+import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard"; // Import UpcomingPayrollCard
+import TopToDosCard from "@/components/dashboard/TopToDosCard"; // Import new TopToDosCard
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -209,6 +211,9 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* Upcoming Payroll Card - Moved here */}
+      <UpcomingPayrollCard />
+
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -228,6 +233,9 @@ const Dashboard: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
+        {/* Top To-Dos Card - New component */}
+        <TopToDosCard />
 
         <Card>
           <CardHeader>
