@@ -29,16 +29,17 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
+            <Route path="/payslips" element={<Payslips />} /> {/* Payslips moved back to top-level */}
             <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
             <Route path="/savings" element={<Savings />} />
             <Route path="/vacation-absence" element={<VacationAbsence />} />
             <Route path="/reports" element={<Reports />} />
             
-            {/* New Payroll Routes */}
+            {/* Payroll Routes */}
             <Route path="/payroll/*" element={<PayrollLayout />}>
               <Route index element={<UpcomingPayrollCard />} /> {/* Default to Upcoming Payroll under /payroll */}
               <Route path="upcoming" element={<UpcomingPayrollCard />} />
-              <Route path="payslips" element={<Payslips />} />
+              {/* Payslips route removed from here */}
               {/* Add more payroll sub-routes here */}
             </Route>
 

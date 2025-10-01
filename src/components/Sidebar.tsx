@@ -103,7 +103,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/employees", icon: Users, label: "Employees" },
-    { to: "/payroll/payslips", icon: Wallet, label: "Payroll" }, // New Payroll item, links to Payslips by default
+    { to: "/payslips", icon: ReceiptText, label: "Payslips" }, // Payslips moved back to top-level
+    { to: "/payroll/upcoming", icon: Wallet, label: "Payroll" }, // Payroll now links to Upcoming Payroll
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
     { to: "/savings", icon: PiggyBank, label: "Savings" },
     { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },

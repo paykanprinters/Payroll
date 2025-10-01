@@ -11,10 +11,7 @@ const sidebarNavItems = [
     title: "Upcoming Payroll",
     href: "/payroll/upcoming",
   },
-  {
-    title: "Payslips",
-    href: "/payroll/payslips",
-  },
+  // Payslips removed from here
   // Add more payroll sub-menus here (e.g., "Payroll Settings", "Tax Submissions")
 ];
 
