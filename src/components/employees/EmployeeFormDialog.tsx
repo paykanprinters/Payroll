@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useForm } from "@hookform/react";
+import { useForm } from "react-hook-form"; // Corrected import path
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
