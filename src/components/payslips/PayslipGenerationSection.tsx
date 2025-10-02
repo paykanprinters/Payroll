@@ -125,7 +125,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       margin: [10, 10, 10, 10],
       filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' }, // Added media: 'print'
       jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
     };
 
@@ -161,7 +161,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       margin: [10, 10, 10, 10],
       filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' }, // Added media: 'print'
       jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
     };
 
