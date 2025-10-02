@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import ReactDOM from 'react-dom/client'; // Import ReactDOM for client-side rendering
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -71,23 +72,35 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
 
-  const generatePayslipHtml = (payslip: MockPayslip) => {
-    // Create a temporary div to render the IndividualPayslipCard into
-    const tempDiv = document.createElement('div');
-    // Render the IndividualPayslipCard into the temporary div
-    // We need to use ReactDOM.render or similar for a full React component,
-    // but for simple HTML generation, we can manually construct it or use a library.
-    // Given the complexity, it's better to let html2pdf process the already rendered component in the DOM.
-    // However, for a standalone generation, we need to simulate the rendering.
-    // For this mock, we'll rely on the component being present in the DOM for the preview.
-    // If we were to generate it completely independently, we'd need a more complex setup.
-    // For now, we'll grab the already rendered preview.
+  const generatePayslipElementForPdf = (payslip: MockPayslip): HTMLElement | null => {
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px'; // Hide it off-screen
+    // Set a default large size for rendering, actual PDF size is controlled by jsPDF format
+    tempContainer.style.width = '210mm'; // A4 width
+    tempContainer.style.height = '297mm'; // A4 height
+    document.body.appendChild(tempContainer);
 
-    const payslipElement = document.getElementById(`payslip-${payslip.id}`);
-    if (payslipElement) {
-      return payslipElement.outerHTML;
-    }
-    return "<p>Error: Payslip content not found.</p>";
+    const root = ReactDOM.createRoot(tempContainer);
+    root.render(
+      <IndividualPayslipCard
+        payslip={payslip}
+        payslipDesignSettings={payslipDesignSettings}
+        companyTradingName={companyTradingName}
+        companyLogoUrl={companyLogoUrl}
+        companyLogoSize={companyLogoSize}
+        employees={allEmployees}
+        getEmployeeName={getEmployeeName}
+      />
+    );
+
+    return tempContainer;
+  };
+
+  const cleanupPayslipElementForPdf = (element: HTMLElement) => {
+    const root = ReactDOM.createRoot(element); // Re-create root to unmount
+    root.unmount();
+    document.body.removeChild(element);
   };
 
   const handlePrintPayslip = () => {
@@ -98,9 +111,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     showSuccess("Preparing payslip for printing...");
 
-    const payslipHtmlContent = generatePayslipHtml(selectedPayslip);
-    if (payslipHtmlContent === "<p>Error: Payslip content not found.</p>") {
-      showError("Selected payslip content not found for printing.");
+    const payslipElement = generatePayslipElementForPdf(selectedPayslip);
+    if (!payslipElement) {
+      showError("Failed to generate payslip content for printing.");
       return;
     }
 
@@ -116,13 +129,13 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
     };
 
-    const element = document.createElement('div');
-    element.innerHTML = payslipHtmlContent;
-    element.style.fontSize = `${payslipDesignSettings.reportContentFontSize || 14}px`; // Apply font size if available
-
-    html2pdf().from(element).set(opt).toPdf().get('pdf').then(function (pdf) {
-      pdf.autoPrint();
-      window.open(pdf.output('bloburl'), '_blank');
+    html2pdf().from(payslipElement).set(opt).toPdf().get('pdf').then(function (pdf) {
+      pdf.output('dataurlnewwindow'); // Opens in new tab, browser handles print dialog
+      cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
+    }).catch(error => {
+      showError("Error generating PDF for printing.");
+      console.error("html2pdf error:", error);
+      cleanupPayslipElementForPdf(payslipElement);
     });
   };
 
@@ -134,9 +147,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     showSuccess("Generating PDF, please wait...");
 
-    const payslipHtmlContent = generatePayslipHtml(selectedPayslip);
-    if (payslipHtmlContent === "<p>Error: Payslip content not found.</p>") {
-      showError("Selected payslip content not found for PDF download.");
+    const payslipElement = generatePayslipElementForPdf(selectedPayslip);
+    if (!payslipElement) {
+      showError("Failed to generate payslip content for PDF download.");
       return;
     }
 
@@ -152,11 +165,13 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
     };
 
-    const element = document.createElement('div');
-    element.innerHTML = payslipHtmlContent;
-    element.style.fontSize = `${payslipDesignSettings.reportContentFontSize || 14}px`; // Apply font size if available
-
-    html2pdf().from(element).set(opt).save();
+    html2pdf().from(payslipElement).set(opt).save().then(() => {
+      cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
+    }).catch(error => {
+      showError("Error generating PDF for download.");
+      console.error("html2pdf error:", error);
+      cleanupPayslipElementForPdf(payslipElement);
+    });
   };
 
   return (
