@@ -117,26 +117,29 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       return;
     }
 
-    let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
-    if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
-    else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
+    // Introduce a small delay to ensure React has fully rendered the component
+    setTimeout(() => {
+      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+      if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
+      else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
 
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' }, // Added media: 'print'
-      jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
-    };
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' },
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
+      };
 
-    html2pdf().from(payslipElement).set(opt).toPdf().get('pdf').then(function (pdf) {
-      pdf.output('dataurlnewwindow'); // Opens in new tab, browser handles print dialog
-      cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
-    }).catch(error => {
-      showError("Error generating PDF for printing.");
-      console.error("html2pdf error:", error);
-      cleanupPayslipElementForPdf(payslipElement);
-    });
+      html2pdf().from(payslipElement).set(opt).toPdf().get('pdf').then(function (pdf) {
+        pdf.output('dataurlnewwindow'); // Opens in new tab, browser handles print dialog
+        cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
+      }).catch(error => {
+        showError("Error generating PDF for printing.");
+        console.error("html2pdf error:", error);
+        cleanupPayslipElementForPdf(payslipElement);
+      });
+    }, 100); // A small delay, e.g., 100ms
   };
 
   const handleDownloadPdf = () => {
@@ -153,25 +156,28 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       return;
     }
 
-    let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
-    if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
-    else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
+    // Introduce a small delay to ensure React has fully rendered the component
+    setTimeout(() => {
+      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+      if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
+      else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
 
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' }, // Added media: 'print'
-      jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
-    };
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' },
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
+      };
 
-    html2pdf().from(payslipElement).set(opt).save().then(() => {
-      cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
-    }).catch(error => {
-      showError("Error generating PDF for download.");
-      console.error("html2pdf error:", error);
-      cleanupPayslipElementForPdf(payslipElement);
-    });
+      html2pdf().from(payslipElement).set(opt).save().then(() => {
+        cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
+      }).catch(error => {
+        showError("Error generating PDF for download.");
+        console.error("html2pdf error:", error);
+        cleanupPayslipElementForPdf(payslipElement);
+      });
+    }, 100); // A small delay, e.g., 100ms
   };
 
   return (
