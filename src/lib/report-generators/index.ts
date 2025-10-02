@@ -9,3 +9,4 @@ export { generateNewHiresTerminationsReportContent } from "./new-hires-terminati
 export { generateEmployeeDemographicsReportContent } from "./employee-demographics";
 export { generateBenefitDeductionsReportContent } from "./benefit-deductions";
 export { generateAuditTrailReportContent } from "./audit-trail";
+export { generateEmployeeProfileReportContent } from "./employee-profile";

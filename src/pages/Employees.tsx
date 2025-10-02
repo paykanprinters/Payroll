@@ -17,7 +17,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Download } from "lucide-react"; // Import Download icon
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import {
@@ -31,8 +31,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { MockEmployee } from "@/lib/mock-data-interfaces"; // Updated import
-
+import { MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Updated import
+import { generateEmployeeProfileReportContent } from "@/lib/report-generators"; // Import new report generator
+import html2pdf from 'html2pdf.js'; // Import html2pdf
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
@@ -44,6 +45,7 @@ const Employees: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<MockEmployee | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
+  const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null); // State for company details
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
@@ -67,7 +69,7 @@ const Employees: React.FC = () => {
       loadedEmployees.forEach((emp) => {
         const current = salarySumByJobTitle.get(emp.jobTitle) || { sum: 0, count: 0 };
         salarySumByJobTitle.set(emp.jobTitle, {
-          sum: current.sum + emp.salary,
+          sum: current.sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), // Estimate monthly for hourly
           count: current.count + 1,
         });
       });
@@ -84,11 +86,50 @@ const Employees: React.FC = () => {
     }
   };
 
+  const loadCompanyDetails = () => {
+    const storedCompanyDetails = localStorage.getItem("companyLegalName")
+      ? {
+          companyLegalName: localStorage.getItem('companyLegalName') || "",
+          companyTradingName: localStorage.getItem('companyTradingName') || "",
+          companyRegistrationNumber: localStorage.getItem('companyRegistrationNumber') || "",
+          companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
+          vatRegistrationNumber: localStorage.getItem('vatRegistrationNumber') || "",
+          industry: localStorage.getItem('industry') || "",
+          payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
+          uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
+          sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
+          coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
+          physicalAddress: localStorage.getItem('physicalAddress') || "",
+          postalAddress: localStorage.getItem('postalAddress') || "",
+          mainContactNumber: localStorage.getItem('mainContactNumber') || "",
+          alternativeContactNumber: localStorage.getItem('alternativeContactNumber') || "",
+          companyEmail: localStorage.getItem('companyEmail') || "",
+          companyWebsite: localStorage.getItem('companyWebsite') || "",
+          bankName: localStorage.getItem('bankName') || "",
+          accountHolderName: localStorage.getItem('accountHolderName') || "",
+          accountNumber: localStorage.getItem('accountNumber') || "",
+          branchCode: localStorage.getItem('branchCode') || "",
+          accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
+          logoUrl: localStorage.getItem('companyLogoUrl') || '',
+          logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
+          // For report design settings, we'll use defaults or load from specific keys
+          defaultReportPaperSize: (localStorage.getItem('reportDesignPaperSize') as "Letter" | "A4" | "A5") || "A4",
+          includeCompanyLogo: localStorage.getItem('reportDesignIncludeLogo') === 'true',
+          includeCompanyDetails: localStorage.getItem('reportDesignIncludeDetails') === 'true',
+          reportContentFontSize: parseFloat(localStorage.getItem('reportDesignFontSize') || '14'),
+        }
+      : null;
+    setCompanyDetails(storedCompanyDetails as MockCompanyDetails);
+  };
+
   useEffect(() => {
     loadEmployees();
+    loadCompanyDetails();
     window.addEventListener('mockDataUpdated', loadEmployees);
+    window.addEventListener('companyDetailsUpdated', loadCompanyDetails); // Listen for company detail updates
     return () => {
       window.removeEventListener('mockDataUpdated', loadEmployees);
+      window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
     };
   }, []);
 
@@ -138,6 +179,24 @@ const Employees: React.FC = () => {
     setIsFormOpen(false);
     setEditingEmployee(null);
     window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
+  };
+
+  const handleDownloadProfile = (employee: MockEmployee) => {
+    if (!companyDetails) {
+      showError("Company details not loaded. Cannot generate profile.");
+      return;
+    }
+
+    showSuccess(`Generating profile for ${employee.firstName} ${employee.lastName}...`);
+    const profileHtml = generateEmployeeProfileReportContent(employee, companyDetails);
+
+    html2pdf().from(profileHtml).set({
+      margin: [10, 10, 10, 10],
+      filename: `employee-profile-${employee.firstName}-${employee.lastName}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).save();
   };
 
   // Helper for PieChart legend formatter
@@ -225,11 +284,11 @@ const Employees: React.FC = () => {
                     <TableHead>ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Job Title</TableHead>
-                    <TableHead>Department</TableHead> {/* New */}
+                    <TableHead>Department</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Mobile</TableHead> {/* Renamed */}
+                    <TableHead>Mobile</TableHead>
                     <TableHead>Start Date</TableHead>
-                    <TableHead className="text-right">Salary</TableHead>
+                    <TableHead className="text-right">Salary/Rate</TableHead> {/* Updated header */}
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -239,14 +298,20 @@ const Employees: React.FC = () => {
                       <TableCell className="font-medium">{employee.id}</TableCell>
                       <TableCell>{employee.firstName} {employee.lastName}</TableCell>
                       <TableCell>{employee.jobTitle}</TableCell>
-                      <TableCell>{employee.department || "N/A"}</TableCell> {/* New */}
+                      <TableCell>{employee.department || "N/A"}</TableCell>
                       <TableCell>{employee.email}</TableCell>
-                      <TableCell>{employee.phoneNumber || "N/A"}</TableCell> {/* Renamed */}
+                      <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
                       <TableCell>{employee.startDate}</TableCell>
-                      <TableCell className="text-right">R {employee.salary.toLocaleString('en-ZA')}</TableCell>
+                      <TableCell className="text-right">
+                        {employee.salary ? `R ${employee.salary.toLocaleString('en-ZA')}` :
+                         employee.hourlyRate ? `R ${employee.hourlyRate.toLocaleString('en-ZA')} / hr` : "N/A"}
+                      </TableCell>
                       <TableCell className="flex justify-center gap-2">
                         <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)}>
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)}>
+                          <Download className="h-4 w-4" />
                         </Button>
                         <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)}>
                           <Trash2 className="h-4 w-4" />
