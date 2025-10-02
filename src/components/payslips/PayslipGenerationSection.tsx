@@ -67,7 +67,13 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write('<html><head><title>Payslip</title>');
-        printWindow.document.write('<link rel="stylesheet" href="/src/globals.css">');
+
+        // Copy all stylesheets and style tags from the current document's head
+        const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+          .map(node => node.outerHTML)
+          .join('');
+        printWindow.document.write(stylesheets);
+
         printWindow.document.write('<style>');
         printWindow.document.write('@media print { body { margin: 0; } .no-print { display: none; } }');
         printWindow.document.write('</style>');
