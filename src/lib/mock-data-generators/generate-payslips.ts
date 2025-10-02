@@ -29,8 +29,16 @@ export const generateMockPayslips = (employees: MockEmployee[], loans: Loan[], s
       const payPeriod = `${payPeriodStart} - ${payPeriodEnd}`;
       const monthString = format(monthDate, "yyyy-MM");
 
-      let grossEarnings = emp.salary;
-      const earningsBreakdown = [{ name: "Basic Salary", amount: emp.salary }];
+      let basicSalary = 0;
+      if (emp.salary !== undefined) {
+        basicSalary = emp.salary;
+      } else if (emp.hourlyRate !== undefined) {
+        // For hourly employees, estimate monthly basic pay (e.g., 8 hours/day * 20 working days/month)
+        basicSalary = emp.hourlyRate * (emp.standardDailyHours || 8) * 20;
+      }
+
+      let grossEarnings = basicSalary;
+      const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
 
       // Add mock Overtime and Bonus for some employees/months
       if (emp.id === "EMP001" && month % 2 === 0) { // John Doe gets overtime every other month
