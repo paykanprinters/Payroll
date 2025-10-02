@@ -12,7 +12,8 @@ import {
   generateMockSavingPlans,
   generateMockLeaveRecords,
   generateMockPayslips,
-  MockCompanyDetails, // Import interfaces for type safety
+  generateMockTimesheets, // New import
+  MockCompanyDetails,
 } from "@/lib/mock-data";
 
 
@@ -27,8 +28,8 @@ const MockData: React.FC = () => {
     const mockLoans = generateMockLoans();
     const mockSavingPlans = generateMockSavingPlans();
     const mockLeaveRecords = generateMockLeaveRecords();
-    console.log("MockData: Generated mockLeaveRecords:", mockLeaveRecords); // Added log
     const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords);
+    const mockTimesheets = generateMockTimesheets(mockEmployees); // Generate mock timesheets
 
     // Save company details
     Object.entries(mockCompany).forEach(([key, value]) => {
@@ -39,15 +40,14 @@ const MockData: React.FC = () => {
     localStorage.setItem("mockLoans", JSON.stringify(mockLoans));
     localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans));
     localStorage.setItem("mockLeaveRecords", JSON.stringify(mockLeaveRecords));
-    console.log("MockData: Saved mockLeaveRecords to localStorage:", JSON.parse(localStorage.getItem("mockLeaveRecords") || '[]')); // Added log
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
+    localStorage.setItem("mockTimesheets", JSON.stringify(mockTimesheets)); // Save mock timesheets
     localStorage.setItem("applyPAYE", "true"); // Enable PAYE for mock data
     localStorage.setItem("applySDL", "true"); // Enable SDL for mock data
 
     // Dispatch events to update components
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('mockDataUpdated')); // Generic event for other components
-    console.log("MockData: Dispatched 'mockDataUpdated' event.");
     showSuccess("Mock data populated successfully!");
   };
 
@@ -71,15 +71,14 @@ const MockData: React.FC = () => {
     localStorage.removeItem("mockLoans");
     localStorage.removeItem("mockSavingPlans");
     localStorage.removeItem("mockLeaveRecords");
-    console.log("MockData: Cleared mockLeaveRecords from localStorage."); // Added log
     localStorage.removeItem("mockPayslips");
+    localStorage.removeItem("mockTimesheets"); // Clear mock timesheets
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
 
     // Dispatch events to update components
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('mockDataUpdated')); // Generic event for other components
-    console.log("MockData: Dispatched 'mockDataUpdated' event (cleared).");
     showSuccess("Mock data cleared successfully!");
   };
 

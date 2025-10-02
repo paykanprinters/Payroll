@@ -12,7 +12,8 @@ import Settings from "./pages/Settings";
 import LoansAndAdvancements from "./pages/LoansAndAdvancements";
 import Savings from "./pages/Savings";
 import VacationAbsence from "./pages/VacationAbsence";
-import Analytics from "./pages/Analytics"; // New import
+import Analytics from "./pages/Analytics";
+import Timesheet from "./pages/Timesheet"; // New import
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,11 +29,12 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
+            <Route path="/timesheet" element={<Timesheet />} /> {/* New Timesheet Route */}
             <Route path="/payslips" element={<Payslips />} />
             <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
             <Route path="/savings" element={<Savings />} />
             <Route path="/vacation-absence" element={<VacationAbsence />} />
-            <Route path="/analytics" element={<Analytics />} /> {/* New Analytics Route */}
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/reports" element={<Reports />} />
             
             <Route path="/settings/*" element={<Settings />} />

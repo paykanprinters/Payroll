@@ -66,6 +66,7 @@ export interface MockEmployee {
   permanentAddress?: string;
   paymentMode?: "Bank Transfer" | "Cash" | "Cheque";
   payFrequency?: "Monthly" | "Weekly" | "Bi-Weekly"; // New field
+  standardDailyHours?: number; // Added for timesheet calculations
 }
 
 export interface Loan {
@@ -113,4 +114,27 @@ export interface MockPayslip {
   leaveSummary: { annual: number; sick: number; unpaid: number };
   ytdGrossEarnings: number;
   ytdTotalDeductions: number;
+}
+
+export interface TimesheetEntry {
+  id: string;
+  employeeId: string;
+  date: string; // YYYY-MM-DD
+  timeIn: string; // HH:mm
+  teaStart?: string; // HH:mm
+  teaEnd?: string; // HH:mm
+  lunchStart?: string; // HH:mm
+  lunchEnd?: string; // HH:mm
+  timeOut: string; // HH:mm
+  totalWorkHours: number; // Calculated
+  overtimeHours: number; // Calculated
+  lateArrival: boolean; // Calculated
+  earlyDeparture: boolean; // Calculated
+  absent: boolean; // Calculated
+  status: "Draft" | "Submitted" | "Approved" | "Locked";
+  submittedBy?: string;
+  submittedAt?: string; // ISO string
+  approvedBy?: string;
+  approvedAt?: string; // ISO string
+  auditLog?: { action: string; timestamp: string; user: string }[];
 }

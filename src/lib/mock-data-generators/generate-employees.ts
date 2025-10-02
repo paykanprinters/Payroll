@@ -40,6 +40,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "15 Tech Street, Unit 10, Johannesburg, 2001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
+    standardDailyHours: 8, // Added
   },
   {
     id: "EMP002",
@@ -79,6 +80,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "22 Oak Avenue, Cape Town, 8001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
+    standardDailyHours: 8, // Added
   },
   {
     id: "EMP003",
@@ -118,6 +120,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "789 Finance Street, Durban, 4001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
+    standardDailyHours: 8, // Added
   },
   {
     id: "EMP004",
@@ -157,6 +160,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "321 Creative Lane, Pretoria, 0001",
     paymentMode: "Bank Transfer",
     payFrequency: "Weekly",
+    standardDailyHours: 8, // Added
   },
   {
     id: "EMP005",
@@ -196,6 +200,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "65 Industrial Park, Port Elizabeth, 6001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
+    standardDailyHours: 8, // Added
   },
   {
     id: "EMP006",
@@ -235,5 +240,6 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "101 Help Desk Road, Bloemfontein, 9301",
     paymentMode: "Bank Transfer",
     payFrequency: "Bi-Weekly",
+    standardDailyHours: 8, // Added
   },
 ];

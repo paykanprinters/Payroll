@@ -15,6 +15,7 @@ import {
   PiggyBank,
   CalendarDays,
   LineChart, // New icon for Analytics
+  Clock, // Icon for Timesheet
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -103,11 +104,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/employees", icon: Users, label: "Employees" },
+    { to: "/timesheet", icon: Clock, label: "Timesheet" }, // New Timesheet item
     { to: "/payslips", icon: ReceiptText, label: "Payslips" },
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
     { to: "/savings", icon: PiggyBank, label: "Savings" },
     { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
-    { to: "/analytics", icon: LineChart, label: "Analytics" }, // New Analytics item
+    { to: "/analytics", icon: LineChart, label: "Analytics" },
     { to: "/reports", icon: BarChart, label: "Reports" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
