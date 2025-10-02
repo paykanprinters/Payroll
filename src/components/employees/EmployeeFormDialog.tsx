@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useForm } from "react-hook-form"; // Corrected import path
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -60,10 +60,10 @@ const employeeSchema = z.object({
   originCountry: z.string().optional(),
   employmentType: z.enum(["Permanent", "Contract", "Temporary"]).optional(),
   portalAccess: z.boolean().default(false).optional(),
-  fathersName: z.string().optional(),
-  molId: z.string().optional(),
+  // fathersName: z.string().optional(), // Removed
+  // molId: z.string().optional(), // Removed
   permanentAddress: z.string().optional(),
-  paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
+  paymentMode: z.enum(["Bank Transfer", "Cash" | "Cheque"]).optional(),
 });
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -118,8 +118,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       originCountry: "",
       employmentType: undefined,
       portalAccess: false,
-      fathersName: "",
-      molId: "",
+      // fathersName: "", // Removed
+      // molId: "", // Removed
       permanentAddress: "",
       paymentMode: "Bank Transfer",
     },
@@ -159,8 +159,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         originCountry: "",
         employmentType: undefined,
         portalAccess: false,
-        fathersName: "",
-        molId: "",
+        // fathersName: "", // Removed
+        // molId: "", // Removed
         permanentAddress: "",
         paymentMode: "Bank Transfer",
       });
@@ -293,16 +293,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     <Input id="dateOfBirth" type="date" {...form.register("dateOfBirth")} />
                     {form.formState.errors.dateOfBirth && (<p className="text-red-500 text-sm">{form.formState.errors.dateOfBirth.message}</p>)}
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="fathersName">Father's Name</Label>
-                    <Input id="fathersName" {...form.register("fathersName")} />
-                    {form.formState.errors.fathersName && (<p className="text-red-500 text-sm">{form.formState.errors.fathersName.message}</p>)}
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="molId">MOL ID</Label>
-                    <Input id="molId" {...form.register("molId")} />
-                    {form.formState.errors.molId && (<p className="text-red-500 text-sm">{form.formState.errors.molId.message}</p>)}
-                  </div>
+                  {/* Removed Father's Name and MOL ID */}
                   <div className="space-y-1">
                     <Label htmlFor="idNumber">ID Number</Label>
                     <Input id="idNumber" {...form.register("idNumber")} />

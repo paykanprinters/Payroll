@@ -32,8 +32,8 @@ export const generateMockEmployees = (): MockEmployee[] => [
     originCountry: "South Africa",
     employmentType: "Permanent",
     portalAccess: true,
-    fathersName: "Richard Doe",
-    molId: "MOL-JD-001",
+    // fathersName: "Richard Doe", // Removed
+    // molId: "MOL-JD-001", // Removed
     permanentAddress: "15 Tech Street, Unit 10, Johannesburg, 2001",
     paymentMode: "Bank Transfer",
   },
@@ -67,8 +67,8 @@ export const generateMockEmployees = (): MockEmployee[] => [
     originCountry: "South Africa",
     employmentType: "Permanent",
     portalAccess: true,
-    fathersName: "David Smith",
-    molId: "MOL-JS-002",
+    // fathersName: "David Smith", // Removed
+    // molId: "MOL-JS-002", // Removed
     permanentAddress: "22 Oak Avenue, Cape Town, 8001",
     paymentMode: "Bank Transfer",
   },
@@ -102,8 +102,8 @@ export const generateMockEmployees = (): MockEmployee[] => [
     originCountry: "South Africa",
     employmentType: "Permanent",
     portalAccess: true,
-    fathersName: "Robert Jones",
-    molId: "MOL-PJ-003",
+    // fathersName: "Robert Jones", // Removed
+    // molId: "MOL-PJ-003", // Removed
     permanentAddress: "789 Finance Street, Durban, 4001",
     paymentMode: "Bank Transfer",
   },
@@ -137,8 +137,8 @@ export const generateMockEmployees = (): MockEmployee[] => [
     originCountry: "South Africa",
     employmentType: "Permanent",
     portalAccess: true,
-    fathersName: "Michael Brown",
-    molId: "MOL-SB-004",
+    // fathersName: "Michael Brown", // Removed
+    // molId: "MOL-SB-004", // Removed
     permanentAddress: "321 Creative Lane, Pretoria, 0001",
     paymentMode: "Bank Transfer",
   },
@@ -172,8 +172,8 @@ export const generateMockEmployees = (): MockEmployee[] => [
     originCountry: "South Africa",
     employmentType: "Permanent",
     portalAccess: true,
-    fathersName: "Paul Green",
-    molId: "MOL-DG-005",
+    // fathersName: "Paul Green", // Removed
+    // molId: "MOL-DG-005", // Removed
     permanentAddress: "65 Industrial Park, Port Elizabeth, 6001",
     paymentMode: "Bank Transfer",
   },
@@ -207,8 +207,8 @@ export const generateMockEmployees = (): MockEmployee[] => [
     originCountry: "South Africa",
     employmentType: "Permanent",
     portalAccess: true,
-    fathersName: "James White",
-    molId: "MOL-EW-006",
+    // fathersName: "James White", // Removed
+    // molId: "MOL-EW-006", // Removed
     permanentAddress: "101 Help Desk Road, Bloemfontein, 9301",
     paymentMode: "Bank Transfer",
   },

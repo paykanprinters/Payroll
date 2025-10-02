@@ -58,8 +58,8 @@ export interface MockEmployee {
   originCountry?: string;
   employmentType?: "Permanent" | "Contract" | "Temporary";
   portalAccess?: boolean;
-  fathersName?: string;
-  molId?: string;
+  // fathersName?: string; // Removed as requested
+  // molId?: string; // Removed as requested
   permanentAddress?: string;
   paymentMode?: "Bank Transfer" | "Cash" | "Cheque";
 }
