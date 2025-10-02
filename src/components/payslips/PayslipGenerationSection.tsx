@@ -119,6 +119,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     // Introduce a small delay to ensure React has fully rendered the component
     setTimeout(() => {
+      console.log("Payslip element innerHTML before PDF generation (Print):", payslipElement.innerHTML); // Debug log
+
       let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
       if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
       else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
@@ -127,7 +129,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         margin: [10, 10, 10, 10],
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true }, // Added debug and useCORS
         jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
       };
 
@@ -139,7 +141,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         console.error("html2pdf error:", error);
         cleanupPayslipElementForPdf(payslipElement);
       });
-    }, 100); // A small delay, e.g., 100ms
+    }, 500); // Increased delay to 500ms
   };
 
   const handleDownloadPdf = () => {
@@ -158,6 +160,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     // Introduce a small delay to ensure React has fully rendered the component
     setTimeout(() => {
+      console.log("Payslip element innerHTML before PDF generation (Download):", payslipElement.innerHTML); // Debug log
+
       let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
       if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
       else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
@@ -166,7 +170,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         margin: [10, 10, 10, 10],
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print' },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true }, // Added debug and useCORS
         jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
       };
 
@@ -177,7 +181,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         console.error("html2pdf error:", error);
         cleanupPayslipElementForPdf(payslipElement);
       });
-    }, 100); // A small delay, e.g., 100ms
+    }, 500); // Increased delay to 500ms
   };
 
   return (
