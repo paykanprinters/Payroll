@@ -61,8 +61,6 @@ export interface MockEmployee {
   originCountry?: string;
   employmentType?: "Permanent" | "Contract" | "Temporary";
   portalAccess?: boolean;
-  fathersName?: string;
-  molId?: string;
   permanentAddress?: string;
   paymentMode?: "Bank Transfer" | "Cash" | "Cheque";
   payFrequency?: "Monthly" | "Weekly" | "Bi-Weekly"; // New field

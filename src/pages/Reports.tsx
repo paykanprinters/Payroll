@@ -154,7 +154,7 @@ const Reports: React.FC = () => {
             <LineChart data={monthlyPayrollTrend}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-              <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+              <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
               <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
               <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               <Line type="monotone" dataKey="gross" stroke="#8884d8" name="Gross Pay" activeDot={{ r: 8 }} />

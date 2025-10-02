@@ -1,9 +1,11 @@
 import { MockEmployee, MockCompanyDetails } from "../mock-data-interfaces";
+import { ReportDesignSettings } from "../report-design-interfaces"; // Import ReportDesignSettings
 import { format } from "date-fns";
 
 export const generateEmployeeProfileReportContent = (
   employee: MockEmployee,
   companyDetails: MockCompanyDetails,
+  reportDesignSettings: ReportDesignSettings, // Add reportDesignSettings
 ): string => {
   const renderField = (label: string, value: string | number | boolean | undefined) => {
     if (value === undefined || value === null || value === "") {
@@ -28,11 +30,11 @@ export const generateEmployeeProfileReportContent = (
   };
 
   const companyLogoHtml =
-    companyDetails.includeCompanyLogo && companyDetails.logoUrl
+    reportDesignSettings.includeCompanyLogo && companyDetails.logoUrl
       ? `<img src="${companyDetails.logoUrl}" alt="Company Logo" style="width: ${companyDetails.logoSize}px; height: ${companyDetails.logoSize}px; object-fit: contain;" class="rounded-md flex-shrink-0" />`
       : "";
 
-  const companyDetailsHtml = companyDetails.includeCompanyDetails
+  const companyDetailsHtml = reportDesignSettings.includeCompanyDetails
     ? `
     <div class="text-right text-xs">
       <h2 class="text-md font-bold">${companyDetails.companyLegalName || "Your Company Legal Name"}</h2>

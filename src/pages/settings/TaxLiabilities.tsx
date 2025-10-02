@@ -63,7 +63,7 @@ const TaxLiabilities: React.FC = () => {
       return;
     }
 
-    const toastId = showLoading(`Fetching tax tables for ${selectedTaxYear} from SARS...`);
+    const toastId = showLoading(`Fetching tax tables for ${selectedTaxYear} from SARS...`) as string;
     console.log(`Attempting to fetch tax tables for year: ${selectedTaxYear}`);
 
     // Simulate API call to SARS
@@ -82,7 +82,7 @@ const TaxLiabilities: React.FC = () => {
   };
 
   const onSubmitDeductions = async (data: TaxLiabilitiesFormValues) => {
-    const toastId = showLoading("Saving authorised deductions settings...");
+    const toastId = showLoading("Saving authorised deductions settings...") as string;
     console.log("Saving authorised deductions:", { applyPAYE: data.applyPAYE, applySDL: data.applySDL });
 
     // Simulate saving to backend/local storage

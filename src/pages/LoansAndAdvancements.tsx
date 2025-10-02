@@ -157,7 +157,7 @@ const LoansAndAdvancements: React.FC = () => {
               <BarChart data={loanSummaryData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="totalLoan" fill="#8884d8" name="Total Loan Amount" />
@@ -340,7 +340,7 @@ const LoansAndAdvancements: React.FC = () => {
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Important Note on Loan Deductions:</h3>
-        <p className className="text-sm">
+        <p className="text-sm">
           This interface allows you to record loans and their repayment schedules. The actual deduction from an employee's salary and the update of the remaining balance would be handled by the backend payroll processing logic when payslips are generated. This front-end provides the configuration.
         </p>
       </div>

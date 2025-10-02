@@ -53,7 +53,7 @@ const BiometricDevices: React.FC = () => {
       return;
     }
 
-    const toastId = showLoading(`Testing connectivity to device '${deviceName}' at ${ipAddress}:${portNumber} in ${zoneName}...`);
+    const toastId = showLoading(`Testing connectivity to device '${deviceName}' at ${ipAddress}:${portNumber} in ${zoneName}...`) as string;
     console.log(`Attempting to test connectivity to device at IP: ${ipAddress}, Port: ${portNumber}, Device Name: ${deviceName}, Zone: ${zoneName}`);
 
     // Simulate API call to a backend service that would then communicate with the device
@@ -71,7 +71,7 @@ const BiometricDevices: React.FC = () => {
   };
 
   const onSubmit = async (data: BiometricDeviceFormValues) => {
-    const toastId = showLoading("Adding biometric device...");
+    const toastId = showLoading("Adding biometric device...") as string;
     console.log("Adding biometric device:", data);
 
     // Simulate API call to add device via a backend service

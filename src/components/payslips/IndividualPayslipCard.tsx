@@ -190,8 +190,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           {payslipDesignSettings.showBankDetails && (
             <div className="space-y-1 text-right">
               <p><span className="font-semibold">Bank Name:</span> {employee.bankName || "N/A"}</p>
-              <p><span className="font-semibold">Account No:</span> {employee.bankAccountNumber ? `********${employee.bankAccountNumber.slice(-4)}` : "N/A"}</p>
-              <p><span className="font-semibold">Branch Code:</span> {employee.bankBranchCode || "N/A"}</p>
+              <p><span className="font-semibold">Account No:</span> {employee.ibanNumber ? `********${employee.ibanNumber.slice(-4)}` : "N/A"}</p>
+              <p><span className="font-semibold">Branch Code:</span> {employee.routingSwiftCode || "N/A"}</p>
               <p><span className="font-semibold">Account Type:</span> {employee.bankAccountType || "N/A"}</p>
             </div>
           )}

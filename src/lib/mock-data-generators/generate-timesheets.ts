@@ -32,12 +32,12 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
         continue; 
       }
 
-      const timeIn = "08:00";
+      let timeIn = "08:00"; // Changed to let
       const teaStart = "10:00";
       const teaEnd = "10:15";
       const lunchStart = "13:00";
       const lunchEnd = "13:30";
-      let timeOut = "17:00"; // Default 8-hour day
+      let timeOut = "17:00"; // Changed to let
 
       // Introduce some variations
       let totalWorkHours = 0;
@@ -81,6 +81,8 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
         overtimeHours = 0;
       }
 
+      const isSubmittedOrApproved = status === "Submitted" || status === "Approved";
+      const isApproved = status === "Approved";
 
       timesheets.push({
         id: `TS-${employee.id}-${formattedDate}`,
@@ -98,10 +100,10 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
         earlyDeparture: earlyDeparture,
         absent: absent,
         status: status,
-        submittedBy: status === "Submitted" || status === "Approved" ? employee.firstName : undefined,
-        submittedAt: status === "Submitted" || status === "Approved" ? format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX") : undefined,
-        approvedBy: status === "Approved" ? "Admin User" : undefined,
-        approvedAt: status === "Approved" ? format(addHours(date, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX") : undefined,
+        submittedBy: isSubmittedOrApproved ? employee.firstName : undefined,
+        submittedAt: isSubmittedOrApproved ? format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX") : undefined,
+        approvedBy: isApproved ? "Admin User" : undefined,
+        approvedAt: isApproved ? format(addHours(date, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX") : undefined,
         auditLog: [],
       });
     }

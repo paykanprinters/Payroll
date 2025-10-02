@@ -55,7 +55,7 @@ const Dashboard: React.FC = () => {
     const leaveRecords: LeaveEntry[] = storedLeaveRecords ? JSON.parse(storedLeaveRecords) : [];
 
     // Calculate upcoming payroll amount (sum of all employee salaries for simplicity)
-    const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
+    const totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), 0); // Include hourly rate estimate
     setUpcomingPayrollAmount(totalSalaries);
 
     // Process employee job title data for PieChart
@@ -116,7 +116,7 @@ const Dashboard: React.FC = () => {
     ];
     employees.forEach(emp => {
       for (const range of salaryRanges) {
-        if (emp.salary >= range.min && emp.salary <= range.max) {
+        if ((emp.salary || 0) >= range.min && (emp.salary || 0) <= range.max) {
           range.count++;
           break;
         }
@@ -235,7 +235,7 @@ const Dashboard: React.FC = () => {
               <BarChart data={monthlyPayrollData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis style={{ fontSize: dataVisualsFontSize }} tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />

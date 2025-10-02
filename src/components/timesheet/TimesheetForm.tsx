@@ -250,7 +250,7 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
           <Label htmlFor="lunchStart">Lunch Time Start (Optional)</Label>
           <Input id="lunchStart" type="time" {...form.register("lunchStart")} className="mt-1" />
           {form.formState.errors.lunchStart && (
-            <p className className="text-red-500 text-sm mt-1">{form.formState.errors.lunchStart.message}</p>
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.lunchStart.message}</p>
           )}
         </div>
         <div>

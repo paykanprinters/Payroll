@@ -71,10 +71,10 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center space-x-1">
-                        {entry.absent && <XCircle className="h-4 w-4 text-red-500" title="Absent" />}
-                        {entry.lateArrival && <ClockIcon className="h-4 w-4 text-yellow-500" title="Late Arrival" />}
-                        {entry.earlyDeparture && <ClockIcon className="h-4 w-4 text-orange-500" title="Early Departure" />}
-                        {!entry.absent && !entry.lateArrival && !entry.earlyDeparture && <CheckCircle className="h-4 w-4 text-green-500" title="No Flags" />}
+                        {entry.absent && <XCircle className="h-4 w-4 text-red-500" />}
+                        {entry.lateArrival && <ClockIcon className="h-4 w-4 text-yellow-500" />}
+                        {entry.earlyDeparture && <ClockIcon className="h-4 w-4 text-orange-500" />}
+                        {!entry.absent && !entry.lateArrival && !entry.earlyDeparture && <CheckCircle className="h-4 w-4 text-green-500" />}
                       </div>
                     </TableCell>
                     <TableCell className="flex justify-center gap-2">

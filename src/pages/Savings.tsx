@@ -151,7 +151,7 @@ const Savings: React.FC = () => {
               <BarChart data={totalSavingsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="amount" fill="#8884d8" name="Total Savings" />

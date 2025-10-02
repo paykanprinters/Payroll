@@ -63,11 +63,10 @@ const employeeSchema = z.object({
   originCountry: z.string().optional(),
   employmentType: z.enum(["Permanent", "Contract", "Temporary"]).optional(),
   portalAccess: z.boolean().default(false).optional(),
-  // fathersName: z.string().optional(), // Removed
-  // molId: z.string().optional(), // Removed
   permanentAddress: z.string().optional(),
   paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
   payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(), // New field
+  standardDailyHours: z.number().min(1).max(24).optional(), // New field for timesheet
 }).superRefine((data, ctx) => {
   if (!data.salary && !data.hourlyRate) {
     ctx.addIssue({
@@ -138,11 +137,10 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       originCountry: "",
       employmentType: undefined,
       portalAccess: false,
-      // fathersName: "", // Removed
-      // molId: "", // Removed
       permanentAddress: "",
       paymentMode: "Bank Transfer",
       payFrequency: undefined, // New default
+      standardDailyHours: 8, // Default for new employees
     },
   });
 
@@ -183,11 +181,10 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         originCountry: "",
         employmentType: undefined,
         portalAccess: false,
-        // fathersName: "", // Removed
-        // molId: "", // Removed
         permanentAddress: "",
         paymentMode: "Bank Transfer",
         payFrequency: undefined,
+        standardDailyHours: 8, // Default for new employees
       });
     }
   }, [initialEmployee, form]);
@@ -405,6 +402,14 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     {form.formState.errors.hourlyRate && (<p className="text-red-500 text-sm">{form.formState.errors.hourlyRate.message}</p>)}
                     <p className="text-xs text-muted-foreground mt-1">
                       Provide either a fixed Salary or an Hourly Rate. In a live system, hourly pay would be calculated based on clock-in/out data.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="standardDailyHours">Standard Daily Hours</Label>
+                    <Input id="standardDailyHours" type="number" step="0.01" {...form.register("standardDailyHours", { valueAsNumber: true })} />
+                    {form.formState.errors.standardDailyHours && (<p className="text-red-500 text-sm">{form.formState.errors.standardDailyHours.message}</p>)}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Used for calculating overtime.
                     </p>
                   </div>
                   <div className="space-y-1">

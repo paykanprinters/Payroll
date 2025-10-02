@@ -34,8 +34,16 @@ import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Updated import
 import { generateEmployeeProfileReportContent } from "@/lib/report-generators"; // Import new report generator
 import html2pdf from 'html2pdf.js'; // Import html2pdf
+import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+
+const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
+  defaultReportPaperSize: "A4",
+  includeCompanyLogo: true,
+  includeCompanyDetails: true,
+  reportContentFontSize: 14,
+};
 
 const Employees: React.FC = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
@@ -46,6 +54,8 @@ const Employees: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
   const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null); // State for company details
+  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
+
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
@@ -86,7 +96,7 @@ const Employees: React.FC = () => {
     }
   };
 
-  const loadCompanyDetails = () => {
+  const loadCompanyDetailsAndReportSettings = () => {
     const storedCompanyDetails = localStorage.getItem("companyLegalName")
       ? {
           companyLegalName: localStorage.getItem('companyLegalName') || "",
@@ -112,24 +122,29 @@ const Employees: React.FC = () => {
           accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
           logoUrl: localStorage.getItem('companyLogoUrl') || '',
           logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
-          // For report design settings, we'll use defaults or load from specific keys
-          defaultReportPaperSize: (localStorage.getItem('reportDesignPaperSize') as "Letter" | "A4" | "A5") || "A4",
-          includeCompanyLogo: localStorage.getItem('reportDesignIncludeLogo') === 'true',
-          includeCompanyDetails: localStorage.getItem('reportDesignIncludeDetails') === 'true',
-          reportContentFontSize: parseFloat(localStorage.getItem('reportDesignFontSize') || '14'),
         }
       : null;
     setCompanyDetails(storedCompanyDetails as MockCompanyDetails);
+
+    const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
+    if (savedReportDesignSettings) {
+      setReportDesignSettings(JSON.parse(savedReportDesignSettings));
+    } else {
+      localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
+      setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
+    }
   };
 
   useEffect(() => {
     loadEmployees();
-    loadCompanyDetails();
+    loadCompanyDetailsAndReportSettings();
     window.addEventListener('mockDataUpdated', loadEmployees);
-    window.addEventListener('companyDetailsUpdated', loadCompanyDetails); // Listen for company detail updates
+    window.addEventListener('companyDetailsUpdated', loadCompanyDetailsAndReportSettings); // Listen for company detail updates
+    window.addEventListener('reportDesignUpdated', loadCompanyDetailsAndReportSettings); // Listen for report design updates
     return () => {
       window.removeEventListener('mockDataUpdated', loadEmployees);
-      window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
+      window.removeEventListener('companyDetailsUpdated', loadCompanyDetailsAndReportSettings);
+      window.removeEventListener('reportDesignUpdated', loadCompanyDetailsAndReportSettings);
     };
   }, []);
 
@@ -171,7 +186,18 @@ const Employees: React.FC = () => {
     } else {
       // Add new employee
       const newId = `EMP${String(employees.length + 1).padStart(3, '0')}`;
-      updatedEmployees = [...employees, { ...employeeData, id: newId }];
+      const newEmployee: MockEmployee = {
+        ...employeeData,
+        id: newId,
+        standardDailyHours: employeeData.standardDailyHours || 8, // Ensure standardDailyHours is set
+        // Ensure all required fields are present, even if optional in form but required in MockEmployee
+        firstName: employeeData.firstName,
+        lastName: employeeData.lastName,
+        email: employeeData.email,
+        jobTitle: employeeData.jobTitle,
+        startDate: employeeData.startDate,
+      };
+      updatedEmployees = [...employees, newEmployee];
     }
     setEmployees(updatedEmployees);
     localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
@@ -182,20 +208,24 @@ const Employees: React.FC = () => {
   };
 
   const handleDownloadProfile = (employee: MockEmployee) => {
-    if (!companyDetails) {
-      showError("Company details not loaded. Cannot generate profile.");
+    if (!companyDetails || !reportDesignSettings) {
+      showError("Company details or report design settings not loaded. Cannot generate profile.");
       return;
     }
 
     showSuccess(`Generating profile for ${employee.firstName} ${employee.lastName}...`);
-    const profileHtml = generateEmployeeProfileReportContent(employee, companyDetails);
+    const profileHtml = generateEmployeeProfileReportContent(employee, companyDetails, reportDesignSettings);
+
+    let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+    if (reportDesignSettings.defaultReportPaperSize === 'Letter') pdfFormat = 'letter';
+    else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
 
     html2pdf().from(profileHtml).set({
       margin: [10, 10, 10, 10],
       filename: `employee-profile-${employee.firstName}-${employee.lastName}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
     }).save();
   };
 
@@ -261,7 +291,7 @@ const Employees: React.FC = () => {
               <BarChart data={averageSalaryByJobTitle}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="salary" fill="#82ca9d" name="Average Salary" />
