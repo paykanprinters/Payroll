@@ -146,6 +146,11 @@ const Payslips: React.FC = () => {
         selectedPayslipId={selectedPayslipId}
         setSelectedPayslipId={setSelectedPayslipId}
         getEmployeeName={getEmployeeName}
+        payslipDesignSettings={payslipDesignSettings} // Pass payslipDesignSettings
+        companyTradingName={companyTradingName}
+        companyLogoUrl={companyLogoUrl}
+        companyLogoSize={companyLogoSize}
+        allEmployees={employees} // Pass all employees for IndividualPayslipCard
       />
 
       {selectedPayslipForPreview && (
