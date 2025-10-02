@@ -12,9 +12,8 @@ import Settings from "./pages/Settings";
 import LoansAndAdvancements from "./pages/LoansAndAdvancements";
 import Savings from "./pages/Savings";
 import VacationAbsence from "./pages/VacationAbsence";
+import Analytics from "./pages/Analytics"; // New import
 import NotFound from "./pages/NotFound";
-// import PayrollLayout from "./pages/payroll/PayrollLayout"; // Removed
-// import UpcomingPayrollCard from "./components/payroll/UpcomingPayrollCard"; // Moved to Dashboard
 
 const queryClient = new QueryClient();
 
@@ -33,13 +32,9 @@ const App = () => (
             <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
             <Route path="/savings" element={<Savings />} />
             <Route path="/vacation-absence" element={<VacationAbsence />} />
+            <Route path="/analytics" element={<Analytics />} /> {/* New Analytics Route */}
             <Route path="/reports" element={<Reports />} />
             
-            {/* Payroll Route removed, content moved to Dashboard */}
-            {/* <Route path="/payroll" element={<PayrollLayout />}>
-              <Route index element={<UpcomingPayrollCard />} />
-            </Route> */}
-
             <Route path="/settings/*" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
