@@ -78,13 +78,13 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="flex justify-center gap-2">
-                      <Button variant="outline" size="icon" onClick={() => onEdit(entry)} disabled={entry.status === "Approved" || entry.status === "Locked"}>
+                      <Button variant="outline" size="icon" onClick={() => onEdit(entry)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" onClick={() => onDelete(entry.id)} disabled={entry.status === "Approved" || entry.status === "Locked"}>
+                      <Button variant="outline" size="icon" onClick={() => onDelete(entry.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      <Select onValueChange={(value: TimesheetEntry["status"]) => onStatusChange(entry.id, value)} value={entry.status} disabled={entry.status === "Locked"}>
+                      <Select onValueChange={(value: TimesheetEntry["status"]) => onStatusChange(entry.id, value)} value={entry.status}>
                         <SelectTrigger className="w-[120px] h-8">
                           <SelectValue placeholder="Change Status" />
                         </SelectTrigger>
