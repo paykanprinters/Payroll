@@ -31,18 +31,21 @@ export interface MockEmployee {
   lastName: string;
   email: string;
   jobTitle: string;
-  salary: number;
+  salary?: number; // Made optional as hourlyRate can also be a payment basis
+  hourlyRate?: number; // New field
   startDate: string;
   idNumber?: string;
   phoneNumber?: string;
   emergencyContactName?: string;
   emergencyContactNumber?: string;
+  emergencyContactAddress?: string; // New field
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
   province?: string;
   postalCode?: string;
   taxReferenceNumber?: string;
+  uifNumber?: string; // New field
   bankName?: string;
   bankAccountHolder?: string;
   ibanNumber?: string; // Renamed from bankAccountNumber
@@ -58,10 +61,11 @@ export interface MockEmployee {
   originCountry?: string;
   employmentType?: "Permanent" | "Contract" | "Temporary";
   portalAccess?: boolean;
-  // fathersName?: string; // Removed as requested
-  // molId?: string; // Removed as requested
+  fathersName?: string;
+  molId?: string;
   permanentAddress?: string;
   paymentMode?: "Bank Transfer" | "Cash" | "Cheque";
+  payFrequency?: "Monthly" | "Weekly" | "Bi-Weekly"; // New field
 }
 
 export interface Loan {

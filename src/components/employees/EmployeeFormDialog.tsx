@@ -31,7 +31,8 @@ const employeeSchema = z.object({
   lastName: z.string().min(1, "Last Name is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   jobTitle: z.string().min(1, "Job Title is required"),
-  salary: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid salary amount").transform(Number).refine(val => val > 0, "Salary must be positive"),
+  salary: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid salary amount").transform(Number).refine(val => val > 0, "Salary must be positive").optional(),
+  hourlyRate: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount").transform(Number).refine(val => val > 0, "Hourly rate must be positive").optional(), // New field
   startDate: z.string().min(1, "Start Date is required"),
   
   // Existing optional fields
@@ -39,12 +40,14 @@ const employeeSchema = z.object({
   phoneNumber: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactNumber: z.string().optional(),
+  emergencyContactAddress: z.string().optional(), // New field
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
   postalCode: z.string().optional(),
   taxReferenceNumber: z.string().optional(),
+  uifNumber: z.string().optional(), // New field
   bankName: z.string().optional(),
   bankAccountHolder: z.string().optional(),
   ibanNumber: z.string().optional(), // Renamed
@@ -60,10 +63,24 @@ const employeeSchema = z.object({
   originCountry: z.string().optional(),
   employmentType: z.enum(["Permanent", "Contract", "Temporary"]).optional(),
   portalAccess: z.boolean().default(false).optional(),
-  // fathersName: z.string().optional(), // Removed
-  // molId: z.string().optional(), // Removed
+  fathersName: z.string().optional(),
+  molId: z.string().optional(),
   permanentAddress: z.string().optional(),
-  paymentMode: z.enum(["Bank Transfer", "Cash" | "Cheque"]).optional(),
+  paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
+  payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(), // New field
+}).superRefine((data, ctx) => {
+  if (!data.salary && !data.hourlyRate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Either Salary or Hourly Rate must be provided.",
+      path: ["salary"],
+    });
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Either Salary or Hourly Rate must be provided.",
+      path: ["hourlyRate"],
+    });
+  }
 });
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -93,18 +110,21 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       lastName: "",
       email: "",
       jobTitle: "",
-      salary: 0,
+      salary: undefined, // Set to undefined for initial state
+      hourlyRate: undefined, // Set to undefined for initial state
       startDate: new Date().toISOString().split('T')[0], // Default to current date
       idNumber: "",
       phoneNumber: "",
       emergencyContactName: "",
       emergencyContactNumber: "",
+      emergencyContactAddress: "", // New default
       addressLine1: "",
       addressLine2: "",
       city: "",
       province: "",
       postalCode: "",
       taxReferenceNumber: "",
+      uifNumber: "", // New default
       bankName: "",
       bankAccountHolder: "",
       ibanNumber: "",
@@ -118,10 +138,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       originCountry: "",
       employmentType: undefined,
       portalAccess: false,
-      // fathersName: "", // Removed
-      // molId: "", // Removed
+      fathersName: "",
+      molId: "",
       permanentAddress: "",
       paymentMode: "Bank Transfer",
+      payFrequency: undefined, // New default
     },
   });
 
@@ -134,18 +155,21 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         lastName: "",
         email: "",
         jobTitle: "",
-        salary: 0,
+        salary: undefined,
+        hourlyRate: undefined,
         startDate: new Date().toISOString().split('T')[0],
         idNumber: "",
         phoneNumber: "",
         emergencyContactName: "",
         emergencyContactNumber: "",
+        emergencyContactAddress: "",
         addressLine1: "",
         addressLine2: "",
         city: "",
         province: "",
         postalCode: "",
         taxReferenceNumber: "",
+        uifNumber: "",
         bankName: "",
         bankAccountHolder: "",
         ibanNumber: "",
@@ -159,10 +183,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         originCountry: "",
         employmentType: undefined,
         portalAccess: false,
-        // fathersName: "", // Removed
-        // molId: "", // Removed
+        fathersName: "",
+        molId: "",
         permanentAddress: "",
         paymentMode: "Bank Transfer",
+        payFrequency: undefined,
       });
     }
   }, [initialEmployee, form]);
@@ -293,7 +318,16 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     <Input id="dateOfBirth" type="date" {...form.register("dateOfBirth")} />
                     {form.formState.errors.dateOfBirth && (<p className="text-red-500 text-sm">{form.formState.errors.dateOfBirth.message}</p>)}
                   </div>
-                  {/* Removed Father's Name and MOL ID */}
+                  <div className="space-y-1">
+                    <Label htmlFor="fathersName">Father's Name</Label>
+                    <Input id="fathersName" {...form.register("fathersName")} />
+                    {form.formState.errors.fathersName && (<p className="text-red-500 text-sm">{form.formState.errors.fathersName.message}</p>)}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="molId">MOL ID</Label>
+                    <Input id="molId" {...form.register("molId")} />
+                    {form.formState.errors.molId && (<p className="text-red-500 text-sm">{form.formState.errors.molId.message}</p>)}
+                  </div>
                   <div className="space-y-1">
                     <Label htmlFor="idNumber">ID Number</Label>
                     <Input id="idNumber" {...form.register("idNumber")} />
@@ -326,6 +360,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     <Textarea id="permanentAddress" {...form.register("permanentAddress")} placeholder="Enter permanent address" rows={4} />
                     {form.formState.errors.permanentAddress && (<p className="text-red-500 text-sm">{form.formState.errors.permanentAddress.message}</p>)}
                   </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="emergencyContactAddress">Emergency Contact Address</Label>
+                    <Textarea id="emergencyContactAddress" {...form.register("emergencyContactAddress")} placeholder="Enter emergency contact address" rows={4} />
+                    {form.formState.errors.emergencyContactAddress && (<p className="text-red-500 text-sm">{form.formState.errors.emergencyContactAddress.message}</p>)}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -350,6 +389,43 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                       </SelectContent>
                     </Select>
                     {form.formState.errors.paymentMode && (<p className="text-red-500 text-sm">{form.formState.errors.paymentMode.message}</p>)}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="payFrequency">Pay Frequency</Label>
+                    <Select onValueChange={(value) => form.setValue("payFrequency", value as "Monthly" | "Weekly" | "Bi-Weekly")} value={form.watch("payFrequency")}>
+                      <SelectTrigger id="payFrequency">
+                        <SelectValue placeholder="Select pay frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                        <SelectItem value="Weekly">Weekly</SelectItem>
+                        <SelectItem value="Bi-Weekly">Bi-Weekly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.payFrequency && (<p className="text-red-500 text-sm">{form.formState.errors.payFrequency.message}</p>)}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="salary">Salary (R)</Label>
+                    <Input id="salary" type="number" step="0.01" {...form.register("salary", { valueAsNumber: true })} />
+                    {form.formState.errors.salary && (<p className="text-red-500 text-sm">{form.formState.errors.salary.message}</p>)}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="hourlyRate">Hourly Rate (R)</Label>
+                    <Input id="hourlyRate" type="number" step="0.01" {...form.register("hourlyRate", { valueAsNumber: true })} />
+                    {form.formState.errors.hourlyRate && (<p className="text-red-500 text-sm">{form.formState.errors.hourlyRate.message}</p>)}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Provide either a fixed Salary or an Hourly Rate. In a live system, hourly pay would be calculated based on clock-in/out data.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="taxReferenceNumber">Tax Reference Number</Label>
+                    <Input id="taxReferenceNumber" {...form.register("taxReferenceNumber")} />
+                    {form.formState.errors.taxReferenceNumber && (<p className="text-red-500 text-sm">{form.formState.errors.taxReferenceNumber.message}</p>)}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="uifNumber">UIF Number (If applicable)</Label>
+                    <Input id="uifNumber" {...form.register("uifNumber")} />
+                    {form.formState.errors.uifNumber && (<p className="text-red-500 text-sm">{form.formState.errors.uifNumber.message}</p>)}
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="ibanNumber">IBAN Number</Label>
@@ -384,16 +460,6 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                       </SelectContent>
                     </Select>
                     {form.formState.errors.bankAccountType && (<p className="text-red-500 text-sm">{form.formState.errors.bankAccountType.message}</p>)}
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="salary">Salary (R)</Label>
-                    <Input id="salary" type="number" step="0.01" {...form.register("salary", { valueAsNumber: true })} />
-                    {form.formState.errors.salary && (<p className="text-red-500 text-sm">{form.formState.errors.salary.message}</p>)}
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="taxReferenceNumber">Tax Reference Number</Label>
-                    <Input id="taxReferenceNumber" {...form.register("taxReferenceNumber")} />
-                    {form.formState.errors.taxReferenceNumber && (<p className="text-red-500 text-sm">{form.formState.errors.taxReferenceNumber.message}</p>)}
                   </div>
                 </div>
               </CardContent>
