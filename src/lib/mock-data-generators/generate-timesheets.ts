@@ -94,6 +94,16 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
       const isSubmittedOrApproved = (status === "Submitted" || status === "Approved");
       const isApproved = (status === "Approved");
 
+      // Determine capture method for mock data
+      let captureMethod: "Manual" | "Biometric" | "Imported" = "Manual";
+      if (employee.id === "EMP001" && i === 0) { // John Doe's latest entry is biometric
+        captureMethod = "Biometric";
+      } else if (employee.id === "EMP002" && i === 1) { // Jane Smith's entry is imported
+        captureMethod = "Imported";
+      } else if (i > 4) { // Older entries are biometric
+        captureMethod = "Biometric";
+      }
+
       timesheets.push({
         id: `TS-${employee.id}-${formattedDate}`,
         employeeId: employee.id,
@@ -114,7 +124,7 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
         submittedAt: isSubmittedOrApproved ? format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX") : undefined,
         approvedBy: isApproved ? "Admin User" : undefined,
         approvedAt: isApproved ? format(addHours(date, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX") : undefined,
-        auditLog: [],
+        auditLog: [{ action: "Created", timestamp: new Date().toISOString(), user: "System (Mock)", captureMethod: captureMethod }],
       });
     }
   });

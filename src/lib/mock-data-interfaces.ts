@@ -136,5 +136,5 @@ export interface TimesheetEntry {
   submittedAt?: string; // ISO string
   approvedBy?: string;
   approvedAt?: string; // ISO string
-  auditLog?: { action: string; timestamp: string; user: string }[];
+  auditLog?: { action: string; timestamp: string; user: string; captureMethod: "Manual" | "Biometric" | "Imported" }[];
 }

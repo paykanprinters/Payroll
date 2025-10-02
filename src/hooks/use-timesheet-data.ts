@@ -120,15 +120,16 @@ export const useTimesheetData = () => {
       earlyDeparture: earlyDeparture,
       absent: absent,
       status: "Draft", // Default status for new entries
-      auditLog: [{ action: isEditing ? "Updated" : "Created", timestamp: new Date().toISOString(), user: "Current User (Mock)" }],
+      auditLog: [], // Initialize auditLog
     };
 
     let updatedTimesheets: TimesheetEntry[];
 
     if (isEditing && editingTimesheet) {
+      const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: "Updated", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
       updatedTimesheets = timesheets.map((ts) =>
         ts.id === editingTimesheet.id
-          ? { ...ts, ...baseTimesheet, id: editingTimesheet.id, auditLog: [...(ts.auditLog || []), { action: "Edited", timestamp: new Date().toISOString(), user: "Current User (Mock)" }] }
+          ? { ...ts, ...baseTimesheet, id: editingTimesheet.id, auditLog: updatedAuditLog }
           : ts
       );
       showSuccess("Timesheet updated successfully!");
@@ -139,15 +140,18 @@ export const useTimesheetData = () => {
       );
 
       if (existingTimesheetIndex !== -1) {
+        const existingTs = timesheets[existingTimesheetIndex];
+        const updatedAuditLog = [...(existingTs.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
         updatedTimesheets = timesheets.map((ts, index) =>
           index === existingTimesheetIndex
-            ? { ...ts, ...baseTimesheet, id: ts.id, auditLog: [...(ts.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User (Mock)" }] }
+            ? { ...ts, ...baseTimesheet, id: ts.id, auditLog: updatedAuditLog }
             : ts
         );
         showSuccess("Existing timesheet updated successfully!");
       } else {
         const newId = `TS-${data.employeeId}-${formattedDate}-${Date.now()}`;
-        updatedTimesheets = [...timesheets, { ...baseTimesheet, id: newId }];
+        const newAuditLog = [{ action: "Created", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
+        updatedTimesheets = [...timesheets, { ...baseTimesheet, id: newId, auditLog: newAuditLog }];
         showSuccess("Timesheet added successfully!");
       }
     }
@@ -170,7 +174,7 @@ export const useTimesheetData = () => {
   const updateTimesheetStatus = useCallback((id: string, newStatus: TimesheetEntry["status"]) => {
     const updatedTimesheets = timesheets.map(ts => {
       if (ts.id === id) {
-        const auditEntry = { action: `Status changed to ${newStatus}`, timestamp: new Date().toISOString(), user: "Current User (Mock)" };
+        const auditEntry = { action: `Status changed to ${newStatus}`, timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const };
         return {
           ...ts,
           status: newStatus,
