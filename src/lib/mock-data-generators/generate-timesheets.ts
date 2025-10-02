@@ -45,7 +45,9 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
       let lateArrival = false;
       let earlyDeparture = false;
       let absent = false;
-      let status: TimesheetEntry["status"] = "Submitted";
+      
+      // Determine status using a const with ternary to avoid type narrowing issues
+      const status: TimesheetEntry["status"] = (employee.id === "EMP004" && i === 3) ? "Draft" : "Submitted";
 
       // Simulate late arrival for some entries
       if (employee.id === "EMP001" && i === 2) { // John Doe was late 2 days ago
@@ -64,7 +66,6 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
       // Simulate an absent day
       if (employee.id === "EMP004" && i === 3) { // Sarah Brown was absent 3 days ago
         absent = true;
-        status = "Draft"; // Absent entries might remain in draft or require approval
         timeIn = ""; // Clear times
         timeOut = "";
       }
@@ -81,8 +82,8 @@ export const generateMockTimesheets = (employees: MockEmployee[]): TimesheetEntr
         overtimeHours = 0;
       }
 
-      const isSubmittedOrApproved = status === "Submitted" || status === "Approved";
-      const isApproved = status === "Approved";
+      const isSubmittedOrApproved = (status === "Submitted" || status === "Approved");
+      const isApproved = (status === "Approved");
 
       timesheets.push({
         id: `TS-${employee.id}-${formattedDate}`,
