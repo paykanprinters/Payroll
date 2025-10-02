@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
-import { format } from "date-fns";
+import { format, differenceInMonths, differenceInYears } from "date-fns";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -33,6 +33,9 @@ const Analytics: React.FC = () => {
   const [deductionCategoryBreakdown, setDeductionCategoryBreakdown] = useState<{ name: string; value: number }[]>([]);
   const [employeeTurnoverTrend, setEmployeeTurnoverTrend] = useState<{ name: string; newHires: number; terminations: number }[]>([]);
   const [leaveTypeDistribution, setLeaveTypeDistribution] = useState<{ name: string; value: number }[]>([]);
+  const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]); // New state
+  const [overtimeCostTrend, setOvertimeCostTrend] = useState<{ name: string; overtime: number }[]>([]); // New state
+  const [employeeTenureDistribution, setEmployeeTenureDistribution] = useState<{ name: string; value: number }[]>([]); // New state
 
 
   const dataVisualsFontSize = useDataVisualsFontSize();
@@ -134,6 +137,61 @@ const Analytics: React.FC = () => {
     setLeaveTypeDistribution(
       Array.from(leaveTypeMap.entries()).map(([name, value]) => ({ name, value }))
     );
+
+    // --- Employee Salary Distribution (New) ---
+    const salaryRanges = [
+      { range: "R0 - R20k", min: 0, max: 20000, count: 0 },
+      { range: "R20k - R40k", min: 20001, max: 40000, count: 0 },
+      { range: "R40k - R60k", min: 40001, max: 60000, count: 0 },
+      { range: "R60k+", min: 60001, max: Infinity, count: 0 },
+    ];
+    loadedEmployees.forEach(emp => {
+      const effectiveSalary = emp.salary || (emp.hourlyRate ? emp.hourlyRate * 160 : 0); // Estimate monthly for hourly
+      for (const range of salaryRanges) {
+        if (effectiveSalary >= range.min && effectiveSalary <= range.max) {
+          range.count++;
+          break;
+        }
+      }
+    });
+    setEmployeeSalaryDistribution(salaryRanges.map(r => ({ range: r.range, count: r.count })));
+
+    // --- Overtime Cost Trend (New) ---
+    const overtimeTrendMap = new Map<string, number>();
+    loadedPayslips.forEach(p => {
+      const monthYear = p.payPeriod.substring(0, 7);
+      const overtimeEntry = p.earningsBreakdown.find(e => e.name === "Overtime");
+      if (overtimeEntry) {
+        overtimeTrendMap.set(monthYear, (overtimeTrendMap.get(monthYear) || 0) + overtimeEntry.amount);
+      }
+    });
+    const sortedOvertimeTrend = Array.from(overtimeTrendMap.entries())
+      .map(([monthYear, overtime]) => ({
+        name: format(new Date(monthYear), 'MMM yyyy'),
+        overtime: overtime,
+      }))
+      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+    setOvertimeCostTrend(sortedOvertimeTrend);
+
+    // --- Employee Tenure Distribution (New) ---
+    const tenureRanges = [
+      { name: "< 1 Year", minMonths: 0, maxMonths: 11, count: 0 },
+      { name: "1-3 Years", minMonths: 12, maxMonths: 35, count: 0 },
+      { name: "3-5 Years", minMonths: 36, maxMonths: 59, count: 0 },
+      { name: "5+ Years", minMonths: 60, maxMonths: Infinity, count: 0 },
+    ];
+    const today = new Date();
+    loadedEmployees.forEach(emp => {
+      const hireDate = new Date(emp.startDate);
+      const monthsSinceHire = differenceInMonths(today, hireDate);
+      for (const range of tenureRanges) {
+        if (monthsSinceHire >= range.minMonths && monthsSinceHire <= range.maxMonths) {
+          range.count++;
+          break;
+        }
+      }
+    });
+    setEmployeeTenureDistribution(tenureRanges.map(r => ({ name: r.name, value: r.count })));
   };
 
   useEffect(() => {
@@ -153,6 +211,7 @@ const Analytics: React.FC = () => {
   const totalCompensation = compensationBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const totalDeductionCategories = deductionCategoryBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const totalLeaveDays = leaveTypeDistribution.reduce((sum, entry) => sum + entry.value, 0);
+  const totalTenureDistribution = employeeTenureDistribution.reduce((sum, entry) => sum + entry.value, 0);
 
 
   return (
@@ -292,6 +351,79 @@ const Analytics: React.FC = () => {
                 </Pie>
                 <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLeaveDays)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* New Chart: Employee Salary Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Employee Salary Distribution</CardTitle>
+            <CardDescription>Number of employees within different salary ranges.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={employeeSalaryDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        {/* New Chart: Overtime Cost Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Overtime Cost Trend</CardTitle>
+            <CardDescription>Monthly trend of total overtime expenses.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={overtimeCostTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                <YAxis formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Line type="monotone" dataKey="overtime" stroke="#00C49F" name="Overtime Cost" activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* New Chart: Employee Tenure Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Employee Tenure Distribution</CardTitle>
+            <CardDescription>Distribution of employees by their length of service.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={employeeTenureDistribution}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  labelLine={false}
+                  style={{ fontSize: dataVisualsFontSize }}
+                >
+                  {employeeTenureDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalTenureDistribution)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
