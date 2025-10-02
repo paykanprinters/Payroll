@@ -63,8 +63,8 @@ const employeeSchema = z.object({
   originCountry: z.string().optional(),
   employmentType: z.enum(["Permanent", "Contract", "Temporary"]).optional(),
   portalAccess: z.boolean().default(false).optional(),
-  fathersName: z.string().optional(),
-  molId: z.string().optional(),
+  // fathersName: z.string().optional(), // Removed
+  // molId: z.string().optional(), // Removed
   permanentAddress: z.string().optional(),
   paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
   payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(), // New field
@@ -138,8 +138,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       originCountry: "",
       employmentType: undefined,
       portalAccess: false,
-      fathersName: "",
-      molId: "",
+      // fathersName: "", // Removed
+      // molId: "", // Removed
       permanentAddress: "",
       paymentMode: "Bank Transfer",
       payFrequency: undefined, // New default
@@ -183,8 +183,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         originCountry: "",
         employmentType: undefined,
         portalAccess: false,
-        fathersName: "",
-        molId: "",
+        // fathersName: "", // Removed
+        // molId: "", // Removed
         permanentAddress: "",
         paymentMode: "Bank Transfer",
         payFrequency: undefined,
@@ -317,16 +317,6 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     <Label htmlFor="dateOfBirth">Date of Birth</Label>
                     <Input id="dateOfBirth" type="date" {...form.register("dateOfBirth")} />
                     {form.formState.errors.dateOfBirth && (<p className="text-red-500 text-sm">{form.formState.errors.dateOfBirth.message}</p>)}
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="fathersName">Father's Name</Label>
-                    <Input id="fathersName" {...form.register("fathersName")} />
-                    {form.formState.errors.fathersName && (<p className="text-red-500 text-sm">{form.formState.errors.fathersName.message}</p>)}
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="molId">MOL ID</Label>
-                    <Input id="molId" {...form.register("molId")} />
-                    {form.formState.errors.molId && (<p className="text-red-500 text-sm">{form.formState.errors.molId.message}</p>)}
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="idNumber">ID Number</Label>
