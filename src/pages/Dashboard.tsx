@@ -237,7 +237,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
               </BarChart>
             </ResponsiveContainer>
@@ -291,7 +291,7 @@ const Dashboard: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -324,7 +324,7 @@ const Dashboard: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -342,7 +342,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Line type="monotone" dataKey="avgNetPay" stroke="#82ca9d" name="Average Net Pay" activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -363,7 +363,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
               </BarChart>
             </ResponsiveContainer>
@@ -382,7 +382,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="days" fill="#00C49F" name="Working Days Taken" />
               </BarChart>
             </ResponsiveContainer>
