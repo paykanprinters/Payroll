@@ -81,7 +81,17 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     tempContainer.style.zIndex = '-1'; // Ensure it's behind everything
     document.body.appendChild(tempContainer);
 
-    const root = ReactDOM.createRoot(tempContainer);
+    // Create a shadow DOM or inject styles directly for html2canvas to pick them up
+    const styleContainer = document.createElement('div');
+    tempContainer.appendChild(styleContainer);
+
+    // Copy all stylesheets and style tags from the current document's head
+    const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(node => node.outerHTML)
+      .join('');
+    styleContainer.innerHTML = stylesheets;
+
+    const root = ReactDOM.createRoot(styleContainer); // Render into the styleContainer
     root.render(
       <IndividualPayslipCard
         payslip={payslip}
