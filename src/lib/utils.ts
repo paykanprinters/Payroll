@@ -27,14 +27,19 @@ export const getEmployeeName = (employeeId: string, employees: MockEmployee[]) =
 
 // Helper to get print-specific classes for different paper sizes
 export const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined, isPdfGeneration: boolean = false) => {
-  const prefix = isPdfGeneration ? "" : "print:"; // Apply 'print:' prefix only if not PDF generation
+  let classes = "";
   switch (layoutSize) {
     case "Letter":
-      return `${prefix}w-letter ${prefix}min-h-letter ${prefix}p-6 ${prefix}text-sm`;
+      classes = "w-letter min-h-letter p-6 text-sm";
+      break;
     case "A5":
-      return `${prefix}w-a5 ${prefix}min-h-a5 ${prefix}p-4 ${prefix}text-xs`;
+      classes = "w-a5 min-h-a5 p-4 text-xs";
+      break;
     case "A4":
     default:
-      return `${prefix}w-a4 ${prefix}min-h-a4 ${prefix}p-8 ${prefix}text-base`;
+      classes = "w-a4 min-h-a4 p-8 text-base";
+      break;
   }
+  // If it's for PDF generation, return classes directly. Otherwise, prefix with 'print:'
+  return isPdfGeneration ? classes : classes.split(' ').map(cls => `print:${cls}`).join(' ');
 };

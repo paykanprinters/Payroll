@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import ReactDOM from 'react-dom/client'; // Import ReactDOM for client-side rendering
+import ReactDOM from 'react-dom/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,9 +9,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Printer, Download } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
-import IndividualPayslipCard from "./IndividualPayslipCard"; // Import IndividualPayslipCard
-import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces"; // Import MockEmployee
-import { getPrintClasses } from "@/lib/utils"; // Import getPrintClasses
+import IndividualPayslipCard from "./IndividualPayslipCard";
+import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
+import { getPrintClasses, cn } from "@/lib/utils";
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -35,11 +35,11 @@ interface PayslipGenerationSectionProps {
   selectedPayslipId: string;
   setSelectedPayslipId: (id: string) => void;
   getEmployeeName: (employeeId: string) => string;
-  payslipDesignSettings: PayslipDesignSettings; // New prop
-  companyTradingName: string; // New prop
-  companyLogoUrl: string | null; // New prop
-  companyLogoSize: number; // New prop
-  allEmployees: MockEmployee[]; // New prop to pass to IndividualPayslipCard
+  payslipDesignSettings: PayslipDesignSettings;
+  companyTradingName: string;
+  companyLogoUrl: string | null;
+  companyLogoSize: number;
+  allEmployees: MockEmployee[];
 }
 
 const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
@@ -50,187 +50,136 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   selectedPayslipId,
   setSelectedPayslipId,
   getEmployeeName,
-  payslipDesignSettings, // Destructure new prop
-  companyTradingName, // Destructure new prop
-  companyLogoUrl, // Destructure new prop
-  companyLogoSize, // Destructure new prop
-  allEmployees, // Destructure new prop
+  payslipDesignSettings,
+  companyTradingName,
+  companyLogoUrl,
+  companyLogoSize,
+  allEmployees,
 }) => {
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
   const selectedPayslip = payslips.find(p => p.id === selectedPayslipId);
 
-  // Effect to automatically select the most recent payslip when an employee is selected
   React.useEffect(() => {
     if (selectedEmployeeId && filteredPayslipsForEmployee.length > 0) {
-      // Sort payslips by pay period (assuming 'payPeriod' is sortable string like 'YYYY-MM-DD - YYYY-MM-DD')
       const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
       if (mostRecentPayslip && mostRecentPayslip.id !== selectedPayslipId) {
         setSelectedPayslipId(mostRecentPayslip.id);
       }
     } else if (!selectedEmployeeId && selectedPayslipId) {
-      // Clear selected payslip if no employee is selected
       setSelectedPayslipId("");
     }
   }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
 
-  const generatePayslipElementForPdf = (payslip: MockPayslip): HTMLElement | null => {
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px'; // Position off-screen
-    tempContainer.style.top = '-9999px';
-    tempContainer.style.zIndex = '-1'; // Ensure it's behind everything
-    document.body.appendChild(tempContainer);
+  const generatePayslipElementForPdf = (payslip: MockPayslip): Promise<HTMLIFrameElement> => {
+    return new Promise((resolve, reject) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.left = '-9999px'; // Position off-screen
+      iframe.style.top = '-9999px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.visibility = 'hidden'; // Ensure it's hidden
+      document.body.appendChild(iframe);
 
-    // Apply global styles to the temporary container
-    const globalStyles = document.createElement('style');
-    globalStyles.innerHTML = `
-      @tailwind base;
-      @tailwind components;
-      @tailwind utilities;
+      const iframeDoc = iframe.contentWindow?.document;
+      if (!iframeDoc) {
+        reject(new Error("Could not access iframe document."));
+        return;
+      }
 
-      @layer base {
-        :root {
-          --background: 0 0% 100%;
-          --foreground: 222.2 84% 4.9%;
-          --card: 0 0% 100%;
-          --card-foreground: 222.2 84% 4.9%;
-          --popover: 0 0% 100%;
-          --popover-foreground: 222.2 84% 4.9%;
-          --primary: 222.2 47.4% 11.2%;
-          --primary-foreground: 210 40% 98%;
-          --secondary: 210 40% 96.1%;
-          --secondary-foreground: 222.2 47.4% 11.2%;
-          --muted: 210 40% 96.1%;
-          --muted-foreground: 215.4 16.3% 46.9%;
-          --accent: 210 40% 96.1%;
-          --accent-foreground: 222.2 47.4% 11.2%;
-          --destructive: 0 84.2% 60.2%;
-          --destructive-foreground: 210 40% 98%;
-          --border: 214.3 31.8% 91.4%;
-          --input: 214.3 31.8% 91.4%;
-          --ring: 222.2 84% 4.9%;
-          --radius: 0.5rem;
-          --sidebar-background: 0 0% 98%;
-          --sidebar-foreground: 240 5.3% 26.1%;
-          --sidebar-primary: 240 5.9% 10%;
-          --sidebar-primary-foreground: 0 0% 98%;
-          --sidebar-accent: 240 4.8% 95.9%;
-          --sidebar-accent-foreground: 240 5.9% 10%;
-          --sidebar-border: 220 13% 91%;
-          --sidebar-ring: 217.2 91.2% 59.8%;
+      iframeDoc.open();
+      iframeDoc.write('<!DOCTYPE html><html><head><title>Payslip</title></head><body><div id="payslip-root"></div></body></html>');
+      iframeDoc.close();
+
+      // Copy all stylesheets and style tags from the main document to the iframe
+      Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).forEach(node => {
+        const clonedNode = node.cloneNode(true);
+        iframeDoc.head.appendChild(clonedNode);
+      });
+
+      // Add a base style for the payslip container within the iframe
+      const baseStyle = iframeDoc.createElement('style');
+      baseStyle.innerHTML = `
+        body { margin: 0; padding: 0; }
+        #payslip-root {
+          box-sizing: border-box;
+          ${getPrintClasses(payslipDesignSettings.layoutSize, true).split(' ').map(cls => {
+            // Convert Tailwind classes to inline styles for html2canvas in iframe
+            // This is a simplified conversion and might not cover all cases,
+            // but it's a starting point. Full conversion would require a utility.
+            if (cls.startsWith('w-')) return `width: ${cls.substring(2)};`;
+            if (cls.startsWith('min-h-')) return `min-height: ${cls.substring(6)};`;
+            if (cls.startsWith('p-')) return `padding: ${cls.substring(2)};`;
+            if (cls.startsWith('text-')) return `font-size: ${cls.substring(5)};`;
+            return '';
+          }).join(' ')}
         }
-        .dark {
-          --background: 222.2 84% 4.9%;
-          --foreground: 210 40% 98%;
-          --card: 222.2 84% 4.9%;
-          --card-foreground: 210 40% 98%;
-          --popover: 222.2 84% 4.9%;
-          --popover-foreground: 210 40% 98%;
-          --primary: 210 40% 98%;
-          --primary-foreground: 222.2 47.4% 11.2%;
-          --secondary: 217.2 32.6% 17.5%;
-          --secondary-foreground: 210 40% 98%;
-          --muted: 217.2 32.6% 17.5%;
-          --muted-foreground: 215 20.2% 65.1%;
-          --accent: 217.2 32.6% 17.5%;
-          --accent-foreground: 210 40% 98%;
-          --destructive: 0 62.8% 30.6%;
-          --destructive-foreground: 210 40% 98%;
-          --border: 217.2 32.6% 17.5%;
-          --input: 217.2 32.6% 17.5%;
-          --ring: 212.7 26.8% 83.9%;
-          --sidebar-background: 240 5.9% 10%;
-          --sidebar-foreground: 240 4.8% 95.9%;
-          --sidebar-primary: 224.3 76.3% 48%;
-          --sidebar-primary-foreground: 0 0% 100%;
-          --sidebar-accent: 240 3.7% 15.9%;
-          --sidebar-accent-foreground: 240 4.8% 95.9%;
-          --sidebar-border: 240 3.7% 15.9%;
-          --sidebar-ring: 217.2 91.2% 59.8%;
-        }
+      `;
+      iframeDoc.head.appendChild(baseStyle);
+
+      const payslipRoot = iframeDoc.getElementById('payslip-root');
+      if (!payslipRoot) {
+        reject(new Error("Payslip root element not found in iframe."));
+        return;
       }
 
-      @layer base {
-        * {
-          @apply border-border;
-        }
-        body {
-          @apply bg-background text-foreground;
-        }
-      }
+      const root = ReactDOM.createRoot(payslipRoot);
+      root.render(
+        <IndividualPayslipCard
+          payslip={payslip}
+          payslipDesignSettings={payslipDesignSettings}
+          companyTradingName={companyTradingName}
+          companyLogoUrl={companyLogoUrl}
+          companyLogoSize={companyLogoSize}
+          employees={allEmployees}
+          getEmployeeName={getEmployeeName}
+          isPdfGeneration={true}
+        />
+      );
 
-      /* Styles for react-day-picker modifiers */
-      .rdp-day_leaveDays {
-        @apply bg-blue-200 text-blue-900;
-      }
-      .rdp-day_leaveDays.rdp-day_range_start {
-        @apply rounded-l-md;
-      }
-      .rdp-day_leaveDays.rdp-day_range_end {
-        @apply rounded-r-md;
-      }
-      .rdp-day_leaveDays.rdp-day_range_middle {
-        @apply rounded-none;
-      }
-      .rdp-day_leaveDays.rdp-day_range_start.rdp-day_range_end {
-        @apply rounded-md;
-      }
-    `;
-    tempContainer.appendChild(globalStyles);
+      // Store the root for cleanup
+      (iframe as any)._reactRoot = root;
 
-    // Copy all <link rel="stylesheet"> tags from the current document's head
-    Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach(link => {
-      const newLink = document.createElement('link');
-      newLink.rel = 'stylesheet';
-      newLink.href = link.href;
-      tempContainer.appendChild(newLink);
+      // Wait for images and other resources to load within the iframe
+      iframe.onload = () => {
+        console.log("Iframe content loaded.");
+        resolve(iframe);
+      };
+      // Fallback if onload doesn't fire or for immediate content
+      setTimeout(() => {
+        console.log("Iframe content ready after timeout.");
+        resolve(iframe);
+      }, 1500); // Increased delay for iframe content to settle
     });
-
-    const root = ReactDOM.createRoot(tempContainer);
-    root.render(
-      <IndividualPayslipCard
-        payslip={payslip}
-        payslipDesignSettings={payslipDesignSettings}
-        companyTradingName={companyTradingName}
-        companyLogoUrl={companyLogoUrl}
-        companyLogoSize={companyLogoSize}
-        employees={allEmployees}
-        getEmployeeName={getEmployeeName}
-        isPdfGeneration={true} // Indicate that this is for PDF generation
-      />
-    );
-
-    // Store the root for cleanup
-    (tempContainer as any)._reactRoot = root;
-
-    return tempContainer;
   };
 
-  const cleanupPayslipElementForPdf = (element: HTMLElement) => {
-    const root = (element as any)._reactRoot;
+  const cleanupPayslipElementForPdf = (iframe: HTMLIFrameElement) => {
+    const root = (iframe as any)._reactRoot;
     if (root) {
       root.unmount();
     }
-    document.body.removeChild(element);
+    document.body.removeChild(iframe);
   };
 
-  const handlePrintPayslip = () => {
+  const handlePrintOrDownload = async (action: 'print' | 'download') => {
     if (!selectedPayslip) {
-      showError("Please select a payslip to print.");
+      showError(`Please select a payslip to ${action}.`);
       return;
     }
 
-    showSuccess("Preparing payslip for printing...");
+    showSuccess(`Generating PDF for ${action}, please wait...`);
 
-    const payslipElement = generatePayslipElementForPdf(selectedPayslip);
-    if (!payslipElement) {
-      showError("Failed to generate payslip content for printing.");
-      return;
-    }
+    let iframe: HTMLIFrameElement | null = null;
+    try {
+      iframe = await generatePayslipElementForPdf(selectedPayslip);
+      const payslipElement = iframe.contentWindow?.document.getElementById('payslip-root');
 
-    // Introduce a small delay to ensure React has fully rendered the component
-    setTimeout(() => {
-      console.log("Payslip element innerHTML before PDF generation (Print):", payslipElement.innerHTML); // Debug log
+      if (!payslipElement) {
+        throw new Error("Payslip root element not found in iframe for capture.");
+      }
+
+      console.log(`Payslip element innerHTML before PDF generation (${action}):`, payslipElement.innerHTML);
 
       let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
       if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
@@ -240,59 +189,28 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
         jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
       };
 
-      html2pdf().from(payslipElement).set(opt).toPdf().get('pdf').then(function (pdf) {
-        pdf.output('dataurlnewwindow'); // Opens in new tab, browser handles print dialog
-        cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
-      }).catch(error => {
-        showError("Error generating PDF for printing.");
-        console.error("html2pdf error:", error);
-        cleanupPayslipElementForPdf(payslipElement);
-      });
-    }, 500); // Increased delay to 500ms
-  };
+      const pdfPromise = html2pdf().from(payslipElement).set(opt);
 
-  const handleDownloadPdf = () => {
-    if (!selectedPayslip) {
-      showError("Please select a payslip to download.");
-      return;
+      if (action === 'download') {
+        await pdfPromise.save();
+        showSuccess("Payslip PDF downloaded successfully!");
+      } else { // 'print'
+        const pdf = await pdfPromise.toPdf().get('pdf');
+        pdf.output('dataurlnewwindow');
+        showSuccess("Payslip sent to printer.");
+      }
+    } catch (error: any) {
+      showError(`Error generating PDF for ${action}: ${error.message || 'Unknown error'}`);
+      console.error(`html2pdf ${action} error:`, error);
+    } finally {
+      if (iframe) {
+        cleanupPayslipElementForPdf(iframe);
+      }
     }
-
-    showSuccess("Generating PDF, please wait...");
-
-    const payslipElement = generatePayslipElementForPdf(selectedPayslip);
-    if (!payslipElement) {
-      showError("Failed to generate payslip content for PDF download.");
-      return;
-    }
-
-    // Introduce a small delay to ensure React has fully rendered the component
-    setTimeout(() => {
-      console.log("Payslip element innerHTML before PDF generation (Download):", payslipElement.innerHTML); // Debug log
-
-      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
-      if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
-      else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
-
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
-        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
-      };
-
-      html2pdf().from(payslipElement).set(opt).save().then(() => {
-        cleanupPayslipElementForPdf(payslipElement); // Clean up the temporary element
-      }).catch(error => {
-        showError("Error generating PDF for download.");
-        console.error("html2pdf error:", error);
-        cleanupPayslipElementForPdf(payslipElement);
-      });
-    }, 500); // Increased delay to 500ms
   };
 
   return (
@@ -360,10 +278,10 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handlePrintPayslip} disabled={!selectedPayslipId}>
+              <DropdownMenuItem onClick={() => handlePrintOrDownload('print')} disabled={!selectedPayslipId}>
                 <Printer className="mr-2 h-4 w-4" /> Print Payslip
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadPdf} disabled={!selectedPayslipId}>
+              <DropdownMenuItem onClick={() => handlePrintOrDownload('download')} disabled={!selectedPayslipId}>
                 <Download className="mr-2 h-4 w-4" /> Download PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
