@@ -79,7 +79,7 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
               <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
               <YAxis style={{ fontSize: dataVisualsFontSize }} />
               <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-              <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               <Bar dataKey="days" fill="#82ca9d" name="Working Days Taken" />
             </BarChart>
           </ResponsiveContainer>

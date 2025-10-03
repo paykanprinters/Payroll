@@ -63,7 +63,7 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
               <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
               <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
               <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-              <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               <Bar dataKey="gross" fill="#8884d8" name="Gross Pay" />
               <Bar dataKey="net" fill="#82ca9d" name="Net Pay" />
             </BarChart>

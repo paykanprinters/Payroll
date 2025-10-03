@@ -234,7 +234,7 @@ const Analytics: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Line type="monotone" dataKey="gross" stroke="#8884d8" name="Gross Pay" activeDot={{ r: 8 }} />
                 <Line type="monotone" dataKey="net" stroke="#82ca9d" name="Net Pay" />
               </LineChart>
@@ -316,7 +316,7 @@ const Analytics: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="newHires" fill="#00C49F" name="New Hires" />
                 <Bar dataKey="terminations" fill="#FF8042" name="Terminations" />
               </BarChart>
@@ -369,7 +369,7 @@ const Analytics: React.FC = () => {
                 <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
               </BarChart>
             </ResponsiveContainer>
@@ -391,7 +391,7 @@ const Analytics: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Line type="monotone" dataKey="overtime" stroke="#00C49F" name="Overtime Cost" activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>

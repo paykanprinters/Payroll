@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
   const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
   const [monthlyPayrollData, setMonthlyPayrollData] = useState<{ name: string; payroll: number }[]>([]);
   const [totalDeductionsBreakdown, setTotalDeductionsBreakdown] = useState<{ name: string; value: number }[]>([]);
-  const [averageNetPayTrend, setAverageNetPayTrend] = useState<{ name: string; avgNetPay: number }[]>([]);
+  const [averageNetPayTrend, setAverageNetPayTrend] = useState<{ name: string; avgNetPay: number }[]>(([]);
   const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
   const [date, setDate] = React.useState<Date | undefined>(new Date()); // State for the calendar
@@ -237,7 +237,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
               </BarChart>
             </ResponsiveContainer>
@@ -342,7 +342,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Line type="monotone" dataKey="avgNetPay" stroke="#82ca9d" name="Average Net Pay" activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -363,7 +363,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
               </BarChart>
             </ResponsiveContainer>
@@ -382,7 +382,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="days" fill="#00C49F" name="Working Days Taken" />
               </BarChart>
             </ResponsiveContainer>
