@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } => "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Import new modular components
@@ -170,6 +170,7 @@ const Payslips: React.FC = () => {
               companyLogoSize={companyLogoSize}
               employees={employees}
               getEmployeeName={getEmployeeName}
+              isPdfGeneration={false} // Indicate that this is for UI preview
             />
           </CardContent>
         </Card>

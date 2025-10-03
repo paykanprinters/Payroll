@@ -27,6 +27,7 @@ interface IndividualPayslipCardProps {
   companyLogoSize: number;
   employees: MockEmployee[]; // Pass the full employees array
   getEmployeeName: (employeeId: string) => string;
+  isPdfGeneration?: boolean; // New prop to distinguish PDF generation from UI preview
 }
 
 const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
@@ -37,6 +38,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   companyLogoSize,
   employees, // Destructure employees
   getEmployeeName,
+  isPdfGeneration = false, // Default to false
 }) => {
   const employee = employees.find(emp => emp.id === payslip.employeeId);
 
@@ -134,9 +136,10 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     <div
       id={`payslip-${payslip.id}`}
       className={cn(
-        "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mx-auto max-w-lg",
+        "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
+        isPdfGeneration ? "" : "mx-auto max-w-lg", // Remove max-w-lg and mx-auto for PDF generation
         "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
-        getPrintClasses(payslipDesignSettings.layoutSize) // Apply dynamic print classes
+        getPrintClasses(payslipDesignSettings.layoutSize, isPdfGeneration) // Pass isPdfGeneration to getPrintClasses
       )}
     >
       {/* Company Header */}

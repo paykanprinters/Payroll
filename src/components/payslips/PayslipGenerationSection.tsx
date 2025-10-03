@@ -11,6 +11,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard"; // Import IndividualPayslipCard
 import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces"; // Import MockEmployee
+import { getPrintClasses } from "@/lib/utils"; // Import getPrintClasses
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -75,10 +76,10 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const generatePayslipElementForPdf = (payslip: MockPayslip): HTMLElement | null => {
     const tempContainer = document.createElement('div');
     tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px'; // Hide it off-screen
-    // Set a default large size for rendering, actual PDF size is controlled by jsPDF format
-    tempContainer.style.width = '210mm'; // A4 width
-    tempContainer.style.height = '297mm'; // A4 height
+    tempContainer.style.visibility = 'hidden'; // Use visibility hidden
+    tempContainer.style.top = '0';
+    tempContainer.style.left = '0';
+    tempContainer.style.zIndex = '-1'; // Ensure it's behind everything
     document.body.appendChild(tempContainer);
 
     const root = ReactDOM.createRoot(tempContainer);
@@ -91,15 +92,21 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         companyLogoSize={companyLogoSize}
         employees={allEmployees}
         getEmployeeName={getEmployeeName}
+        isPdfGeneration={true} // Indicate that this is for PDF generation
       />
     );
+
+    // Store the root for cleanup
+    (tempContainer as any)._reactRoot = root;
 
     return tempContainer;
   };
 
   const cleanupPayslipElementForPdf = (element: HTMLElement) => {
-    const root = ReactDOM.createRoot(element); // Re-create root to unmount
-    root.unmount();
+    const root = (element as any)._reactRoot;
+    if (root) {
+      root.unmount();
+    }
     document.body.removeChild(element);
   };
 
