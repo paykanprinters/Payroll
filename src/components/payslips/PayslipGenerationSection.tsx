@@ -135,9 +135,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 }, // Explicitly cast type
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
-        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' } // Explicitly cast orientation
       };
 
       html2pdf().from(payslipElement).set(opt).toPdf().get('pdf').then(function (pdf) {
@@ -176,9 +176,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 }, // Explicitly cast type
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
-        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' } // Explicitly cast orientation
       };
 
       html2pdf().from(payslipElement).set(opt).save().then(() => {
