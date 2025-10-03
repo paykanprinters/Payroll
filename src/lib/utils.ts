@@ -25,7 +25,40 @@ export const getEmployeeName = (employeeId: string, employees: MockEmployee[]) =
   return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
 };
 
-// Helper to get print-specific classes for different paper sizes
+// Helper to get explicit print styles for different paper sizes
+export const getPrintStyles = (layoutSize: "Letter" | "A4" | "A5" | undefined): React.CSSProperties => {
+  let styles: React.CSSProperties = {};
+  switch (layoutSize) {
+    case "Letter":
+      styles = {
+        width: '215.9mm', // 8.5 inches
+        minHeight: '279.4mm', // 11 inches
+        padding: '24px', // Approx 0.25 inch margin
+        fontSize: '13px', // Base font size for Letter
+      };
+      break;
+    case "A5":
+      styles = {
+        width: '148mm',
+        minHeight: '210mm',
+        padding: '16px', // Smaller padding for A5
+        fontSize: '11px', // Smaller base font size for A5
+      };
+      break;
+    case "A4":
+    default:
+      styles = {
+        width: '210mm',
+        minHeight: '297mm',
+        padding: '32px', // Standard padding for A4
+        fontSize: '14px', // Base font size for A4
+      };
+      break;
+  }
+  return styles;
+};
+
+// Original getPrintClasses is no longer needed for PDF generation, but kept for potential print media queries
 export const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined, isPdfGeneration: boolean = false) => {
   let classes = "";
   switch (layoutSize) {

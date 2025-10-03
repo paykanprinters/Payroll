@@ -10,8 +10,8 @@ import { Printer, Download } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
-import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
-import { getPrintClasses } from "@/lib/utils";
+import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { getPrintClasses } from "@/lib/utils"; // Keep getPrintClasses for now, though getPrintStyles is new
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -36,7 +36,7 @@ interface PayslipGenerationSectionProps {
   setSelectedPayslipId: (id: string) => void;
   getEmployeeName: (employeeId: string) => string;
   payslipDesignSettings: PayslipDesignSettings;
-  companyDetails: MockCompanyDetails; // New prop for all company details
+  companyDetails: MockCompanyDetails;
   allEmployees: MockEmployee[];
 }
 
@@ -49,7 +49,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   setSelectedPayslipId,
   getEmployeeName,
   payslipDesignSettings,
-  companyDetails, // Destructure new prop
+  companyDetails,
   allEmployees,
 }) => {
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
@@ -94,9 +94,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         iframeDoc.head.appendChild(clonedNode);
       });
 
-      // No need for baseStyle.innerHTML to convert Tailwind classes to inline CSS.
-      // html2canvas should pick up the Tailwind classes from the copied stylesheets.
-
       const payslipRoot = iframeDoc.getElementById('payslip-root');
       if (!payslipRoot) {
         reject(new Error("Payslip root element not found in iframe."));
@@ -108,7 +105,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         <IndividualPayslipCard
           payslip={payslip}
           payslipDesignSettings={payslipDesignSettings}
-          companyDetails={companyDetails} // Pass all company details
+          companyDetails={companyDetails}
           employees={allEmployees}
           getEmployeeName={getEmployeeName}
           isPdfGeneration={true}
