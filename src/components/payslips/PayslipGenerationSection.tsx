@@ -10,8 +10,8 @@ import { Printer, Download } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
-import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
-import { getPrintClasses, cn } from "@/lib/utils";
+import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
+import { getPrintClasses } from "@/lib/utils";
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -36,9 +36,7 @@ interface PayslipGenerationSectionProps {
   setSelectedPayslipId: (id: string) => void;
   getEmployeeName: (employeeId: string) => string;
   payslipDesignSettings: PayslipDesignSettings;
-  companyTradingName: string;
-  companyLogoUrl: string | null;
-  companyLogoSize: number;
+  companyDetails: MockCompanyDetails; // New prop for all company details
   allEmployees: MockEmployee[];
 }
 
@@ -51,9 +49,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   setSelectedPayslipId,
   getEmployeeName,
   payslipDesignSettings,
-  companyTradingName,
-  companyLogoUrl,
-  companyLogoSize,
+  companyDetails, // Destructure new prop
   allEmployees,
 }) => {
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
@@ -98,25 +94,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         iframeDoc.head.appendChild(clonedNode);
       });
 
-      // Add a base style for the payslip container within the iframe
-      const baseStyle = iframeDoc.createElement('style');
-      baseStyle.innerHTML = `
-        body { margin: 0; padding: 0; }
-        #payslip-root {
-          box-sizing: border-box;
-          ${getPrintClasses(payslipDesignSettings.layoutSize, true).split(' ').map(cls => {
-            // Convert Tailwind classes to inline styles for html2canvas in iframe
-            // This is a simplified conversion and might not cover all cases,
-            // but it's a starting point. Full conversion would require a utility.
-            if (cls.startsWith('w-')) return `width: ${cls.substring(2)};`;
-            if (cls.startsWith('min-h-')) return `min-height: ${cls.substring(6)};`;
-            if (cls.startsWith('p-')) return `padding: ${cls.substring(2)};`;
-            if (cls.startsWith('text-')) return `font-size: ${cls.substring(5)};`;
-            return '';
-          }).join(' ')}
-        }
-      `;
-      iframeDoc.head.appendChild(baseStyle);
+      // No need for baseStyle.innerHTML to convert Tailwind classes to inline CSS.
+      // html2canvas should pick up the Tailwind classes from the copied stylesheets.
 
       const payslipRoot = iframeDoc.getElementById('payslip-root');
       if (!payslipRoot) {
@@ -129,9 +108,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         <IndividualPayslipCard
           payslip={payslip}
           payslipDesignSettings={payslipDesignSettings}
-          companyTradingName={companyTradingName}
-          companyLogoUrl={companyLogoUrl}
-          companyLogoSize={companyLogoSize}
+          companyDetails={companyDetails} // Pass all company details
           employees={allEmployees}
           getEmployeeName={getEmployeeName}
           isPdfGeneration={true}

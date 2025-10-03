@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Separator } from "@/components/ui/separator";
-import { cn, getPrintClasses } from "@/lib/utils"; // Import getPrintClasses
-import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces"; // Updated import
+import { cn, getPrintClasses } from "@/lib/utils";
+import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -22,23 +22,19 @@ interface PayslipDesignSettings {
 interface IndividualPayslipCardProps {
   payslip: MockPayslip;
   payslipDesignSettings: PayslipDesignSettings;
-  companyTradingName: string;
-  companyLogoUrl: string | null;
-  companyLogoSize: number;
-  employees: MockEmployee[]; // Pass the full employees array
+  companyDetails: MockCompanyDetails; // New prop for all company details
+  employees: MockEmployee[];
   getEmployeeName: (employeeId: string) => string;
-  isPdfGeneration?: boolean; // New prop to distinguish PDF generation from UI preview
+  isPdfGeneration?: boolean;
 }
 
 const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   payslip,
   payslipDesignSettings,
-  companyTradingName,
-  companyLogoUrl,
-  companyLogoSize,
-  employees, // Destructure employees
+  companyDetails, // Destructure new prop
+  employees,
   getEmployeeName,
-  isPdfGeneration = false, // Default to false
+  isPdfGeneration = false,
 }) => {
   // Debug log to confirm rendering during PDF generation
   if (isPdfGeneration) {
@@ -47,15 +43,19 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
   const employee = employees.find(emp => emp.id === payslip.employeeId);
 
-  // Retrieve company details from localStorage for display
-  const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-  const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
-  const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
-  const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
-  const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-  const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-  const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
-
+  // Use companyDetails from props instead of localStorage
+  const {
+    companyLegalName,
+    companyTradingName,
+    companyRegistrationNumber,
+    vatRegistrationNumber,
+    physicalAddress,
+    mainContactNumber,
+    companyEmail,
+    companyWebsite,
+    logoUrl: companyLogoUrl, // Renamed to avoid conflict with prop
+    logoSize: companyLogoSize, // Renamed to avoid conflict with prop
+  } = companyDetails;
 
   // Helper to render specific content for earnings, deductions, or leave
   const renderEarningsContent = () => {
@@ -130,11 +130,11 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   const mainContentOrder = payslipDesignSettings.earningsDeductionsLayout === "earnings-left-deductions-right"
     ? [
         { content: renderEarningsContent(), align: "text-left" },
-        { content: renderDeductionsContent(), align: "text-left" } // Align right for second column
+        { content: renderDeductionsContent(), align: "text-left" }
       ]
     : [
         { content: renderDeductionsContent(), align: "text-left" },
-        { content: renderEarningsContent(), align: "text-left" } // Align right for second column
+        { content: renderEarningsContent(), align: "text-left" }
       ];
 
   return (
@@ -142,9 +142,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       id={`payslip-${payslip.id}`}
       className={cn(
         "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
-        isPdfGeneration ? "" : "mx-auto max-w-lg", // Remove max-w-lg and mx-auto for PDF generation
+        isPdfGeneration ? "" : "mx-auto max-w-lg",
         "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
-        getPrintClasses(payslipDesignSettings.layoutSize, isPdfGeneration) // Pass isPdfGeneration to getPrintClasses
+        getPrintClasses(payslipDesignSettings.layoutSize, isPdfGeneration)
       )}
     >
       {/* Company Header */}

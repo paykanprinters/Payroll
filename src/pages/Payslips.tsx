@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard directly
-import { MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
+import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -40,6 +40,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
 const Payslips: React.FC = () => {
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
+  const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null); // New state for company details
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
@@ -86,6 +87,39 @@ const Payslips: React.FC = () => {
     }
   };
 
+  const loadCompanyDetails = () => {
+    const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
+    const companyTradingName = localStorage.getItem('companyTradingName') || "";
+    const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
+    const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
+    const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
+    const postalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
+    const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
+    const alternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
+    const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
+    const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
+    const bankName = localStorage.getItem('bankName') || "";
+    const accountHolderName = localStorage.getItem('accountHolderName') || "";
+    const accountNumber = localStorage.getItem('accountNumber') || "";
+    const branchCode = localStorage.getItem('branchCode') || "";
+    const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
+    const logoUrl = localStorage.getItem('companyLogoUrl') || '';
+    const logoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
+
+    setCompanyDetails({
+      companyLegalName, companyTradingName, companyRegistrationNumber,
+      companyTaxNumber: localStorage.getItem('companyTaxNumber') || "", // Added missing field
+      vatRegistrationNumber, industry: localStorage.getItem('industry') || "", // Added missing field
+      payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "", // Added missing field
+      uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "", // Added missing field
+      sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "", // Added missing field
+      coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "", // Added missing field
+      physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
+      companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
+      branchCode, accountType, logoUrl, logoSize,
+    });
+  };
+
   const loadPayslipDesignSettings = () => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings);
@@ -93,11 +127,20 @@ const Payslips: React.FC = () => {
 
   useEffect(() => {
     loadPayslipsAndEmployees();
+    loadCompanyDetails(); // Load company details
     loadPayslipDesignSettings();
-    window.addEventListener('mockDataUpdated', loadPayslipsAndEmployees);
+    window.addEventListener('mockDataUpdated', () => {
+      loadPayslipsAndEmployees();
+      loadCompanyDetails();
+    });
+    window.addEventListener('companyDetailsUpdated', loadCompanyDetails); // Listen for company detail updates
     window.addEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
     return () => {
-      window.removeEventListener('mockDataUpdated', loadPayslipsAndEmployees);
+      window.removeEventListener('mockDataUpdated', () => {
+        loadPayslipsAndEmployees();
+        loadCompanyDetails();
+      });
+      window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
       window.removeEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
     };
   }, []);
@@ -120,10 +163,6 @@ const Payslips: React.FC = () => {
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
   };
 
-  const companyTradingName = localStorage.getItem('companyTradingName') || "Your Company Name";
-  const companyLogoUrl = localStorage.getItem('companyLogoUrl');
-  const companyLogoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
-
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
 
   return (
@@ -138,22 +177,22 @@ const Payslips: React.FC = () => {
         deductionsBreakdownData={deductionsBreakdownData}
       />
 
-      <PayslipGenerationSection
-        employees={employees}
-        payslips={payslips}
-        selectedEmployeeId={selectedEmployeeId}
-        setSelectedEmployeeId={setSelectedEmployeeId}
-        selectedPayslipId={selectedPayslipId}
-        setSelectedPayslipId={setSelectedPayslipId}
-        getEmployeeName={getEmployeeName}
-        payslipDesignSettings={payslipDesignSettings} // Pass payslipDesignSettings
-        companyTradingName={companyTradingName}
-        companyLogoUrl={companyLogoUrl}
-        companyLogoSize={companyLogoSize}
-        allEmployees={employees} // Pass all employees for IndividualPayslipCard
-      />
+      {companyDetails && ( // Only render if companyDetails are loaded
+        <PayslipGenerationSection
+          employees={employees}
+          payslips={payslips}
+          selectedEmployeeId={selectedEmployeeId}
+          setSelectedEmployeeId={setSelectedEmployeeId}
+          selectedPayslipId={selectedPayslipId}
+          setSelectedPayslipId={setSelectedPayslipId}
+          getEmployeeName={getEmployeeName}
+          payslipDesignSettings={payslipDesignSettings}
+          companyDetails={companyDetails} // Pass all company details
+          allEmployees={employees}
+        />
+      )}
 
-      {selectedPayslipForPreview && (
+      {selectedPayslipForPreview && companyDetails && ( // Only render if companyDetails are loaded
         <Card>
           <CardHeader>
             <CardTitle>Payslip Preview</CardTitle>
@@ -165,9 +204,7 @@ const Payslips: React.FC = () => {
             <IndividualPayslipCard
               payslip={selectedPayslipForPreview}
               payslipDesignSettings={payslipDesignSettings}
-              companyTradingName={companyTradingName}
-              companyLogoUrl={companyLogoUrl}
-              companyLogoSize={companyLogoSize}
+              companyDetails={companyDetails} // Pass all company details
               employees={employees}
               getEmployeeName={getEmployeeName}
               isPdfGeneration={false} // Indicate that this is for UI preview
