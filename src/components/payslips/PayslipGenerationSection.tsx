@@ -133,10 +133,10 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
 
       const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number], // Explicitly cast to tuple
+        margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true }, // Added debug and useCORS
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 }, // Explicitly cast type
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
         jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
       };
 
@@ -174,10 +174,10 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
 
       const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number], // Explicitly cast to tuple
+        margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true }, // Added debug and useCORS
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 }, // Explicitly cast type
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
         jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
       };
 
