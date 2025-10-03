@@ -81,17 +81,112 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     tempContainer.style.zIndex = '-1'; // Ensure it's behind everything
     document.body.appendChild(tempContainer);
 
-    // Create a shadow DOM or inject styles directly for html2canvas to pick them up
-    const styleContainer = document.createElement('div');
-    tempContainer.appendChild(styleContainer);
+    // Apply global styles to the temporary container
+    const globalStyles = document.createElement('style');
+    globalStyles.innerHTML = `
+      @tailwind base;
+      @tailwind components;
+      @tailwind utilities;
 
-    // Copy all stylesheets and style tags from the current document's head
-    const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map(node => node.outerHTML)
-      .join('');
-    styleContainer.innerHTML = stylesheets;
+      @layer base {
+        :root {
+          --background: 0 0% 100%;
+          --foreground: 222.2 84% 4.9%;
+          --card: 0 0% 100%;
+          --card-foreground: 222.2 84% 4.9%;
+          --popover: 0 0% 100%;
+          --popover-foreground: 222.2 84% 4.9%;
+          --primary: 222.2 47.4% 11.2%;
+          --primary-foreground: 210 40% 98%;
+          --secondary: 210 40% 96.1%;
+          --secondary-foreground: 222.2 47.4% 11.2%;
+          --muted: 210 40% 96.1%;
+          --muted-foreground: 215.4 16.3% 46.9%;
+          --accent: 210 40% 96.1%;
+          --accent-foreground: 222.2 47.4% 11.2%;
+          --destructive: 0 84.2% 60.2%;
+          --destructive-foreground: 210 40% 98%;
+          --border: 214.3 31.8% 91.4%;
+          --input: 214.3 31.8% 91.4%;
+          --ring: 222.2 84% 4.9%;
+          --radius: 0.5rem;
+          --sidebar-background: 0 0% 98%;
+          --sidebar-foreground: 240 5.3% 26.1%;
+          --sidebar-primary: 240 5.9% 10%;
+          --sidebar-primary-foreground: 0 0% 98%;
+          --sidebar-accent: 240 4.8% 95.9%;
+          --sidebar-accent-foreground: 240 5.9% 10%;
+          --sidebar-border: 220 13% 91%;
+          --sidebar-ring: 217.2 91.2% 59.8%;
+        }
+        .dark {
+          --background: 222.2 84% 4.9%;
+          --foreground: 210 40% 98%;
+          --card: 222.2 84% 4.9%;
+          --card-foreground: 210 40% 98%;
+          --popover: 222.2 84% 4.9%;
+          --popover-foreground: 210 40% 98%;
+          --primary: 210 40% 98%;
+          --primary-foreground: 222.2 47.4% 11.2%;
+          --secondary: 217.2 32.6% 17.5%;
+          --secondary-foreground: 210 40% 98%;
+          --muted: 217.2 32.6% 17.5%;
+          --muted-foreground: 215 20.2% 65.1%;
+          --accent: 217.2 32.6% 17.5%;
+          --accent-foreground: 210 40% 98%;
+          --destructive: 0 62.8% 30.6%;
+          --destructive-foreground: 210 40% 98%;
+          --border: 217.2 32.6% 17.5%;
+          --input: 217.2 32.6% 17.5%;
+          --ring: 212.7 26.8% 83.9%;
+          --sidebar-background: 240 5.9% 10%;
+          --sidebar-foreground: 240 4.8% 95.9%;
+          --sidebar-primary: 224.3 76.3% 48%;
+          --sidebar-primary-foreground: 0 0% 100%;
+          --sidebar-accent: 240 3.7% 15.9%;
+          --sidebar-accent-foreground: 240 4.8% 95.9%;
+          --sidebar-border: 240 3.7% 15.9%;
+          --sidebar-ring: 217.2 91.2% 59.8%;
+        }
+      }
 
-    const root = ReactDOM.createRoot(styleContainer); // Render into the styleContainer
+      @layer base {
+        * {
+          @apply border-border;
+        }
+        body {
+          @apply bg-background text-foreground;
+        }
+      }
+
+      /* Styles for react-day-picker modifiers */
+      .rdp-day_leaveDays {
+        @apply bg-blue-200 text-blue-900;
+      }
+      .rdp-day_leaveDays.rdp-day_range_start {
+        @apply rounded-l-md;
+      }
+      .rdp-day_leaveDays.rdp-day_range_end {
+        @apply rounded-r-md;
+      }
+      .rdp-day_leaveDays.rdp-day_range_middle {
+        @apply rounded-none;
+      }
+      .rdp-day_leaveDays.rdp-day_range_start.rdp-day_range_end {
+        @apply rounded-md;
+      }
+    `;
+    tempContainer.appendChild(globalStyles);
+
+    // Copy all <link rel="stylesheet"> tags from the current document's head
+    Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach(link => {
+      const newLink = document.createElement('link');
+      newLink.rel = 'stylesheet';
+      newLink.href = link.href;
+      tempContainer.appendChild(newLink);
+    });
+
+    const root = ReactDOM.createRoot(tempContainer);
     root.render(
       <IndividualPayslipCard
         payslip={payslip}
