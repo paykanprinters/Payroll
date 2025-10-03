@@ -40,6 +40,11 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   getEmployeeName,
   isPdfGeneration = false, // Default to false
 }) => {
+  // Debug log to confirm rendering during PDF generation
+  if (isPdfGeneration) {
+    console.log(`IndividualPayslipCard: Rendering for PDF generation for employee ${payslip.employeeId}, payslip ${payslip.id}`);
+  }
+
   const employee = employees.find(emp => emp.id === payslip.employeeId);
 
   // Retrieve company details from localStorage for display

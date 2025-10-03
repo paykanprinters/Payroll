@@ -76,9 +76,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const generatePayslipElementForPdf = (payslip: MockPayslip): HTMLElement | null => {
     const tempContainer = document.createElement('div');
     tempContainer.style.position = 'absolute';
-    tempContainer.style.visibility = 'hidden'; // Use visibility hidden
-    tempContainer.style.top = '0';
-    tempContainer.style.left = '0';
+    tempContainer.style.left = '-9999px'; // Position off-screen
+    tempContainer.style.top = '-9999px';
     tempContainer.style.zIndex = '-1'; // Ensure it's behind everything
     document.body.appendChild(tempContainer);
 
@@ -137,7 +136,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
-        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' } // Explicitly cast orientation
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
       };
 
       html2pdf().from(payslipElement).set(opt).toPdf().get('pdf').then(function (pdf) {
@@ -178,7 +177,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'print', debug: true, useCORS: true },
-        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' } // Explicitly cast orientation
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
       };
 
       html2pdf().from(payslipElement).set(opt).save().then(() => {
