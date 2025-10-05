@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Printer, Download } from "lucide-react";
-import { showSuccess, showError } from "@/utils/toast";
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { format } from "date-fns";
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -65,41 +66,19 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
 
-  const generatePayslipElementForPdf = (payslip: MockPayslip): Promise<HTMLIFrameElement> => {
-    return new Promise((resolve, reject) => {
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'absolute';
-      iframe.style.left = '-9999px'; // Position off-screen
-      iframe.style.top = '-9999px';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      iframe.style.visibility = 'hidden'; // Ensure it's hidden
-      document.body.appendChild(iframe);
+  // Helper to render an IndividualPayslipCard into a hidden DOM element for PDF generation
+  const renderPayslipToDomElement = (payslip: MockPayslip): Promise<{ element: HTMLDivElement; root: ReactDOM.Root }> => {
+    return new Promise((resolve) => {
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      container.style.width = '0';
+      container.style.height = '0';
+      container.style.overflow = 'hidden'; // Hide overflow
+      document.body.appendChild(container);
 
-      const iframeDoc = iframe.contentWindow?.document;
-      if (!iframeDoc) {
-        reject(new Error("Could not access iframe document."));
-        return;
-      }
-
-      iframeDoc.open();
-      iframeDoc.write('<!DOCTYPE html><html><head><title>Payslip</title></head><body><div id="payslip-root"></div></body></html>');
-      iframeDoc.close();
-
-      // Copy all stylesheets and style tags from the main document to the iframe
-      Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).forEach(node => {
-        const clonedNode = node.cloneNode(true);
-        iframeDoc.head.appendChild(clonedNode);
-      });
-
-      const payslipRoot = iframeDoc.getElementById('payslip-root');
-      if (!payslipRoot) {
-        reject(new Error("Payslip root element not found in iframe."));
-        return;
-      }
-
-      const root = ReactDOM.createRoot(payslipRoot);
+      const root = ReactDOM.createRoot(container);
       root.render(
         <IndividualPayslipCard
           payslip={payslip}
@@ -109,32 +88,27 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
           getEmployeeName={getEmployeeName}
           isPdfGeneration={true}
           onReadyForPdf={() => {
-            console.log("IndividualPayslipCard signaled readiness in iframe.");
-            resolve(iframe);
+            console.log(`Payslip ${payslip.id} signaled readiness.`);
+            resolve({ element: container, root });
           }}
         />
       );
 
-      // Store the root for cleanup
-      (iframe as any)._reactRoot = root;
-
       // Fallback if onReadyForPdf doesn't fire (e.g., no images, or component renders very fast)
-      const timeoutId = setTimeout(() => {
-        console.warn("Payslip iframe readiness timed out, proceeding with PDF generation.");
-        resolve(iframe);
-      }, 3000); // Increased delay for iframe content to settle
-
-      // Clear timeout if resolved earlier
-      iframe.onload = () => clearTimeout(timeoutId);
+      setTimeout(() => {
+        if (!container.isConnected) return; // Already resolved and cleaned up
+        console.warn(`Payslip ${payslip.id} rendering timed out, proceeding.`);
+        resolve({ element: container, root });
+      }, 5000); // Increased timeout
     });
   };
 
-  const cleanupPayslipElementForPdf = (iframe: HTMLIFrameElement) => {
-    const root = (iframe as any)._reactRoot;
-    if (root) {
-      root.unmount();
+  // Helper to clean up the temporary DOM element and its React root
+  const cleanupRenderedElement = (item: { element: HTMLDivElement; root: ReactDOM.Root }) => {
+    item.root.unmount();
+    if (item.element.parentNode) {
+      item.element.parentNode.removeChild(item.element);
     }
-    document.body.removeChild(iframe);
   };
 
   const handlePrintOrDownload = async (action: 'print' | 'download') => {
@@ -143,18 +117,12 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       return;
     }
 
-    showSuccess(`Generating PDF for ${action}, please wait...`);
+    const toastId = showLoading(`Generating PDF for ${action}, please wait...`) as string;
+    let renderedPayslip: { element: HTMLDivElement; root: ReactDOM.Root } | null = null;
 
-    let iframe: HTMLIFrameElement | null = null;
     try {
-      iframe = await generatePayslipElementForPdf(selectedPayslip);
-      const payslipElement = iframe.contentWindow?.document.getElementById('payslip-root');
-
-      if (!payslipElement) {
-        throw new Error("Payslip root element not found in iframe for capture.");
-      }
-
-      console.log(`Payslip element innerHTML before PDF generation (${action}):`, payslipElement.innerHTML);
+      renderedPayslip = await renderPayslipToDomElement(selectedPayslip);
+      const payslipElement = renderedPayslip.element;
 
       let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
       if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
@@ -182,23 +150,72 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       showError(`Error generating PDF for ${action}: ${error.message || 'Unknown error'}`);
       console.error(`html2pdf ${action} error:`, error);
     } finally {
-      if (iframe) {
-        cleanupPayslipElementForPdf(iframe);
+      dismissToast(toastId);
+      if (renderedPayslip) {
+        cleanupRenderedElement(renderedPayslip);
       }
+    }
+  };
+
+  const handlePrintOrDownloadAll = async (action: 'print' | 'download') => {
+    if (payslips.length === 0) {
+      showError(`No payslips available to ${action}.`);
+      return;
+    }
+
+    const toastId = showLoading(`Generating all payslips for ${action}, please wait...`) as string;
+    let renderedPayslips: { element: HTMLDivElement; root: ReactDOM.Root }[] = [];
+
+    try {
+      // Render all payslips to hidden DOM elements
+      const renderPromises = payslips.map(p => renderPayslipToDomElement(p));
+      renderedPayslips = await Promise.all(renderPromises);
+
+      const payslipElements = renderedPayslips.map(item => item.element);
+
+      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+      if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
+      else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `all-payslips-${format(new Date(), 'yyyyMMddHHmmss')}.pdf`,
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
+      };
+
+      const pdfPromise = html2pdf().from(payslipElements).set(opt);
+
+      if (action === 'download') {
+        await pdfPromise.save();
+        showSuccess("All payslips PDF downloaded successfully!");
+      } else { // 'print'
+        const pdf = await pdfPromise.toPdf().get('pdf');
+        pdf.output('dataurlnewwindow');
+        showSuccess("All payslips sent to printer.");
+      }
+    } catch (error: any) {
+      showError(`Error generating all payslips for ${action}: ${error.message || 'Unknown error'}`);
+      console.error(`html2pdf all payslips ${action} error:`, error);
+    } finally {
+      dismissToast(toastId);
+      // Clean up all temporary DOM elements
+      renderedPayslips.forEach(cleanupRenderedElement);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Generate a Single Payslip</CardTitle>
+        <CardTitle>Generate Payslips</CardTitle>
         <CardDescription>
-          Select an employee and a specific payslip to print or download.
+          Generate individual payslips or a batch of all payslips for printing or downloading.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-end">
-          <div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
+          <div className="lg:col-span-2">
             <label htmlFor="employee-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               Select Employee
             </label>
@@ -258,6 +275,23 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handlePrintOrDownload('download')} disabled={!selectedPayslipId}>
                 <Download className="mr-2 h-4 w-4" /> Download PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="mt-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="w-full" variant="outline" disabled={payslips.length === 0}>
+                Generate All Payslips
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handlePrintOrDownloadAll('print')} disabled={payslips.length === 0}>
+                <Printer className="mr-2 h-4 w-4" /> Print All Payslips
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePrintOrDownloadAll('download')} disabled={payslips.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> Download All Payslips PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
