@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { eachDayOfInterval, isWeekend } from "date-fns";
-import { MockEmployee } from "./mock-data-interfaces"; // Updated import
+import { MockEmployee } from "./mock-data-interfaces";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -58,7 +58,9 @@ export const getPrintStyles = (layoutSize: "Letter" | "A4" | "A5" | undefined): 
   return styles;
 };
 
-// Original getPrintClasses is no longer needed for PDF generation, but kept for potential print media queries
+// getPrintClasses is no longer needed as getPrintStyles provides explicit CSS.
+// Keeping it commented out for reference if needed for non-PDF print media queries.
+/*
 export const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined, isPdfGeneration: boolean = false) => {
   let classes = "";
   switch (layoutSize) {
@@ -73,6 +75,6 @@ export const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined, 
       classes = "w-a4 min-h-a4 p-8 text-base";
       break;
   }
-  // If it's for PDF generation, return classes directly. Otherwise, prefix with 'print:'
   return isPdfGeneration ? classes : classes.split(' ').map(cls => `print:${cls}`).join(' ');
 };
+*/

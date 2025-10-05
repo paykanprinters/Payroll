@@ -11,7 +11,8 @@ import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { getPrintClasses } from "@/lib/utils"; // Keep getPrintClasses for now, though getPrintStyles is new
+// Removed getPrintClasses import as it's no longer used
+// import { getPrintClasses } from "@/lib/utils"; 
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
