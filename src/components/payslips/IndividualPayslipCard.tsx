@@ -125,10 +125,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
           </p>
         ))}
-        <p className="font-bold border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
-          <span style={{ float: 'left' }}>GROSS EARNINGS</span>
-          <span style={{ float: 'right' }}>R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
-          <div style={{ clear: 'both' }}></div> {/* Clear float */}
+        <p className="font-bold border-t pt-1 flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
+          <span>GROSS EARNINGS</span>
+          <span>R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
         </p>
       </div>
     );
@@ -145,10 +144,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
           </p>
         ))}
-        <p className="font-bold border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
-          <span style={{ float: 'left' }}>TOTAL DEDUCTIONS</span>
-          <span style={{ float: 'right' }}>R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
-          <div style={{ clear: 'both' }}></div> {/* Clear float */}
+        <p className="font-bold border-t pt-1 flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
+          <span>TOTAL DEDUCTIONS</span>
+          <span>R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
         </p>
       </div>
     );
@@ -245,7 +243,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       {/* Employee & Bank Details */}
       {payslipDesignSettings.showEmployeeDetails && employee && (
         <div style={isPdfGeneration ? { display: 'flex', justifyContent: 'space-between', marginBottom: `${baseFontSizePx * 1.5}px` } : {}} className="grid grid-cols-2 gap-4 mb-4">
-          <div style={isPdfGeneration ? { width: '48%', float: 'left' } : {}} className="space-y-1">
+          <div style={isPdfGeneration ? { flex: '1', marginRight: `${baseFontSizePx * 0.5}px` } : {}} className="space-y-1">
             {renderParagraph("Employee Name", getEmployeeName(payslip.employeeId))}
             {renderParagraph("Employee No", employee.id)}
             {renderParagraph("ID No", employee.idNumber)}
@@ -253,14 +251,13 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             {renderParagraph("Tax No", employee.taxReferenceNumber)}
           </div>
           {payslipDesignSettings.showBankDetails && (
-            <div style={isPdfGeneration ? { width: '48%', float: 'right', textAlign: 'right' } : {}} className="space-y-1 text-right">
+            <div style={isPdfGeneration ? { flex: '1', textAlign: 'right', marginLeft: `${baseFontSizePx * 0.5}px` } : {}} className="space-y-1 text-right">
               {renderParagraph("Bank Name", employee.bankName)}
               {renderParagraph("Account No", employee.ibanNumber ? `********${employee.ibanNumber.slice(-4)}` : "N/A")}
               {renderParagraph("Branch Code", employee.routingSwiftCode)}
               {renderParagraph("Account Type", employee.bankAccountType)}
             </div>
           )}
-          <div style={{ clear: 'both' }}></div> {/* Clear float */}
         </div>
       )}
 
@@ -268,13 +265,12 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
       {/* Main Pay Information: Earnings/Deductions */}
       <div style={isPdfGeneration ? { display: 'flex', justifyContent: 'space-between', marginTop: `${baseFontSizePx * 1.5}px`, marginBottom: `${baseFontSizePx * 1.5}px` } : {}} className="grid grid-cols-2 gap-6 mt-4">
-        <div style={isPdfGeneration ? { width: '48%', float: 'left' } : {}}>
+        <div style={isPdfGeneration ? { flex: '1', marginRight: `${baseFontSizePx * 0.5}px` } : {}}>
           {mainContentOrder[0].content}
         </div>
-        <div style={isPdfGeneration ? { width: '48%', float: 'right' } : {}}>
+        <div style={isPdfGeneration ? { flex: '1', marginLeft: `${baseFontSizePx * 0.5}px` } : {}}>
           {mainContentOrder[1].content}
         </div>
-        <div style={{ clear: 'both' }}></div> {/* Clear float */}
       </div>
 
       <Separator className="my-4" style={isPdfGeneration ? { margin: `${baseFontSizePx * 1}px 0` } : {}} />
