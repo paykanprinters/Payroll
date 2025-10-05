@@ -4,7 +4,7 @@ import React from "react";
 import { Outlet, Link, useLocation, Navigate, Routes, Route } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { Separator }1 from "@/components/ui/separator";
+import { Separator } from "@/components/ui/separator"; // Removed the extra '1'
 import PayslipOverviewPage from "./payslips/PayslipOverviewPage";
 import Irp5ExportPage from "./payslips/Irp5ExportPage";
 
@@ -28,7 +28,6 @@ const PayslipsLayout: React.FC = () => {
     <div className="space-y-6 p-4 pb-16 md:block">
       <div className="space-y-0.5">
         <h2 className="text-2xl font-bold tracking-tight">Payslips</h2>
-        {/* Removed debug paragraph */}
       </div>
       <Separator className="my-6" />
       <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
