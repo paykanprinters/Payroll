@@ -29,7 +29,7 @@ interface NavLinkProps {
 
 const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed }) => {
   const location = useLocation();
-  const isActive = location.pathname.startsWith(to); // Check if current path starts with the link's path
+  const isActive = location.pathname.startsWith(to);
 
   return (
     <Button
@@ -37,7 +37,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
       variant="ghost"
       className={cn(
         "w-full justify-start",
-        isCollapsed ? "h-9 w-9 p-0" : "px-4 py-2",
+        isCollapsed ? "h-9 w-9 p-1.5" : "px-4 py-2", // Adjusted padding for collapsed state
         isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline"
       )}
     >
@@ -56,7 +56,6 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const isMobile = useIsMobile();
-  // Initialize state directly from localStorage
   const [companyTradingName, setCompanyTradingName] = React.useState<string>(
     localStorage.getItem('companyTradingName') || ""
   );
@@ -90,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
     window.addEventListener('mockDataUpdated', updateCompanyDetails);
-    updateCompanyDetails(); // Call on mount to ensure initial state reflects current localStorage
+    updateCompanyDetails();
     
     return () => {
       window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
@@ -98,14 +97,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     };
   }, []);
 
-  // Prioritize companyLegalName as requested, then companyTradingName
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/timesheet", icon: Clock, label: "Timesheet" },
-    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" }, // Updated to point to overview
+    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
     { to: "/savings", icon: PiggyBank, label: "Savings" },
     { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
