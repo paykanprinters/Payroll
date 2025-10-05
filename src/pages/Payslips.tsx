@@ -19,19 +19,21 @@ const payslipsNavItems = [
 
 const PayslipsLayout: React.FC = () => {
   const location = useLocation();
+  console.log("PayslipsLayout rendered. Current path:", location.pathname);
+  console.log("Payslips nav items:", payslipsNavItems);
 
   return (
-    <div className="space-y-6 p-4 pb-16 md:block">
+    <div className="space-y-6 p-4 pb-16 md:block border border-red-500"> {/* Added red border for visibility */}
       <div className="space-y-0.5">
-        <h2 className="text-2xl font-bold tracking-tight">Payslips</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Payslips (Debug Mode)</h2>
         <p className="text-muted-foreground">
-          Manage payslip generation, history, and IRP5 exports.
+          If you see this, the Payslips layout is rendering.
         </p>
       </div>
       <Separator className="my-6" />
       <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-        <aside className="-mx-4 lg:w-1/5">
-          <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1">
+        <aside className="-mx-4 lg:w-1/5 border border-blue-500"> {/* Added blue border for visibility */}
+          <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1 border border-green-500"> {/* Added green border for visibility */}
             {payslipsNavItems.map((item) => (
               <Link
                 key={item.href}
@@ -49,7 +51,7 @@ const PayslipsLayout: React.FC = () => {
             ))}
           </nav>
         </aside>
-        <div className="flex-1 lg:max-w-full"> {/* Adjusted max-w to full for content */}
+        <div className="flex-1 lg:max-w-full border border-purple-500"> {/* Added purple border for visibility */}
           <Outlet /> {/* This is where nested routes will render */}
         </div>
       </div>
@@ -58,6 +60,7 @@ const PayslipsLayout: React.FC = () => {
 };
 
 const Payslips: React.FC = () => {
+  console.log("Payslips component rendered.");
   return (
     <Routes>
       <Route path="/" element={<PayslipsLayout />}>
