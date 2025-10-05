@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import ReactDOM from 'react-dom/client';
 import {
   Dialog,
   DialogContent,
@@ -15,8 +16,10 @@ import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, getPrintStyles } from "@/lib/utils"; // Removed getPrintClasses
+import { cn, getPrintStyles } from "@/lib/utils";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import ReportContentWrapper from "./ReportContentWrapper"; // Import the new component
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -51,84 +54,135 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   vatRegistrationNumber,
   companyLogoUrl,
   companyLogoSize,
-  reportDesignSettings, // Destructure reportDesignSettings
+  reportDesignSettings,
 }) => {
-  React.useEffect(() => {
-    if (isOpen) {
-      console.log("ReportPreviewDialog: Current reportDesignSettings:", reportDesignSettings);
-    }
-  }, [isOpen, reportDesignSettings]);
-
-  const handlePrintReport = () => {
-    const reportElement = document.getElementById("report-preview-content");
-    if (reportElement) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write('<html><head><title>' + reportTitle + '</title>');
-
-        // Copy all stylesheets and style tags from the current document's head
-        const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-          .map(node => node.outerHTML)
-          .join('');
-        printWindow.document.write(stylesheets);
-
-        printWindow.document.write('<style>');
-        printWindow.document.write('@media print { body { margin: 0; } .no-print { display: none; } }');
-        printWindow.document.write('</style>');
-        printWindow.document.write('</head><body>');
-        printWindow.document.write(reportElement.outerHTML);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-        showSuccess("Report sent to printer.");
-      } else {
-        showError("Could not open print window.");
-      }
-    } else {
-      showError("Report content not found for printing.");
-    }
+  const companyDetails: MockCompanyDetails = {
+    companyLegalName, companyTradingName, companyRegistrationNumber,
+    companyTaxNumber: "", // Not used in report header, but required by interface
+    vatRegistrationNumber, industry: "", // Not used in report header
+    payeReferenceNumber: "", uifReferenceNumber: "", sdlReferenceNumber: "", coidaRegistrationNumber: "", // Not used
+    physicalAddress, postalAddress: "", mainContactNumber, alternativeContactNumber: "",
+    companyEmail, companyWebsite, bankName: "", accountHolderName: "", accountNumber: "",
+    branchCode: "", accountType: "Cheque", logoUrl: companyLogoUrl || "", logoSize: companyLogoSize,
   };
 
-  const handleDownloadPdf = () => {
-    const reportElement = document.getElementById("report-preview-content");
-    if (reportElement) {
-      showSuccess("Generating PDF, please wait...");
+  // Get explicit print styles for the preview display
+  const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
+  const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || '14px');
+
+  const generateReportElementForPdf = (): Promise<HTMLIFrameElement> => {
+    return new Promise((resolve, reject) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.left = '-9999px'; // Position off-screen
+      iframe.style.top = '-9999px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.visibility = 'hidden'; // Ensure it's hidden
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentWindow?.document;
+      if (!iframeDoc) {
+        reject(new Error("Could not access iframe document."));
+        return;
+      }
+
+      iframeDoc.open();
+      iframeDoc.write('<!DOCTYPE html><html><head><title>Report</title></head><body><div id="report-root"></div></body></html>');
+      iframeDoc.close();
+
+      // Copy all stylesheets and style tags from the main document to the iframe
+      Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).forEach(node => {
+        const clonedNode = node.cloneNode(true);
+        iframeDoc.head.appendChild(clonedNode);
+      });
+
+      const reportRoot = iframeDoc.getElementById('report-root');
+      if (!reportRoot) {
+        reject(new Error("Report root element not found in iframe."));
+        return;
+      }
+
+      const root = ReactDOM.createRoot(reportRoot);
+      root.render(
+        <ReportContentWrapper
+          reportTitle={reportTitle}
+          reportContent={reportContent}
+          companyDetails={companyDetails}
+          reportDesignSettings={reportDesignSettings}
+          onReadyForPdf={() => {
+            console.log("ReportContentWrapper signaled readiness in iframe.");
+            resolve(iframe);
+          }}
+        />
+      );
+
+      // Store the root for cleanup
+      (iframe as any)._reactRoot = root;
+
+      // Fallback if onReadyForPdf doesn't fire (e.g., no images, or component renders very fast)
+      const timeoutId = setTimeout(() => {
+        console.warn("Report iframe readiness timed out, proceeding with PDF generation.");
+        resolve(iframe);
+      }, 3000); // Increased delay for iframe content to settle
+
+      // Clear timeout if resolved earlier
+      iframe.onload = () => clearTimeout(timeoutId);
+    });
+  };
+
+  const cleanupReportElementForPdf = (iframe: HTMLIFrameElement) => {
+    const root = (iframe as any)._reactRoot;
+    if (root) {
+      root.unmount();
+    }
+    document.body.removeChild(iframe);
+  };
+
+  const handlePrintOrDownload = async (action: 'print' | 'download') => {
+    showSuccess(`Generating PDF for ${action}, please wait...`);
+
+    let iframe: HTMLIFrameElement | null = null;
+    try {
+      iframe = await generateReportElementForPdf();
+      const reportElement = iframe.contentWindow?.document.getElementById('report-root');
+
+      if (!reportElement) {
+        throw new Error("Report root element not found in iframe for capture.");
+      }
 
       let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
       if (reportDesignSettings.defaultReportPaperSize === 'Letter') pdfFormat = 'letter';
       else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
 
-      // Get explicit print styles for the PDF generation
-      const explicitPrintStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
-
-      // Apply the explicit styles directly to the report element for html2canvas to pick up
-      // Temporarily apply styles, then revert after PDF generation
-      const originalStyle = reportElement.style.cssText;
-      Object.assign(reportElement.style, explicitPrintStyles);
-
-
-      html2pdf().from(reportElement).set({
-        margin: [10, 10, 10, 10],
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
-        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' } // Dynamic format
-      }).save().then(() => {
-        // Revert styles after PDF generation
-        reportElement.style.cssText = originalStyle;
-      });
-    } else {
-      showError("Report content not found for PDF download.");
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
+      };
+
+      const pdfPromise = html2pdf().from(reportElement).set(opt);
+
+      if (action === 'download') {
+        await pdfPromise.save();
+        showSuccess("Report PDF downloaded successfully!");
+      } else { // 'print'
+        const pdf = await pdfPromise.toPdf().get('pdf');
+        pdf.output('dataurlnewwindow');
+        showSuccess("Report sent to printer.");
+      }
+    } catch (error: any) {
+      showError(`Error generating PDF for ${action}: ${error.message || 'Unknown error'}`);
+      console.error(`html2pdf ${action} error:`, error);
+    } finally {
+      if (iframe) {
+        cleanupReportElementForPdf(iframe);
+      }
     }
   };
-
-  const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
-
-  // Get explicit print styles for the preview display (if needed, otherwise default to UI styles)
-  const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
-  const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || '14px');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -138,7 +192,8 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <DialogDescription>Preview and manage your report.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-4">
-          <div id="report-preview-content" className={cn(
+          {/* This is the UI preview, not the content for PDF generation */}
+          <div className={cn(
             "p-4 bg-white text-gray-900 text-[13px]",
             "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
           )}
@@ -146,7 +201,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
             width: previewStyles.width,
             minHeight: previewStyles.minHeight,
             padding: previewStyles.padding,
-            fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Use report setting for content font size
+            fontSize: `${reportDesignSettings.reportContentFontSize}px`,
             border: '1px solid #ccc', // Add border for visual separation in preview
             boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Add shadow for visual separation in preview
           }}
@@ -186,15 +241,15 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
             {/* Report Content */}
             <div
               dangerouslySetInnerHTML={{ __html: reportContent }}
-              style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }} // Apply dynamic font size
+              style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }}
             />
           </div>
         </ScrollArea>
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={handlePrintReport}>
+          <Button variant="outline" onClick={() => handlePrintOrDownload('print')}>
             <Printer className="mr-2 h-4 w-4" /> Print Report
           </Button>
-          <Button onClick={handleDownloadPdf}>
+          <Button onClick={() => handlePrintOrDownload('download')}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
           </Button>
           <Button variant="secondary" onClick={onClose}>

@@ -11,8 +11,6 @@ import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
-// Removed getPrintClasses import as it's no longer used
-// import { getPrintClasses } from "@/lib/utils"; 
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -110,22 +108,24 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
           employees={allEmployees}
           getEmployeeName={getEmployeeName}
           isPdfGeneration={true}
+          onReadyForPdf={() => {
+            console.log("IndividualPayslipCard signaled readiness in iframe.");
+            resolve(iframe);
+          }}
         />
       );
 
       // Store the root for cleanup
       (iframe as any)._reactRoot = root;
 
-      // Wait for images and other resources to load within the iframe
-      iframe.onload = () => {
-        console.log("Iframe content loaded.");
+      // Fallback if onReadyForPdf doesn't fire (e.g., no images, or component renders very fast)
+      const timeoutId = setTimeout(() => {
+        console.warn("Payslip iframe readiness timed out, proceeding with PDF generation.");
         resolve(iframe);
-      };
-      // Fallback if onload doesn't fire or for immediate content
-      setTimeout(() => {
-        console.log("Iframe content ready after timeout.");
-        resolve(iframe);
-      }, 1500); // Increased delay for iframe content to settle
+      }, 3000); // Increased delay for iframe content to settle
+
+      // Clear timeout if resolved earlier
+      iframe.onload = () => clearTimeout(timeoutId);
     });
   };
 

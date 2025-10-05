@@ -26,6 +26,7 @@ interface IndividualPayslipCardProps {
   employees: MockEmployee[];
   getEmployeeName: (employeeId: string) => string;
   isPdfGeneration?: boolean;
+  onReadyForPdf?: () => void; // Callback to signal readiness for PDF generation
 }
 
 const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
@@ -35,6 +36,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   employees,
   getEmployeeName,
   isPdfGeneration = false,
+  onReadyForPdf,
 }) => {
   const employee = employees.find(emp => emp.id === payslip.employeeId);
 
@@ -54,6 +56,44 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   // Get explicit print styles based on layout size
   const printStyles = isPdfGeneration ? getPrintStyles(payslipDesignSettings.layoutSize) : {};
   const baseFontSizePx = parseFloat(printStyles.fontSize?.toString().replace('px', '') || '14'); // Ensure it's a number
+
+  const [imagesLoaded, setImagesLoaded] = React.useState(false);
+  const imageRef = React.useRef<HTMLImageElement>(null);
+
+  React.useEffect(() => {
+    if (!isPdfGeneration) {
+      setImagesLoaded(true); // Not generating PDF, so no need to wait for images
+      return;
+    }
+
+    if (companyLogoUrl && imageRef.current) {
+      if (imageRef.current.complete) {
+        setImagesLoaded(true);
+      } else {
+        const handleImageLoad = () => {
+          setImagesLoaded(true);
+        };
+        const handleImageError = () => {
+          console.warn("Company logo failed to load for PDF generation.");
+          setImagesLoaded(true); // Still resolve to not block PDF generation
+        };
+        imageRef.current.addEventListener('load', handleImageLoad);
+        imageRef.current.addEventListener('error', handleImageError);
+        return () => {
+          imageRef.current?.removeEventListener('load', handleImageLoad);
+          imageRef.current?.removeEventListener('error', handleImageError);
+        };
+      }
+    } else {
+      setImagesLoaded(true); // No logo or not PDF generation, so ready
+    }
+  }, [companyLogoUrl, isPdfGeneration]);
+
+  React.useEffect(() => {
+    if (imagesLoaded && onReadyForPdf) {
+      onReadyForPdf();
+    }
+  }, [imagesLoaded, onReadyForPdf]);
 
   // Helper to render text with dynamic font size and line height
   const renderText = (text: string | number | undefined, scale: number = 1, className: string = "") => {
@@ -168,6 +208,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         {payslipDesignSettings.showCompanyLogo && companyLogoUrl && (
           <div style={isPdfGeneration ? { width: `${companyLogoSize}px`, height: `${companyLogoSize}px`, flexShrink: 0, marginRight: `${baseFontSizePx * 0.5}px` } : {}} className="flex-shrink-0 mr-2">
             <img
+              ref={imageRef}
               src={companyLogoUrl}
               alt="Company Logo"
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
