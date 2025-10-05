@@ -5,6 +5,8 @@ import { Outlet, Link, useLocation, Navigate, Routes, Route } from "react-router
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import PayslipOverviewPage from "./payslips/PayslipOverviewPage"; // Added import
+import Irp5ExportPage from "./payslips/Irp5ExportPage"; // Added import
 
 const payslipsNavItems = [
   {
