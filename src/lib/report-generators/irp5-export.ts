@@ -32,7 +32,6 @@ export const generateIrp5ExportContent = (
 
   return `
     <div class="p-8 bg-white text-gray-900 print:text-black" style="font-size: ${contentFontSize}px;">
-      <h3 class="font-bold text-center mb-4" style="font-size: ${contentFontSize * 1.5}px;">IRP5 Certificate - Tax Year ${taxYear}</h3>
       <p class="text-center text-muted-foreground mb-6" style="font-size: ${contentFontSize * 0.9}px;">
         (Mock-up for demonstration purposes only. Not a legally compliant SARS document.)
       </p>
