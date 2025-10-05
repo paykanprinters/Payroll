@@ -211,13 +211,12 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <div className={cn(
             "p-4 bg-white text-gray-900 text-[13px] mx-auto", // Added mx-auto for centering
             getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize), // Apply width/min-height classes
-            "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
+            // Removed print: classes here as they are for actual print, not the UI preview
           )}
           style={{
-            padding: previewStyles.padding,
-            fontSize: `${reportDesignSettings.reportContentFontSize}px`,
-            border: '1px solid #ccc', // Add border for visual separation in preview
-            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Add shadow for visual separation in preview
+            ...previewStyles, // Apply all styles from getPrintStyles
+            fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size
+            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Add shadow specifically for UI preview
           }}
           >
             {/* Report Header with Company Details */}

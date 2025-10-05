@@ -86,12 +86,11 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     <div
       className={cn(
         "p-4 bg-white text-gray-900 text-[13px]",
-        "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
+        "print:shadow-none print:bg-white print:text-black print:mx-0 print:my-0", // Removed print:border
       )}
       style={{
-        // Removed width and minHeight, relying on html2pdf.js margins for page dimensions
-        padding: printStyles.padding,
-        fontSize: `${reportDesignSettings.reportContentFontSize}px`,
+        ...printStyles, // Apply all print styles including border
+        fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size if needed
       }}
     >
       {/* Report Header with Company Details */}

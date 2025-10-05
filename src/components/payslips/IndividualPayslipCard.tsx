@@ -54,7 +54,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   } = companyDetails;
 
   // Get explicit print styles based on layout size
-  const printStyles = isPdfGeneration ? getPrintStyles(payslipDesignSettings.layoutSize) : {};
+  const printStyles = getPrintStyles(payslipDesignSettings.layoutSize);
   const baseFontSizePx = parseFloat(printStyles.fontSize?.toString().replace('px', '') || '14'); // Ensure it's a number
 
   const [imagesLoaded, setImagesLoaded] = React.useState(false);
@@ -197,9 +197,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       className={cn(
         "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
         isPdfGeneration ? "" : "mx-auto max-w-lg",
-        !isPdfGeneration && "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
+        !isPdfGeneration && "print:shadow-none print:bg-white print:text-black print:mx-0 print:my-0", // Removed print:border
       )}
-      style={isPdfGeneration ? { ...printStyles, border: '1px solid #ccc', boxShadow: 'none' } : {}}
+      style={isPdfGeneration ? { ...printStyles, border: '2px solid black', boxShadow: 'none' } : {}}
     >
       {/* Company Header */}
       <div style={isPdfGeneration ? { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: `${baseFontSizePx * 1.5}px` } : {}} className="flex justify-between items-start mb-4">
