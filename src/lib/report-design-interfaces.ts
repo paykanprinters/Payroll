@@ -3,4 +3,5 @@ export interface ReportDesignSettings {
   includeCompanyLogo: boolean;
   includeCompanyDetails: boolean;
   reportContentFontSize: number;
+  irp5ContentFontSize: number; // New field for IRP5 specific font size
 }

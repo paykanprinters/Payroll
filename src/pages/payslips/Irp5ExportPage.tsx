@@ -18,6 +18,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   includeCompanyLogo: true,
   includeCompanyDetails: true,
   reportContentFontSize: 14,
+  irp5ContentFontSize: 12, // Default for IRP5
 };
 
 const Irp5ExportPage: React.FC = () => {
@@ -73,11 +74,16 @@ const Irp5ExportPage: React.FC = () => {
     });
 
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
+    const savedIrp5FontSize = parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize.toString());
+
     if (savedReportDesignSettings) {
-      setReportDesignSettings(JSON.parse(savedReportDesignSettings));
+      const parsedSettings = JSON.parse(savedReportDesignSettings);
+      setReportDesignSettings({ ...parsedSettings, irp5ContentFontSize: savedIrp5FontSize });
     } else {
-      localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
-      setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
+      // If no settings saved, initialize with defaults and save them
+      const initialSettings = { ...DEFAULT_REPORT_DESIGN_SETTINGS, irp5ContentFontSize: savedIrp5FontSize };
+      localStorage.setItem("reportDesignSettings", JSON.stringify(initialSettings));
+      setReportDesignSettings(initialSettings);
     }
 
     setIsIrp5ExportEnabled(localStorage.getItem("enableIrp5Export") === "true");
@@ -88,7 +94,7 @@ const Irp5ExportPage: React.FC = () => {
     window.addEventListener('mockDataUpdated', loadData);
     window.addEventListener('companyDetailsUpdated', loadData);
     window.addEventListener('reportDesignUpdated', loadData);
-    window.addEventListener('irp5SettingsUpdated', loadData);
+    window.addEventListener('irp5SettingsUpdated', loadData); // Listen for IRP5 specific settings updates
     return () => {
       window.removeEventListener('mockDataUpdated', loadData);
       window.removeEventListener('companyDetailsUpdated', loadData);

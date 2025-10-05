@@ -9,15 +9,21 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch"; // Import Switch
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider"; // Import Slider
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+
+const DEFAULT_IRP5_FONT_SIZE = 12; // Default font size for IRP5 content
+const MIN_IRP5_FONT_SIZE = 10;
+const MAX_IRP5_FONT_SIZE = 16;
 
 // Define the schema for form validation
 const taxLiabilitiesSchema = z.object({
   taxYear: z.string().min(1, "Tax Year is required"),
   applyPAYE: z.boolean().default(false),
   applySDL: z.boolean().default(false),
-  enableIrp5Export: z.boolean().default(false), // New field for IRP5 export toggle
+  enableIrp5Export: z.boolean().default(false),
+  irp5ContentFontSize: z.number().min(MIN_IRP5_FONT_SIZE).max(MAX_IRP5_FONT_SIZE).default(DEFAULT_IRP5_FONT_SIZE), // New field
 });
 
 type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
@@ -34,14 +40,15 @@ const TaxLiabilities: React.FC = () => {
   const form = useForm<TaxLiabilitiesFormValues>({
     resolver: zodResolver(taxLiabilitiesSchema),
     defaultValues: {
-      taxYear: currentYear.toString(), // Default to current year
+      taxYear: currentYear.toString(),
       applyPAYE: localStorage.getItem('applyPAYE') === 'true',
       applySDL: localStorage.getItem('applySDL') === 'true',
-      enableIrp5Export: localStorage.getItem('enableIrp5Export') === 'true', // Load from localStorage
+      enableIrp5Export: localStorage.getItem('enableIrp5Export') === 'true',
+      irp5ContentFontSize: parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_IRP5_FONT_SIZE.toString()),
     },
   });
 
-  // Effect to update form defaults when mock data is toggled
+  // Effect to update form defaults when mock data is toggled or on initial load
   React.useEffect(() => {
     const updateFormDefaults = () => {
       form.reset({
@@ -49,17 +56,21 @@ const TaxLiabilities: React.FC = () => {
         applyPAYE: localStorage.getItem('applyPAYE') === 'true',
         applySDL: localStorage.getItem('applySDL') === 'true',
         enableIrp5Export: localStorage.getItem('enableIrp5Export') === 'true',
+        irp5ContentFontSize: parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_IRP5_FONT_SIZE.toString()),
       });
     };
 
     window.addEventListener('mockDataUpdated', updateFormDefaults);
+    window.addEventListener('irp5SettingsUpdated', updateFormDefaults); // Listen for changes to IRP5 settings
     updateFormDefaults(); // Call on mount to ensure initial state reflects current localStorage
     return () => {
       window.removeEventListener('mockDataUpdated', updateFormDefaults);
+      window.removeEventListener('irp5SettingsUpdated', updateFormDefaults);
     };
   }, [form]);
 
   const selectedTaxYear = form.watch("taxYear");
+  const irp5ContentFontSize = form.watch("irp5ContentFontSize");
 
   const handleFetchTaxTables = async () => {
     if (!selectedTaxYear) {
@@ -104,6 +115,13 @@ const TaxLiabilities: React.FC = () => {
     localStorage.setItem('enableIrp5Export', checked.toString());
     window.dispatchEvent(new Event('irp5SettingsUpdated')); // Dispatch event
     showSuccess(`IRP5 Export functionality ${checked ? 'enabled' : 'disabled'}.`);
+  };
+
+  const handleIrp5FontSizeChange = (value: number[]) => {
+    form.setValue("irp5ContentFontSize", value[0]);
+    localStorage.setItem('irp5ContentFontSize', value[0].toString());
+    window.dispatchEvent(new Event('irp5SettingsUpdated')); // Dispatch event
+    showSuccess(`IRP5 content font size set to ${value[0]}px.`);
   };
 
   return (
@@ -196,16 +214,28 @@ const TaxLiabilities: React.FC = () => {
         <CardHeader>
           <CardTitle>IRP5 Export Settings</CardTitle>
           <CardDescription>
-            Enable or disable the IRP5 export functionality for employees.
+            Enable or disable the IRP5 export functionality for employees and adjust text size.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between space-x-2">
             <Label htmlFor="enableIrp5Export">Enable IRP5 Export</Label>
             <Switch
               id="enableIrp5Export"
               checked={form.watch("enableIrp5Export")}
               onCheckedChange={handleIrp5ToggleChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="irp5ContentFontSize">IRP5 Content Text Size ({irp5ContentFontSize}px)</Label>
+            <Slider
+              id="irp5ContentFontSize"
+              min={MIN_IRP5_FONT_SIZE}
+              max={MAX_IRP5_FONT_SIZE}
+              step={1}
+              value={[irp5ContentFontSize]}
+              onValueChange={handleIrp5FontSizeChange}
+              className="mt-2"
             />
           </div>
           <div className="mt-8 p-4 border rounded-lg bg-purple-50 text-purple-800">
