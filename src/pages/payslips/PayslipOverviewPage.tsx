@@ -9,6 +9,7 @@ import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard directly
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
 import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
+import { showError } from "@/utils/toast"; // Import showError
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -62,36 +63,56 @@ const PayslipOverviewPage: React.FC = () => {
 
   const loadPayslipsAndEmployees = useCallback(() => {
     const storedPayslips = localStorage.getItem("mockPayslips");
+    console.log("PayslipOverviewPage: Loading payslips. Raw storedPayslips:", storedPayslips);
     if (storedPayslips) {
-      const loadedPayslips: MockPayslip[] = JSON.parse(storedPayslips);
-      setPayslips(loadedPayslips);
+      try {
+        const loadedPayslips: MockPayslip[] = JSON.parse(storedPayslips);
+        setPayslips(loadedPayslips);
+        console.log("PayslipOverviewPage: Loaded payslips count:", loadedPayslips.length);
 
-      const totalGross = loadedPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-      const totalNet = loadedPayslips.reduce((sum, p) => sum + p.netPay, 0);
-      setPayrollSummaryData([
-        { name: "Total Payroll", gross: totalGross, net: totalNet },
-      ]);
+        const totalGross = loadedPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+        const totalNet = loadedPayslips.reduce((sum, p) => sum + p.netPay, 0);
+        setPayrollSummaryData([
+          { name: "Total Payroll", gross: totalGross, net: totalNet },
+        ]);
 
-      const deductionsMap = new Map<string, number>();
-      loadedPayslips.forEach(payslip => {
-        payslip.deductionsBreakdown.forEach(deduction => {
-          deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
+        const deductionsMap = new Map<string, number>();
+        loadedPayslips.forEach(payslip => {
+          payslip.deductionsBreakdown.forEach(deduction => {
+            deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
+          });
         });
-      });
-      setDeductionsBreakdownData(
-        Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
-      );
+        setDeductionsBreakdownData(
+          Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
+        );
 
+      } catch (error) {
+        console.error("PayslipOverviewPage: Error parsing mockPayslips from localStorage:", error);
+        setPayslips([]);
+        setPayrollSummaryData([]);
+        setDeductionsBreakdownData([]);
+        showError("Failed to load payslip data. Please check browser console for details.");
+      }
     } else {
+      console.log("PayslipOverviewPage: No mockPayslips found in localStorage.");
       setPayslips([]);
       setPayrollSummaryData([]);
       setDeductionsBreakdownData([]);
     }
 
     const storedEmployees = localStorage.getItem("mockEmployees");
+    console.log("PayslipOverviewPage: Loading employees. Raw storedEmployees:", storedEmployees);
     if (storedEmployees) {
-      setEmployees(JSON.parse(storedEmployees));
+      try {
+        setEmployees(JSON.parse(storedEmployees));
+        console.log("PayslipOverviewPage: Loaded employees count:", JSON.parse(storedEmployees).length);
+      } catch (error) {
+        console.error("PayslipOverviewPage: Error parsing mockEmployees from localStorage:", error);
+        setEmployees([]);
+        showError("Failed to load employee data. Please check browser console for details.");
+      }
     } else {
+      console.log("PayslipOverviewPage: No mockEmployees found in localStorage.");
       setEmployees([]);
     }
   }, []);
@@ -204,6 +225,19 @@ const PayslipOverviewPage: React.FC = () => {
         Generate new payslips, view historical payslips, and manage payroll periods.
       </p>
 
+      {payslips.length === 0 && (
+        <Card className="border-yellow-500 bg-yellow-50 text-yellow-800">
+          <CardHeader>
+            <CardTitle>No Payslips Found</CardTitle>
+            <CardDescription>
+              It looks like there are no payslips available. Please ensure "Mock Data" is enabled in{" "}
+              <a href="/settings/mock-data" className="underline font-semibold">Settings &gt; Mock Data</a>{" "}
+              to populate the system with sample payslips.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       <PayslipSummaryCharts
         payrollSummaryData={payrollSummaryData}
         deductionsBreakdownData={deductionsBreakdownData}
@@ -221,8 +255,6 @@ const PayslipOverviewPage: React.FC = () => {
           payslipDesignSettings={payslipDesignSettings}
           companyDetails={companyDetails}
           allEmployees={employees}
-          // isIrp5ExportEnabled is no longer passed here
-          // reportDesignSettings is no longer passed here
         />
       )}
 
