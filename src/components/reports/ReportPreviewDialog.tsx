@@ -66,6 +66,9 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     branchCode: "", accountType: "Cheque", logoUrl: companyLogoUrl || "", logoSize: companyLogoSize,
   };
 
+  // Define displayCompanyName within this component's scope
+  const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
+
   // Get explicit print styles for the preview display
   const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
   const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || '14px');
