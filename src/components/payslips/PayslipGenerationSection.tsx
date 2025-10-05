@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Printer, Download, CalendarIcon } from "lucide-react";
+import { Printer, Download, CalendarIcon, Settings } from "lucide-react"; // Import Settings icon
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
@@ -15,6 +15,7 @@ import { format, isSameMonth, isSameYear } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -56,6 +57,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   allEmployees,
 }) => {
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
   const selectedPayslip = payslips.find(p => p.id === selectedPayslipId);
@@ -315,7 +317,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         <div className="mt-4 grid gap-4 md:grid-cols-2 items-end">
           <div>
             <label htmlFor="pay-period-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Select Pay Period for All Payslips
+              Select Pay Period for Bulk Payslips
             </label>
             <Popover>
               <PopoverTrigger asChild>
@@ -346,7 +348,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="w-full" variant="outline" disabled={!selectedPayPeriodDate || payslips.length === 0}>
-                Generate All Payslips
+                Bulk Payslips
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -355,6 +357,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handlePrintOrDownloadAll('download')} disabled={!selectedPayPeriodDate || payslips.length === 0}>
                 <Download className="mr-2 h-4 w-4" /> Download All Payslips PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/settings/payslip-design')}>
+                <Settings className="mr-2 h-4 w-4" /> Payslip Design Settings
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
