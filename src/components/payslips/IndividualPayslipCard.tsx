@@ -191,15 +191,33 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         { content: renderEarningsContent() }
       ];
 
+  // Helper to get Tailwind classes for width/min-height for UI preview
+  const getPreviewPageClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
+    switch (layoutSize) {
+      case "Letter":
+        return "w-letter min-h-letter";
+      case "A5":
+        return "w-a5 min-h-a5";
+      case "A4":
+      default:
+        return "w-a4 min-h-a4";
+    }
+  };
+
   return (
     <div
       id={`payslip-${payslip.id}`}
       className={cn(
         "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
-        isPdfGeneration ? "" : "mx-auto max-w-lg",
-        !isPdfGeneration && "print:shadow-none print:bg-white print:text-black print:mx-0 print:my-0", // Removed print:border
+        isPdfGeneration ? "" : "mx-auto", // Keep mx-auto for centering in UI
+        !isPdfGeneration && getPreviewPageClasses(payslipDesignSettings.layoutSize) // Apply width/min-height classes for UI preview
       )}
-      style={isPdfGeneration ? { ...printStyles, border: '2px solid black', boxShadow: 'none' } : {}}
+      style={isPdfGeneration ? { ...printStyles, border: '2px solid black', boxShadow: 'none' } : {
+        padding: printStyles.padding,
+        fontSize: printStyles.fontSize,
+        border: '1px solid #ccc', // Lighter border for UI preview
+        boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Shadow for UI preview
+      }}
     >
       {/* Company Header */}
       <div style={isPdfGeneration ? { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: `${baseFontSizePx * 1.5}px` } : {}} className="flex justify-between items-start mb-4">
