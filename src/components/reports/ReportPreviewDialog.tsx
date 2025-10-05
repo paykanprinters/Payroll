@@ -15,7 +15,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, getPrintClasses } from "@/lib/utils";
+import { cn, getPrintStyles } from "@/lib/utils"; // Removed getPrintClasses
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
 interface ReportPreviewDialogProps {
@@ -100,19 +100,35 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       if (reportDesignSettings.defaultReportPaperSize === 'Letter') pdfFormat = 'letter';
       else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
 
+      // Get explicit print styles for the PDF generation
+      const explicitPrintStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
+
+      // Apply the explicit styles directly to the report element for html2canvas to pick up
+      // Temporarily apply styles, then revert after PDF generation
+      const originalStyle = reportElement.style.cssText;
+      Object.assign(reportElement.style, explicitPrintStyles);
+
+
       html2pdf().from(reportElement).set({
         margin: [10, 10, 10, 10],
         filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
         jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' } // Dynamic format
-      }).save();
+      }).save().then(() => {
+        // Revert styles after PDF generation
+        reportElement.style.cssText = originalStyle;
+      });
     } else {
       showError("Report content not found for PDF download.");
     }
   };
 
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
+
+  // Get explicit print styles for the preview display (if needed, otherwise default to UI styles)
+  const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
+  const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || '14px');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -125,8 +141,16 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <div id="report-preview-content" className={cn(
             "p-4 bg-white text-gray-900 text-[13px]",
             "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
-            getPrintClasses(reportDesignSettings.defaultReportPaperSize) // Apply dynamic print classes from report settings
-          )}>
+          )}
+          style={{
+            width: previewStyles.width,
+            minHeight: previewStyles.minHeight,
+            padding: previewStyles.padding,
+            fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Use report setting for content font size
+            border: '1px solid #ccc', // Add border for visual separation in preview
+            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Add shadow for visual separation in preview
+          }}
+          >
             {/* Report Header with Company Details */}
             {(reportDesignSettings.includeCompanyLogo && companyLogoUrl) || reportDesignSettings.includeCompanyDetails ? (
               <div className="flex justify-between items-start mb-6 print:mb-8">
@@ -139,10 +163,10 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
                   />
                 )}
                 {reportDesignSettings.includeCompanyDetails && (
-                  <div className="text-right text-[13px] print:text-[13px] w-full">
-                    <h2 className="text-md font-bold print:text-lg">{displayCompanyName}</h2>
+                  <div className="text-right text-[13px] print:text-[13px] w-full" style={{ fontSize: `${baseFontSizePx * 0.9}px` }}>
+                    <h2 className="text-md font-bold print:text-lg" style={{ fontSize: `${baseFontSizePx * 1.2}px` }}>{displayCompanyName}</h2>
                     {companyTradingName && companyTradingName !== companyLegalName && (
-                      <p className="text-[13px] print:text-[13px]">{companyTradingName}</p>
+                      <p className="text-[13px] print:text-[13px]" style={{ fontSize: `${baseFontSizePx * 1}px` }}>{companyTradingName}</p>
                     )}
                     <p>{physicalAddress}</p>
                     <p>Reg. No: {companyRegistrationNumber}</p>
@@ -155,9 +179,9 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
               </div>
             ) : null}
 
-            <Separator className="my-4 print:my-4" />
+            <Separator className="my-4 print:my-4" style={{ margin: `${baseFontSizePx * 1}px 0` }} />
 
-            <h3 className="text-lg font-bold text-center mb-4 print:text-xl print:mb-6">{reportTitle}</h3>
+            <h3 className="text-lg font-bold text-center mb-4 print:text-xl print:mb-6" style={{ fontSize: `${baseFontSizePx * 1.3}px`, marginBottom: `${baseFontSizePx * 1}px` }}>{reportTitle}</h3>
 
             {/* Report Content */}
             <div
