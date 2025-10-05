@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Printer, Download, CalendarIcon, Settings } from "lucide-react"; // Import Settings icon
+import { Printer, Download, CalendarIcon } from "lucide-react"; // Removed Settings icon
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
@@ -15,7 +15,7 @@ import { format, isSameMonth, isSameYear } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+// Removed useNavigate as it's no longer needed here
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -57,7 +57,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   allEmployees,
 }) => {
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
-  const navigate = useNavigate(); // Initialize useNavigate
+  // Removed useNavigate initialization
 
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
   const selectedPayslip = payslips.find(p => p.id === selectedPayslipId);
@@ -189,25 +189,86 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
 
     const toastId = showLoading(`Generating all payslips for ${format(selectedPayPeriodDate, 'MMM yyyy')} for ${action}, please wait...`) as string;
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-    container.style.width = '0';
-    container.style.height = '0';
-    container.style.overflow = 'hidden';
-    document.body.appendChild(container);
+
+    // Create a hidden iframe for rendering all payslips
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.left = '-9999px'; // Position off-screen
+    iframe.style.top = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden'; // Ensure it's hidden
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      dismissToast(toastId);
+      showError("Could not access iframe document for bulk payslip generation.");
+      iframe.parentNode?.removeChild(iframe);
+      return;
+    }
+
+    iframeDoc.open();
+    iframeDoc.write('<!DOCTYPE html><html><head><title>Bulk Payslips</title></head><body><div id="payslips-root"></div></body></html>');
+    iframeDoc.close();
+
+    // Copy all stylesheets and style tags from the main document to the iframe
+    Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).forEach(node => {
+      const clonedNode = node.cloneNode(true);
+      iframeDoc.head.appendChild(clonedNode);
+    });
+
+    const payslipsRoot = iframeDoc.getElementById('payslips-root');
+    if (!payslipsRoot) {
+      dismissToast(toastId);
+      showError("Payslips root element not found in iframe.");
+      iframe.parentNode?.removeChild(iframe);
+      return;
+    }
+
+    const root = ReactDOM.createRoot(payslipsRoot);
+    (iframe as any)._reactRoot = root; // Store root for cleanup
 
     try {
-      // Render all payslips into the single container with page breaks
+      const renderPromises: Promise<void>[] = [];
       for (let i = 0; i < payslipsForPeriod.length; i++) {
-        await renderPayslipToDomElement(payslipsForPeriod[i], container);
+        const payslipContainer = document.createElement('div');
+        payslipsRoot.appendChild(payslipContainer);
+        
+        renderPromises.push(new Promise<void>((resolve) => {
+          const payslipRootInstance = ReactDOM.createRoot(payslipContainer);
+          payslipRootInstance.render(
+            <IndividualPayslipCard
+              payslip={payslipsForPeriod[i]}
+              payslipDesignSettings={payslipDesignSettings}
+              companyDetails={companyDetails}
+              employees={allEmployees}
+              getEmployeeName={getEmployeeName}
+              isPdfGeneration={true}
+              onReadyForPdf={() => {
+                console.log(`Payslip ${payslipsForPeriod[i].id} in iframe signaled readiness.`);
+                resolve();
+              }}
+            />
+          );
+          (payslipContainer as any)._reactRoot = payslipRootInstance; // Store for cleanup
+          // Fallback for rendering readiness
+          setTimeout(() => {
+            if (!payslipContainer.isConnected) return;
+            console.warn(`Payslip ${payslipsForPeriod[i].id} rendering in iframe timed out, proceeding.`);
+            resolve();
+          }, 5000);
+        }));
+
         if (i < payslipsForPeriod.length - 1) {
-          const pageBreak = document.createElement('div');
+          const pageBreak = iframeDoc.createElement('div');
           pageBreak.style.pageBreakAfter = 'always';
-          container.appendChild(pageBreak);
+          payslipsRoot.appendChild(pageBreak);
         }
       }
+
+      await Promise.all(renderPromises); // Wait for all payslips to render and signal readiness
 
       let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
       if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
@@ -221,7 +282,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
       };
 
-      const pdfPromise = html2pdf().from(container).set(opt);
+      const pdfPromise = html2pdf().from(payslipsRoot).set(opt);
 
       if (action === 'download') {
         await pdfPromise.save();
@@ -236,7 +297,13 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       console.error(`html2pdf all payslips ${action} error:`, error);
     } finally {
       dismissToast(toastId);
-      cleanupRenderedElement(container);
+      // Clean up all temporary DOM elements and the iframe
+      Array.from(payslipsRoot.children).forEach(child => {
+        const childRoot = (child as any)._reactRoot;
+        if (childRoot) childRoot.unmount();
+      });
+      root.unmount();
+      iframe.parentNode?.removeChild(iframe);
     }
   };
 
@@ -357,9 +424,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handlePrintOrDownloadAll('download')} disabled={!selectedPayPeriodDate || payslips.length === 0}>
                 <Download className="mr-2 h-4 w-4" /> Download All Payslips PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/settings/payslip-design')}>
-                <Settings className="mr-2 h-4 w-4" /> Payslip Design Settings
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
