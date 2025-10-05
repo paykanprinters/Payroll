@@ -70,6 +70,18 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
   const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || '14px');
 
+  const getPreviewPageClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
+    switch (layoutSize) {
+      case "Letter":
+        return "w-letter min-h-letter";
+      case "A5":
+        return "w-a5 min-h-a5";
+      case "A4":
+      default:
+        return "w-a4 min-h-a4";
+    }
+  };
+
   const generateReportElementForPdf = (): Promise<HTMLIFrameElement> => {
     return new Promise((resolve, reject) => {
       const iframe = document.createElement('iframe');
@@ -194,11 +206,11 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         <ScrollArea className="flex-grow pr-4">
           {/* This is the UI preview, not the content for PDF generation */}
           <div className={cn(
-            "p-4 bg-white text-gray-900 text-[13px]",
+            "p-4 bg-white text-gray-900 text-[13px] mx-auto", // Added mx-auto for centering
+            getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize), // Apply width/min-height classes
             "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
           )}
           style={{
-            // Removed width and minHeight, relying on html2pdf.js margins for page dimensions
             padding: previewStyles.padding,
             fontSize: `${reportDesignSettings.reportContentFontSize}px`,
             border: '1px solid #ccc', // Add border for visual separation in preview
