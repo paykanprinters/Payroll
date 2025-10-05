@@ -57,21 +57,39 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
   // Get explicit print styles based on layout size
   const printStyles = isPdfGeneration ? getPrintStyles(payslipDesignSettings.layoutSize) : {};
-  const baseFontSizePx = parseFloat(printStyles.fontSize?.toString() || '14px'); // Default to 14px if not set
+  const baseFontSizePx = parseFloat(printStyles.fontSize?.toString().replace('px', '') || '14'); // Ensure it's a number
 
-  // Helper to render specific content for earnings, deductions, or leave
+  // Helper to render text with dynamic font size
+  const renderText = (text: string | number | undefined, scale: number = 1, className: string = "") => {
+    if (text === undefined || text === null || text === "") return "N/A";
+    return (
+      <span className={className} style={isPdfGeneration ? { fontSize: `${baseFontSizePx * scale}px` } : {}}>
+        {text}
+      </span>
+    );
+  };
+
+  // Helper to render a paragraph with dynamic font size
+  const renderParagraph = (label: string, value: string | number | undefined, scale: number = 0.9) => {
+    return (
+      <p style={isPdfGeneration ? { fontSize: `${baseFontSizePx * scale}px` } : {}}>
+        <span className="font-semibold">{label}:</span> {renderText(value, scale)}
+      </p>
+    );
+  };
+
   const renderEarningsContent = () => {
     if (!payslipDesignSettings.showEarningsBreakdown) return null;
     return (
       <div className="space-y-1">
-        <h4 className="font-bold text-sm mb-1 underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px` } : {}}>EARNINGS</h4>
+        <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px`, marginBottom: `${baseFontSizePx * 0.2}px` } : {}}>EARNINGS</h4>
         {payslip.earningsBreakdown.map((item, idx) => (
-          <p key={idx} className="text-xs flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
+          <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
             <span>{item.name}</span>
             <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
           </p>
         ))}
-        <p className="text-xs font-bold mt-2 flex justify-between border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
+        <p className="font-bold mt-2 flex justify-between border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
           <span>GROSS EARNINGS</span>
           <span>R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
         </p>
@@ -83,14 +101,14 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     if (!payslipDesignSettings.showDeductionsBreakdown) return null;
     return (
       <div className="space-y-1">
-        <h4 className="font-bold text-sm mb-1 underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px` } : {}}>DEDUCTIONS</h4>
+        <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px`, marginBottom: `${baseFontSizePx * 0.2}px` } : {}}>DEDUCTIONS</h4>
         {payslip.deductionsBreakdown.map((item, idx) => (
-          <p key={idx} className="text-xs flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
+          <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
             <span>{item.name}</span>
             <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
           </p>
         ))}
-        <p className="text-xs font-bold mt-2 flex justify-between border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
+        <p className="font-bold mt-2 flex justify-between border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
           <span>TOTAL DEDUCTIONS</span>
           <span>R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
         </p>
@@ -101,9 +119,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   const renderLeaveSummaryContent = () => {
     if (!payslipDesignSettings.showLeaveSummary) return null;
     return (
-      <div className="mt-4 pt-2 border-t border-dashed">
-        <h4 className="font-bold text-sm mb-1 underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px` } : {}}>LEAVE SUMMARY</h4>
-        <div className="grid grid-cols-2 gap-1 text-xs" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
+      <div className="mt-4 pt-2 border-t border-dashed" style={isPdfGeneration ? { marginTop: `${baseFontSizePx * 1}px`, paddingTop: `${baseFontSizePx * 0.5}px` } : {}}>
+        <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px`, marginBottom: `${baseFontSizePx * 0.2}px` } : {}}>LEAVE SUMMARY</h4>
+        <div className="grid grid-cols-2 gap-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, gap: `${baseFontSizePx * 0.5}px` } : {}}>
           <p>Annual Leave Remaining:</p> <p className="text-right">{payslip.leaveSummary.annual} days</p>
           <p>Sick Leave Remaining:</p> <p className="text-right">{payslip.leaveSummary.sick} days</p>
           {payslip.leaveSummary.unpaid > 0 && (
@@ -119,9 +137,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   const renderYTDContent = () => {
     if (!payslipDesignSettings.showYTD) return null;
     return (
-      <div className="mt-4 pt-2 border-t border-dashed">
-        <h4 className="font-bold text-sm mb-1 underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px` } : {}}>YEAR TO DATE (YTD)</h4>
-        <div className="grid grid-cols-2 gap-1 text-xs" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
+      <div className="mt-4 pt-2 border-t border-dashed" style={isPdfGeneration ? { marginTop: `${baseFontSizePx * 1}px`, paddingTop: `${baseFontSizePx * 0.5}px` } : {}}>
+        <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px` } : {}}>YEAR TO DATE (YTD)</h4>
+        <div className="grid grid-cols-2 gap-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, gap: `${baseFontSizePx * 0.5}px` } : {}}>
           <p>Gross Earnings YTD:</p> <p className="text-right">R {payslip.ytdGrossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
           <p>Total Deductions YTD:</p> <p className="text-right">R {payslip.ytdTotalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
         </div>
@@ -145,7 +163,6 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       className={cn(
         "p-6 border rounded-lg shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
         isPdfGeneration ? "" : "mx-auto max-w-lg", // Only apply max-w-lg for UI preview
-        // Remove print: classes when isPdfGeneration is true, as explicit styles will handle it
         !isPdfGeneration && "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
       )}
       style={isPdfGeneration ? { ...printStyles, border: '1px solid #ccc', boxShadow: 'none' } : {}} // Apply explicit styles for PDF
@@ -157,31 +174,29 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             src={companyLogoUrl}
             alt="Company Logo"
             style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-            className="rounded-md"
+            className="rounded-md flex-shrink-0"
           />
         )}
-        <div className={cn("text-right text-xs", !payslipDesignSettings.showCompanyLogo && "w-full")} style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
-          <h2 className="text-md font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.2}px` } : {}}>{companyLegalName}</h2>
-          {companyTradingName && companyTradingName !== companyLegalName && (
-            <p className="text-sm" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1}px` } : {}}>{companyTradingName}</p>
-          )}
-          {payslipDesignSettings.showCompanyDetails && (
-            <>
-              <p>{physicalAddress}</p>
-              <p>Reg. No: {companyRegistrationNumber}</p>
-              <p>VAT No: {vatRegistrationNumber}</p>
-              <p>Tel: {mainContactNumber}</p>
-              <p>Email: {companyEmail}</p>
-              <p>Web: {companyWebsite}</p>
-            </>
-          )}
-        </div>
+        {payslipDesignSettings.showCompanyDetails && (
+          <div className={cn("text-right flex-grow", !payslipDesignSettings.showCompanyLogo && "w-full")} style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px` } : {}}>
+            <h2 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.2}px` } : {}}>{companyLegalName}</h2>
+            {companyTradingName && companyTradingName !== companyLegalName && (
+              <p style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1}px` } : {}}>{companyTradingName}</p>
+            )}
+            <p>{physicalAddress}</p>
+            <p>Reg. No: {companyRegistrationNumber}</p>
+            <p>VAT No: {vatRegistrationNumber}</p>
+            <p>Tel: {mainContactNumber}</p>
+            <p>Email: {companyEmail}</p>
+            <p>Web: {companyWebsite}</p>
+          </div>
+        )}
       </div>
 
       <Separator className="my-4" style={isPdfGeneration ? { margin: `${baseFontSizePx * 1}px 0` } : {}} />
 
-      <h3 className="text-lg font-bold text-center mb-3" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px`, marginBottom: `${baseFontSizePx * 1}px` } : {}}>PAYSLIP</h3>
-      <div className="text-center text-sm mb-4" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1}px`, marginBottom: `${baseFontSizePx * 1.5}px` } : {}}>
+      <h3 className="font-bold text-center mb-3" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px`, marginBottom: `${baseFontSizePx * 1}px` } : {}}>PAYSLIP</h3>
+      <div className="text-center mb-4" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1}px`, marginBottom: `${baseFontSizePx * 1.5}px` } : {}}>
         <p><span className="font-semibold">PAY PERIOD:</span> {payslip.payPeriod}</p>
         <p><span className="font-semibold">PAY DATE:</span> 25/07/2024</p> {/* Placeholder */}
       </div>
@@ -190,20 +205,20 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
       {/* Employee & Bank Details */}
       {payslipDesignSettings.showEmployeeDetails && employee && (
-        <div className="grid grid-cols-2 gap-4 text-xs mb-4" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, gap: `${baseFontSizePx * 1.5}px`, marginBottom: `${baseFontSizePx * 1.5}px` } : {}}>
+        <div className="grid grid-cols-2 gap-4 mb-4" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, gap: `${baseFontSizePx * 1.5}px`, marginBottom: `${baseFontSizePx * 1.5}px` } : {}}>
           <div className="space-y-1">
-            <p><span className="font-semibold">Employee Name:</span> {getEmployeeName(payslip.employeeId)}</p>
-            <p><span className="font-semibold">Employee No:</span> {employee.id}</p>
-            <p><span className="font-semibold">ID No:</span> {employee.idNumber || "N/A"}</p>
-            <p><span className="font-semibold">Job Title:</span> {employee.jobTitle}</p>
-            <p><span className="font-semibold">Tax No:</span> {employee.taxReferenceNumber || "N/A"}</p>
+            {renderParagraph("Employee Name", getEmployeeName(payslip.employeeId))}
+            {renderParagraph("Employee No", employee.id)}
+            {renderParagraph("ID No", employee.idNumber)}
+            {renderParagraph("Job Title", employee.jobTitle)}
+            {renderParagraph("Tax No", employee.taxReferenceNumber)}
           </div>
           {payslipDesignSettings.showBankDetails && (
             <div className="space-y-1 text-right">
-              <p><span className="font-semibold">Bank Name:</span> {employee.bankName || "N/A"}</p>
-              <p><span className="font-semibold">Account No:</span> {employee.ibanNumber ? `********${employee.ibanNumber.slice(-4)}` : "N/A"}</p>
-              <p><span className="font-semibold">Branch Code:</span> {employee.routingSwiftCode || "N/A"}</p>
-              <p><span className="font-semibold">Account Type:</span> {employee.bankAccountType || "N/A"}</p>
+              {renderParagraph("Bank Name", employee.bankName)}
+              {renderParagraph("Account No", employee.ibanNumber ? `********${employee.ibanNumber.slice(-4)}` : "N/A")}
+              {renderParagraph("Branch Code", employee.routingSwiftCode)}
+              {renderParagraph("Account Type", employee.bankAccountType)}
             </div>
           )}
         </div>
@@ -222,8 +237,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
       {/* Net Pay (Always at bottom) */}
       <div className="flex justify-between items-center pt-2 mt-2" style={isPdfGeneration ? { paddingTop: `${baseFontSizePx * 1}px`, marginTop: `${baseFontSizePx * 1}px` } : {}}>
-        <h3 className="text-lg font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px` } : {}}>NET PAY</h3>
-        <h3 className="text-lg font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px` } : {}}>R {payslip.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</h3>
+        <h3 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px` } : {}}>NET PAY</h3>
+        <h3 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px` } : {}}>R {payslip.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</h3>
       </div>
       
       {/* Leave Summary (Moved below Net Pay) */}
