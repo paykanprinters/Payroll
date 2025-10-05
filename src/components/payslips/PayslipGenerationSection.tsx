@@ -4,15 +4,14 @@ import React, { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { format, isSameMonth, isSameYear } from "date-fns";
-import { usePdfGenerator } from "@/hooks/use-pdf-generator"; // Import the new hook
+import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import IndividualPayslipCard from "./IndividualPayslipCard";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import IndividualPayslipActions from "./IndividualPayslipActions";
 import BulkPayslipActions from "./BulkPayslipActions";
-import IndividualIrp5Actions from "./IndividualIrp5Actions";
-import { generateIrp5ExportContent } from "@/lib/report-generators";
-import ReportContentWrapper from "../reports/ReportContentWrapper";
-import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+// IndividualIrp5Actions and related imports are removed
+// generateIrp5ExportContent and ReportDesignSettings are removed
+// ReportContentWrapper is removed
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -39,8 +38,7 @@ interface PayslipGenerationSectionProps {
   payslipDesignSettings: PayslipDesignSettings;
   companyDetails: MockCompanyDetails;
   allEmployees: MockEmployee[];
-  isIrp5ExportEnabled: boolean;
-  reportDesignSettings: ReportDesignSettings;
+  // isIrp5ExportEnabled and reportDesignSettings are no longer props
 }
 
 const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
@@ -54,15 +52,14 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   payslipDesignSettings,
   companyDetails,
   allEmployees,
-  isIrp5ExportEnabled,
-  reportDesignSettings,
+  // isIrp5ExportEnabled, reportDesignSettings are removed from destructuring
 }) => {
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
   const { generatePdf, printPdf } = usePdfGenerator();
 
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
   const selectedPayslip = payslips.find(p => p.id === selectedPayslipId);
-  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
+  // selectedEmployee is no longer needed here as IRP5 logic moved out
 
   React.useEffect(() => {
     if (selectedEmployeeId && filteredPayslipsForEmployee.length > 0) {
@@ -75,35 +72,109 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
 
-  const handleGenerateIndividualPayslip = useCallback(async (action: 'print' | 'download') => {
-    if (!selectedPayslip) return;
+  // Helper to render an IndividualPayslipCard into a hidden DOM element for PDF generation
+  const renderPayslipToDomElement = (payslip: MockPayslip, container: HTMLDivElement): Promise<void> => {
+    return new Promise((resolve) => {
+      const payslipRoot = document.createElement('div');
+      container.appendChild(payslipRoot);
 
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <IndividualPayslipCard
-        payslip={selectedPayslip}
-        payslipDesignSettings={payslipDesignSettings}
-        companyDetails={companyDetails}
-        employees={allEmployees}
-        getEmployeeName={getEmployeeName}
-        isPdfGeneration={true}
-        onReadyForPdf={onReadyForPdf}
-      />
-    );
+      const root = ReactDOM.createRoot(payslipRoot);
+      root.render(
+        <IndividualPayslipCard
+          payslip={payslip}
+          payslipDesignSettings={payslipDesignSettings}
+          companyDetails={companyDetails}
+          employees={allEmployees}
+          getEmployeeName={getEmployeeName}
+          isPdfGeneration={true}
+          onReadyForPdf={() => {
+            console.log(`Payslip ${payslip.id} signaled readiness.`);
+            resolve();
+          }}
+        />
+      );
 
-    const options = {
-      filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-      format: payslipDesignSettings.layoutSize,
-    };
+      // Store the root for cleanup
+      (payslipRoot as any)._reactRoot = root;
 
-    if (action === 'download') {
-      await generatePdf(renderComponent, options);
-    } else {
-      await printPdf(renderComponent, options);
+      // Fallback if onReadyForPdf doesn't fire (e.g., no images, or component renders very fast)
+      setTimeout(() => {
+        if (!payslipRoot.isConnected) return; // Already resolved and cleaned up
+        console.warn(`Payslip ${payslip.id} rendering timed out, proceeding.`);
+        resolve();
+      }, 5000); // Increased timeout
+    });
+  };
+
+  // Helper to clean up the temporary DOM element and its React root
+  const cleanupRenderedElement = (container: HTMLDivElement) => {
+    Array.from(container.children).forEach(child => {
+      const root = (child as any)._reactRoot;
+      if (root) {
+        root.unmount();
+      }
+    });
+    if (container.parentNode) {
+      container.parentNode.removeChild(container);
     }
-  }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
+  };
 
-  const handleGenerateBulkPayslips = useCallback(async (action: 'print' | 'download') => {
-    if (!selectedPayPeriodDate) return;
+  const handlePrintOrDownload = async (action: 'print' | 'download') => {
+    if (!selectedPayslip) {
+      showError(`Please select a payslip to ${action}.`);
+      return;
+    }
+
+    const toastId = showLoading(`Generating PDF for ${action}, please wait...`) as string;
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+    container.style.width = '0';
+    container.style.height = '0';
+    container.style.overflow = 'hidden';
+    document.body.appendChild(container);
+
+    try {
+      await renderPayslipToDomElement(selectedPayslip, container);
+      const payslipElement = container.firstChild as HTMLDivElement; // Get the rendered payslip
+
+      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+      if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
+      else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
+      };
+
+      const pdfPromise = html2pdf().from(payslipElement).set(opt);
+
+      if (action === 'download') {
+        await pdfPromise.save();
+        showSuccess("Payslip PDF downloaded successfully!");
+      } else { // 'print'
+        const pdf = await pdfPromise.toPdf().get('pdf');
+        pdf.output('dataurlnewwindow');
+        showSuccess("Payslip sent to printer.");
+      }
+    } catch (error: any) {
+      showError(`Error generating PDF for ${action}: ${error.message || 'Unknown error'}`);
+      console.error(`html2pdf ${action} error:`, error);
+    } finally {
+      dismissToast(toastId);
+      cleanupRenderedElement(container);
+    }
+  };
+
+  const handlePrintOrDownloadAll = async (action: 'print' | 'download') => {
+    if (!selectedPayPeriodDate) {
+      showError("Please select a pay period date to generate all payslips.");
+      return;
+    }
 
     const payslipsForPeriod = payslips.filter(p => {
       const [startPeriodStr] = p.payPeriod.split(' - ');
@@ -112,68 +183,128 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     });
 
     if (payslipsForPeriod.length === 0) {
-      // Error message handled by BulkPayslipActions component
+      showError(`No payslips found for the selected pay period (${format(selectedPayPeriodDate, 'MMM yyyy')}).`);
       return;
     }
 
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <>
-        {payslipsForPeriod.map((payslip, index) => (
-          <React.Fragment key={payslip.id}>
+    const toastId = showLoading(`Generating all payslips for ${format(selectedPayPeriodDate, 'MMM yyyy')} for ${action}, please wait...`) as string;
+
+    // Create a hidden iframe for rendering all payslips
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.left = '-9999px'; // Position off-screen
+    iframe.style.top = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden'; // Ensure it's hidden
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      dismissToast(toastId);
+      showError("Could not access iframe document for bulk payslip generation.");
+      iframe.parentNode?.removeChild(iframe);
+      return;
+    }
+
+    iframeDoc.open();
+    iframeDoc.write('<!DOCTYPE html><html><head><title>Bulk Payslips</title></head><body><div id="payslips-root"></div></body></html>');
+    iframeDoc.close();
+
+    // Copy all stylesheets and style tags from the main document to the iframe
+    Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).forEach(node => {
+      const clonedNode = node.cloneNode(true);
+      iframeDoc.head.appendChild(clonedNode);
+    });
+
+    const payslipsRoot = iframeDoc.getElementById('payslips-root');
+    if (!payslipsRoot) {
+      dismissToast(toastId);
+      showError("Payslips root element not found in iframe.");
+      iframe.parentNode?.removeChild(iframe);
+      return;
+    }
+
+    const root = ReactDOM.createRoot(payslipsRoot);
+    (iframe as any)._reactRoot = root; // Store root for cleanup
+
+    try {
+      const renderPromises: Promise<void>[] = [];
+      for (let i = 0; i < payslipsForPeriod.length; i++) {
+        const payslipContainer = document.createElement('div');
+        payslipsRoot.appendChild(payslipContainer);
+        
+        renderPromises.push(new Promise<void>((resolve) => {
+          const payslipRootInstance = ReactDOM.createRoot(payslipContainer);
+          payslipRootInstance.render(
             <IndividualPayslipCard
-              payslip={payslip}
+              payslip={payslipsForPeriod[i]}
               payslipDesignSettings={payslipDesignSettings}
               companyDetails={companyDetails}
               employees={allEmployees}
               getEmployeeName={getEmployeeName}
               isPdfGeneration={true}
-              onReadyForPdf={index === payslipsForPeriod.length - 1 ? onReadyForPdf : undefined} // Only last one signals readiness
+              onReadyForPdf={() => {
+                console.log(`Payslip ${payslipsForPeriod[i].id} in iframe signaled readiness.`);
+                resolve();
+              }}
             />
-            {index < payslipsForPeriod.length - 1 && (
-              <div style={{ pageBreakAfter: 'always' }}></div>
-            )}
-          </React.Fragment>
-        ))}
-      </>
-    );
+          );
+          (payslipContainer as any)._reactRoot = payslipRootInstance; // Store for cleanup
+          // Fallback for rendering readiness
+          setTimeout(() => {
+            if (!payslipContainer.isConnected) return;
+            console.warn(`Payslip ${payslipsForPeriod[i].id} rendering in iframe timed out, proceeding.`);
+            resolve();
+          }, 5000);
+        }));
 
-    const options = {
-      filename: `all-payslips-${format(selectedPayPeriodDate, 'yyyy-MM')}.pdf`,
-      format: payslipDesignSettings.layoutSize,
-    };
+        if (i < payslipsForPeriod.length - 1) {
+          const pageBreak = iframeDoc.createElement('div');
+          pageBreak.style.pageBreakAfter = 'always';
+          payslipsRoot.appendChild(pageBreak);
+        }
+      }
 
-    if (action === 'download') {
-      await generatePdf(renderComponent, options);
-    } else {
-      await printPdf(renderComponent, options);
+      await Promise.all(renderPromises); // Wait for all payslips to render and signal readiness
+
+      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+      if (payslipDesignSettings.layoutSize === 'Letter') pdfFormat = 'letter';
+      else if (payslipDesignSettings.layoutSize === 'A5') pdfFormat = 'a5';
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `all-payslips-${format(selectedPayPeriodDate, 'yyyy-MM')}.pdf`,
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
+      };
+
+      const pdfPromise = html2pdf().from(payslipsRoot).set(opt);
+
+      if (action === 'download') {
+        await pdfPromise.save();
+        showSuccess("All payslips PDF downloaded successfully!");
+      } else { // 'print'
+        const pdf = await pdfPromise.toPdf().get('pdf');
+        pdf.output('dataurlnewwindow');
+        showSuccess("All payslips sent to printer.");
+      }
+    } catch (error: any) {
+      showError(`Error generating all payslips for ${action}: ${error.message || 'Unknown error'}`);
+      console.error(`html2pdf all payslips ${action} error:`, error);
+    } finally {
+      dismissToast(toastId);
+      // Clean up all temporary DOM elements and the iframe
+      Array.from(payslipsRoot.children).forEach(child => {
+        const childRoot = (child as any)._reactRoot;
+        if (childRoot) childRoot.unmount();
+      });
+      root.unmount();
+      iframe.parentNode?.removeChild(iframe);
     }
-  }, [payslips, selectedPayPeriodDate, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
-
-  const handleGenerateIrp5 = useCallback(async (action: 'print' | 'download') => {
-    if (!isIrp5ExportEnabled || !selectedEmployee || !selectedPayslip) return;
-
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <ReportContentWrapper
-        reportTitle={`IRP5 Certificate - Tax Year ${selectedPayslip.payPeriod.substring(0, 4)}`}
-        reportContent={generateIrp5ExportContent(selectedEmployee, selectedPayslip, companyDetails, reportDesignSettings)}
-        companyDetails={companyDetails}
-        reportDesignSettings={reportDesignSettings}
-        onReadyForPdf={onReadyForPdf}
-      />
-    );
-
-    const options = {
-      filename: `irp5-export-${selectedEmployee.id}-${selectedPayslip.payPeriod.substring(0, 4)}.pdf`,
-      format: reportDesignSettings.defaultReportPaperSize,
-    };
-
-    if (action === 'download') {
-      await generatePdf(renderComponent, options);
-    } else {
-      await printPdf(renderComponent, options);
-    }
-  }, [isIrp5ExportEnabled, selectedEmployee, selectedPayslip, companyDetails, reportDesignSettings, generatePdf, printPdf]);
-
+  };
 
   return (
     <Card>
@@ -196,8 +327,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
           />
           <IndividualPayslipActions
             selectedPayslip={selectedPayslip}
-            onPrint={() => handleGenerateIndividualPayslip('print')}
-            onDownload={() => handleGenerateIndividualPayslip('download')}
+            onPrint={() => handlePrintOrDownload('print')}
+            onDownload={() => handlePrintOrDownload('download')}
           />
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2 items-end">
@@ -205,18 +336,12 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             payslips={payslips}
             selectedPayPeriodDate={selectedPayPeriodDate}
             setSelectedPayPeriodDate={setSelectedPayPeriodDate}
-            onPrintAll={() => handleGenerateBulkPayslips('print')}
-            onDownloadAll={() => handleGenerateBulkPayslips('download')}
+            onPrintAll={() => handlePrintOrDownloadAll('print')}
+            onDownloadAll={() => handlePrintOrDownloadAll('download')}
           />
         </div>
 
-        <IndividualIrp5Actions
-          isIrp5ExportEnabled={isIrp5ExportEnabled}
-          selectedEmployee={selectedEmployee}
-          selectedPayslip={selectedPayslip}
-          onPrintIrp5={() => handleGenerateIrp5('print')}
-          onDownloadIrp5={() => handleGenerateIrp5('download')}
-        />
+        {/* IndividualIrp5Actions component removed from here */}
       </CardContent>
     </Card>
   );

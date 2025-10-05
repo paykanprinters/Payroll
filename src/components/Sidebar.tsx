@@ -104,8 +104,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/employees", icon: Users, label: "Employees" },
-    { to: "/timesheet", icon: Clock, label: "Timesheet" }, // New Timesheet item
-    { to: "/payslips", icon: ReceiptText, label: "Payslips" },
+    { to: "/timesheet", icon: Clock, label: "Timesheet" },
+    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" }, // Updated to point to overview
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
     { to: "/savings", icon: PiggyBank, label: "Savings" },
     { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
