@@ -147,7 +147,6 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         isPdfGeneration ? "" : "mx-auto max-w-lg", // Only apply max-w-lg for UI preview
         // Remove print: classes when isPdfGeneration is true, as explicit styles will handle it
         !isPdfGeneration && "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
-        !isPdfGeneration && `print:${getPrintClasses(payslipDesignSettings.layoutSize, false)}` // Apply print classes only for browser print
       )}
       style={isPdfGeneration ? { ...printStyles, border: '1px solid #ccc', boxShadow: 'none' } : {}} // Apply explicit styles for PDF
     >
