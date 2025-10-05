@@ -22,26 +22,6 @@ export const generateIrp5ExportContent = (
     `;
   };
 
-  const companyLogoHtml =
-    reportDesignSettings.includeCompanyLogo && companyDetails.logoUrl
-      ? `<img src="${companyDetails.logoUrl}" alt="Company Logo" style="width: ${companyDetails.logoSize}px; height: ${companyDetails.logoSize}px; object-fit: contain;" class="rounded-md flex-shrink-0" />`
-      : "";
-
-  const companyDetailsHtml = reportDesignSettings.includeCompanyDetails
-    ? `
-    <div class="text-right" style="font-size: ${contentFontSize * 0.9}px;">
-      <h2 class="font-bold" style="font-size: ${contentFontSize * 1.2}px;">${companyDetails.companyLegalName || "Your Company Legal Name"}</h2>
-      ${companyDetails.companyTradingName && companyDetails.companyTradingName !== companyDetails.companyLegalName ? `<p style="font-size: ${contentFontSize * 1}px;">${companyDetails.companyTradingName}</p>` : ""}
-      <p>${companyDetails.physicalAddress || "N/A"}</p>
-      <p>Reg. No: ${companyDetails.companyRegistrationNumber || "N/A"}</p>
-      <p>VAT No: ${companyDetails.vatRegistrationNumber || "N/A"}</p>
-      <p>Tel: ${companyDetails.mainContactNumber || "N/A"}</p>
-      <p>Email: ${companyDetails.companyEmail || "N/A"}</p>
-      <p>Web: ${companyDetails.companyWebsite || "N/A"}</p>
-    </div>
-  `
-    : "";
-
   // Mock IRP5 values (simplified)
   const grossIncome = payslip.ytdGrossEarnings;
   const totalDeductions = payslip.ytdTotalDeductions;
@@ -52,11 +32,6 @@ export const generateIrp5ExportContent = (
 
   return `
     <div class="p-8 bg-white text-gray-900 print:text-black" style="font-size: ${contentFontSize}px;">
-      <div class="flex justify-between items-start mb-6">
-        ${companyLogoHtml}
-        ${companyDetailsHtml}
-      </div>
-      <hr class="my-4 border-gray-300" />
       <h3 class="font-bold text-center mb-4" style="font-size: ${contentFontSize * 1.5}px;">IRP5 Certificate - Tax Year ${taxYear}</h3>
       <p class="text-center text-muted-foreground mb-6" style="font-size: ${contentFontSize * 0.9}px;">
         (Mock-up for demonstration purposes only. Not a legally compliant SARS document.)
