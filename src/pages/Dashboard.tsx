@@ -24,6 +24,7 @@ import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interface
 import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard"; // Import UpcomingPayrollCard
 import TopToDosCard from "@/components/dashboard/TopToDosCard"; // Import new TopToDosCard
 import { Calendar } from "@/components/ui/calendar"; // Import Calendar component
+import { Link } from "react-router-dom"; // Import Link for navigation
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -397,13 +398,19 @@ const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="flex items-center space-x-2">
-            <Button className="w-full">Add New Employee</Button>
+            <Button asChild className="w-full">
+              <Link to="/employees">Add New Employee</Link>
+            </Button>
           </div>
           <div className="flex items-center space-x-2">
-            <Button className="w-full">Generate Payslips</Button>
+            <Button asChild className="w-full">
+              <Link to="/payslips/overview">Generate Payslips</Link>
+            </Button>
           </div>
           <div className="flex items-center space-x-2">
-            <Button className="w-full">View Reports</Button>
+            <Button asChild className="w-full">
+              <Link to="/reports">View Reports</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
