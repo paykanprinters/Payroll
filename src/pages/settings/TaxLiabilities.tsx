@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch"; // Import Switch
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 
 // Define the schema for form validation
@@ -16,6 +17,7 @@ const taxLiabilitiesSchema = z.object({
   taxYear: z.string().min(1, "Tax Year is required"),
   applyPAYE: z.boolean().default(false),
   applySDL: z.boolean().default(false),
+  enableIrp5Export: z.boolean().default(false), // New field for IRP5 export toggle
 });
 
 type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
@@ -35,6 +37,7 @@ const TaxLiabilities: React.FC = () => {
       taxYear: currentYear.toString(), // Default to current year
       applyPAYE: localStorage.getItem('applyPAYE') === 'true',
       applySDL: localStorage.getItem('applySDL') === 'true',
+      enableIrp5Export: localStorage.getItem('enableIrp5Export') === 'true', // Load from localStorage
     },
   });
 
@@ -45,6 +48,7 @@ const TaxLiabilities: React.FC = () => {
         ...form.getValues(), // Keep current taxYear selection
         applyPAYE: localStorage.getItem('applyPAYE') === 'true',
         applySDL: localStorage.getItem('applySDL') === 'true',
+        enableIrp5Export: localStorage.getItem('enableIrp5Export') === 'true',
       });
     };
 
@@ -93,6 +97,13 @@ const TaxLiabilities: React.FC = () => {
     dismissToast(toastId);
     showSuccess("Authorised deductions settings saved successfully!");
     console.log(`PAYE applied: ${data.applyPAYE}, SDL applied: ${data.applySDL}. These settings would influence employee salary calculations.`);
+  };
+
+  const handleIrp5ToggleChange = (checked: boolean) => {
+    form.setValue("enableIrp5Export", checked);
+    localStorage.setItem('enableIrp5Export', checked.toString());
+    window.dispatchEvent(new Event('irp5SettingsUpdated')); // Dispatch event
+    showSuccess(`IRP5 Export functionality ${checked ? 'enabled' : 'disabled'}.`);
   };
 
   return (
@@ -175,6 +186,32 @@ const TaxLiabilities: React.FC = () => {
             <h3 className="font-semibold text-lg mb-2">Important Note:</h3>
             <p className="text-sm">
               Enabling these deductions here will flag them for application. The actual calculation and deduction from employee salaries would be performed by the backend payroll processing logic.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* New Card for IRP5 Export Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>IRP5 Export Settings</CardTitle>
+          <CardDescription>
+            Enable or disable the IRP5 export functionality for employees.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="enableIrp5Export">Enable IRP5 Export</Label>
+            <Switch
+              id="enableIrp5Export"
+              checked={form.watch("enableIrp5Export")}
+              onCheckedChange={handleIrp5ToggleChange}
+            />
+          </div>
+          <div className="mt-8 p-4 border rounded-lg bg-purple-50 text-purple-800">
+            <h3 className="font-semibold text-lg mb-2">IRP5 Export Note:</h3>
+            <p className="text-sm">
+              Enabling this option will make the IRP5 export button visible in the Payslips section. The generated IRP5 is a simplified mock-up for demonstration purposes and does not represent a legally compliant SARS IRP5 certificate. A real IRP5 export requires complex tax calculations and official SARS integration.
             </p>
           </div>
         </CardContent>

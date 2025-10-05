@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Printer, Download, CalendarIcon } from "lucide-react"; // Removed Settings icon
+import { Printer, Download, CalendarIcon, FileText } from "lucide-react"; // Import FileText icon
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import IndividualPayslipCard from "./IndividualPayslipCard";
@@ -15,7 +15,9 @@ import { format, isSameMonth, isSameYear } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-// Removed useNavigate as it's no longer needed here
+import { generateIrp5ExportContent } from "@/lib/report-generators"; // Import IRP5 generator
+import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
+import ReportContentWrapper from "../reports/ReportContentWrapper"; // Import ReportContentWrapper
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -42,6 +44,8 @@ interface PayslipGenerationSectionProps {
   payslipDesignSettings: PayslipDesignSettings;
   companyDetails: MockCompanyDetails;
   allEmployees: MockEmployee[];
+  isIrp5ExportEnabled: boolean; // New prop
+  reportDesignSettings: ReportDesignSettings; // New prop
 }
 
 const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
@@ -55,12 +59,14 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   payslipDesignSettings,
   companyDetails,
   allEmployees,
+  isIrp5ExportEnabled,
+  reportDesignSettings,
 }) => {
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
-  // Removed useNavigate initialization
 
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
   const selectedPayslip = payslips.find(p => p.id === selectedPayslipId);
+  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
 
   React.useEffect(() => {
     if (selectedEmployeeId && filteredPayslipsForEmployee.length > 0) {
@@ -104,6 +110,40 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         console.warn(`Payslip ${payslip.id} rendering timed out, proceeding.`);
         resolve();
       }, 5000); // Increased timeout
+    });
+  };
+
+  // Helper to render IRP5 content into a hidden DOM element for PDF generation
+  const renderIrp5ToDomElement = (
+    employee: MockEmployee,
+    payslip: MockPayslip,
+    container: HTMLDivElement
+  ): Promise<void> => {
+    return new Promise((resolve) => {
+      const irp5Root = document.createElement('div');
+      container.appendChild(irp5Root);
+
+      const root = ReactDOM.createRoot(irp5Root);
+      root.render(
+        <ReportContentWrapper
+          reportTitle={`IRP5 Certificate - Tax Year ${payslip.payPeriod.substring(0, 4)}`}
+          reportContent={generateIrp5ExportContent(employee, payslip, companyDetails, reportDesignSettings)}
+          companyDetails={companyDetails}
+          reportDesignSettings={reportDesignSettings}
+          onReadyForPdf={() => {
+            console.log(`IRP5 for ${employee.id} signaled readiness.`);
+            resolve();
+          }}
+        />
+      );
+
+      (irp5Root as any)._reactRoot = root;
+
+      setTimeout(() => {
+        if (!irp5Root.isConnected) return;
+        console.warn(`IRP5 for ${employee.id} rendering timed out, proceeding.`);
+        resolve();
+      }, 5000);
     });
   };
 
@@ -307,6 +347,61 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   };
 
+  const handleGenerateIrp5 = async (action: 'print' | 'download') => {
+    if (!isIrp5ExportEnabled) {
+      showError("IRP5 Export is disabled. Please enable it in Settings > Tax Liabilities.");
+      return;
+    }
+    if (!selectedEmployee || !selectedPayslip) {
+      showError("Please select an employee and a payslip to generate the IRP5 Export.");
+      return;
+    }
+
+    const toastId = showLoading(`Generating IRP5 Export for ${action}, please wait...`) as string;
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+    container.style.width = '0';
+    container.style.height = '0';
+    container.style.overflow = 'hidden';
+    document.body.appendChild(container);
+
+    try {
+      await renderIrp5ToDomElement(selectedEmployee, selectedPayslip, container);
+      const irp5Element = container.firstChild as HTMLDivElement;
+
+      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
+      if (reportDesignSettings.defaultReportPaperSize === 'Letter') pdfFormat = 'letter';
+      else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `irp5-export-${selectedEmployee.id}-${selectedPayslip.payPeriod.substring(0, 4)}.pdf`,
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
+        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
+      };
+
+      const pdfPromise = html2pdf().from(irp5Element).set(opt);
+
+      if (action === 'download') {
+        await pdfPromise.save();
+        showSuccess("IRP5 Export PDF downloaded successfully!");
+      } else { // 'print'
+        const pdf = await pdfPromise.toPdf().get('pdf');
+        pdf.output('dataurlnewwindow');
+        showSuccess("IRP5 Export sent to printer.");
+      }
+    } catch (error: any) {
+      showError(`Error generating IRP5 Export for ${action}: ${error.message || 'Unknown error'}`);
+      console.error(`html2pdf IRP5 Export ${action} error:`, error);
+    } finally {
+      dismissToast(toastId);
+      cleanupRenderedElement(container);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -428,6 +523,35 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* New IRP5 Export Section */}
+        {isIrp5ExportEnabled && (
+          <div className="mt-4 grid gap-4 md:grid-cols-2 items-end">
+            <div className="md:col-span-1">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Individual IRP5 Export
+              </label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Generate IRP5 for the selected employee and payslip.
+              </p>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-full" variant="outline" disabled={!selectedEmployeeId || !selectedPayslipId}>
+                  <FileText className="mr-2 h-4 w-4" /> Generate IRP5 Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleGenerateIrp5('print')} disabled={!selectedEmployeeId || !selectedPayslipId}>
+                  <Printer className="mr-2 h-4 w-4" /> Print IRP5
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleGenerateIrp5('download')} disabled={!selectedEmployeeId || !selectedPayslipId}>
+                  <Download className="mr-2 h-4 w-4" /> Download IRP5 PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

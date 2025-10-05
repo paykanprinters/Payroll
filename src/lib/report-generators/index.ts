@@ -10,3 +10,4 @@ export { generateEmployeeDemographicsReportContent } from "./employee-demographi
 export { generateBenefitDeductionsReportContent } from "./benefit-deductions";
 export { generateAuditTrailReportContent } from "./audit-trail";
 export { generateEmployeeProfileReportContent } from "./employee-profile";
+export { generateIrp5ExportContent } from "./irp5-export"; // New export

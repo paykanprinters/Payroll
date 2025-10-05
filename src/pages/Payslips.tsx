@@ -8,6 +8,7 @@ import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSec
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard directly
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
+import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -29,12 +30,19 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showEmployeeDetails: true,
   showEarningsBreakdown: true,
   showDeductionsBreakdown: true,
-  showLeaveSummary: true,
-  showBankDetails: true,
-  showYTD: true,
+  showLeaveSummary: true, // Now controlled by a toggle
+  showBankDetails: true, // Now controlled by a toggle
+  showYTD: true, // New setting for YTD calculations
   sectionOrder: ["Earnings", "Deductions"],
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
+};
+
+const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
+  defaultReportPaperSize: "A4",
+  includeCompanyLogo: true,
+  includeCompanyDetails: true,
+  reportContentFontSize: 14,
 };
 
 const Payslips: React.FC = () => {
@@ -45,8 +53,12 @@ const Payslips: React.FC = () => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
   });
+  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS); // State for report design settings
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
+  const [isIrp5ExportEnabled, setIsIrp5ExportEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("enableIrp5Export") === "true";
+  });
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
@@ -125,23 +137,48 @@ const Payslips: React.FC = () => {
     setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings);
   };
 
+  const loadReportDesignSettings = () => {
+    const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
+    if (savedReportDesignSettings) {
+      setReportDesignSettings(JSON.parse(savedReportDesignSettings));
+    } else {
+      localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
+      setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
+    }
+  };
+
   useEffect(() => {
     loadPayslipsAndEmployees();
     loadCompanyDetails(); // Load company details
     loadPayslipDesignSettings();
-    window.addEventListener('mockDataUpdated', () => {
+    loadReportDesignSettings(); // Load report design settings
+    setIsIrp5ExportEnabled(localStorage.getItem("enableIrp5Export") === "true"); // Load IRP5 setting
+
+    const handleMockDataUpdate = () => {
       loadPayslipsAndEmployees();
       loadCompanyDetails();
-    });
-    window.addEventListener('companyDetailsUpdated', loadCompanyDetails); // Listen for company detail updates
-    window.addEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
+      setIsIrp5ExportEnabled(localStorage.getItem("enableIrp5Export") === "true");
+    };
+    const handleCompanyDetailsUpdate = () => {
+      loadCompanyDetails();
+    };
+    const handlePayslipDesignUpdate = () => {
+      loadPayslipDesignSettings();
+    };
+    const handleIrp5SettingsUpdate = () => {
+      setIsIrp5ExportEnabled(localStorage.getItem("enableIrp5Export") === "true");
+    };
+
+    window.addEventListener('mockDataUpdated', handleMockDataUpdate);
+    window.addEventListener('companyDetailsUpdated', handleCompanyDetailsUpdate); // Listen for company detail updates
+    window.addEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
+    window.addEventListener('irp5SettingsUpdated', handleIrp5SettingsUpdate); // Listen for IRP5 setting updates
+
     return () => {
-      window.removeEventListener('mockDataUpdated', () => {
-        loadPayslipsAndEmployees();
-        loadCompanyDetails();
-      });
-      window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
-      window.removeEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
+      window.removeEventListener('mockDataUpdated', handleMockDataUpdate);
+      window.removeEventListener('companyDetailsUpdated', handleCompanyDetailsUpdate);
+      window.removeEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
+      window.removeEventListener('irp5SettingsUpdated', handleIrp5SettingsUpdate);
     };
   }, []);
 
@@ -189,6 +226,8 @@ const Payslips: React.FC = () => {
           payslipDesignSettings={payslipDesignSettings}
           companyDetails={companyDetails} // Pass all company details
           allEmployees={employees}
+          isIrp5ExportEnabled={isIrp5ExportEnabled} // Pass IRP5 setting
+          reportDesignSettings={reportDesignSettings} // Pass report design settings
         />
       )}
 
