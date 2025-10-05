@@ -86,8 +86,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           </p>
         ))}
         <p className="font-bold border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
-          <span className="float-left">GROSS EARNINGS</span>
-          <span className="float-right">R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+          <span style={{ float: 'left' }}>GROSS EARNINGS</span>
+          <span style={{ float: 'right' }}>R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
           <div style={{ clear: 'both' }}></div> {/* Clear float */}
         </p>
       </div>
@@ -106,8 +106,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           </p>
         ))}
         <p className="font-bold border-t pt-1" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
-          <span className="float-left">TOTAL DEDUCTIONS</span>
-          <span className="float-right">R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+          <span style={{ float: 'left' }}>TOTAL DEDUCTIONS</span>
+          <span style={{ float: 'right' }}>R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
           <div style={{ clear: 'both' }}></div> {/* Clear float */}
         </p>
       </div>
@@ -176,7 +176,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           </div>
         )}
         {payslipDesignSettings.showCompanyDetails && (
-          <div style={isPdfGeneration ? { textAlign: 'right', fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, flexGrow: 1 } : {}} className={cn("text-right flex-grow", !payslipDesignSettings.showCompanyLogo && "w-full")}>
+          <div style={isPdfGeneration ? { textAlign: 'right', fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, flexGrow: 1, width: payslipDesignSettings.showCompanyLogo && companyLogoUrl ? 'calc(100% - ' + (companyLogoSize + baseFontSizePx * 0.5) + 'px)' : '100%' } : {}} className={cn("text-right flex-grow", !payslipDesignSettings.showCompanyLogo && "w-full")}>
             <h2 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.2}px`, lineHeight: `${baseFontSizePx * 1.2 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>{companyLegalName}</h2>
             {companyTradingName && companyTradingName !== companyLegalName && (
               <p style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1}px`, lineHeight: `${baseFontSizePx * 1 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>{companyTradingName}</p>
