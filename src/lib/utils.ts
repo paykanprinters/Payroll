@@ -28,19 +28,17 @@ export const getEmployeeName = (employeeId: string, employees: MockEmployee[]) =
 // Helper to get explicit print styles for different paper sizes
 export const getPrintStyles = (layoutSize: "Letter" | "A4" | "A5" | undefined): React.CSSProperties => {
   let styles: React.CSSProperties = {};
+  // Define internal padding and base font size based on paper size
+  // The overall page dimensions and margins will be controlled by html2pdf.js's format and margin options.
   switch (layoutSize) {
     case "Letter":
       styles = {
-        width: '215.9mm', // 8.5 inches
-        minHeight: '279.4mm', // 11 inches
         padding: '24px', // Approx 0.25 inch margin
         fontSize: '13px', // Base font size for Letter
       };
       break;
     case "A5":
       styles = {
-        width: '148mm',
-        minHeight: '210mm',
         padding: '16px', // Smaller padding for A5
         fontSize: '11px', // Smaller base font size for A5
       };
@@ -48,8 +46,6 @@ export const getPrintStyles = (layoutSize: "Letter" | "A4" | "A5" | undefined): 
     case "A4":
     default:
       styles = {
-        width: '210mm',
-        minHeight: '297mm',
         padding: '32px', // Standard padding for A4
         fontSize: '14px', // Base font size for A4
       };

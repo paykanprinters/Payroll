@@ -198,8 +198,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
             "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
           )}
           style={{
-            width: previewStyles.width,
-            minHeight: previewStyles.minHeight,
+            // Removed width and minHeight, relying on html2pdf.js margins for page dimensions
             padding: previewStyles.padding,
             fontSize: `${reportDesignSettings.reportContentFontSize}px`,
             border: '1px solid #ccc', // Add border for visual separation in preview

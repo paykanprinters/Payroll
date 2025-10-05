@@ -89,8 +89,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
         "print:shadow-none print:border print:border-gray-300 print:bg-white print:text-black print:mx-0 print:my-0",
       )}
       style={{
-        width: printStyles.width,
-        minHeight: printStyles.minHeight,
+        // Removed width and minHeight, relying on html2pdf.js margins for page dimensions
         padding: printStyles.padding,
         fontSize: `${reportDesignSettings.reportContentFontSize}px`,
       }}
