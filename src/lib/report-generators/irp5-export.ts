@@ -14,9 +14,9 @@ export const generateIrp5ExportContent = (
   const renderField = (label: string, value: string | number | boolean | undefined, code?: string) => {
     const displayValue = (value === undefined || value === null || value === "") ? "N/A" : String(value);
     return `
-      <div class="flex justify-between items-center py-1 border-b border-gray-200" style="font-size: ${contentFontSize}px;">
+      <div class="flex justify-between items-baseline" style="font-size: ${contentFontSize}px; line-height: ${contentFontSize * 1.2}px; margin-bottom: ${contentFontSize * 0.1}px;">
         <span class="font-semibold">${label}</span>
-        <span>${displayValue}</span>
+        <span class="text-right">${displayValue}</span>
         ${code ? `<span class="text-xs text-gray-500 ml-2" style="font-size: ${contentFontSize * 0.8}px;">(${code})</span>` : ''}
       </div>
     `;
@@ -32,13 +32,13 @@ export const generateIrp5ExportContent = (
 
   return `
     <div class="p-8 bg-white text-gray-900 print:text-black" style="font-size: ${contentFontSize}px;">
-      <p class="text-center text-muted-foreground mb-6" style="font-size: ${contentFontSize * 0.9}px;">
+      <p class="text-center text-muted-foreground mb-4" style="font-size: ${contentFontSize * 0.9}px;">
         (Mock-up for demonstration purposes only. Not a legally compliant SARS document.)
       </p>
-      <hr class="my-4 border-gray-300" />
+      <hr class="my-3 border-gray-300" style="margin-top: ${contentFontSize * 0.8}px; margin-bottom: ${contentFontSize * 0.8}px;" />
 
-      <div class="space-y-4 mb-6">
-        <h4 class="font-semibold underline" style="font-size: ${contentFontSize * 1.1}px;">Employer Details</h4>
+      <div class="space-y-2 mb-4">
+        <h4 class="font-semibold underline mb-2" style="font-size: ${contentFontSize * 1.1}px;">Employer Details</h4>
         ${renderField("Employer Name", companyDetails.companyLegalName)}
         ${renderField("PAYE Ref No", companyDetails.payeReferenceNumber)}
         ${renderField("UIF Ref No", companyDetails.uifReferenceNumber)}
@@ -46,8 +46,8 @@ export const generateIrp5ExportContent = (
         ${renderField("Address", companyDetails.physicalAddress)}
       </div>
 
-      <div class="space-y-4 mb-6">
-        <h4 class="font-semibold underline" style="font-size: ${contentFontSize * 1.1}px;">Employee Details</h4>
+      <div class="space-y-2 mb-4">
+        <h4 class="font-semibold underline mb-2" style="font-size: ${contentFontSize * 1.1}px;">Employee Details</h4>
         ${renderField("Employee Name", `${employee.firstName} ${employee.lastName}`)}
         ${renderField("ID Number", employee.idNumber)}
         ${renderField("Tax Ref No", employee.taxReferenceNumber)}
@@ -55,24 +55,25 @@ export const generateIrp5ExportContent = (
         ${renderField("Employment Date", employee.startDate)}
       </div>
 
-      <div class="space-y-4 mb-6">
-        <h4 class="font-semibold underline" style="font-size: ${contentFontSize * 1.1}px;">Income Details (Year to Date)</h4>
-        ${renderField("Gross Remuneration", grossIncome.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "3601")}
-        ${renderField("Taxable Income", taxableIncome.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "3601")}
-        ${renderField("Total Deductions", totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4001")}
+      <div class="grid grid-cols-2 gap-x-8 mb-4">
+        <div>
+          <h4 class="font-semibold underline mb-2" style="font-size: ${contentFontSize * 1.1}px;">Income Details (Year to Date)</h4>
+          ${renderField("Gross Remuneration", grossIncome.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "3601")}
+          ${renderField("Taxable Income", taxableIncome.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "3601")}
+          ${renderField("Total Deductions", totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4001")}
+        </div>
+        <div>
+          <h4 class="font-semibold underline mb-2" style="font-size: ${contentFontSize * 1.1}px;">Deductions & Contributions (Year to Date)</h4>
+          ${renderField("PAYE Deducted", payeDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4102")}
+          ${renderField("UIF Contributions", uifDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4141")}
+          ${renderField("SDL Contributions", sdlDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4142")}
+          ${payslip.deductionsBreakdown.filter(d => !["PAYE", "UIF", "SDL"].includes(d.name)).map(d =>
+            renderField(d.name, d.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4001")
+          ).join('')}
+        </div>
       </div>
 
-      <div class="space-y-4 mb-6">
-        <h4 class="font-semibold underline" style="font-size: ${contentFontSize * 1.1}px;">Deductions & Contributions (Year to Date)</h4>
-        ${renderField("PAYE Deducted", payeDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4102")}
-        ${renderField("UIF Contributions", uifDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4141")}
-        ${renderField("SDL Contributions", sdlDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4142")}
-        ${payslip.deductionsBreakdown.filter(d => !["PAYE", "UIF", "SDL"].includes(d.name)).map(d =>
-          renderField(d.name, d.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4001")
-        ).join('')}
-      </div>
-
-      <div class="mt-8 text-muted-foreground text-center" style="font-size: ${contentFontSize * 0.9}px;">
+      <div class="mt-6 text-muted-foreground text-center" style="font-size: ${contentFontSize * 0.9}px;">
         <p>Issued on: ${format(new Date(), "yyyy-MM-dd")}</p>
         <p>This is a system-generated document. No signature is required.</p>
       </div>
