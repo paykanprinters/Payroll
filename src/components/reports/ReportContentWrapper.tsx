@@ -12,6 +12,7 @@ interface ReportContentWrapperProps {
   companyDetails: MockCompanyDetails;
   reportDesignSettings: ReportDesignSettings;
   onReadyForPdf?: () => void; // Callback to signal readiness for PDF generation
+  isPdfGeneration?: boolean; // New prop to indicate PDF generation context
 }
 
 const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
@@ -20,6 +21,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   companyDetails,
   reportDesignSettings,
   onReadyForPdf,
+  isPdfGeneration = false, // Default to false
 }) => {
   const {
     companyLegalName,
@@ -44,6 +46,11 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   const imageRefs = React.useRef<HTMLImageElement[]>([]);
 
   React.useEffect(() => {
+    if (!isPdfGeneration) {
+      setImagesLoaded(true); // Not generating PDF, so no need to wait for images
+      return;
+    }
+
     let loadedCount = 0;
     const totalImages = imageRefs.current.length;
 
@@ -74,7 +81,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
         img.removeEventListener('error', handleImageLoad);
       });
     };
-  }, [companyLogoUrl]); // Re-run if logo URL changes
+  }, [companyLogoUrl, isPdfGeneration]); // Re-run if logo URL changes or PDF generation context changes
 
   React.useEffect(() => {
     if (imagesLoaded && onReadyForPdf) {
@@ -86,11 +93,13 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     <div
       className={cn(
         "p-4 bg-white text-gray-900 text-[13px]",
-        "print:shadow-none print:bg-white print:text-black print:mx-0 print:my-0", // Removed print:border
+        "print:shadow-none print:bg-white print:text-black print:mx-0 print:my-0",
       )}
       style={{
-        ...printStyles, // Apply all print styles including border
+        ...printStyles, // Apply all print styles including padding and base font size
         fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size if needed
+        border: isPdfGeneration ? '1px solid black' : 'none', // Apply border ONLY for PDF generation
+        boxShadow: 'none', // Ensure no shadow in print/PDF
       }}
     >
       {/* Report Header with Company Details */}

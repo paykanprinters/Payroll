@@ -16,6 +16,7 @@ interface PdfOptions {
 
 interface RenderComponentProps {
   onReadyForPdf?: () => void;
+  isPdfGeneration?: boolean; // Add this prop to indicate PDF generation context
 }
 
 export const usePdfGenerator = () => {
@@ -84,7 +85,7 @@ export const usePdfGenerator = () => {
       #pdf-root > div { /* The root element rendered by the component */
         box-sizing: border-box;
         /* Removed default border here. Components should apply their own if needed. */
-        /* Removed default padding here. Components should apply their own if needed. */
+        padding: 10mm; /* Internal padding for content */
         min-height: ${minHeight}; /* Dynamic min-height for page content */
         display: flex;
         flex-direction: column;
@@ -145,7 +146,8 @@ export const usePdfGenerator = () => {
         onReadyForPdf: () => {
           console.log(`Component for ${options.filename} signaled readiness.`);
           resolveReady();
-        }
+        },
+        isPdfGeneration: true, // Pass this prop to the rendered component
       })
     );
 
@@ -247,7 +249,7 @@ export const usePdfGenerator = () => {
       #pdf-root > div { /* The root element rendered by the component */
         box-sizing: border-box;
         /* Removed default border here. Components should apply their own if needed. */
-        /* Removed default padding here. Components should apply their own if needed. */
+        padding: 10mm; /* Internal padding for content */
         min-height: ${minHeight}; /* Dynamic min-height for page content */
         display: flex;
         flex-direction: column;
@@ -308,7 +310,8 @@ export const usePdfGenerator = () => {
         onReadyForPdf: () => {
           console.log(`Component for ${options.filename} signaled readiness for print.`);
           resolveReady();
-        }
+        },
+        isPdfGeneration: true, // Pass this prop to the rendered component
       })
     );
 

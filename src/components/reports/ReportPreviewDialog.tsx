@@ -140,7 +140,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         }
         #report-root > div { /* The ReportContentWrapper */
           box-sizing: border-box;
-          border: 1px solid black; /* RESTORED BORDER for reports */
+          /* Removed default border here. ReportContentWrapper will apply its own. */
           padding: 10mm; /* Internal padding for content */
           min-height: ${minHeight}; /* Dynamic min-height */
           display: flex;
@@ -201,6 +201,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
             console.log("ReportContentWrapper signaled readiness in iframe.");
             resolve(iframe);
           }}
+          isPdfGeneration={true} // Indicate that this is for PDF generation
         />
       );
 
