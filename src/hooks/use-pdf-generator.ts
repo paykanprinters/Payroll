@@ -162,7 +162,7 @@ export const usePdfGenerator = () => {
       clearTimeout(timeoutId); // Clear timeout if resolved earlier
 
       const html2pdfOptions = {
-        margin: [0, 0, 0, 0], // Set margin to 0, CSS handles padding/border
+        margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
@@ -326,7 +326,7 @@ export const usePdfGenerator = () => {
       clearTimeout(timeoutId);
 
       const html2pdfOptions = {
-        margin: [0, 0, 0, 0], // Set margin to 0, CSS handles padding/border
+        margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },

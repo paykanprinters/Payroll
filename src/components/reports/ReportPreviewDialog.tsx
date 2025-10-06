@@ -141,7 +141,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         #report-root > div { /* The ReportContentWrapper */
           box-sizing: border-box;
           /* Removed default border here. ReportContentWrapper will apply its own. */
-          padding: 10mm; /* Internal padding for content */
+          /* Removed default padding here. ReportContentWrapper will apply its own. */
           min-height: ${minHeight}; /* Dynamic min-height */
           display: flex;
           flex-direction: column;
@@ -244,7 +244,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
 
       const opt = {
-        margin: [0, 0, 0, 0] as [number, number, number, number], // Set margin to 0, CSS handles padding/border
+        margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
         filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
@@ -281,13 +281,14 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         <ScrollArea className="flex-grow pr-4">
           {/* This is the UI preview, not the content for PDF generation */}
           <div className={cn(
-            "bg-white text-gray-900 mx-auto rounded-lg shadow-lg p-4", // Added p-4 for UI preview
+            "bg-white text-gray-900 mx-auto rounded-lg shadow-lg", // Apply rounded-lg and shadow-lg for UI preview
             getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize), // Apply width/min-height classes
           )}
           style={{
-            ...previewStyles, // Apply all styles from getPrintStyles (padding, fontSize)
-            fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size for content
+            padding: '24px', // Consistent padding for UI preview
+            fontSize: previewStyles.fontSize,
             border: '1px solid #ccc', // Lighter border for UI preview
+            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Shadow for UI preview
           }}
           >
             {/* Report Header with Company Details */}
