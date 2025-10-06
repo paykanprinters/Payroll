@@ -111,7 +111,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
       )}
       style={isPdfGeneration ? {
         ...printStyles, // fontSize from utils
-        padding: '0', // No internal padding for PDF, margin will be handled by html2pdf options
+        padding: '10mm', // Explicit internal padding for PDF
         border: 'none', // No border for PDF generation, will be drawn programmatically
         boxShadow: 'none', // Ensure no shadow in print/PDF
       } : {
