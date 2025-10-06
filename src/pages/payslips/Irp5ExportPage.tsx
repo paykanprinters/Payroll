@@ -4,14 +4,18 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
-import EmployeePayslipSelector from "@/components/payslips/EmployeePayslipSelector";
 import { generateIrp5ExportContent } from "@/lib/report-generators";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FileText, Printer, Download } from "lucide-react";
+import { FileText, Printer, Download, CalendarIcon } from "lucide-react";
 import { showError } from "@/utils/toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format, isSameYear } from "date-fns";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -31,7 +35,7 @@ const Irp5ExportPage: React.FC = () => {
   });
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
-  const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
+  const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined); // State for selected IRP year
 
   const { generatePdf, printPdf } = usePdfGenerator();
 
@@ -103,36 +107,32 @@ const Irp5ExportPage: React.FC = () => {
     };
   }, [loadData]);
 
-  const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
-  const selectedPayslip = payslips.find(p => p.id === selectedPayslipId);
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
-
-  // Effect to reset selected payslip if employee changes or payslips update
-  useEffect(() => {
-    if (selectedEmployeeId) {
-      const employeePayslips = payslips.filter(p => p.employeeId === selectedEmployeeId);
-      if (!employeePayslips.some(p => p.id === selectedPayslipId)) {
-        setSelectedPayslipId("");
-      }
-    } else {
-      setSelectedPayslipId("");
-    }
-  }, [selectedEmployeeId, payslips, selectedPayslipId]);
 
   const handleGenerateIrp5 = useCallback(async (action: 'print' | 'download') => {
     if (!isIrp5ExportEnabled) {
       showError("IRP5 Export is disabled. Please enable it in Settings > Tax Liabilities.");
       return;
     }
-    if (!selectedEmployee || !selectedPayslip || !companyDetails) {
-      showError("Please select an employee and a payslip, and ensure company details are loaded to generate the IRP5 Export.");
+    if (!selectedEmployee || !selectedIrpYear || !companyDetails) {
+      showError("Please select an employee and an IRP Year, and ensure company details are loaded to generate the IRP5 Export.");
+      return;
+    }
+
+    const year = selectedIrpYear.getFullYear();
+    const payslipsForYear = payslips.filter(p =>
+      p.employeeId === selectedEmployeeId && isSameYear(new Date(p.payPeriod.substring(0, 4)), selectedIrpYear)
+    );
+
+    if (payslipsForYear.length === 0) {
+      showError(`No payslips found for ${selectedEmployee.firstName} ${selectedEmployee.lastName} in ${year}.`);
       return;
     }
 
     const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
       <ReportContentWrapper
-        reportTitle={`IRP5 Certificate - Tax Year ${selectedPayslip.payPeriod.substring(0, 4)}`}
-        reportContent={generateIrp5ExportContent(selectedEmployee, selectedPayslip, companyDetails, reportDesignSettings)}
+        reportTitle={`IRP5 Certificate - Tax Year ${year}`}
+        reportContent={generateIrp5ExportContent(selectedEmployee, payslipsForYear, companyDetails, reportDesignSettings, year)}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
         onReadyForPdf={onReadyForPdf}
@@ -140,7 +140,7 @@ const Irp5ExportPage: React.FC = () => {
     );
 
     const options = {
-      filename: `irp5-export-${selectedEmployee.id}-${selectedPayslip.payPeriod.substring(0, 4)}.pdf`,
+      filename: `irp5-export-${selectedEmployee.id}-${year}.pdf`,
       format: reportDesignSettings.defaultReportPaperSize,
     };
 
@@ -149,9 +149,9 @@ const Irp5ExportPage: React.FC = () => {
     } else {
       await printPdf(renderComponent, options);
     }
-  }, [isIrp5ExportEnabled, selectedEmployee, selectedPayslip, companyDetails, reportDesignSettings, generatePdf, printPdf]);
+  }, [isIrp5ExportEnabled, selectedEmployee, selectedIrpYear, companyDetails, payslips, selectedEmployeeId, reportDesignSettings, generatePdf, printPdf]);
 
-  const isDisabled = !selectedEmployeeId || !selectedPayslipId || !isIrp5ExportEnabled;
+  const isDisabled = !selectedEmployeeId || !selectedIrpYear || !isIrp5ExportEnabled;
 
   return (
     <div className="flex flex-col gap-4">
@@ -176,21 +176,70 @@ const Irp5ExportPage: React.FC = () => {
         <CardHeader>
           <CardTitle>Generate Individual IRP5</CardTitle>
           <CardDescription>
-            Select an employee and a payslip to generate their IRP5 certificate.
+            Select an employee and an IRP year to generate their IRP5 certificate.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
-            <EmployeePayslipSelector
-              employees={employees}
-              payslips={payslips}
-              selectedEmployeeId={selectedEmployeeId}
-              setSelectedEmployeeId={setSelectedEmployeeId}
-              selectedPayslipId={selectedPayslipId}
-              setSelectedPayslipId={setSelectedPayslipId}
-              filteredPayslipsForEmployee={filteredPayslipsForEmployee}
-            />
-            <div className="md:col-span-2">
+            {/* Select Employee */}
+            <div className="lg:col-span-2">
+              <label htmlFor="employee-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Select Employee
+              </label>
+              <Select onValueChange={setSelectedEmployeeId} value={selectedEmployeeId}>
+                <SelectTrigger id="employee-select" className="mt-1">
+                  <SelectValue placeholder="Select an employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.length > 0 ? (
+                    employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName} ({emp.id})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-employees" disabled>
+                      No employees available (enable mock data)
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Select IRP Year */}
+            <div>
+              <label htmlFor="irp-year-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Select IRP Year
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-1",
+                      !selectedIrpYear && "text-muted-foreground"
+                    )}
+                    disabled={!selectedEmployeeId}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedIrpYear ? format(selectedIrpYear, "yyyy") : <span>Pick a year</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedIrpYear}
+                    onSelect={setSelectedIrpYear}
+                    initialFocus
+                    captionLayout="dropdown-buttons"
+                    fromYear={2020}
+                    toYear={new Date().getFullYear() + 1}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="md:col-span-1"> {/* Adjusted span for button alignment */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="w-full" variant="outline" disabled={isDisabled}>

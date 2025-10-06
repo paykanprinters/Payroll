@@ -4,11 +4,11 @@ import { format } from "date-fns";
 
 export const generateIrp5ExportContent = (
   employee: MockEmployee,
-  payslip: MockPayslip,
+  payslipsForYear: MockPayslip[], // Changed from single payslip to array of payslips for the year
   companyDetails: MockCompanyDetails,
   reportDesignSettings: ReportDesignSettings,
+  selectedYear: number, // Added selectedYear for clarity
 ): string => {
-  const taxYear = payslip.payPeriod.substring(0, 4); // Assuming payPeriod is "YYYY-MM-DD - YYYY-MM-DD"
   const contentFontSize = reportDesignSettings.irp5ContentFontSize || 12; // Use IRP5 specific font size
 
   const renderField = (label: string, value: string | number | boolean | undefined, code?: string) => {
@@ -22,13 +22,24 @@ export const generateIrp5ExportContent = (
     `;
   };
 
-  // Mock IRP5 values (simplified)
-  const grossIncome = payslip.ytdGrossEarnings;
-  const totalDeductions = payslip.ytdTotalDeductions;
-  const taxableIncome = grossIncome - totalDeductions; // Very simplified
-  const payeDeducted = payslip.deductionsBreakdown.find(d => d.name === "PAYE")?.amount || 0;
-  const uifDeducted = payslip.deductionsBreakdown.find(d => d.name === "UIF")?.amount || 0;
-  const sdlDeducted = payslip.deductionsBreakdown.find(d => d.name === "SDL")?.amount || 0;
+  // Aggregate values from all payslips for the selected year
+  const totalGrossIncome = payslipsForYear.reduce((sum, p) => sum + p.grossEarnings, 0);
+  const totalDeductions = payslipsForYear.reduce((sum, p) => sum + p.totalDeductions, 0);
+  const totalPayeDeducted = payslipsForYear.reduce((sum, p) => sum + (p.deductionsBreakdown.find(d => d.name === "PAYE")?.amount || 0), 0);
+  const totalUifDeducted = payslipsForYear.reduce((sum, p) => sum + (p.deductionsBreakdown.find(d => d.name === "UIF")?.amount || 0), 0);
+  const totalSdlDeducted = payslipsForYear.reduce((sum, p) => sum + (p.deductionsBreakdown.find(d => d.name === "SDL")?.amount || 0), 0);
+
+  // Collect all other deductions
+  const otherDeductionsMap = new Map<string, number>();
+  payslipsForYear.forEach(p => {
+    p.deductionsBreakdown.forEach(d => {
+      if (!["PAYE", "UIF", "SDL"].includes(d.name)) {
+        otherDeductionsMap.set(d.name, (otherDeductionsMap.get(d.name) || 0) + d.amount);
+      }
+    });
+  });
+
+  const taxableIncome = totalGrossIncome - totalDeductions; // Very simplified
 
   return `
     <div class="p-8 bg-white text-gray-900 print:text-black" style="font-size: ${contentFontSize}px;">
@@ -58,17 +69,17 @@ export const generateIrp5ExportContent = (
       <div class="grid grid-cols-2 gap-x-8 mb-4">
         <div>
           <h4 class="font-semibold underline mb-2" style="font-size: ${contentFontSize * 1.1}px;">Income Details (Year to Date)</h4>
-          ${renderField("Gross Remuneration", grossIncome.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "3601")}
+          ${renderField("Gross Remuneration", totalGrossIncome.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "3601")}
           ${renderField("Taxable Income", taxableIncome.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "3601")}
           ${renderField("Total Deductions", totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4001")}
         </div>
         <div>
           <h4 class="font-semibold underline mb-2" style="font-size: ${contentFontSize * 1.1}px;">Deductions & Contributions (Year to Date)</h4>
-          ${renderField("PAYE Deducted", payeDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4102")}
-          ${renderField("UIF Contributions", uifDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4141")}
-          ${renderField("SDL Contributions", sdlDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4142")}
-          ${payslip.deductionsBreakdown.filter(d => !["PAYE", "UIF", "SDL"].includes(d.name)).map(d =>
-            renderField(d.name, d.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4001")
+          ${renderField("PAYE Deducted", totalPayeDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4102")}
+          ${renderField("UIF Contributions", totalUifDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4141")}
+          ${renderField("SDL Contributions", totalSdlDeducted.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4142")}
+          ${Array.from(otherDeductionsMap.entries()).map(([name, amount]) =>
+            renderField(name, amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 }), "4001")
           ).join('')}
         </div>
       </div>
