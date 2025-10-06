@@ -140,7 +140,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         }
         #report-root > div { /* The ReportContentWrapper */
           box-sizing: border-box;
-          border: 1px solid black; /* RESTORED BORDER */
+          border: 1px solid black; /* RESTORED BORDER for reports */
           padding: 10mm; /* Internal padding for content */
           min-height: ${minHeight}; /* Dynamic min-height */
           display: flex;
@@ -280,15 +280,13 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         <ScrollArea className="flex-grow pr-4">
           {/* This is the UI preview, not the content for PDF generation */}
           <div className={cn(
-            "p-4 bg-white text-gray-900 text-[13px] mx-auto", // Added mx-auto for centering
+            "p-4 bg-white text-gray-900 text-[13px] mx-auto rounded-lg shadow-lg", // Added rounded-lg and shadow-lg for UI preview
             getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize), // Apply width/min-height classes
-            // Removed print: classes here as they are for actual print, not the UI preview
           )}
           style={{
             ...previewStyles, // Apply all styles from getPrintStyles
             fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size
             border: '1px solid #ccc', // Lighter border for UI preview
-            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Shadow for UI preview
           }}
           >
             {/* Report Header with Company Details */}

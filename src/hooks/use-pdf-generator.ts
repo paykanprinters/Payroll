@@ -81,11 +81,11 @@ export const usePdfGenerator = () => {
       #pdf-root {
         background-color: white;
       }
-      #pdf-root > div { /* The ReportContentWrapper or IndividualPayslipCard */
+      #pdf-root > div { /* The root element rendered by the component */
         box-sizing: border-box;
-        border: 1px solid black; /* RESTORED BORDER */
-        padding: 10mm; /* Internal padding for content */
-        min-height: ${minHeight}; /* Dynamic min-height */
+        /* Removed default border here. Components should apply their own if needed. */
+        /* Removed default padding here. Components should apply their own if needed. */
+        min-height: ${minHeight}; /* Dynamic min-height for page content */
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
@@ -244,11 +244,11 @@ export const usePdfGenerator = () => {
       #pdf-root {
         background-color: white;
       }
-      #pdf-root > div { /* The ReportContentWrapper or IndividualPayslipCard */
+      #pdf-root > div { /* The root element rendered by the component */
         box-sizing: border-box;
-        border: 1px solid black; /* RESTORED BORDER */
-        padding: 10mm; /* Internal padding for content */
-        min-height: ${minHeight}; /* Dynamic min-height */
+        /* Removed default border here. Components should apply their own if needed. */
+        /* Removed default padding here. Components should apply their own if needed. */
+        min-height: ${minHeight}; /* Dynamic min-height for page content */
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
