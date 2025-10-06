@@ -212,7 +212,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         isPdfGeneration ? "" : "mx-auto", // Keep mx-auto for centering in UI
         !isPdfGeneration && getPreviewPageClasses(payslipDesignSettings.layoutSize) // Apply width/min-height classes for UI preview
       )}
-      style={isPdfGeneration ? { ...printStyles, border: '2px solid black', boxShadow: 'none' } : {
+      style={isPdfGeneration ? { ...printStyles, border: 'none', boxShadow: 'none' } : { // Removed border for PDF generation
         padding: printStyles.padding,
         fontSize: printStyles.fontSize,
         border: '1px solid #ccc', // Lighter border for UI preview

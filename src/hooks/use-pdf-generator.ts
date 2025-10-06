@@ -4,21 +4,30 @@ import React, { useCallback } from "react";
 import ReactDOM from 'react-dom/client';
 import html2pdf from 'html2pdf.js';
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
 
 interface PdfOptions {
   filename: string;
   format?: 'a4' | 'letter' | 'a5';
   orientation?: 'portrait' | 'landscape';
   margin?: number | [number, number, number, number]; // top, left, bottom, right
+  reportDesignSettings?: ReportDesignSettings; // Pass report design settings
 }
 
 interface RenderComponentProps {
   onReadyForPdf?: () => void;
 }
 
-type ComponentRenderer = (container: HTMLDivElement) => Promise<void>;
-
 export const usePdfGenerator = () => {
+
+  const getMinHeightForFormat = (format: 'a4' | 'letter' | 'a5' | undefined) => {
+    switch (format) {
+      case 'letter': return '279.4mm'; // 11 inches
+      case 'a5': return '210mm';
+      case 'a4':
+      default: return '297mm';
+    }
+  };
 
   const generatePdf = useCallback(async (
     renderComponent: (props: RenderComponentProps) => React.ReactElement,
@@ -56,6 +65,67 @@ export const usePdfGenerator = () => {
       iframeDoc.head.appendChild(clonedNode);
     });
 
+    // Inject custom CSS for PDF styling
+    const style = iframeDoc.createElement('style');
+    const minHeight = getMinHeightForFormat(options.format);
+    style.textContent = `
+      @page {
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #pdf-root {
+        background-color: white;
+      }
+      #pdf-root > div { /* The ReportContentWrapper or IndividualPayslipCard */
+        box-sizing: border-box;
+        border: 1px solid black;
+        padding: 10mm; /* Internal padding for content */
+        min-height: ${minHeight}; /* Dynamic min-height */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+      }
+      #pdf-root table {
+        width: 100%;
+        border-collapse: collapse;
+        page-break-inside: auto; /* Allow tables to break across pages */
+      }
+      #pdf-root table thead {
+        display: table-header-group; /* Repeat table headers on new pages */
+      }
+      #pdf-root table tr {
+        page-break-inside: auto; /* Allow table rows to break across pages */
+        page-break-before: auto;
+        page-break-after: auto;
+      }
+      #pdf-root table th, #pdf-root table td {
+        padding: 8px; /* Consistent padding for cells */
+        border-bottom: 1px solid #eee; /* Light border for rows */
+        vertical-align: top; /* Align content to top */
+      }
+      #pdf-root table tr.border-b:last-child td {
+        border-bottom: none; /* Remove bottom border for last row if it has border-b class */
+      }
+      #pdf-root h1, #pdf-root h2, #pdf-root h3, #pdf-root h4, #pdf-root h5, #pdf-root h6 {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+      #pdf-root p {
+        page-break-inside: avoid;
+      }
+      #pdf-root hr {
+        page-break-after: avoid;
+        page-break-before: avoid;
+      }
+    `;
+    iframeDoc.head.appendChild(style);
+
     const pdfRoot = iframeDoc.getElementById('pdf-root');
     if (!pdfRoot) {
       dismissToast(toastId);
@@ -90,7 +160,7 @@ export const usePdfGenerator = () => {
       clearTimeout(timeoutId); // Clear timeout if resolved earlier
 
       const html2pdfOptions = {
-        margin: options.margin || [10, 10, 10, 10],
+        margin: [0, 0, 0, 0], // Set margin to 0, CSS handles padding/border
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
@@ -158,6 +228,67 @@ export const usePdfGenerator = () => {
       iframeDoc.head.appendChild(clonedNode);
     });
 
+    // Inject custom CSS for PDF styling
+    const style = iframeDoc.createElement('style');
+    const minHeight = getMinHeightForFormat(options.format);
+    style.textContent = `
+      @page {
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #pdf-root {
+        background-color: white;
+      }
+      #pdf-root > div { /* The ReportContentWrapper or IndividualPayslipCard */
+        box-sizing: border-box;
+        border: 1px solid black;
+        padding: 10mm; /* Internal padding for content */
+        min-height: ${minHeight}; /* Dynamic min-height */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+      }
+      #pdf-root table {
+        width: 100%;
+        border-collapse: collapse;
+        page-break-inside: auto; /* Allow tables to break across pages */
+      }
+      #pdf-root table thead {
+        display: table-header-group; /* Repeat table headers on new pages */
+      }
+      #pdf-root table tr {
+        page-break-inside: auto; /* Allow table rows to break across pages */
+        page-break-before: auto;
+        page-break-after: auto;
+      }
+      #pdf-root table th, #pdf-root table td {
+        padding: 8px; /* Consistent padding for cells */
+        border-bottom: 1px solid #eee; /* Light border for rows */
+        vertical-align: top; /* Align content to top */
+      }
+      #pdf-root table tr.border-b:last-child td {
+        border-bottom: none; /* Remove bottom border for last row if it has border-b class */
+      }
+      #pdf-root h1, #pdf-root h2, #pdf-root h3, #pdf-root h4, #pdf-root h5, #pdf-root h6 {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+      #pdf-root p {
+        page-break-inside: avoid;
+      }
+      #pdf-root hr {
+        page-break-after: avoid;
+        page-break-before: avoid;
+      }
+    `;
+    iframeDoc.head.appendChild(style);
+
     const pdfRoot = iframeDoc.getElementById('pdf-root');
     if (!pdfRoot) {
       dismissToast(toastId);
@@ -192,7 +323,7 @@ export const usePdfGenerator = () => {
       clearTimeout(timeoutId);
 
       const html2pdfOptions = {
-        margin: options.margin || [10, 10, 10, 10],
+        margin: [0, 0, 0, 0], // Set margin to 0, CSS handles padding/border
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },

@@ -85,6 +85,15 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     }
   };
 
+  const getMinHeightForFormat = (format: 'Letter' | 'A4' | 'A5' | undefined) => {
+    switch (format) {
+      case 'Letter': return '279.4mm'; // 11 inches
+      case 'A5': return '210mm';
+      case 'A4':
+      default: return '297mm';
+    }
+  };
+
   const generateReportElementForPdf = (): Promise<HTMLIFrameElement> => {
     return new Promise((resolve, reject) => {
       const iframe = document.createElement('iframe');
@@ -112,6 +121,68 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         const clonedNode = node.cloneNode(true);
         iframeDoc.head.appendChild(clonedNode);
       });
+
+      // Inject custom CSS for PDF styling
+      const style = iframeDoc.createElement('style');
+      const minHeight = getMinHeightForFormat(reportDesignSettings.defaultReportPaperSize);
+      style.textContent = `
+        @page {
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        #report-root {
+          background-color: white;
+        }
+        #report-root > div { /* The ReportContentWrapper */
+          box-sizing: border-box;
+          border: 1px solid black;
+          padding: 10mm; /* Internal padding for content */
+          min-height: ${minHeight}; /* Dynamic min-height */
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          align-items: stretch;
+        }
+        #report-root table {
+          width: 100%;
+          border-collapse: collapse;
+          page-break-inside: auto; /* Allow tables to break across pages */
+        }
+        #report-root table thead {
+          display: table-header-group; /* Repeat table headers on new pages */
+        }
+        #report-root table tr {
+          page-break-inside: auto; /* Allow table rows to break across pages */
+          page-break-before: auto;
+          page-break-after: auto;
+        }
+        #report-root table th, #report-root table td {
+          padding: 8px; /* Consistent padding for cells */
+          border-bottom: 1px solid #eee; /* Light border for rows */
+          vertical-align: top; /* Align content to top */
+        }
+        #report-root table tr.border-b:last-child td {
+          border-bottom: none; /* Remove bottom border for last row if it has border-b class */
+        }
+        #report-root h1, #report-root h2, #report-root h3, #report-root h4, #report-root h5, #report-root h6 {
+          page-break-after: avoid;
+          page-break-inside: avoid;
+        }
+        #report-root p {
+          page-break-inside: avoid;
+        }
+        #report-root hr {
+          page-break-after: avoid;
+          page-break-before: avoid;
+        }
+      `;
+      iframeDoc.head.appendChild(style);
+
 
       const reportRoot = iframeDoc.getElementById('report-root');
       if (!reportRoot) {
@@ -172,7 +243,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
 
       const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
+        margin: [0, 0, 0, 0] as [number, number, number, number], // Set margin to 0, CSS handles padding/border
         filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
@@ -216,7 +287,8 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           style={{
             ...previewStyles, // Apply all styles from getPrintStyles
             fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size
-            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Add shadow specifically for UI preview
+            border: '1px solid #ccc', // Lighter border for UI preview
+            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Shadow for UI preview
           }}
           >
             {/* Report Header with Company Details */}

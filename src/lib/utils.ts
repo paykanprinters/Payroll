@@ -28,7 +28,7 @@ export const getEmployeeName = (employeeId: string, employees: MockEmployee[]) =
 // Helper to get explicit print styles for different paper sizes
 export const getPrintStyles = (layoutSize: "Letter" | "A4" | "A5" | undefined): React.CSSProperties => {
   let styles: React.CSSProperties = {
-    border: '2px solid black', // More prominent border for print/PDF
+    // Removed default border here, it's now handled by injected CSS
     boxShadow: 'none', // Ensure no shadow in print/PDF
   };
   // Define internal padding and base font size based on paper size
