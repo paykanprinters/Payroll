@@ -89,17 +89,36 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     }
   }, [imagesLoaded, onReadyForPdf]);
 
+  // Helper to get Tailwind classes for width/min-height for UI preview
+  const getPreviewPageClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
+    switch (layoutSize) {
+      case "Letter":
+        return "w-letter min-h-letter";
+      case "A5":
+        return "w-a5 min-h-a5";
+      case "A4":
+      default:
+        return "w-a4 min-h-a4";
+    }
+  };
+
   return (
     <div
       className={cn(
         "p-4 bg-white text-gray-900 text-[13px]",
-        "print:shadow-none print:bg-white print:text-black print:mx-0 print:my-0",
+        isPdfGeneration ? "" : "mx-auto rounded-lg shadow-lg", // Apply rounded-lg and shadow-lg for UI preview
+        !isPdfGeneration && getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize) // Apply width/min-height classes for UI preview
       )}
-      style={{
+      style={isPdfGeneration ? {
         ...printStyles, // Apply all print styles including padding and base font size
         fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size if needed
-        border: isPdfGeneration ? '1px solid black' : 'none', // Apply border ONLY for PDF generation
+        border: '1px solid black', // Apply border ONLY for PDF generation
         boxShadow: 'none', // Ensure no shadow in print/PDF
+      } : {
+        padding: printStyles.padding,
+        fontSize: printStyles.fontSize,
+        border: '1px solid #ccc', // Lighter border for UI preview
+        boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Shadow for UI preview
       }}
     >
       {/* Report Header with Company Details */}
