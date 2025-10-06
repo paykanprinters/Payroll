@@ -92,14 +92,20 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   return (
     <div
       className={cn(
-        "p-4 bg-white text-gray-900 text-[13px]",
-        "print:shadow-none print:bg-white print:text-black print:mx-0 print:my-0",
+        "bg-white text-gray-900", // Removed text-[13px]
+        isPdfGeneration ? "" : "mx-auto rounded-lg shadow-lg p-4", // p-4 only for UI preview
+        !isPdfGeneration && getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize) // width/min-height for UI preview
       )}
-      style={{
-        ...printStyles, // Apply all print styles including padding and base font size
-        fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size if needed
-        border: isPdfGeneration ? '1px solid black' : 'none', // Apply border ONLY for PDF generation (rectangular)
-        boxShadow: 'none', // Ensure no shadow in print/PDF
+      style={isPdfGeneration ? {
+        ...printStyles, // padding and fontSize from utils
+        border: '1px solid black',
+        boxShadow: 'none',
+      } : {
+        // UI preview styles
+        padding: printStyles.padding, // Use printStyles padding for UI too for consistency
+        fontSize: printStyles.fontSize,
+        border: '1px solid #ccc',
+        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
       }}
     >
       {/* Report Header with Company Details */}

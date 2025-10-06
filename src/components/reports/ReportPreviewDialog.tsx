@@ -281,12 +281,12 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         <ScrollArea className="flex-grow pr-4">
           {/* This is the UI preview, not the content for PDF generation */}
           <div className={cn(
-            "p-4 bg-white text-gray-900 text-[13px] mx-auto rounded-lg shadow-lg", // Added rounded-lg and shadow-lg for UI preview
+            "bg-white text-gray-900 mx-auto rounded-lg shadow-lg p-4", // Added p-4 for UI preview
             getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize), // Apply width/min-height classes
           )}
           style={{
-            ...previewStyles, // Apply all styles from getPrintStyles
-            fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size
+            ...previewStyles, // Apply all styles from getPrintStyles (padding, fontSize)
+            fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size for content
             border: '1px solid #ccc', // Lighter border for UI preview
           }}
           >
