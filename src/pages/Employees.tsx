@@ -35,14 +35,16 @@ import { MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces"; /
 import { generateEmployeeProfileReportContent } from "@/lib/report-generators"; // Import new report generator
 import html2pdf from 'html2pdf.js'; // Import html2pdf
 import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
+import { usePdfGenerator } from "@/hooks/use-pdf-generator"; // Import usePdfGenerator
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
   includeCompanyLogo: true,
   includeCompanyDetails: true,
   reportContentFontSize: 14,
+  irp5ContentFontSize: 12,
 };
 
 const Employees: React.FC = () => {
@@ -58,6 +60,7 @@ const Employees: React.FC = () => {
 
 
   const dataVisualsFontSize = useDataVisualsFontSize();
+  const { generatePdf } = usePdfGenerator(); // Use the hook
 
   const loadEmployees = () => {
     const storedEmployees = localStorage.getItem("mockEmployees");
@@ -207,26 +210,30 @@ const Employees: React.FC = () => {
     window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
   };
 
-  const handleDownloadProfile = (employee: MockEmployee) => {
+  const handleDownloadProfile = async (employee: MockEmployee) => {
     if (!companyDetails || !reportDesignSettings) {
       showError("Company details or report design settings not loaded. Cannot generate profile.");
       return;
     }
 
-    showSuccess(`Generating profile for ${employee.firstName} ${employee.lastName}...`);
-    const profileHtml = generateEmployeeProfileReportContent(employee, companyDetails, reportDesignSettings);
+    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <ReportContentWrapper
+        reportTitle={`Employee Profile: ${employee.firstName} ${employee.lastName}`}
+        reportContent={generateEmployeeProfileReportContent(employee, companyDetails, reportDesignSettings)}
+        companyDetails={companyDetails}
+        reportDesignSettings={reportDesignSettings}
+        onReadyForPdf={onReadyForPdf}
+        isPdfGeneration={true}
+      />
+    );
 
-    let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
-    if (reportDesignSettings.defaultReportPaperSize === 'Letter') pdfFormat = 'letter';
-    else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
-
-    html2pdf().from(profileHtml).set({
-      margin: [10, 10, 10, 10],
+    const options = {
       filename: `employee-profile-${employee.firstName}-${employee.lastName}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
-      jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
-    }).save();
+      format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
+      documentType: 'report' as const, // Specify document type
+    };
+
+    await generatePdf(renderComponent, options);
   };
 
   // Helper for PieChart legend formatter

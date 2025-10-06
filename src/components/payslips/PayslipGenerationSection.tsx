@@ -88,7 +88,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     const options = {
       filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
-      format: payslipDesignSettings.layoutSize,
+      format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
+      documentType: 'payslip' as const, // Specify document type
     };
 
     if (action === 'download') {
@@ -128,7 +129,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     const options = {
       filename: `all-payslips-${format(selectedPayPeriodDate, 'yyyy-MM')}.pdf`,
-      format: payslipDesignSettings.layoutSize,
+      format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
+      documentType: 'payslip' as const, // Specify document type
     };
 
     if (action === 'download') {

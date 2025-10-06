@@ -20,6 +20,7 @@ import { cn, getPrintStyles } from "@/lib/utils";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import ReportContentWrapper from "./ReportContentWrapper"; // Import the new component
+import { usePdfGenerator } from "@/hooks/use-pdf-generator"; // Import usePdfGenerator
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -85,189 +86,30 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     }
   };
 
-  const getMinHeightForFormat = (format: 'Letter' | 'A4' | 'A5' | undefined) => {
-    switch (format) {
-      case 'Letter': return '279.4mm'; // 11 inches
-      case 'A5': return '210mm';
-      case 'A4':
-      default: return '297mm';
-    }
-  };
-
-  const generateReportElementForPdf = (): Promise<HTMLIFrameElement> => {
-    return new Promise((resolve, reject) => {
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'absolute';
-      iframe.style.left = '-9999px'; // Position off-screen
-      iframe.style.top = '-9999px';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      iframe.style.visibility = 'hidden'; // Ensure it's hidden
-      document.body.appendChild(iframe);
-
-      const iframeDoc = iframe.contentWindow?.document;
-      if (!iframeDoc) {
-        reject(new Error("Could not access iframe document."));
-        return;
-      }
-
-      iframeDoc.open();
-      iframeDoc.write('<!DOCTYPE html><html><head><title>Report</title></head><body><div id="report-root"></div></body></html>');
-      iframeDoc.close();
-
-      // Copy all stylesheets and style tags from the main document to the iframe
-      Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).forEach(node => {
-        const clonedNode = node.cloneNode(true);
-        iframeDoc.head.appendChild(clonedNode);
-      });
-
-      // Inject custom CSS for PDF styling
-      const style = iframeDoc.createElement('style');
-      const minHeight = getMinHeightForFormat(reportDesignSettings.defaultReportPaperSize);
-      style.textContent = `
-        @page {
-          margin: 0;
-        }
-        body {
-          margin: 0;
-          padding: 0;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        #report-root {
-          background-color: white;
-        }
-        #report-root > div { /* The ReportContentWrapper */
-          box-sizing: border-box;
-          /* Removed default border here. ReportContentWrapper will apply its own. */
-          /* Removed default padding here. ReportContentWrapper will apply its own. */
-          min-height: ${minHeight}; /* Dynamic min-height */
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-start;
-          align-items: stretch;
-        }
-        #report-root table {
-          width: 100%;
-          border-collapse: collapse;
-          page-break-inside: auto; /* Allow tables to break across pages */
-        }
-        #report-root table thead {
-          display: table-header-group; /* Repeat table headers on new pages */
-        }
-        #report-root table tr {
-          page-break-inside: auto; /* Allow table rows to break across pages */
-          page-break-before: auto;
-          page-break-after: auto;
-        }
-        #report-root table th, #report-root table td {
-          padding: 8px; /* Consistent padding for cells */
-          border-bottom: 1px solid #eee; /* Light border for rows */
-          vertical-align: top; /* Align content to top */
-        }
-        #report-root table tr.border-b:last-child td {
-          border-bottom: none; /* Remove bottom border for last row if it has border-b class */
-        }
-        #report-root h1, #report-root h2, #report-root h3, #report-root h4, #report-root h5, #report-root h6 {
-          page-break-after: avoid;
-          page-break-inside: avoid;
-        }
-        #report-root p {
-          page-break-inside: avoid;
-        }
-        #report-root hr {
-          page-break-after: avoid;
-          page-break-before: avoid;
-        }
-      `;
-      iframeDoc.head.appendChild(style);
-
-
-      const reportRoot = iframeDoc.getElementById('report-root');
-      if (!reportRoot) {
-        reject(new Error("Report root element not found in iframe."));
-        return;
-      }
-
-      const root = ReactDOM.createRoot(reportRoot);
-      root.render(
-        <ReportContentWrapper
-          reportTitle={reportTitle}
-          reportContent={reportContent}
-          companyDetails={companyDetails}
-          reportDesignSettings={reportDesignSettings}
-          onReadyForPdf={() => {
-            console.log("ReportContentWrapper signaled readiness in iframe.");
-            resolve(iframe);
-          }}
-          isPdfGeneration={true} // Indicate that this is for PDF generation
-        />
-      );
-
-      // Store the root for cleanup
-      (iframe as any)._reactRoot = root;
-
-      // Fallback if onReadyForPdf doesn't fire (e.g., no images, or component renders very fast)
-      const timeoutId = setTimeout(() => {
-        console.warn("Report iframe readiness timed out, proceeding with PDF generation.");
-        resolve(iframe);
-      }, 3000); // Increased delay for iframe content to settle
-
-      // Clear timeout if resolved earlier
-      iframe.onload = () => clearTimeout(timeoutId);
-    });
-  };
-
-  const cleanupReportElementForPdf = (iframe: HTMLIFrameElement) => {
-    const root = (iframe as any)._reactRoot;
-    if (root) {
-      root.unmount();
-    }
-    document.body.removeChild(iframe);
-  };
+  const { generatePdf, printPdf } = usePdfGenerator(); // Use the hook
 
   const handlePrintOrDownload = async (action: 'print' | 'download') => {
-    showSuccess(`Generating PDF for ${action}, please wait...`);
+    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <ReportContentWrapper
+        reportTitle={reportTitle}
+        reportContent={reportContent}
+        companyDetails={companyDetails}
+        reportDesignSettings={reportDesignSettings}
+        onReadyForPdf={onReadyForPdf}
+        isPdfGeneration={true}
+      />
+    );
 
-    let iframe: HTMLIFrameElement | null = null;
-    try {
-      iframe = await generateReportElementForPdf();
-      const reportElement = iframe.contentWindow?.document.getElementById('report-root');
+    const options = {
+      filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
+      format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
+      documentType: 'report' as const, // Specify document type
+    };
 
-      if (!reportElement) {
-        throw new Error("Report root element not found in iframe for capture.");
-      }
-
-      let pdfFormat: 'a4' | 'letter' | 'a5' = 'a4';
-      if (reportDesignSettings.defaultReportPaperSize === 'Letter') pdfFormat = 'letter';
-      else if (reportDesignSettings.defaultReportPaperSize === 'A5') pdfFormat = 'a5';
-
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
-        filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
-        jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' as 'portrait' }
-      };
-
-      const pdfPromise = html2pdf().from(reportElement).set(opt);
-
-      if (action === 'download') {
-        await pdfPromise.save();
-        showSuccess("Report PDF downloaded successfully!");
-      } else { // 'print'
-        const pdf = await pdfPromise.toPdf().get('pdf');
-        pdf.output('dataurlnewwindow');
-        showSuccess("Report sent to printer.");
-      }
-    } catch (error: any) {
-      showError(`Error generating PDF for ${action}: ${error.message || 'Unknown error'}`);
-      console.error(`html2pdf ${action} error:`, error);
-    } finally {
-      if (iframe) {
-        cleanupReportElementForPdf(iframe);
-      }
+    if (action === 'download') {
+      await generatePdf(renderComponent, options);
+    } else {
+      await printPdf(renderComponent, options);
     }
   };
 

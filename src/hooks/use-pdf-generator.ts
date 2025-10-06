@@ -11,7 +11,7 @@ interface PdfOptions {
   format?: 'a4' | 'letter' | 'a5';
   orientation?: 'portrait' | 'landscape';
   margin?: number | [number, number, number, number]; // top, left, bottom, right
-  reportDesignSettings?: ReportDesignSettings; // Pass report design settings
+  documentType?: 'payslip' | 'report'; // New field to distinguish document types
 }
 
 interface RenderComponentProps {
@@ -162,20 +162,50 @@ export const usePdfGenerator = () => {
       clearTimeout(timeoutId); // Clear timeout if resolved earlier
 
       const html2pdfOptions = {
-        margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
+        margin: [0, 0, 0, 0], // Set margin to 0, as we'll draw the border
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
         jsPDF: { unit: 'mm', format: options.format || 'a4', orientation: options.orientation || 'portrait' as 'portrait' }
       };
 
-      const pdfPromise = html2pdf().from(pdfRoot).set(html2pdfOptions);
+      const pdf = await html2pdf().from(pdfRoot).set(html2pdfOptions).toPdf().get('pdf');
 
-      if (isBulk) { // For bulk, we just return the promise, the caller will handle save/print
-        return pdfPromise;
+      // --- Programmatically draw border on each page ---
+      const borderWidth = 1; // 1mm border
+      const borderOffset = 10; // 10mm offset from page edge (matches html2pdf margin)
+      const borderColor = '#000000'; // Black
+
+      const pageCount = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+          pdf.setPage(i);
+
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+
+          // Calculate rectangle dimensions for the border
+          const rectX = borderOffset;
+          const rectY = borderOffset;
+          const rectWidth = pageWidth - (2 * borderOffset);
+          const rectHeight = pageHeight - (2 * borderOffset);
+
+          pdf.setDrawColor(borderColor);
+          pdf.setLineWidth(borderWidth);
+
+          if (options.documentType === 'payslip') {
+              const cornerRadius = 5; // 5mm radius for payslips
+              pdf.roundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius, cornerRadius, 'S'); // 'S' for stroke
+          } else { // Default to report style (rectangular)
+              pdf.rect(rectX, rectY, rectWidth, rectHeight, 'S');
+          }
+      }
+      // --- End programmatic border drawing ---
+
+      if (isBulk) { // For bulk, we just return the jsPDF instance
+          return pdf;
       } else {
-        await pdfPromise.save();
-        showSuccess(`${options.filename} PDF downloaded successfully!`);
+          pdf.save(options.filename);
+          showSuccess(`${options.filename} PDF downloaded successfully!`);
       }
 
     } catch (error: any) {
@@ -326,7 +356,7 @@ export const usePdfGenerator = () => {
       clearTimeout(timeoutId);
 
       const html2pdfOptions = {
-        margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
+        margin: [0, 0, 0, 0], // Set margin to 0, as we'll draw the border
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
@@ -334,6 +364,37 @@ export const usePdfGenerator = () => {
       };
 
       const pdf = await html2pdf().from(pdfRoot).set(html2pdfOptions).toPdf().get('pdf');
+
+      // --- Programmatically draw border on each page ---
+      const borderWidth = 1; // 1mm border
+      const borderOffset = 10; // 10mm offset from page edge (matches html2pdf margin)
+      const borderColor = '#000000'; // Black
+
+      const pageCount = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+          pdf.setPage(i);
+
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+
+          // Calculate rectangle dimensions for the border
+          const rectX = borderOffset;
+          const rectY = borderOffset;
+          const rectWidth = pageWidth - (2 * borderOffset);
+          const rectHeight = pageHeight - (2 * borderOffset);
+
+          pdf.setDrawColor(borderColor);
+          pdf.setLineWidth(borderWidth);
+
+          if (options.documentType === 'payslip') {
+              const cornerRadius = 5; // 5mm radius for payslips
+              pdf.roundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius, cornerRadius, 'S'); // 'S' for stroke
+          } else { // Default to report style (rectangular)
+              pdf.rect(rectX, rectY, rectWidth, rectHeight, 'S');
+          }
+      }
+      // --- End programmatic border drawing ---
+
       pdf.output('dataurlnewwindow');
       showSuccess(`${options.filename} sent to printer.`);
 

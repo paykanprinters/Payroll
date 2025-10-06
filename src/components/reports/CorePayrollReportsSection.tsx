@@ -26,7 +26,7 @@ interface ReportItemProps {
   icon: React.ElementType;
   title: string;
   description: string;
-  onGenerate: (reportTitle: string, reportContent: string) => void;
+  onGenerate: (reportTitle: string, reportContent: string, documentType: 'payslip' | 'report') => void; // Added documentType
   reportContentGenerator: (employees: MockEmployee[], payslips: MockPayslip[], leaveRecords: LeaveEntry[]) => string;
   employees: MockEmployee[];
   payslips: MockPayslip[];
@@ -45,7 +45,7 @@ const ReportItem: React.FC<ReportItemProps> = ({
 }) => {
   const handleGenerateClick = () => {
     const content = reportContentGenerator(employees, payslips, leaveRecords);
-    onGenerate(title, content);
+    onGenerate(title, content, 'report'); // Pass 'report' as documentType
   };
 
   return (
@@ -102,10 +102,12 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
   const [currentReportTitle, setCurrentReportTitle] = React.useState("");
   const [currentReportContent, setCurrentReportContent] = React.useState("");
+  const [currentDocumentType, setCurrentDocumentType] = React.useState<'payslip' | 'report'>('report'); // New state for document type
 
-  const handleOpenReportPreview = (title: string, content: string) => {
+  const handleOpenReportPreview = (title: string, content: string, documentType: 'payslip' | 'report') => {
     setCurrentReportTitle(title);
     setCurrentReportContent(content);
+    setCurrentDocumentType(documentType); // Set document type
     setIsReportPreviewOpen(true);
   };
 
@@ -250,7 +252,8 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
         vatRegistrationNumber={vatRegistrationNumber}
         companyLogoUrl={companyLogoUrl}
         companyLogoSize={companyLogoSize}
-        reportDesignSettings={reportDesignSettings} // Pass the report design settings
+        reportDesignSettings={reportDesignSettings}
+        documentType={currentDocumentType} // Pass document type to dialog
       />
     </>
   );

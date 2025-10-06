@@ -136,12 +136,14 @@ const Irp5ExportPage: React.FC = () => {
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
         onReadyForPdf={onReadyForPdf}
+        isPdfGeneration={true}
       />
     );
 
     const options = {
       filename: `irp5-export-${selectedEmployee.id}-${year}.pdf`,
-      format: reportDesignSettings.defaultReportPaperSize,
+      format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
+      documentType: 'report' as const, // Specify document type
     };
 
     if (action === 'download') {
