@@ -208,11 +208,11 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     <div
       id={`payslip-${payslip.id}`}
       className={cn(
-        "p-6 shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
-        isPdfGeneration ? "" : "mx-auto rounded-lg", // Keep mx-auto and rounded-lg for UI preview
+        "p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
+        isPdfGeneration ? "rounded-lg" : "mx-auto rounded-lg shadow-lg", // Apply rounded-lg for PDF, and full styling for UI preview
         !isPdfGeneration && getPreviewPageClasses(payslipDesignSettings.layoutSize) // Apply width/min-height classes for UI preview
       )}
-      style={isPdfGeneration ? { ...printStyles, border: 'none', boxShadow: 'none' } : { // No border for PDF generation
+      style={isPdfGeneration ? { ...printStyles, border: '1px solid black', boxShadow: 'none' } : { // Apply black border for PDF, no shadow
         padding: printStyles.padding,
         fontSize: printStyles.fontSize,
         border: '1px solid #ccc', // Lighter border for UI preview

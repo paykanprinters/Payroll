@@ -27,16 +27,14 @@ export const getEmployeeName = (employeeId: string, employees: MockEmployee[]) =
 
 // Helper to get explicit print styles for different paper sizes
 export const getPrintStyles = (layoutSize: "Letter" | "A4" | "A5" | undefined): React.CSSProperties => {
-  let styles: React.CSSProperties = {
-    // Removed default border here, it's now handled by injected CSS
-    boxShadow: 'none', // Ensure no shadow in print/PDF
-  };
+  let styles: React.CSSProperties = {}; // Removed default border and boxShadow
+
   // Define internal padding and base font size based on paper size
   // The overall page dimensions and margins will be controlled by html2pdf.js's format and margin options.
   switch (layoutSize) {
     case "Letter":
       styles = {
-        ...styles, // Keep the border and boxShadow
+        ...styles,
         padding: '24px', // Approx 0.25 inch margin
         fontSize: '13px', // Base font size for Letter
       };

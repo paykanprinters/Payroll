@@ -98,7 +98,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
       style={{
         ...printStyles, // Apply all print styles including padding and base font size
         fontSize: `${reportDesignSettings.reportContentFontSize}px`, // Override font size if needed
-        border: isPdfGeneration ? '1px solid black' : 'none', // Apply border ONLY for PDF generation
+        border: isPdfGeneration ? '1px solid black' : 'none', // Apply border ONLY for PDF generation (rectangular)
         boxShadow: 'none', // Ensure no shadow in print/PDF
       }}
     >

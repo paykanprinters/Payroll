@@ -85,7 +85,7 @@ export const usePdfGenerator = () => {
       #pdf-root > div { /* The root element rendered by the component */
         box-sizing: border-box;
         /* Removed default border here. Components should apply their own if needed. */
-        padding: 10mm; /* Internal padding for content */
+        /* Removed default padding here. Components should apply their own if needed. */
         min-height: ${minHeight}; /* Dynamic min-height for page content */
         display: flex;
         flex-direction: column;
