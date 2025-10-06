@@ -83,7 +83,7 @@ export const usePdfGenerator = () => {
       }
       #pdf-root > div { /* The ReportContentWrapper or IndividualPayslipCard */
         box-sizing: border-box;
-        border: 1px solid black;
+        border: 1px solid black; /* RESTORED BORDER */
         padding: 10mm; /* Internal padding for content */
         min-height: ${minHeight}; /* Dynamic min-height */
         display: flex;
@@ -246,7 +246,7 @@ export const usePdfGenerator = () => {
       }
       #pdf-root > div { /* The ReportContentWrapper or IndividualPayslipCard */
         box-sizing: border-box;
-        border: 1px solid black;
+        border: 1px solid black; /* RESTORED BORDER */
         padding: 10mm; /* Internal padding for content */
         min-height: ${minHeight}; /* Dynamic min-height */
         display: flex;

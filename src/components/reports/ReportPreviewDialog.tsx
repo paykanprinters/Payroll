@@ -140,7 +140,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         }
         #report-root > div { /* The ReportContentWrapper */
           box-sizing: border-box;
-          border: 1px solid black;
+          border: 1px solid black; /* RESTORED BORDER */
           padding: 10mm; /* Internal padding for content */
           min-height: ${minHeight}; /* Dynamic min-height */
           display: flex;
