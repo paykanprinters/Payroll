@@ -105,18 +105,18 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   return (
     <div
       className={cn(
-        "bg-white text-gray-900", // Removed text-[13px]
-        isPdfGeneration ? "" : "mx-auto rounded-lg shadow-lg", // Apply full styling for UI preview
+        "bg-white text-gray-900",
+        isPdfGeneration ? "rounded-lg" : "mx-auto rounded-lg shadow-lg", // Apply rounded-lg for PDF, and full styling for UI preview
         !isPdfGeneration && getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize) // width/min-height for UI preview
       )}
       style={isPdfGeneration ? {
         ...printStyles, // fontSize from utils
         padding: '24px', // Explicit internal padding for PDF
-        border: '1px solid black', // Apply border ONLY for PDF generation (rectangular)
-        boxShadow: 'none', // Ensure no shadow in print/PDF
+        border: '1px solid black',
+        boxShadow: 'none',
       } : {
         // UI preview styles
-        padding: '24px', // Consistent padding for UI preview
+        padding: printStyles.padding, // Use printStyles padding for UI too for consistency
         fontSize: printStyles.fontSize,
         border: '1px solid #ccc',
         boxShadow: '0 0 10px rgba(0,0,0,0.1)',
