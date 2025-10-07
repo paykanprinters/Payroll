@@ -263,13 +263,15 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     if (!finalTimeIn || !timeRegex.test(finalTimeIn)) errors.push("Valid Time In (HH:mm) is required.");
     if (!finalTimeOut || !timeRegex.test(finalTimeOut)) errors.push("Valid Time Out (HH:mm) is required.");
 
-    // New validation: Ensure Time Out is not before Time In
+    // New validation: Ensure Time Out is not before Time In, and not the same as Time In
     if (finalTimeIn && finalTimeOut && timeRegex.test(finalTimeIn) && timeRegex.test(finalTimeOut)) {
       const timeInDateObj = parse(finalTimeIn, 'HH:mm', new Date());
       const timeOutDateObj = parse(finalTimeOut, 'HH:mm', new Date());
 
       if (isAfter(timeInDateObj, timeOutDateObj)) {
         errors.push("Time Out cannot be before Time In.");
+      } else if (timeInDateObj.getTime() === timeOutDateObj.getTime()) { // Explicit check for equality
+        errors.push("Time In and Time Out cannot be the same.");
       }
     }
 
