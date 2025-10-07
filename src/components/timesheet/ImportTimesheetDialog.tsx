@@ -30,7 +30,8 @@ interface ImportTimesheetDialogProps {
 }
 
 interface ParsedTimesheetRow {
-  employeeId: string;
+  employeeId: string; // This will be the internal employee.id (e.g., EMP001)
+  csvPersonalId: string; // The personal ID from the CSV (e.g., BIO1001)
   date: string;
   timeIn: string;
   teaStart?: string;
@@ -42,9 +43,9 @@ interface ParsedTimesheetRow {
   _errors: string[];
 }
 
-// Define required fields and their display names
+// Define required fields and their display names, now including 'personalId' for matching
 const requiredFields = [
-  { key: "employeeId", label: "Employee ID" },
+  { key: "personalId", label: "Personal ID (from Report)" }, // Changed to personalId
   { key: "date", label: "Date" },
   { key: "timeIn", label: "Time In" },
   { key: "timeOut", label: "Time Out" },
@@ -109,11 +110,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       const commonNames = [
         field.label,
         field.key,
-        field.label.replace(/\s/g, ''), // e.g., EmployeeID
+        field.label.replace(/\s/g, ''), // e.g., PersonalID
         field.label.toLowerCase(),
         field.key.toLowerCase(),
+        // Add more common variations for personal ID
+        "employeeid", "employee_id", "clockid", "clock_id", "id", "staffid", "staff_id"
       ];
-      const foundHeader = headers.find(header => commonNames.includes(header.trim()));
+      const foundHeader = headers.find(header => commonNames.includes(header.trim().toLowerCase()));
       if (foundHeader) {
         newMappings[field.key] = foundHeader.trim();
       }
@@ -146,7 +149,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         setCsvHeaders(headers);
         setParsedRawData(results.data);
         autoMapColumns(headers); // Attempt to auto-map
-        parseAndValidate(results.data, columnMappings); // Initial validation with auto-mapped or default empty mappings
+        // Use the updated columnMappings for initial validation
+        parseAndValidate(results.data, columnMappings); 
         setIsParsing(false);
         if (results.errors.length > 0) {
           showError(`CSV parsing completed with ${results.errors.length} errors. Check console for details.`);
@@ -171,7 +175,21 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       return mappedColumn ? String(row[mappedColumn] || "").trim() : "";
     };
 
-    const employeeId = getMappedValue("employeeId");
+    const csvPersonalId = getMappedValue("personalId"); // Get the personal ID from CSV
+    let resolvedEmployeeId = ""; // Initialize resolved internal employee ID
+
+    // Validate Personal ID and resolve internal employeeId
+    if (!csvPersonalId) {
+      errors.push("Personal ID is required.");
+    } else {
+      const matchingEmployee = employees.find(emp => emp.personalId === csvPersonalId);
+      if (matchingEmployee) {
+        resolvedEmployeeId = matchingEmployee.id; // Found a match, use internal ID
+      } else {
+        errors.push(`Personal ID '${csvPersonalId}' not found in employee records.`);
+      }
+    }
+
     const date = getMappedValue("date");
     const timeIn = getMappedValue("timeIn");
     const timeOut = getMappedValue("timeOut");
@@ -180,23 +198,19 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     const lunchStart = getMappedValue("lunchStart");
     const lunchEnd = getMappedValue("lunchEnd");
 
-    // Required field validations
-    if (!employeeId) errors.push("Employee ID is required.");
-    else if (!employees.some(emp => emp.id === employeeId)) errors.push("Employee ID not found.");
-    
+    // Date validation
     const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
     if (!date || !isValid(parsedDate)) errors.push("Valid Date (YYYY-MM-DD) is required.");
 
+    // Time validations
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeIn || !timeRegex.test(timeIn)) errors.push("Valid Time In (HH:mm) is required.");
     if (!timeOut || !timeRegex.test(timeOut)) errors.push("Valid Time Out (HH:mm) is required.");
 
-    // Optional time validations
     const validateOptionalTimePair = (start: string, end: string, startName: string, endName: string) => {
       if ((start && !timeRegex.test(start)) || (end && !timeRegex.test(end))) {
         errors.push(`Valid ${startName} and ${endName} (HH:mm) are required if provided.`);
       } else if ((start && !end) || (!start && end)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Both Tea Start and End times are required if one is provided.", path: ["teaStart"] });
         errors.push(`Both ${startName} and ${endName} are required if one is provided.`);
       }
     };
@@ -204,7 +218,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     validateOptionalTimePair(lunchStart, lunchEnd, "Lunch Start", "Lunch End");
 
     return {
-      employeeId,
+      employeeId: resolvedEmployeeId, // Use the resolved internal ID
+      csvPersonalId: csvPersonalId, // Keep CSV personal ID for display
       date,
       timeIn,
       teaStart: teaStart || undefined,
@@ -219,7 +234,14 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
   const handleColumnMappingChange = (key: string, value: string) => {
     // If "none" is selected, set the mapping to undefined
-    setColumnMappings(prev => ({ ...prev, [key]: value === "none" ? undefined : value }));
+    setColumnMappings(prev => {
+      const newMappings = { ...prev, [key]: value === "none" ? undefined : value };
+      // Re-validate data immediately after mapping changes
+      if (parsedRawData.length > 0) {
+        parseAndValidate(parsedRawData, newMappings);
+      }
+      return newMappings;
+    });
   };
 
   const handleRevalidate = () => {
@@ -238,7 +260,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     }
 
     const timesheetsToImport = validEntries.map(row => ({
-      employeeId: row.employeeId,
+      employeeId: row.employeeId, // Use the resolved internal employeeId
       date: row.date,
       timeIn: row.timeIn,
       teaStart: row.teaStart,
@@ -322,7 +344,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                 <TableHeader>
                   <TableRow>
                     <TableHead>Status</TableHead>
-                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Personal ID (from CSV)</TableHead>
+                    <TableHead>Employee Name (Resolved)</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time In</TableHead>
                     <TableHead>Tea Break</TableHead>
@@ -342,7 +365,11 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>{row.employeeId}</TableCell>
+                      <TableCell>{row.csvPersonalId}</TableCell>
+                      <TableCell>
+                        {employees.find(emp => emp.id === row.employeeId)?.firstName}{" "}
+                        {employees.find(emp => emp.id === row.employeeId)?.lastName || "N/A"}
+                      </TableCell>
                       <TableCell>{row.date}</TableCell>
                       <TableCell>{row.timeIn}</TableCell>
                       <TableCell>{row.teaStart && row.teaEnd ? `${row.teaStart}-${row.teaEnd}` : "N/A"}</TableCell>
