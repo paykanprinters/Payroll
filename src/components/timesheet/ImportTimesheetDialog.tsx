@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import { UploadCloud, CheckCircle, XCircle, RefreshCcw } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import Papa from "papaparse";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
-import { format, parse, isValid, isAfter } from "date-fns";
+import { format, parse, isValid, isAfter, isBefore, min, max } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
@@ -43,15 +43,15 @@ interface ParsedTimesheetRow {
   _errors: string[];
 }
 
-// Define required fields and their display names, now including 'personalId' for matching
+// Define fields for mapping from CSV. 'timeIn' and 'timeOut' are now derived.
 const requiredFields = [
   { key: "personalId", label: "Personal ID (from Report)" },
-  { key: "date", label: "Date" },
-  { key: "timeIn", label: "Time In" },
-  { key: "timeOut", label: "Time Out" },
+  { key: "combinedDateTime", label: "Date And Time (from Report)" }, // New field for mapping
 ];
 
 const optionalFields = [
+  // These will remain optional, assuming they might be in separate columns if needed,
+  // or will be left blank if only combinedDateTime is available.
   { key: "teaStart", label: "Tea Start" },
   { key: "teaEnd", label: "Tea End" },
   { key: "lunchStart", label: "Lunch Start" },
@@ -60,17 +60,15 @@ const optionalFields = [
 
 type ColumnMappings = { [key: string]: string | undefined };
 
-// Helper to extract date and time parts from a combined string (e.g., "YYYY-MM-DD HH:mm")
+// Helper to extract date and time parts from a combined string (e.g., "YYYY-MM-DD HH:mm:ss")
 const extractDateAndTimeParts = (value: string) => {
-  const dateRegex = /(\d{4}-\d{2}-\d{2})/; // YYYY-MM-DD
-  const timeRegex = /(\d{2}:\d{2})/; // HH:mm
-
-  const dateMatch = value.match(dateRegex);
-  const timeMatch = value.match(timeRegex);
+  // Regex to capture YYYY-MM-DD and HH:mm (ignoring seconds for time part)
+  const dateTimeRegex = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/;
+  const match = value.match(dateTimeRegex);
 
   return {
-    datePart: dateMatch ? dateMatch[1] : undefined,
-    timePart: timeMatch ? timeMatch[1] : undefined,
+    datePart: match ? match[1] : undefined,
+    timePart: match ? match[2] : undefined,
   };
 };
 
@@ -85,6 +83,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     return initialMappings;
   });
   const [parsedRawData, setParsedRawData] = useState<any[]>([]);
+  const [aggregatedData, setAggregatedData] = useState<ParsedTimesheetRow[]>([]); // New state for aggregated data
   const [validatedData, setValidatedData] = useState<ParsedTimesheetRow[]>([]);
   const [isParsing, setIsParsing] = useState(false);
 
@@ -95,6 +94,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       setCsvHeaders([]);
       setColumnMappings({});
       setParsedRawData([]);
+      setAggregatedData([]);
       setValidatedData([]);
     } else {
       const initialMappings: ColumnMappings = {};
@@ -112,6 +112,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       setCsvHeaders([]);
       setColumnMappings({});
       setParsedRawData([]);
+      setAggregatedData([]);
       setValidatedData([]);
     } else {
       setFile(null);
@@ -127,10 +128,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         field.label.replace(/\s/g, ''), // e.g., PersonalID
         field.label.toLowerCase(),
         field.key.toLowerCase(),
-        // Add more common variations for personal ID
+        // Specific common names for 'personalId'
         "employeeid", "employee_id", "clockid", "clock_id", "id", "staffid", "staff_id",
-        // Common names for combined date/time fields
-        "timestamp", "datetime", "clocktime", "time"
+        // Specific common names for 'combinedDateTime'
+        "dateandtime", "timestamp", "datetime", "clocktime", "time", "punchtime"
       ];
       const foundHeader = headers.find(header => commonNames.includes(header.trim().toLowerCase()));
       if (foundHeader) {
@@ -140,15 +141,103 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     setColumnMappings(prev => ({ ...prev, ...newMappings }));
   };
 
-  const parseAndValidate = (data: any[], currentMappings: ColumnMappings) => {
-    const validated = data.map(row => validateRow(row, currentMappings));
+  const aggregateClockTimes = useCallback((data: any[], currentMappings: ColumnMappings): ParsedTimesheetRow[] => {
+    const employeeDailyPunches = new Map<string, Map<string, Date[]>>(); // Map<employeeId, Map<date (yyyy-MM-dd), punchTimes (Date[])>>
+    const aggregationErrors: { personalId: string; date: string; error: string }[] = [];
+
+    data.forEach(row => {
+      const csvPersonalId = currentMappings.personalId ? String(row[currentMappings.personalId] || "").trim() : "";
+      const rawCombinedDateTime = currentMappings.combinedDateTime ? String(row[currentMappings.combinedDateTime] || "").trim() : "";
+
+      if (!csvPersonalId || !rawCombinedDateTime) {
+        // Skip rows with missing essential data for aggregation, or log an error
+        return;
+      }
+
+      const matchingEmployee = employees.find(emp => emp.personalId === csvPersonalId);
+      if (!matchingEmployee) {
+        // Log error for unknown personal ID, but continue processing other rows
+        aggregationErrors.push({ personalId: csvPersonalId, date: extractDateAndTimeParts(rawCombinedDateTime).datePart || "N/A", error: `Personal ID '${csvPersonalId}' not found.` });
+        return;
+      }
+
+      const { datePart, timePart } = extractDateAndTimeParts(rawCombinedDateTime);
+
+      if (!datePart || !timePart) {
+        aggregationErrors.push({ personalId: csvPersonalId, date: datePart || "N/A", error: `Invalid date/time format for '${rawCombinedDateTime}'.` });
+        return;
+      }
+
+      const punchDateTime = parse(`${datePart} ${timePart}`, 'yyyy-MM-dd HH:mm', new Date());
+      if (!isValid(punchDateTime)) {
+        aggregationErrors.push({ personalId: csvPersonalId, date: datePart, error: `Could not parse date/time '${rawCombinedDateTime}'.` });
+        return;
+      }
+
+      if (!employeeDailyPunches.has(matchingEmployee.id)) {
+        employeeDailyPunches.set(matchingEmployee.id, new Map());
+      }
+      const dailyPunches = employeeDailyPunches.get(matchingEmployee.id)!;
+
+      if (!dailyPunches.has(datePart)) {
+        dailyPunches.set(datePart, []);
+      }
+      dailyPunches.get(datePart)!.push(punchDateTime);
+    });
+
+    const aggregatedRows: ParsedTimesheetRow[] = [];
+    employeeDailyPunches.forEach((dailyPunchesMap, employeeId) => {
+      dailyPunchesMap.forEach((punches, date) => {
+        if (punches.length > 0) {
+          const earliestPunch = min(punches);
+          const latestPunch = max(punches);
+
+          const timeIn = format(earliestPunch, 'HH:mm');
+          const timeOut = format(latestPunch, 'HH:mm');
+
+          // For optional fields, we assume they are either mapped from separate columns
+          // or will be left blank. This aggregation primarily focuses on in/out.
+          const teaStart = currentMappings.teaStart ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.teaStart] || "").trim() : undefined;
+          const teaEnd = currentMappings.teaEnd ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.teaEnd] || "").trim() : undefined;
+          const lunchStart = currentMappings.lunchStart ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.lunchStart] || "").trim() : undefined;
+          const lunchEnd = currentMappings.lunchEnd ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.lunchEnd] || "").trim() : undefined;
+
+          aggregatedRows.push({
+            employeeId: employeeId,
+            csvPersonalId: employees.find(e => e.id === employeeId)?.personalId || "Unknown",
+            date: date,
+            timeIn: timeIn,
+            teaStart: teaStart || undefined,
+            teaEnd: teaEnd || undefined,
+            lunchStart: lunchStart || undefined,
+            lunchEnd: lunchEnd || undefined,
+            timeOut: timeOut,
+            _isValid: true, // Will be re-validated by validateRow
+            _errors: [],
+          });
+        }
+      });
+    });
+
+    if (aggregationErrors.length > 0) {
+      console.warn("Timesheet aggregation warnings/errors:", aggregationErrors);
+      showError(`Some entries could not be aggregated due to missing data or invalid format. See console for details.`);
+    }
+
+    return aggregatedRows;
+  }, [employees]);
+
+  const parseAndValidateData = useCallback((data: any[], currentMappings: ColumnMappings) => {
+    const aggregated = aggregateClockTimes(data, currentMappings);
+    setAggregatedData(aggregated); // Store aggregated data
+    const validated = aggregated.map(row => validateRow(row, currentMappings));
     setValidatedData(validated);
     if (validated.some(row => !row._isValid)) {
-      showError("Some rows contain errors. Please review the table below.");
+      showError("Some rows contain errors after aggregation. Please review the table below.");
     } else if (validated.length > 0) {
       showSuccess("All entries appear valid. Ready to import!");
     }
-  };
+  }, [aggregateClockTimes]);
 
   const handleParseFile = () => {
     if (!file) {
@@ -165,8 +254,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         setCsvHeaders(headers);
         setParsedRawData(results.data);
         autoMapColumns(headers); // Attempt to auto-map
-        // Use the updated columnMappings for initial validation
-        parseAndValidate(results.data, columnMappings); 
+        // Initial validation after parsing and auto-mapping
+        parseAndValidateData(results.data, columnMappings);
         setIsParsing(false);
         if (results.errors.length > 0) {
           showError(`CSV parsing completed with ${results.errors.length} errors. Check console for details.`);
@@ -183,92 +272,28 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     });
   };
 
-  const validateRow = (row: any, currentMappings: ColumnMappings): ParsedTimesheetRow => {
+  const validateRow = (row: ParsedTimesheetRow, currentMappings: ColumnMappings): ParsedTimesheetRow => {
     const errors: string[] = [];
 
-    const getRawMappedValue = (key: string) => {
-      const mappedColumn = currentMappings[key];
-      return mappedColumn ? String(row[mappedColumn] || "").trim() : "";
-    };
-
-    const csvPersonalId = getRawMappedValue("personalId");
-    let resolvedEmployeeId = "";
-
-    // Validate Personal ID and resolve internal employeeId
-    if (!csvPersonalId) {
-      errors.push("Personal ID is required.");
-    } else {
-      const matchingEmployee = employees.find(emp => emp.personalId === csvPersonalId);
-      if (matchingEmployee) {
-        resolvedEmployeeId = matchingEmployee.id;
-      } else {
-        errors.push(`Personal ID '${csvPersonalId}' not found in employee records.`);
-      }
-    }
-
-    // Raw values from CSV, potentially combined date/time
-    const rawDate = getRawMappedValue("date");
-    const rawTimeIn = getRawMappedValue("timeIn");
-    const rawTimeOut = getRawMappedValue("timeOut");
-    const rawTeaStart = getRawMappedValue("teaStart");
-    const rawTeaEnd = getRawMappedValue("teaEnd");
-    const rawLunchStart = getRawMappedValue("lunchStart");
-    const rawLunchEnd = getRawMappedValue("lunchEnd");
-
-    // Final parsed values for the timesheet entry
-    let finalDate: string | undefined;
-    let finalTimeIn: string | undefined;
-    let finalTimeOut: string | undefined;
-    let finalTeaStart: string | undefined;
-    let finalTeaEnd: string | undefined;
-    let finalLunchStart: string | undefined;
-    let finalLunchEnd: string | undefined;
-
-    // Prioritize date extraction: from 'date' column, then 'timeIn', then 'timeOut'
-    if (rawDate) {
-      finalDate = extractDateAndTimeParts(rawDate).datePart || rawDate;
-    }
-    if (!finalDate && rawTimeIn) {
-      finalDate = extractDateAndTimeParts(rawTimeIn).datePart;
-    }
-    if (!finalDate && rawTimeOut) {
-      finalDate = extractDateAndTimeParts(rawTimeOut).datePart;
-    }
-
-    // Extract time parts
-    if (rawTimeIn) {
-      finalTimeIn = extractDateAndTimeParts(rawTimeIn).timePart || rawTimeIn;
-    }
-    if (rawTimeOut) {
-      finalTimeOut = extractDateAndTimeParts(rawTimeOut).timePart || rawTimeOut;
-    }
-    if (rawTeaStart) {
-      finalTeaStart = extractDateAndTimeParts(rawTeaStart).timePart || rawTeaStart;
-    }
-    if (rawTeaEnd) {
-      finalTeaEnd = extractDateAndTimeParts(rawTeaEnd).timePart || rawTeaEnd;
-    }
-    if (rawLunchStart) {
-      finalLunchStart = extractDateAndTimeParts(rawLunchStart).timePart || rawLunchStart;
-    }
-    if (rawLunchEnd) {
-      finalLunchEnd = extractDateAndTimeParts(rawLunchEnd).timePart || rawLunchEnd;
+    // Employee ID should already be resolved from aggregation
+    if (!row.employeeId || row.employeeId === "Unknown") {
+      errors.push(`Personal ID '${row.csvPersonalId}' not found in employee records.`);
     }
 
     // Date validation
-    if (!finalDate || !isValid(parse(finalDate, 'yyyy-MM-dd', new Date()))) errors.push("Valid Date (YYYY-MM-DD) is required.");
+    if (!row.date || !isValid(parse(row.date, 'yyyy-MM-dd', new Date()))) errors.push("Valid Date (YYYY-MM-DD) is required.");
 
     // Time validations
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!finalTimeIn || !timeRegex.test(finalTimeIn)) errors.push("Valid Time In (HH:mm) is required.");
-    if (!finalTimeOut || !timeRegex.test(finalTimeOut)) errors.push("Valid Time Out (HH:mm) is required.");
+    if (!row.timeIn || !timeRegex.test(row.timeIn)) errors.push("Valid Time In (HH:mm) is required.");
+    if (!row.timeOut || !timeRegex.test(row.timeOut)) errors.push("Valid Time Out (HH:mm) is required.");
 
-    // New validation: Ensure Time Out is strictly after Time In
-    if (finalTimeIn && finalTimeOut && timeRegex.test(finalTimeIn) && timeRegex.test(finalTimeOut)) {
-      const timeInDateObj = parse(finalTimeIn, 'HH:mm', new Date());
-      const timeOutDateObj = parse(finalTimeOut, 'HH:mm', new Date());
+    // Ensure Time Out is strictly after Time In
+    if (row.timeIn && row.timeOut && timeRegex.test(row.timeIn) && timeRegex.test(row.timeOut)) {
+      const timeInDateObj = parse(row.timeIn, 'HH:mm', new Date());
+      const timeOutDateObj = parse(row.timeOut, 'HH:mm', new Date());
 
-      if (!isAfter(timeOutDateObj, timeInDateObj)) { // Check if Time Out is NOT strictly after Time In
+      if (!isAfter(timeOutDateObj, timeInDateObj)) {
         errors.push("Time Out must be strictly after Time In.");
       }
     }
@@ -280,19 +305,11 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         errors.push(`Both ${startName} and ${endName} are required if one is provided.`);
       }
     };
-    validateOptionalTimePair(finalTeaStart, finalTeaEnd, "Tea Start", "Tea End");
-    validateOptionalTimePair(finalLunchStart, finalLunchEnd, "Lunch Start", "Lunch End");
+    validateOptionalTimePair(row.teaStart, row.teaEnd, "Tea Start", "Tea End");
+    validateOptionalTimePair(row.lunchStart, row.lunchEnd, "Lunch Start", "Lunch End");
 
     return {
-      employeeId: resolvedEmployeeId,
-      csvPersonalId: csvPersonalId,
-      date: finalDate || "", // Ensure it's a string
-      timeIn: finalTimeIn || "", // Ensure it's a string
-      teaStart: finalTeaStart,
-      teaEnd: finalTeaEnd,
-      lunchStart: finalLunchStart,
-      lunchEnd: finalLunchEnd,
-      timeOut: finalTimeOut || "", // Ensure it's a string
+      ...row,
       _isValid: errors.length === 0,
       _errors: errors,
     };
@@ -302,7 +319,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     setColumnMappings(prev => {
       const newMappings = { ...prev, [key]: value === "none" ? undefined : value };
       if (parsedRawData.length > 0) {
-        parseAndValidate(parsedRawData, newMappings);
+        parseAndValidateData(parsedRawData, newMappings);
       }
       return newMappings;
     });
@@ -310,7 +327,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
   const handleRevalidate = () => {
     if (parsedRawData.length > 0) {
-      parseAndValidate(parsedRawData, columnMappings);
+      parseAndValidateData(parsedRawData, columnMappings);
     } else {
       showError("No data parsed yet. Please upload and parse a file first.");
     }
@@ -348,9 +365,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         <DialogHeader>
           <DialogTitle>Import Clock Times</DialogTitle>
           <DialogDescription>
-            Upload a CSV file containing employee clock-in/out times and map the columns.
+            Upload a CSV file containing employee clock punches. The system will automatically
+            extract the earliest punch as "Time In" and the latest punch as "Time Out" for each employee per day.
             <br />
-            <span className="font-semibold text-blue-600">Note:</span> "Time In" and "Time Out" must be distinct and "Time Out" must be strictly later than "Time In" for each entry.
+            <span className="font-semibold text-blue-600">Note:</span> "Time Out" must be strictly later than "Time In".
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 flex-grow">
