@@ -18,7 +18,7 @@ import { UploadCloud, CheckCircle, XCircle, RefreshCcw } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import Papa from "papaparse";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
-import { format, parse, isValid, isAfter } from "date-fns"; // Import isAfter
+import { format, parse, isValid, isAfter } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
@@ -263,15 +263,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     if (!finalTimeIn || !timeRegex.test(finalTimeIn)) errors.push("Valid Time In (HH:mm) is required.");
     if (!finalTimeOut || !timeRegex.test(finalTimeOut)) errors.push("Valid Time Out (HH:mm) is required.");
 
-    // New validation: Ensure Time Out is not before Time In, and not the same as Time In
+    // New validation: Ensure Time Out is strictly after Time In
     if (finalTimeIn && finalTimeOut && timeRegex.test(finalTimeIn) && timeRegex.test(finalTimeOut)) {
       const timeInDateObj = parse(finalTimeIn, 'HH:mm', new Date());
       const timeOutDateObj = parse(finalTimeOut, 'HH:mm', new Date());
 
-      if (isAfter(timeInDateObj, timeOutDateObj)) {
-        errors.push("Time Out cannot be before Time In.");
-      } else if (timeInDateObj.getTime() === timeOutDateObj.getTime()) { // Explicit check for equality
-        errors.push("Time In and Time Out cannot be the same.");
+      if (!isAfter(timeOutDateObj, timeInDateObj)) { // Check if Time Out is NOT strictly after Time In
+        errors.push("Time Out must be strictly after Time In.");
       }
     }
 
@@ -351,6 +349,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           <DialogTitle>Import Clock Times</DialogTitle>
           <DialogDescription>
             Upload a CSV file containing employee clock-in/out times and map the columns.
+            <br />
+            <span className="font-semibold text-blue-600">Note:</span> "Time In" and "Time Out" must be distinct and "Time Out" must be strictly later than "Time In" for each entry.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 flex-grow">
