@@ -82,8 +82,6 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       setParsedRawData([]);
       setValidatedData([]);
     } else {
-      // Attempt to load employees again if they might have changed
-      // (though `employees` prop should keep it updated)
       const initialMappings: ColumnMappings = {};
       [...requiredFields, ...optionalFields].forEach(field => {
         initialMappings[field.key] = undefined;
@@ -198,6 +196,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       if ((start && !timeRegex.test(start)) || (end && !timeRegex.test(end))) {
         errors.push(`Valid ${startName} and ${endName} (HH:mm) are required if provided.`);
       } else if ((start && !end) || (!start && end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Both Tea Start and End times are required if one is provided.", path: ["teaStart"] });
         errors.push(`Both ${startName} and ${endName} are required if one is provided.`);
       }
     };
@@ -219,7 +218,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   };
 
   const handleColumnMappingChange = (key: string, value: string) => {
-    setColumnMappings(prev => ({ ...prev, [key]: value }));
+    // If "none" is selected, set the mapping to undefined
+    setColumnMappings(prev => ({ ...prev, [key]: value === "none" ? undefined : value }));
   };
 
   const handleRevalidate = () => {
@@ -292,12 +292,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                     <Label htmlFor={`map-${field.key}`}>{field.label}</Label>
                     <Select
                       onValueChange={(value) => handleColumnMappingChange(field.key, value)}
-                      value={columnMappings[field.key] || ""}
+                      value={columnMappings[field.key] || "none"} // Set default to "none"
                     >
                       <SelectTrigger id={`map-${field.key}`}>
                         <SelectValue placeholder={`Select ${field.label} column`} />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">None</SelectItem> {/* Added "None" option */}
                         {csvHeaders.map(header => (
                           <SelectItem key={header} value={header}>
                             {header}
