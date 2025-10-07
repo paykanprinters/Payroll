@@ -361,7 +361,16 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
+      <DialogContent 
+        className="sm:max-w-[900px] max-h-[90vh] flex flex-col"
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement;
+          // Prevent dialog from closing if the click is inside a Select dropdown
+          if (target.closest("[data-radix-popper-content]") || target.closest(".radix-select-content")) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Import Clock Times</DialogTitle>
           <DialogDescription>
@@ -371,7 +380,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             <span className="font-semibold text-blue-600">Note:</span> "Time Out" must be strictly later than "Time In".
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4 flex-grow"> {/* Changed to flex-col and flex-grow */}
+        <div className="flex flex-col gap-4 py-4 flex-grow">
           <div className="flex items-center space-x-2">
             <Label htmlFor="timesheet-file" className="sr-only">
               Upload CSV
@@ -423,7 +432,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           )}
 
           {validatedData.length > 0 && (
-            <ScrollArea className="border rounded-md flex-grow"> {/* Removed fixed height, added flex-grow */}
+            <ScrollArea className="border rounded-md flex-grow">
               <Table>
                 <TableHeader>
                   <TableRow>
