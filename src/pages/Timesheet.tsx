@@ -5,6 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
+import { Button } from "@/components/ui/button"; // Import Button
+import { UploadCloud } from "lucide-react"; // Import UploadCloud icon
+import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog"; // Import new dialog
+import { TimesheetEntry } from "@/lib/mock-data-interfaces"; // Import TimesheetEntry
 
 const Timesheet: React.FC = () => {
   const {
@@ -21,12 +25,32 @@ const Timesheet: React.FC = () => {
     isLeaveDay,
   } = useTimesheetData();
 
+  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
+
+  const handleImportTimesheets = (importedEntries: Omit<TimesheetEntry, 'id' | 'totalWorkHours' | 'overtimeHours' | 'lateArrival' | 'earlyDeparture' | 'absent' | 'status' | 'auditLog'>[]) => {
+    importedEntries.forEach(entry => {
+      // The addOrUpdateTimesheet function expects a Date object for 'date'
+      // and will calculate other metrics.
+      addOrUpdateTimesheet({
+        ...entry,
+        date: new Date(entry.date), // Convert date string back to Date object
+      });
+    });
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Timesheet Management</h1>
       <p className="text-lg text-muted-foreground">
         Accurately track employee working hours, breaks, and calculate payroll-related metrics.
       </p>
+
+      <div className="flex justify-end gap-2">
+        <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
+          <UploadCloud className="mr-2 h-4 w-4" /> Import Clock Times
+        </Button>
+        {/* Existing Add/Edit button can go here if needed, or remain in the form card */}
+      </div>
 
       <Card>
         <CardHeader>
@@ -64,6 +88,13 @@ const Timesheet: React.FC = () => {
           <li>**Mock Data**: All data is currently stored in your browser's local storage. Enable mock data in settings to populate initial entries.</li>
         </ul>
       </div>
+
+      <ImportTimesheetDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImport={handleImportTimesheets}
+        employees={employees}
+      />
     </div>
   );
 };

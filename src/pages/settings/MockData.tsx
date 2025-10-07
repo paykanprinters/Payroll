@@ -12,7 +12,7 @@ import {
   generateMockSavingPlans,
   generateMockLeaveRecords,
   generateMockPayslips,
-  generateMockTimesheets, // New import
+  generateMockTimesheets,
   MockCompanyDetails,
 } from "@/lib/mock-data";
 
@@ -28,8 +28,9 @@ const MockData: React.FC = () => {
     const mockLoans = generateMockLoans();
     const mockSavingPlans = generateMockSavingPlans();
     const mockLeaveRecords = generateMockLeaveRecords();
-    const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords);
     const mockTimesheets = generateMockTimesheets(mockEmployees); // Generate mock timesheets
+    // Pass timesheets to payslip generation
+    const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets);
 
     // Save company details
     Object.entries(mockCompany).forEach(([key, value]) => {
