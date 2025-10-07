@@ -18,7 +18,7 @@ import { UploadCloud, CheckCircle, XCircle, RefreshCcw } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import Papa from "papaparse";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
-import { format, parse, isValid, isAfter, isBefore, min, max } from "date-fns";
+import { format, parse, isValid, isAfter } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
@@ -371,7 +371,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             <span className="font-semibold text-blue-600">Note:</span> "Time Out" must be strictly later than "Time In".
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4 flex-grow">
+        <div className="flex flex-col gap-4 py-4 flex-grow"> {/* Changed to flex-col and flex-grow */}
           <div className="flex items-center space-x-2">
             <Label htmlFor="timesheet-file" className="sr-only">
               Upload CSV
@@ -423,7 +423,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           )}
 
           {validatedData.length > 0 && (
-            <ScrollArea className="h-[300px] border rounded-md">
+            <ScrollArea className="border rounded-md flex-grow"> {/* Removed fixed height, added flex-grow */}
               <Table>
                 <TableHeader>
                   <TableRow>
