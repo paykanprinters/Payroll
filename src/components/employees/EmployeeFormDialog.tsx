@@ -32,8 +32,20 @@ const employeeSchema = z.object({
   lastName: z.string().min(1, "Last Name is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   jobTitle: z.string().min(1, "Job Title is required"),
-  salary: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid salary amount").transform(Number).refine(val => val > 0, "Salary must be positive").optional(),
-  hourlyRate: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount").transform(Number).refine(val => val > 0, "Hourly rate must be positive").optional(), // New field
+  // Updated salary field to use z.preprocess for handling empty strings and then z.number
+  salary: z.preprocess(
+    (val) => (val === "" ? undefined : val), // Convert empty string to undefined
+    z.number()
+      .min(1, "Salary must be a positive number") // Validate as a number, ensure positive
+      .optional() // The field itself is optional
+  ),
+  // Updated hourlyRate field to use z.preprocess for handling empty strings and then z.number
+  hourlyRate: z.preprocess(
+    (val) => (val === "" ? undefined : val), // Convert empty string to undefined
+    z.number()
+      .min(1, "Hourly rate must be a positive number") // Validate as a number, ensure positive
+      .optional() // The field itself is optional
+  ),
   startDate: z.string().min(1, "Start Date is required"),
   
   // Existing optional fields
