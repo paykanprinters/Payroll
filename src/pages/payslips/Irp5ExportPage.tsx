@@ -227,7 +227,7 @@ const Irp5ExportPage: React.FC = () => {
                     {selectedIrpYear ? format(selectedIrpYear, "yyyy") : <span>Pick a year</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-2" side="bottom" align="center"> {/* Added side and align props */}
+                <PopoverContent className="p-2" side="bottom" align="center"> {/* Removed fixed width */}
                   <Calendar
                     mode="single"
                     selected={selectedIrpYear}
