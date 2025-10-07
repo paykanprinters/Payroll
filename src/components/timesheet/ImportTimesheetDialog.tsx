@@ -45,7 +45,7 @@ interface ParsedTimesheetRow {
 
 // Define required fields and their display names, now including 'personalId' for matching
 const requiredFields = [
-  { key: "personalId", label: "Personal ID (from Report)" }, // Changed to personalId
+  { key: "personalId", label: "Personal ID (from Report)" },
   { key: "date", label: "Date" },
   { key: "timeIn", label: "Time In" },
   { key: "timeOut", label: "Time Out" },
@@ -59,6 +59,20 @@ const optionalFields = [
 ];
 
 type ColumnMappings = { [key: string]: string | undefined };
+
+// Helper to extract date and time parts from a combined string (e.g., "YYYY-MM-DD HH:mm")
+const extractDateAndTimeParts = (value: string) => {
+  const dateRegex = /(\d{4}-\d{2}-\d{2})/; // YYYY-MM-DD
+  const timeRegex = /(\d{2}:\d{2})/; // HH:mm
+
+  const dateMatch = value.match(dateRegex);
+  const timeMatch = value.match(timeRegex);
+
+  return {
+    datePart: dateMatch ? dateMatch[1] : undefined,
+    timePart: timeMatch ? timeMatch[1] : undefined,
+  };
+};
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, onClose, onImport, employees }) => {
   const [file, setFile] = useState<File | null>(null);
@@ -114,7 +128,9 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         field.label.toLowerCase(),
         field.key.toLowerCase(),
         // Add more common variations for personal ID
-        "employeeid", "employee_id", "clockid", "clock_id", "id", "staffid", "staff_id"
+        "employeeid", "employee_id", "clockid", "clock_id", "id", "staffid", "staff_id",
+        // Common names for combined date/time fields
+        "timestamp", "datetime", "clocktime", "time"
       ];
       const foundHeader = headers.find(header => commonNames.includes(header.trim().toLowerCase()));
       if (foundHeader) {
@@ -170,13 +186,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   const validateRow = (row: any, currentMappings: ColumnMappings): ParsedTimesheetRow => {
     const errors: string[] = [];
 
-    const getMappedValue = (key: string) => {
+    const getRawMappedValue = (key: string) => {
       const mappedColumn = currentMappings[key];
       return mappedColumn ? String(row[mappedColumn] || "").trim() : "";
     };
 
-    const csvPersonalId = getMappedValue("personalId"); // Get the personal ID from CSV
-    let resolvedEmployeeId = ""; // Initialize resolved internal employee ID
+    const csvPersonalId = getRawMappedValue("personalId");
+    let resolvedEmployeeId = "";
 
     // Validate Personal ID and resolve internal employeeId
     if (!csvPersonalId) {
@@ -184,59 +200,97 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     } else {
       const matchingEmployee = employees.find(emp => emp.personalId === csvPersonalId);
       if (matchingEmployee) {
-        resolvedEmployeeId = matchingEmployee.id; // Found a match, use internal ID
+        resolvedEmployeeId = matchingEmployee.id;
       } else {
         errors.push(`Personal ID '${csvPersonalId}' not found in employee records.`);
       }
     }
 
-    const date = getMappedValue("date");
-    const timeIn = getMappedValue("timeIn");
-    const timeOut = getMappedValue("timeOut");
-    const teaStart = getMappedValue("teaStart");
-    const teaEnd = getMappedValue("teaEnd");
-    const lunchStart = getMappedValue("lunchStart");
-    const lunchEnd = getMappedValue("lunchEnd");
+    // Raw values from CSV, potentially combined date/time
+    const rawDate = getRawMappedValue("date");
+    const rawTimeIn = getRawMappedValue("timeIn");
+    const rawTimeOut = getRawMappedValue("timeOut");
+    const rawTeaStart = getRawMappedValue("teaStart");
+    const rawTeaEnd = getRawMappedValue("teaEnd");
+    const rawLunchStart = getRawMappedValue("lunchStart");
+    const rawLunchEnd = getRawMappedValue("lunchEnd");
+
+    // Final parsed values for the timesheet entry
+    let finalDate: string | undefined;
+    let finalTimeIn: string | undefined;
+    let finalTimeOut: string | undefined;
+    let finalTeaStart: string | undefined;
+    let finalTeaEnd: string | undefined;
+    let finalLunchStart: string | undefined;
+    let finalLunchEnd: string | undefined;
+
+    // Prioritize date extraction: from 'date' column, then 'timeIn', then 'timeOut'
+    if (rawDate) {
+      finalDate = extractDateAndTimeParts(rawDate).datePart || rawDate;
+    }
+    if (!finalDate && rawTimeIn) {
+      finalDate = extractDateAndTimeParts(rawTimeIn).datePart;
+    }
+    if (!finalDate && rawTimeOut) {
+      finalDate = extractDateAndTimeParts(rawTimeOut).datePart;
+    }
+
+    // Extract time parts
+    if (rawTimeIn) {
+      finalTimeIn = extractDateAndTimeParts(rawTimeIn).timePart || rawTimeIn;
+    }
+    if (rawTimeOut) {
+      finalTimeOut = extractDateAndTimeParts(rawTimeOut).timePart || rawTimeOut;
+    }
+    if (rawTeaStart) {
+      finalTeaStart = extractDateAndTimeParts(rawTeaStart).timePart || rawTeaStart;
+    }
+    if (rawTeaEnd) {
+      finalTeaEnd = extractDateAndTimeParts(rawTeaEnd).timePart || rawTeaEnd;
+    }
+    if (rawLunchStart) {
+      finalLunchStart = extractDateAndTimeParts(rawLunchStart).timePart || rawLunchStart;
+    }
+    if (rawLunchEnd) {
+      finalLunchEnd = extractDateAndTimeParts(rawLunchEnd).timePart || rawLunchEnd;
+    }
 
     // Date validation
-    const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
-    if (!date || !isValid(parsedDate)) errors.push("Valid Date (YYYY-MM-DD) is required.");
+    if (!finalDate || !isValid(parse(finalDate, 'yyyy-MM-dd', new Date()))) errors.push("Valid Date (YYYY-MM-DD) is required.");
 
     // Time validations
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeIn || !timeRegex.test(timeIn)) errors.push("Valid Time In (HH:mm) is required.");
-    if (!timeOut || !timeRegex.test(timeOut)) errors.push("Valid Time Out (HH:mm) is required.");
+    if (!finalTimeIn || !timeRegex.test(finalTimeIn)) errors.push("Valid Time In (HH:mm) is required.");
+    if (!finalTimeOut || !timeRegex.test(finalTimeOut)) errors.push("Valid Time Out (HH:mm) is required.");
 
-    const validateOptionalTimePair = (start: string, end: string, startName: string, endName: string) => {
+    const validateOptionalTimePair = (start: string | undefined, end: string | undefined, startName: string, endName: string) => {
       if ((start && !timeRegex.test(start)) || (end && !timeRegex.test(end))) {
         errors.push(`Valid ${startName} and ${endName} (HH:mm) are required if provided.`);
       } else if ((start && !end) || (!start && end)) {
         errors.push(`Both ${startName} and ${endName} are required if one is provided.`);
       }
     };
-    validateOptionalTimePair(teaStart, teaEnd, "Tea Start", "Tea End");
-    validateOptionalTimePair(lunchStart, lunchEnd, "Lunch Start", "Lunch End");
+    validateOptionalTimePair(finalTeaStart, finalTeaEnd, "Tea Start", "Tea End");
+    validateOptionalTimePair(finalLunchStart, finalLunchEnd, "Lunch Start", "Lunch End");
 
     return {
-      employeeId: resolvedEmployeeId, // Use the resolved internal ID
-      csvPersonalId: csvPersonalId, // Keep CSV personal ID for display
-      date,
-      timeIn,
-      teaStart: teaStart || undefined,
-      teaEnd: teaEnd || undefined,
-      lunchStart: lunchStart || undefined,
-      lunchEnd: lunchEnd || undefined,
-      timeOut,
+      employeeId: resolvedEmployeeId,
+      csvPersonalId: csvPersonalId,
+      date: finalDate || "", // Ensure it's a string
+      timeIn: finalTimeIn || "", // Ensure it's a string
+      teaStart: finalTeaStart,
+      teaEnd: finalTeaEnd,
+      lunchStart: finalLunchStart,
+      lunchEnd: finalLunchEnd,
+      timeOut: finalTimeOut || "", // Ensure it's a string
       _isValid: errors.length === 0,
       _errors: errors,
     };
   };
 
   const handleColumnMappingChange = (key: string, value: string) => {
-    // If "none" is selected, set the mapping to undefined
     setColumnMappings(prev => {
       const newMappings = { ...prev, [key]: value === "none" ? undefined : value };
-      // Re-validate data immediately after mapping changes
       if (parsedRawData.length > 0) {
         parseAndValidate(parsedRawData, newMappings);
       }
@@ -260,7 +314,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     }
 
     const timesheetsToImport = validEntries.map(row => ({
-      employeeId: row.employeeId, // Use the resolved internal employeeId
+      employeeId: row.employeeId,
       date: row.date,
       timeIn: row.timeIn,
       teaStart: row.teaStart,
@@ -314,13 +368,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                     <Label htmlFor={`map-${field.key}`}>{field.label}</Label>
                     <Select
                       onValueChange={(value) => handleColumnMappingChange(field.key, value)}
-                      value={columnMappings[field.key] || "none"} // Set default to "none"
+                      value={columnMappings[field.key] || "none"}
                     >
                       <SelectTrigger id={`map-${field.key}`}>
                         <SelectValue placeholder={`Select ${field.label} column`} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem> {/* Added "None" option */}
+                        <SelectItem value="none">None</SelectItem>
                         {csvHeaders.map(header => (
                           <SelectItem key={header} value={header}>
                             {header}
