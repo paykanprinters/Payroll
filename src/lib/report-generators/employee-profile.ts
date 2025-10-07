@@ -63,6 +63,7 @@ export const generateEmployeeProfileReportContent = (
         <h4 class="text-lg font-semibold underline">Basic Information</h4>
         <div class="grid grid-cols-2 gap-2">
           ${renderField("Employee ID", employee.id)}
+          ${renderField("Personal ID", employee.personalId)}
           ${renderField("First Name", employee.firstName)}
           ${renderField("Last Name", employee.lastName)}
           ${renderField("Email", employee.email)}

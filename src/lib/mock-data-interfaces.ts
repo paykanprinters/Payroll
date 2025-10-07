@@ -27,6 +27,7 @@ export interface MockCompanyDetails {
 
 export interface MockEmployee {
   id: string;
+  personalId?: string; // New field for external clock-in system ID
   firstName: string;
   lastName: string;
   email: string;

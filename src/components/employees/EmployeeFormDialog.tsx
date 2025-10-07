@@ -27,6 +27,7 @@ import { MockEmployee } from "@/lib/mock-data-interfaces"; // Updated import
 // Define the schema for employee form validation
 const employeeSchema = z.object({
   id: z.string().optional(), // ID is optional for new employees
+  personalId: z.string().optional(), // New field for external clock-in system ID
   firstName: z.string().min(1, "First Name is required"),
   lastName: z.string().min(1, "Last Name is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
@@ -112,6 +113,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       salary: undefined, // Set to undefined for initial state
       hourlyRate: undefined, // Set to undefined for initial state
       startDate: new Date().toISOString().split('T')[0], // Default to current date
+      personalId: "", // New default
       idNumber: "",
       phoneNumber: "",
       emergencyContactName: "",
@@ -156,6 +158,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         salary: undefined,
         hourlyRate: undefined,
         startDate: new Date().toISOString().split('T')[0],
+        personalId: "", // New default
         idNumber: "",
         phoneNumber: "",
         emergencyContactName: "",
@@ -316,9 +319,20 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     {form.formState.errors.dateOfBirth && (<p className="text-red-500 text-sm">{form.formState.errors.dateOfBirth.message}</p>)}
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="idNumber">ID Number</Label>
+                    <Label htmlFor="personalId">Personal ID (from Clock Report)</Label>
+                    <Input id="personalId" {...form.register("personalId")} />
+                    {form.formState.errors.personalId && (<p className="text-red-500 text-sm">{form.formState.errors.personalId.message}</p>)}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This unique ID is used to associate clock-in data with this employee.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="idNumber">ID Number (National ID)</Label>
                     <Input id="idNumber" {...form.register("idNumber")} />
                     {form.formState.errors.idNumber && (<p className="text-red-500 text-sm">{form.formState.errors.idNumber.message}</p>)}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This is the employee's official national identification number.
+                    </p>
                   </div>
                   <div className="space-y-1 md:col-span-2">
                     <Label htmlFor="addressLine1">Residential Address</Label>

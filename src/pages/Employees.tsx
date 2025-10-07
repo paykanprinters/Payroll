@@ -319,13 +319,14 @@ const Employees: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
+                    <TableHead>Personal ID</TableHead> {/* New column header */}
                     <TableHead>Name</TableHead>
                     <TableHead>Job Title</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Mobile</TableHead>
                     <TableHead>Start Date</TableHead>
-                    <TableHead className="text-right">Salary/Rate</TableHead> {/* Updated header */}
+                    <TableHead className="text-right">Salary/Rate</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -333,6 +334,7 @@ const Employees: React.FC = () => {
                   {employees.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell className="font-medium">{employee.id}</TableCell>
+                      <TableCell>{employee.personalId || "N/A"}</TableCell> {/* Display Personal ID */}
                       <TableCell>{employee.firstName} {employee.lastName}</TableCell>
                       <TableCell>{employee.jobTitle}</TableCell>
                       <TableCell>{employee.department || "N/A"}</TableCell>

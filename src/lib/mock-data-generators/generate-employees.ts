@@ -3,6 +3,7 @@ import { MockEmployee } from "../mock-data-interfaces";
 export const generateMockEmployees = (): MockEmployee[] => [
   {
     id: "EMP001",
+    personalId: "BIO1001", // New: Personal ID for clock-in system
     firstName: "John",
     lastName: "Doe",
     email: "john.doe@acmecorp.co.za",
@@ -44,6 +45,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
   },
   {
     id: "EMP002",
+    personalId: "BIO1002", // New: Personal ID for clock-in system
     firstName: "Jane",
     lastName: "Smith",
     email: "jane.smith@acmecorp.co.za",
@@ -84,6 +86,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
   },
   {
     id: "EMP003",
+    personalId: "BIO1003", // New: Personal ID for clock-in system
     firstName: "Peter",
     lastName: "Jones",
     email: "peter.jones@acmecorp.co.za",
@@ -124,6 +127,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
   },
   {
     id: "EMP004",
+    personalId: "BIO1004", // New: Personal ID for clock-in system
     firstName: "Sarah",
     lastName: "Brown",
     email: "sarah.brown@acmecorp.co.za",
@@ -164,6 +168,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
   },
   {
     id: "EMP005",
+    personalId: "BIO1005", // New: Personal ID for clock-in system
     firstName: "David",
     lastName: "Green",
     email: "david.green@acmecorp.co.za",
@@ -204,6 +209,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
   },
   {
     id: "EMP006",
+    personalId: "BIO1006", // New: Personal ID for clock-in system
     firstName: "Emily",
     lastName: "White",
     email: "emily.white@acmecorp.co.za",
