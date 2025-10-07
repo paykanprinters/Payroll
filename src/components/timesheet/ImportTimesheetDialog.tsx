@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,11 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UploadCloud, CheckCircle, XCircle } from "lucide-react";
+import { UploadCloud, CheckCircle, XCircle, RefreshCcw } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import Papa from "papaparse";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import { format, parse, isValid } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
@@ -40,59 +42,95 @@ interface ParsedTimesheetRow {
   _errors: string[];
 }
 
+// Define required fields and their display names
+const requiredFields = [
+  { key: "employeeId", label: "Employee ID" },
+  { key: "date", label: "Date" },
+  { key: "timeIn", label: "Time In" },
+  { key: "timeOut", label: "Time Out" },
+];
+
+const optionalFields = [
+  { key: "teaStart", label: "Tea Start" },
+  { key: "teaEnd", label: "Tea End" },
+  { key: "lunchStart", label: "Lunch Start" },
+  { key: "lunchEnd", label: "Lunch End" },
+];
+
+type ColumnMappings = { [key: string]: string | undefined };
+
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, onClose, onImport, employees }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [parsedData, setParsedData] = useState<ParsedTimesheetRow[]>([]);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [columnMappings, setColumnMappings] = useState<ColumnMappings>(() => {
+    const initialMappings: ColumnMappings = {};
+    [...requiredFields, ...optionalFields].forEach(field => {
+      initialMappings[field.key] = undefined;
+    });
+    return initialMappings;
+  });
+  const [parsedRawData, setParsedRawData] = useState<any[]>([]);
+  const [validatedData, setValidatedData] = useState<ParsedTimesheetRow[]>([]);
   const [isParsing, setIsParsing] = useState(false);
+
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFile(null);
+      setCsvHeaders([]);
+      setColumnMappings({});
+      setParsedRawData([]);
+      setValidatedData([]);
+    } else {
+      // Attempt to load employees again if they might have changed
+      // (though `employees` prop should keep it updated)
+      const initialMappings: ColumnMappings = {};
+      [...requiredFields, ...optionalFields].forEach(field => {
+        initialMappings[field.key] = undefined;
+      });
+      setColumnMappings(initialMappings);
+    }
+  }, [isOpen]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      setParsedData([]); // Clear previous data
+      setCsvHeaders([]);
+      setColumnMappings({});
+      setParsedRawData([]);
+      setValidatedData([]);
     } else {
       setFile(null);
     }
   };
 
-  const validateRow = (row: any): ParsedTimesheetRow => {
-    const errors: string[] = [];
-    const employeeId = String(row.employeeId || "").trim();
-    const date = String(row.date || "").trim();
-    const timeIn = String(row.timeIn || "").trim();
-    const timeOut = String(row.timeOut || "").trim();
+  const autoMapColumns = (headers: string[]) => {
+    const newMappings: ColumnMappings = {};
+    [...requiredFields, ...optionalFields].forEach(field => {
+      const commonNames = [
+        field.label,
+        field.key,
+        field.label.replace(/\s/g, ''), // e.g., EmployeeID
+        field.label.toLowerCase(),
+        field.key.toLowerCase(),
+      ];
+      const foundHeader = headers.find(header => commonNames.includes(header.trim()));
+      if (foundHeader) {
+        newMappings[field.key] = foundHeader.trim();
+      }
+    });
+    setColumnMappings(prev => ({ ...prev, ...newMappings }));
+  };
 
-    if (!employeeId) errors.push("Employee ID is required.");
-    if (!employees.some(emp => emp.id === employeeId)) errors.push("Employee ID not found.");
-    
-    const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
-    if (!date || !isValid(parsedDate)) errors.push("Valid Date (YYYY-MM-DD) is required.");
-
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeIn || !timeRegex.test(timeIn)) errors.push("Valid Time In (HH:mm) is required.");
-    if (!timeOut || !timeRegex.test(timeOut)) errors.push("Valid Time Out (HH:mm) is required.");
-
-    // Optional time validations
-    const validateOptionalTime = (time: string | undefined, fieldName: string) => {
-      if (time && !timeRegex.test(time)) errors.push(`Valid ${fieldName} (HH:mm) is required.`);
-    };
-    validateOptionalTime(String(row.teaStart || "").trim(), "Tea Start");
-    validateOptionalTime(String(row.teaEnd || "").trim(), "Tea End");
-    validateOptionalTime(String(row.lunchStart || "").trim(), "Lunch Start");
-    validateOptionalTime(String(row.lunchEnd || "").trim(), "Lunch End");
-
-    return {
-      employeeId,
-      date,
-      timeIn,
-      teaStart: String(row.teaStart || "").trim() || undefined,
-      teaEnd: String(row.teaEnd || "").trim() || undefined,
-      lunchStart: String(row.lunchStart || "").trim() || undefined,
-      lunchEnd: String(row.lunchEnd || "").trim() || undefined,
-      timeOut,
-      _isValid: errors.length === 0,
-      _errors: errors,
-    };
+  const parseAndValidate = (data: any[], currentMappings: ColumnMappings) => {
+    const validated = data.map(row => validateRow(row, currentMappings));
+    setValidatedData(validated);
+    if (validated.some(row => !row._isValid)) {
+      showError("Some rows contain errors. Please review the table below.");
+    } else if (validated.length > 0) {
+      showSuccess("All entries appear valid. Ready to import!");
+    }
   };
 
   const handleParseFile = () => {
@@ -106,14 +144,17 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const validatedData = results.data.map(row => validateRow(row));
-        setParsedData(validatedData);
+        const headers = results.meta.fields || [];
+        setCsvHeaders(headers);
+        setParsedRawData(results.data);
+        autoMapColumns(headers); // Attempt to auto-map
+        parseAndValidate(results.data, columnMappings); // Initial validation with auto-mapped or default empty mappings
         setIsParsing(false);
         if (results.errors.length > 0) {
           showError(`CSV parsing completed with ${results.errors.length} errors. Check console for details.`);
           console.error("CSV Parsing Errors:", results.errors);
         } else {
-          showSuccess("File parsed successfully. Please review entries.");
+          showSuccess("File parsed successfully. Please review entries and mappings.");
         }
       },
       error: (error) => {
@@ -124,8 +165,73 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     });
   };
 
+  const validateRow = (row: any, currentMappings: ColumnMappings): ParsedTimesheetRow => {
+    const errors: string[] = [];
+
+    const getMappedValue = (key: string) => {
+      const mappedColumn = currentMappings[key];
+      return mappedColumn ? String(row[mappedColumn] || "").trim() : "";
+    };
+
+    const employeeId = getMappedValue("employeeId");
+    const date = getMappedValue("date");
+    const timeIn = getMappedValue("timeIn");
+    const timeOut = getMappedValue("timeOut");
+    const teaStart = getMappedValue("teaStart");
+    const teaEnd = getMappedValue("teaEnd");
+    const lunchStart = getMappedValue("lunchStart");
+    const lunchEnd = getMappedValue("lunchEnd");
+
+    // Required field validations
+    if (!employeeId) errors.push("Employee ID is required.");
+    else if (!employees.some(emp => emp.id === employeeId)) errors.push("Employee ID not found.");
+    
+    const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
+    if (!date || !isValid(parsedDate)) errors.push("Valid Date (YYYY-MM-DD) is required.");
+
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeIn || !timeRegex.test(timeIn)) errors.push("Valid Time In (HH:mm) is required.");
+    if (!timeOut || !timeRegex.test(timeOut)) errors.push("Valid Time Out (HH:mm) is required.");
+
+    // Optional time validations
+    const validateOptionalTimePair = (start: string, end: string, startName: string, endName: string) => {
+      if ((start && !timeRegex.test(start)) || (end && !timeRegex.test(end))) {
+        errors.push(`Valid ${startName} and ${endName} (HH:mm) are required if provided.`);
+      } else if ((start && !end) || (!start && end)) {
+        errors.push(`Both ${startName} and ${endName} are required if one is provided.`);
+      }
+    };
+    validateOptionalTimePair(teaStart, teaEnd, "Tea Start", "Tea End");
+    validateOptionalTimePair(lunchStart, lunchEnd, "Lunch Start", "Lunch End");
+
+    return {
+      employeeId,
+      date,
+      timeIn,
+      teaStart: teaStart || undefined,
+      teaEnd: teaEnd || undefined,
+      lunchStart: lunchStart || undefined,
+      lunchEnd: lunchEnd || undefined,
+      timeOut,
+      _isValid: errors.length === 0,
+      _errors: errors,
+    };
+  };
+
+  const handleColumnMappingChange = (key: string, value: string) => {
+    setColumnMappings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleRevalidate = () => {
+    if (parsedRawData.length > 0) {
+      parseAndValidate(parsedRawData, columnMappings);
+    } else {
+      showError("No data parsed yet. Please upload and parse a file first.");
+    }
+  };
+
   const handleImportData = () => {
-    const validEntries = parsedData.filter(row => row._isValid);
+    const validEntries = validatedData.filter(row => row._isValid);
     if (validEntries.length === 0) {
       showError("No valid timesheet entries to import.");
       return;
@@ -144,12 +250,11 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
     onImport(timesheetsToImport);
     showSuccess(`${timesheetsToImport.length} timesheet entries imported successfully!`);
-    setFile(null);
-    setParsedData([]);
     onClose();
   };
 
-  const allRowsValid = parsedData.length > 0 && parsedData.every(row => row._isValid);
+  const allRowsValid = validatedData.length > 0 && validatedData.every(row => row._isValid);
+  const canImport = validatedData.length > 0 && allRowsValid;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -157,10 +262,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         <DialogHeader>
           <DialogTitle>Import Clock Times</DialogTitle>
           <DialogDescription>
-            Upload a CSV file containing employee clock-in/out times.
-            <p className="text-xs text-muted-foreground mt-1">
-              Expected CSV columns: `employeeId`, `date` (YYYY-MM-DD), `timeIn` (HH:mm), `timeOut` (HH:mm), `teaStart` (HH:mm, optional), `teaEnd` (HH:mm, optional), `lunchStart` (HH:mm, optional), `lunchEnd` (HH:mm, optional).
-            </p>
+            Upload a CSV file containing employee clock-in/out times and map the columns.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 flex-grow">
@@ -180,29 +282,56 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             </Button>
           </div>
 
-          {parsedData.length > 0 && (
+          {csvHeaders.length > 0 && (
+            <>
+              <Separator />
+              <h3 className="text-md font-semibold">Column Mapping</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[...requiredFields, ...optionalFields].map(field => (
+                  <div key={field.key} className="space-y-1">
+                    <Label htmlFor={`map-${field.key}`}>{field.label}</Label>
+                    <Select
+                      onValueChange={(value) => handleColumnMappingChange(field.key, value)}
+                      value={columnMappings[field.key] || ""}
+                    >
+                      <SelectTrigger id={`map-${field.key}`}>
+                        <SelectValue placeholder={`Select ${field.label} column`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {csvHeaders.map(header => (
+                          <SelectItem key={header} value={header}>
+                            {header}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+              <Button onClick={handleRevalidate} variant="outline" disabled={parsedRawData.length === 0}>
+                <RefreshCcw className="mr-2 h-4 w-4" /> Re-validate with Mappings
+              </Button>
+              <Separator />
+            </>
+          )}
+
+          {validatedData.length > 0 && (
             <ScrollArea className="h-[300px] border rounded-md">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Status</TableHead>
                     <TableHead>Employee ID</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time In</TableHead>
                     <TableHead>Tea Break</TableHead>
                     <TableHead>Lunch Break</TableHead>
                     <TableHead>Time Out</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {parsedData.map((row, index) => (
+                  {validatedData.map((row, index) => (
                     <TableRow key={index} className={!row._isValid ? "bg-red-50/50" : ""}>
-                      <TableCell>{row.employeeId}</TableCell>
-                      <TableCell>{row.date}</TableCell>
-                      <TableCell>{row.timeIn}</TableCell>
-                      <TableCell>{row.teaStart && row.teaEnd ? `${row.teaStart}-${row.teaEnd}` : "N/A"}</TableCell>
-                      <TableCell>{row.lunchStart && row.lunchEnd ? `${row.lunchStart}-${row.lunchEnd}` : "N/A"}</TableCell>
-                      <TableCell>{row.timeOut}</TableCell>
                       <TableCell className="text-center">
                         {row._isValid ? (
                           <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
@@ -212,13 +341,19 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                           </div>
                         )}
                       </TableCell>
+                      <TableCell>{row.employeeId}</TableCell>
+                      <TableCell>{row.date}</TableCell>
+                      <TableCell>{row.timeIn}</TableCell>
+                      <TableCell>{row.teaStart && row.teaEnd ? `${row.teaStart}-${row.teaEnd}` : "N/A"}</TableCell>
+                      <TableCell>{row.lunchStart && row.lunchEnd ? `${row.lunchStart}-${row.lunchEnd}` : "N/A"}</TableCell>
+                      <TableCell>{row.timeOut}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </ScrollArea>
           )}
-          {parsedData.length > 0 && !allRowsValid && (
+          {validatedData.length > 0 && !allRowsValid && (
             <p className="text-sm text-red-500">Some rows contain errors and will not be imported. Hover over <XCircle className="inline h-3 w-3" /> for details.</p>
           )}
         </div>
@@ -226,7 +361,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleImportData} disabled={parsedData.length === 0 || !allRowsValid}>
+          <Button onClick={handleImportData} disabled={!canImport}>
             Import Valid Entries
           </Button>
         </DialogFooter>
