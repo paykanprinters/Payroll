@@ -18,7 +18,7 @@ import { UploadCloud, CheckCircle, XCircle, RefreshCcw } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import Papa from "papaparse";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
-import { format, parse, isValid, isAfter } from "date-fns";
+import { format, parse, isValid, isAfter, min, max } from "date-fns"; // Added min, max
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
@@ -63,7 +63,8 @@ type ColumnMappings = { [key: string]: string | undefined };
 // Helper to extract date and time parts from a combined string (e.g., "YYYY-MM-DD HH:mm:ss")
 const extractDateAndTimeParts = (value: string) => {
   // Regex to capture YYYY-MM-DD and HH:mm (ignoring seconds for time part)
-  const dateTimeRegex = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/;
+  // Added optional seconds part to handle "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DD HH:mm"
+  const dateTimeRegex = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/;
   const match = value.match(dateTimeRegex);
 
   return {
@@ -142,29 +143,40 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   };
 
   const aggregateClockTimes = useCallback((data: any[], currentMappings: ColumnMappings): ParsedTimesheetRow[] => {
-    const employeeDailyPunches = new Map<string, Map<string, Date[]>>(); // Map<employeeId, Map<date (yyyy-MM-dd), punchTimes (Date[])>>
+    const employeeDailyPunches = new Map<string, Map<string, Date[]>>();
     const aggregationErrors: { personalId: string; date: string; error: string }[] = [];
 
-    data.forEach(row => {
-      const csvPersonalId = currentMappings.personalId ? String(row[currentMappings.personalId] || "").trim() : "";
-      const rawCombinedDateTime = currentMappings.combinedDateTime ? String(row[currentMappings.combinedDateTime] || "").trim() : "";
+    // CRITICAL: Check if required mappings are present before attempting to access row properties
+    if (!currentMappings.personalId || !currentMappings.combinedDateTime) {
+      aggregationErrors.push({ personalId: "N/A", date: "N/A", error: "Required columns for Personal ID and Date And Time are not mapped. Please select them from the dropdowns." });
+      // If required mappings are missing, we cannot proceed with aggregation.
+      return [];
+    }
 
-      if (!csvPersonalId || !rawCombinedDateTime) {
-        // Skip rows with missing essential data for aggregation, or log an error
+    data.forEach(row => {
+      // Safely get values, defaulting to empty string if property is missing
+      const csvPersonalId = String(row[currentMappings.personalId] || "").trim();
+      const rawCombinedDateTime = String(row[currentMappings.combinedDateTime] || "").trim();
+
+      if (!csvPersonalId) {
+        aggregationErrors.push({ personalId: "N/A", date: "N/A", error: `Skipped row: Missing Personal ID in row: ${JSON.stringify(row)}` });
+        return;
+      }
+      if (!rawCombinedDateTime) {
+        aggregationErrors.push({ personalId: csvPersonalId, date: "N/A", error: `Skipped row: Missing Date And Time for Personal ID '${csvPersonalId}'` });
         return;
       }
 
       const matchingEmployee = employees.find(emp => emp.personalId === csvPersonalId);
       if (!matchingEmployee) {
-        // Log error for unknown personal ID, but continue processing other rows
-        aggregationErrors.push({ personalId: csvPersonalId, date: extractDateAndTimeParts(rawCombinedDateTime).datePart || "N/A", error: `Personal ID '${csvPersonalId}' not found.` });
+        aggregationErrors.push({ personalId: csvPersonalId, date: "N/A", error: `Personal ID '${csvPersonalId}' not found in employee records. Ensure employee exists and has a 'Personal ID' set.` });
         return;
       }
 
       const { datePart, timePart } = extractDateAndTimeParts(rawCombinedDateTime);
 
       if (!datePart || !timePart) {
-        aggregationErrors.push({ personalId: csvPersonalId, date: datePart || "N/A", error: `Invalid date/time format for '${rawCombinedDateTime}'.` });
+        aggregationErrors.push({ personalId: csvPersonalId, date: datePart || "N/A", error: `Invalid date/time format for '${rawCombinedDateTime}'. Expected YYYY-MM-DD HH:mm.` });
         return;
       }
 
@@ -195,16 +207,24 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           const timeIn = format(earliestPunch, 'HH:mm');
           const timeOut = format(latestPunch, 'HH:mm');
 
-          // For optional fields, we assume they are either mapped from separate columns
-          // or will be left blank. This aggregation primarily focuses on in/out.
-          const teaStart = currentMappings.teaStart ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.teaStart] || "").trim() : undefined;
-          const teaEnd = currentMappings.teaEnd ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.teaEnd] || "").trim() : undefined;
-          const lunchStart = currentMappings.lunchStart ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.lunchStart] || "").trim() : undefined;
-          const lunchEnd = currentMappings.lunchEnd ? String(data.find(r => r[currentMappings.personalId] === employees.find(e => e.id === employeeId)?.personalId && extractDateAndTimeParts(String(r[currentMappings.combinedDateTime])).datePart === date)?.[currentMappings.lunchEnd] || "").trim() : undefined;
+          // Find a representative row from the raw data for this employee and date
+          // to extract optional fields if they are mapped.
+          const employeePersonalId = employees.find(e => e.id === employeeId)?.personalId;
+          const sampleRowForOptionalFields = data.find(r => {
+            const rowPersonalId = currentMappings.personalId ? String(r[currentMappings.personalId] || "").trim() : "";
+            const rowCombinedDateTime = currentMappings.combinedDateTime ? String(r[currentMappings.combinedDateTime] || "").trim() : "";
+            const { datePart: rowDatePart } = extractDateAndTimeParts(rowCombinedDateTime);
+            return rowPersonalId === employeePersonalId && rowDatePart === date;
+          });
+
+          const teaStart = currentMappings.teaStart && sampleRowForOptionalFields ? String(sampleRowForOptionalFields[currentMappings.teaStart] || "").trim() : undefined;
+          const teaEnd = currentMappings.teaEnd && sampleRowForOptionalFields ? String(sampleRowForOptionalFields[currentMappings.teaEnd] || "").trim() : undefined;
+          const lunchStart = currentMappings.lunchStart && sampleRowForOptionalFields ? String(sampleRowForOptionalFields[currentMappings.lunchStart] || "").trim() : undefined;
+          const lunchEnd = currentMappings.lunchEnd && sampleRowForOptionalFields ? String(sampleRowForOptionalFields[currentMappings.lunchEnd] || "").trim() : undefined;
 
           aggregatedRows.push({
             employeeId: employeeId,
-            csvPersonalId: employees.find(e => e.id === employeeId)?.personalId || "Unknown",
+            csvPersonalId: employeePersonalId || "Unknown",
             date: date,
             timeIn: timeIn,
             teaStart: teaStart || undefined,
@@ -221,7 +241,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
     if (aggregationErrors.length > 0) {
       console.warn("Timesheet aggregation warnings/errors:", aggregationErrors);
-      showError(`Some entries could not be aggregated due to missing data or invalid format. See console for details.`);
+      // Only show a general error if there are actual errors, not just if the initial check failed
+      if (aggregationErrors.some(e => e.error !== "Required columns for Personal ID and Date And Time are not mapped.")) {
+        showError(`Some entries could not be aggregated due to missing data or invalid format. See console for details.`);
+      }
     }
 
     return aggregatedRows;
@@ -319,6 +342,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     setColumnMappings(prev => {
       const newMappings = { ...prev, [key]: value === "none" ? undefined : value };
       if (parsedRawData.length > 0) {
+        // Re-parse and validate with new mappings
         parseAndValidateData(parsedRawData, newMappings);
       }
       return newMappings;
