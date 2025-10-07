@@ -18,7 +18,7 @@ import { UploadCloud, CheckCircle, XCircle, RefreshCcw } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import Papa from "papaparse";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
-import { format, parse, isValid } from "date-fns";
+import { format, parse, isValid, isAfter } from "date-fns"; // Import isAfter
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
@@ -262,6 +262,16 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!finalTimeIn || !timeRegex.test(finalTimeIn)) errors.push("Valid Time In (HH:mm) is required.");
     if (!finalTimeOut || !timeRegex.test(finalTimeOut)) errors.push("Valid Time Out (HH:mm) is required.");
+
+    // New validation: Ensure Time Out is not before Time In
+    if (finalTimeIn && finalTimeOut && timeRegex.test(finalTimeIn) && timeRegex.test(finalTimeOut)) {
+      const timeInDateObj = parse(finalTimeIn, 'HH:mm', new Date());
+      const timeOutDateObj = parse(finalTimeOut, 'HH:mm', new Date());
+
+      if (isAfter(timeInDateObj, timeOutDateObj)) {
+        errors.push("Time Out cannot be before Time In.");
+      }
+    }
 
     const validateOptionalTimePair = (start: string | undefined, end: string | undefined, startName: string, endName: string) => {
       if ((start && !timeRegex.test(start)) || (end && !timeRegex.test(end))) {
