@@ -41,7 +41,9 @@ export const useTimesheetData = () => {
     setEmployees(storedEmployees ? JSON.parse(storedEmployees) : []);
 
     const storedTimesheets = localStorage.getItem("mockTimesheets");
-    setTimesheets(storedTimesheets ? JSON.parse(storedTimesheets) : []);
+    const loadedTimesheets = storedTimesheets ? JSON.parse(storedTimesheets) : [];
+    setTimesheets(loadedTimesheets);
+    console.log(`useTimesheetData: Loaded ${loadedTimesheets.length} timesheet entries.`); // Added console log
 
     const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
     setLeaveRecords(storedLeaveRecords ? JSON.parse(storedLeaveRecords) : []);

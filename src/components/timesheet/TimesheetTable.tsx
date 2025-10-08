@@ -8,6 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Clock as ClockIcon, CheckCircle, XCircle, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimesheetEntry } from "@/lib/mock-data-interfaces";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface TimesheetTableProps {
   timesheets: TimesheetEntry[];
@@ -17,6 +25,8 @@ interface TimesheetTableProps {
   onStatusChange: (id: string, newStatus: TimesheetEntry["status"]) => void;
 }
 
+const ITEMS_PER_PAGE = 10; // Number of items to show per page
+
 const TimesheetTable: React.FC<TimesheetTableProps> = ({
   timesheets,
   getEmployeeName,
@@ -24,6 +34,31 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
   onDelete,
   onStatusChange,
 }) => {
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  // Sort timesheets by date (most recent first)
+  const sortedTimesheets = React.useMemo(() => {
+    return [...timesheets].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [timesheets]);
+
+  const totalPages = Math.ceil(sortedTimesheets.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedTimesheets = sortedTimesheets.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages, prev + 1));
+  };
+
+  // Reset to first page if timesheets change (e.g., after import/delete)
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [timesheets]);
+
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -48,7 +83,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {timesheets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((entry) => (
+                {paginatedTimesheets.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>{getEmployeeName(entry.employeeId)}</TableCell>
                     <TableCell>{entry.date}</TableCell>
@@ -100,6 +135,28 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                 ))}
               </TableBody>
             </Table>
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious onClick={handlePreviousPage} disabled={currentPage === 1} />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(i + 1)}
+                        isActive={currentPage === i + 1}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext onClick={handleNextPage} disabled={currentPage === totalPages} />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
