@@ -18,9 +18,22 @@ const calculateTimeDifferenceInHours = (start: string, end: string): number => {
   return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
 };
 
-interface TimesheetFormValues {
+// Define the expected input type for adding/updating timesheets
+export interface TimesheetFormValues {
   employeeId: string;
   date: Date; // Expecting a Date object now
+  timeIn: string;
+  teaStart?: string;
+  teaEnd?: string;
+  lunchStart?: string;
+  lunchEnd?: string;
+  timeOut: string;
+}
+
+// Define the expected input type for batch imports
+export interface ImportableTimesheetEntry {
+  employeeId: string;
+  date: Date; // Expecting a Date object
   timeIn: string;
   teaStart?: string;
   teaEnd?: string;
@@ -62,7 +75,7 @@ export const useTimesheetData = () => {
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
   }, [employees]);
 
-  const calculateTimesheetMetrics = useCallback((data: TimesheetFormValues, employee?: MockEmployee) => {
+  const calculateTimesheetMetrics = useCallback((data: TimesheetFormValues | ImportableTimesheetEntry, employee?: MockEmployee) => {
     const standardDailyHours = employee?.standardDailyHours || 8; // Default to 8 hours
 
     let totalWorkHours = 0;
@@ -103,105 +116,173 @@ export const useTimesheetData = () => {
 
   const addOrUpdateTimesheet = useCallback((data: TimesheetFormValues) => {
     console.log("addOrUpdateTimesheet: Received data:", data); // Log incoming data
-    const employee = employees.find(emp => emp.id === data.employeeId);
-    if (!employee) {
-      console.error("addOrUpdateTimesheet: Employee not found for ID:", data.employeeId);
-      showError("Employee not found. Cannot add/update timesheet.");
+    setTimesheets(prevTimesheets => {
+      const employee = employees.find(emp => emp.id === data.employeeId);
+      if (!employee) {
+        console.error("addOrUpdateTimesheet: Employee not found for ID:", data.employeeId);
+        showError("Employee not found. Cannot add/update timesheet.");
+        return prevTimesheets; // Return previous state if employee not found
+      }
+
+      const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(data, employee);
+
+      const formattedDate = format(data.date, "yyyy-MM-dd");
+      console.log("addOrUpdateTimesheet: Formatted date:", formattedDate);
+
+      const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
+        employeeId: data.employeeId,
+        date: formattedDate,
+        timeIn: data.timeIn,
+        teaStart: data.teaStart || undefined,
+        teaEnd: data.teaEnd || undefined,
+        lunchStart: data.lunchStart || undefined,
+        lunchEnd: data.lunchEnd || undefined,
+        timeOut: data.timeOut,
+        totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
+        overtimeHours: parseFloat(overtimeHours.toFixed(2)),
+        lateArrival: lateArrival,
+        earlyDeparture: earlyDeparture,
+        absent: absent,
+        status: "Draft", // Default status for new entries
+        auditLog: [], // Initialize auditLog
+      };
+
+      let updatedTimesheets: TimesheetEntry[];
+
+      if (isEditing && editingTimesheet) {
+        const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: "Updated", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
+        updatedTimesheets = prevTimesheets.map((ts) =>
+          ts.id === editingTimesheet.id
+            ? { ...ts, ...baseTimesheet, id: editingTimesheet.id, auditLog: updatedAuditLog }
+            : ts
+        );
+        showSuccess("Timesheet updated successfully!");
+      } else {
+        // Check for existing timesheet for the same employee and date
+        const existingTimesheetIndex = prevTimesheets.findIndex(
+          (ts) => ts.employeeId === data.employeeId && ts.date === formattedDate
+        );
+
+        if (existingTimesheetIndex !== -1) {
+          const existingTs = prevTimesheets[existingTimesheetIndex];
+          const updatedAuditLog = [...(existingTs.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
+          updatedTimesheets = prevTimesheets.map((ts, index) =>
+            index === existingTimesheetIndex
+              ? { ...ts, ...baseTimesheet, id: ts.id, auditLog: updatedAuditLog }
+              : ts
+          );
+          showSuccess("Existing timesheet updated successfully!");
+        } else {
+          const newId = `TS-${data.employeeId}-${formattedDate}-${Date.now()}`;
+          const newAuditLog = [{ action: "Created", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
+          updatedTimesheets = [...prevTimesheets, { ...baseTimesheet, id: newId, auditLog: newAuditLog }];
+          showSuccess("Timesheet added successfully!");
+        }
+      }
+      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+      window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
+      return updatedTimesheets;
+    });
+    setIsEditing(false);
+    setEditingTimesheet(null);
+  }, [employees, isEditing, editingTimesheet, calculateTimesheetMetrics]);
+
+  const addTimesheetBatch = useCallback((newEntries: ImportableTimesheetEntry[]) => {
+    if (newEntries.length === 0) {
       return;
     }
 
-    const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(data, employee);
+    setTimesheets(prevTimesheets => {
+      const timesheetMap = new Map<string, TimesheetEntry>(); // Key: employeeId-date, Value: TimesheetEntry
 
-    const formattedDate = format(data.date, "yyyy-MM-dd");
-    console.log("addOrUpdateTimesheet: Formatted date:", formattedDate);
+      // Populate map with existing timesheets for efficient lookup/update
+      prevTimesheets.forEach(ts => {
+        timesheetMap.set(`${ts.employeeId}-${ts.date}`, ts);
+      });
 
-    const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
-      employeeId: data.employeeId,
-      date: formattedDate,
-      timeIn: data.timeIn,
-      teaStart: data.teaStart || undefined,
-      teaEnd: data.teaEnd || undefined,
-      lunchStart: data.lunchStart || undefined,
-      lunchEnd: data.lunchEnd || undefined,
-      timeOut: data.timeOut,
-      totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
-      overtimeHours: parseFloat(overtimeHours.toFixed(2)),
-      lateArrival: lateArrival,
-      earlyDeparture: earlyDeparture,
-      absent: absent,
-      status: "Draft", // Default status for new entries
-      auditLog: [], // Initialize auditLog
-    };
+      newEntries.forEach(data => {
+        const employee = employees.find(emp => emp.id === data.employeeId);
+        if (!employee) {
+          console.warn(`Employee not found for ID: ${data.employeeId}. Skipping timesheet entry for ${format(data.date, "yyyy-MM-dd")}.`);
+          return; // Skip this entry if employee not found
+        }
 
-    let updatedTimesheets: TimesheetEntry[];
+        const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(data, employee);
+        const formattedDate = format(data.date, "yyyy-MM-dd");
+        const mapKey = `${data.employeeId}-${formattedDate}`;
 
-    if (isEditing && editingTimesheet) {
-      const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: "Updated", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
-      updatedTimesheets = timesheets.map((ts) =>
-        ts.id === editingTimesheet.id
-          ? { ...ts, ...baseTimesheet, id: editingTimesheet.id, auditLog: updatedAuditLog }
-          : ts
-      );
-      showSuccess("Timesheet updated successfully!");
-    } else {
-      // Check for existing timesheet for the same employee and date
-      const existingTimesheetIndex = timesheets.findIndex(
-        (ts) => ts.employeeId === data.employeeId && ts.date === formattedDate
-      );
+        const existingEntry = timesheetMap.get(mapKey);
 
-      if (existingTimesheetIndex !== -1) {
-        const existingTs = timesheets[existingTimesheetIndex];
-        const updatedAuditLog = [...(existingTs.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
-        updatedTimesheets = timesheets.map((ts, index) =>
-          index === existingTimesheetIndex
-            ? { ...ts, ...baseTimesheet, id: ts.id, auditLog: updatedAuditLog }
-            : ts
-        );
-        showSuccess("Existing timesheet updated successfully!");
-      } else {
-        const newId = `TS-${data.employeeId}-${formattedDate}-${Date.now()}`;
-        const newAuditLog = [{ action: "Created", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
-        updatedTimesheets = [...timesheets, { ...baseTimesheet, id: newId, auditLog: newAuditLog }];
-        showSuccess("Timesheet added successfully!");
-      }
-    }
+        const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
+          employeeId: data.employeeId,
+          date: formattedDate,
+          timeIn: data.timeIn,
+          teaStart: data.teaStart || undefined,
+          teaEnd: data.teaEnd || undefined,
+          lunchStart: data.lunchStart || undefined,
+          lunchEnd: data.lunchEnd || undefined,
+          timeOut: data.timeOut,
+          totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
+          overtimeHours: parseFloat(overtimeHours.toFixed(2)),
+          lateArrival: lateArrival,
+          earlyDeparture: earlyDeparture,
+          absent: absent,
+          status: existingEntry?.status || "Submitted", // Default to Submitted for imported, or keep existing
+          auditLog: [],
+        };
 
-    setTimesheets(updatedTimesheets);
-    localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
-    setIsEditing(false);
-    setEditingTimesheet(null);
-    window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
-  }, [employees, timesheets, isEditing, editingTimesheet, calculateTimesheetMetrics]);
+        if (existingEntry) {
+          // Update existing entry
+          const updatedAuditLog = [...(existingEntry.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
+          timesheetMap.set(mapKey, { ...existingEntry, ...baseTimesheet, auditLog: updatedAuditLog });
+        } else {
+          // Add new entry
+          const newId = `TS-${data.employeeId}-${formattedDate}-${Date.now()}`;
+          const newAuditLog = [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
+          timesheetMap.set(mapKey, { ...baseTimesheet, id: newId, auditLog: newAuditLog });
+        }
+      });
+
+      const finalTimesheets = Array.from(timesheetMap.values());
+      localStorage.setItem("mockTimesheets", JSON.stringify(finalTimesheets));
+      window.dispatchEvent(new Event('mockDataUpdated'));
+      return finalTimesheets;
+    });
+  }, [employees, calculateTimesheetMetrics]);
 
   const deleteTimesheet = useCallback((id: string) => {
-    const updatedTimesheets = timesheets.filter(ts => ts.id !== id);
-    setTimesheets(updatedTimesheets);
-    localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
-    showSuccess("Timesheet deleted successfully!");
-    window.dispatchEvent(new Event('mockDataUpdated'));
-  }, [timesheets]);
+    setTimesheets(prevTimesheets => {
+      const updatedTimesheets = prevTimesheets.filter(ts => ts.id !== id);
+      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+      showSuccess("Timesheet deleted successfully!");
+      window.dispatchEvent(new Event('mockDataUpdated'));
+      return updatedTimesheets;
+    });
+  }, []);
 
   const updateTimesheetStatus = useCallback((id: string, newStatus: TimesheetEntry["status"]) => {
-    const updatedTimesheets = timesheets.map(ts => {
-      if (ts.id === id) {
-        const auditEntry = { action: `Status changed to ${newStatus}`, timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const };
-        return {
-          ...ts,
-          status: newStatus,
-          submittedBy: newStatus === "Submitted" ? "Current User (Mock)" : ts.submittedBy,
-          submittedAt: newStatus === "Submitted" ? new Date().toISOString() : ts.submittedAt,
-          approvedBy: newStatus === "Approved" ? "Admin User (Mock)" : ts.approvedBy,
-          approvedAt: newStatus === "Approved" ? new Date().toISOString() : ts.approvedAt,
-          auditLog: [...(ts.auditLog || []), auditEntry],
-        };
-      }
-      return ts;
+    setTimesheets(prevTimesheets => {
+      const updatedTimesheets = prevTimesheets.map(ts => {
+        if (ts.id === id) {
+          const auditEntry = { action: `Status changed to ${newStatus}`, timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const };
+          return {
+            ...ts,
+            status: newStatus,
+            submittedBy: newStatus === "Submitted" ? "Current User (Mock)" : ts.submittedBy,
+            submittedAt: newStatus === "Submitted" ? new Date().toISOString() : ts.submittedAt,
+            approvedBy: newStatus === "Approved" ? "Admin User (Mock)" : ts.approvedBy,
+            approvedAt: newStatus === "Approved" ? new Date().toISOString() : ts.approvedAt,
+            auditLog: [...(ts.auditLog || []), auditEntry],
+          };
+        }
+        return ts;
+      });
+      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+      showSuccess(`Timesheet status updated to ${newStatus}!`);
+      window.dispatchEvent(new Event('mockDataUpdated'));
+      return updatedTimesheets;
     });
-    setTimesheets(updatedTimesheets);
-    localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
-    showSuccess(`Timesheet status updated to ${newStatus}!`);
-    window.dispatchEvent(new Event('mockDataUpdated'));
-  }, [timesheets]);
+  }, []);
 
   const startEditing = useCallback((timesheet: TimesheetEntry) => {
     setIsEditing(true);
@@ -237,5 +318,6 @@ export const useTimesheetData = () => {
     startEditing,
     cancelEditing,
     isLeaveDay,
+    addTimesheetBatch, // Expose the new batch function
   };
 };

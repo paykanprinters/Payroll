@@ -14,18 +14,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UploadCloud } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
-import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
+import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
 import { XCircle } from "lucide-react"; // Import XCircle for the error message
 import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea for error list
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Import Card components
+import { ImportableTimesheetEntry } from "@/hooks/use-timesheet-data"; // Import the new type
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (timesheets: Omit<TimesheetEntry, 'id' | 'totalWorkHours' | 'overtimeHours' | 'lateArrival' | 'earlyDeparture' | 'absent' | 'status' | 'auditLog'>[]) => void;
+  onImport: (timesheets: ImportableTimesheetEntry[]) => void; // Use the new type
   employees: MockEmployee[];
 }
 
@@ -53,7 +54,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       return;
     }
 
-    const timesheetsToImport = validEntries.map(row => ({
+    const timesheetsToImport: ImportableTimesheetEntry[] = validEntries.map(row => ({
       employeeId: row.employeeId,
       date: new Date(row.date), // Convert date string to Date object here
       timeIn: row.timeIn,
@@ -65,7 +66,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     }));
 
     console.log("ImportTimesheetDialog: Attempting to import these entries:", timesheetsToImport);
-    onImport(timesheetsToImport);
+    onImport(timesheetsToImport); // Call the prop function
     showSuccess(`${timesheetsToImport.length} timesheet entries imported successfully!`);
     onClose();
   };

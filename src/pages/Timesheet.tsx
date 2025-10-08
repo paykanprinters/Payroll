@@ -8,7 +8,7 @@ import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button"; // Import Button
 import { UploadCloud } from "lucide-react"; // Import UploadCloud icon
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog"; // Import new dialog
-import { TimesheetEntry } from "@/lib/mock-data-interfaces"; // Import TimesheetEntry
+import { ImportableTimesheetEntry, TimesheetFormValues } from "@/hooks/use-timesheet-data"; // Import the new type and TimesheetFormValues
 
 const Timesheet: React.FC = () => {
   const {
@@ -23,19 +23,14 @@ const Timesheet: React.FC = () => {
     startEditing,
     cancelEditing,
     isLeaveDay,
+    addTimesheetBatch, // Get the new batch function
   } = useTimesheetData();
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
 
-  const handleImportTimesheets = (importedEntries: Omit<TimesheetEntry, 'id' | 'totalWorkHours' | 'overtimeHours' | 'lateArrival' | 'earlyDeparture' | 'absent' | 'status' | 'auditLog'>[]) => {
-    importedEntries.forEach(entry => {
-      // The addOrUpdateTimesheet function expects a Date object for 'date'
-      // and will calculate other metrics.
-      addOrUpdateTimesheet({
-        ...entry,
-        date: new Date(entry.date), // Convert date string back to Date object
-      });
-    });
+  // The handleImportTimesheets function will now just directly call addTimesheetBatch
+  const handleImportTimesheets = (importedEntries: ImportableTimesheetEntry[]) => { // Use the new type
+    addTimesheetBatch(importedEntries);
   };
 
   return (
@@ -92,7 +87,7 @@ const Timesheet: React.FC = () => {
       <ImportTimesheetDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportTimesheets}
+        onImport={handleImportTimesheets} // Pass the updated handler
         employees={employees}
       />
     </div>
