@@ -349,7 +349,12 @@ const PayslipDesign: React.FC = () => {
                   <p><span className="font-semibold">ID No:</span> 9001015000087</p>
                   <p><span className="font-semibold">Job Title:</span> Software Developer</p>
                   {settings.showHourlyRate && (
-                    <p><span className="font-semibold">Hourly Rate:</span> R 150.00</p>
+                    <>
+                      <p><span className="font-semibold">Hourly Rate:</span> R 150.00</p>
+                      <p className="text-xs text-muted-foreground italic">
+                        (This line only appears for employees with an hourly rate)
+                      </p>
+                    </>
                   )}
                   <p><span className="font-semibold">Tax No:</span> 1234567890</p>
                 </div>
