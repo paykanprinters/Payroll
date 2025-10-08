@@ -22,6 +22,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   includeCompanyLogo: true,
   includeCompanyDetails: true,
   reportContentFontSize: 14,
+  irp5ContentFontSize: 12, // Added irp5ContentFontSize
 };
 
 const Reports: React.FC = () => {

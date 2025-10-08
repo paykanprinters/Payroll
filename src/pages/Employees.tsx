@@ -36,6 +36,7 @@ import { generateEmployeeProfileReportContent } from "@/lib/report-generators"; 
 import html2pdf from 'html2pdf.js'; // Import html2pdf
 import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
 import { usePdfGenerator } from "@/hooks/use-pdf-generator"; // Import usePdfGenerator
+import ReportContentWrapper from "@/components/reports/ReportContentWrapper"; // Import ReportContentWrapper
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 

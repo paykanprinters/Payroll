@@ -20,6 +20,7 @@ import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
 import { XCircle } from "lucide-react"; // Import XCircle for the error message
 import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea for error list
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Import Card components
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;

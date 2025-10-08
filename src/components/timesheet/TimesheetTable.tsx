@@ -139,7 +139,10 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
               <Pagination className="mt-4">
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={handlePreviousPage} disabled={currentPage === 1} />
+                    <PaginationPrevious
+                      onClick={handlePreviousPage}
+                      className={cn(currentPage === 1 && "pointer-events-none opacity-50")}
+                    />
                   </PaginationItem>
                   {Array.from({ length: totalPages }, (_, i) => (
                     <PaginationItem key={i}>
@@ -152,7 +155,10 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                     </PaginationItem>
                   ))}
                   <PaginationItem>
-                    <PaginationNext onClick={handleNextPage} disabled={currentPage === totalPages} />
+                    <PaginationNext
+                      onClick={handleNextPage}
+                      className={cn(currentPage === totalPages && "pointer-events-none opacity-50")}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>

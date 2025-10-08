@@ -38,6 +38,7 @@ interface ReportPreviewDialogProps {
   companyLogoUrl: string | null;
   companyLogoSize: number;
   reportDesignSettings: ReportDesignSettings; // Prop for report design settings
+  documentType: 'payslip' | 'report'; // New prop for document type
 }
 
 const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
@@ -56,6 +57,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   companyLogoUrl,
   companyLogoSize,
   reportDesignSettings,
+  documentType,
 }) => {
   const companyDetails: MockCompanyDetails = {
     companyLegalName, companyTradingName, companyRegistrationNumber,
@@ -103,7 +105,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     const options = {
       filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
       format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
-      documentType: 'report' as const, // Specify document type
+      documentType: documentType, // Pass documentType from props
     };
 
     if (action === 'download') {
