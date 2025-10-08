@@ -303,6 +303,8 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       return;
     }
 
+    console.log("handleParseFile: Attempting to parse file:", file); // Added console log
+
     setIsParsing(true);
     Papa.parse(file, {
       header: true,

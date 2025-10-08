@@ -71,7 +71,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open && isParsing) {
+        showError("Please wait for the file parsing to complete before closing.");
+        return;
+      }
+      onClose();
+    }}>
       <DialogContent 
         className="sm:max-w-[900px] max-h-[90vh] flex flex-col"
         onPointerDownOutside={(e) => {
