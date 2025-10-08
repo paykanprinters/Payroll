@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
     employees.forEach((emp) => {
       jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
     });
-    setJobTitleDistribution(
+    setEmployeeJobTitleData(
       Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
     );
 
@@ -158,7 +158,7 @@ const Dashboard: React.FC = () => {
     return `${value} (${percentage}%)`;
   };
 
-  const totalJobTitles = jobTitleDistribution.reduce((sum, entry) => sum + entry.value, 0);
+  const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
   const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
 
   return (
