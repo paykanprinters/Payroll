@@ -18,6 +18,7 @@ import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
+import { XCircle } from "lucide-react"; // Import XCircle for the error message
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
@@ -85,7 +86,9 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             <span className="font-semibold text-blue-600">Note:</span> "Time Out" must be strictly later than "Time In".
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4 flex-grow">
+        
+        {/* Fixed content area: File upload and column mapping */}
+        <div className="flex flex-col gap-4 py-4"> {/* Removed flex-grow from this div */}
           <div className="flex items-center space-x-2">
             <Label htmlFor="timesheet-file" className="sr-only">
               Upload CSV
@@ -109,13 +112,22 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             onRevalidate={handleRevalidate}
             parsedRawDataLength={parsedRawData.length}
           />
+        </div>
 
+        {/* Scrollable content area: Validated data table */}
+        {validatedData.length > 0 && (
           <ValidatedDataTable
             validatedData={validatedData}
             employees={employees}
             allRowsValid={allRowsValid}
           />
-        </div>
+        )}
+        
+        {/* Error message, always visible if present */}
+        {validatedData.length > 0 && !allRowsValid && (
+          <p className="text-sm text-red-500 mt-2">Some rows contain errors and will not be imported. Hover over <XCircle className="inline h-3 w-3" /> for details.</p>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
