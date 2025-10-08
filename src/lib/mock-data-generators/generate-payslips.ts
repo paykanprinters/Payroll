@@ -38,6 +38,7 @@ export const generatePayslipsForPeriod = (
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
   const monthString = format(payPeriodStart, "yyyy-MM");
+  const payDateString = format(payPeriodEnd, "dd/MM/yyyy"); // Pay date is the end of the period
 
   employees.forEach(emp => {
     let basicSalary = 0;
@@ -217,6 +218,7 @@ export const generatePayslipsForPeriod = (
       id: `PS-${emp.id}-${monthString}-${Date.now()}`, // Unique ID for each payslip
       employeeId: emp.id,
       payPeriod: payPeriodString,
+      payDate: payDateString, // Assign the calculated pay date
       grossEarnings: grossEarnings,
       totalDeductions: totalDeductions,
       netPay: netPay,

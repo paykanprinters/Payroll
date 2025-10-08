@@ -259,7 +259,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       <h3 className="font-bold text-center mb-3" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px`, lineHeight: `${baseFontSizePx * 1.3 * 1.2}px`, marginBottom: `${baseFontSizePx * 1}px` } : {}}>PAYSLIP</h3>
       <div className="text-center mb-4" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1}px`, lineHeight: `${baseFontSizePx * 1 * 1.2}px`, marginBottom: `${baseFontSizePx * 1.5}px` } : {}}>
         <p><span className="font-semibold">PAY PERIOD:</span> {payslip.payPeriod}</p>
-        <p><span className="font-semibold">PAY DATE:</span> 25/07/2024</p> {/* Placeholder */}
+        <p><span className="font-semibold">PAY DATE:</span> {payslip.payDate}</p> {/* Use dynamic payDate */}
       </div>
 
       <Separator className="my-4" style={isPdfGeneration ? { margin: `${baseFontSizePx * 1}px 0` } : {}} />

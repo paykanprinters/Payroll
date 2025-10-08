@@ -107,6 +107,7 @@ export interface MockPayslip {
   id: string;
   employeeId: string;
   payPeriod: string;
+  payDate: string; // Added payDate field
   grossEarnings: number;
   totalDeductions: number;
   netPay: number;
