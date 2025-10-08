@@ -12,7 +12,7 @@ import BulkPayslipActions from "./BulkPayslipActions";
 import BulkPayslipsRenderer from "./BulkPayslipsRenderer"; // Import the new component
 import { showError, showSuccess } from "@/utils/toast"; // Ensure showError and showSuccess are imported
 import { Button } from "@/components/ui/button"; // Import Button
-import { FileStack } from "lucide-react"; // Import FileStack icon
+import { FileStack, CalendarCheck } from "lucide-react"; // Import FileStack and CalendarCheck icons
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -218,6 +218,50 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
   }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, generatePdf, printPdf]);
 
+  const handleSelectCurrentPeriodPayslip = useCallback(() => {
+    if (!selectedEmployeeId) {
+      showError("Please select an employee first.");
+      return;
+    }
+
+    const employee = allEmployees.find(emp => emp.id === selectedEmployeeId);
+    if (!employee) {
+      showError("Selected employee not found.");
+      return;
+    }
+
+    const today = new Date();
+    let periodStart: Date;
+    let periodEnd: Date;
+    let periodFormat: string;
+
+    if (employee.payFrequency === "Monthly") {
+      periodStart = startOfMonth(today);
+      periodEnd = endOfMonth(today);
+      periodFormat = "yyyy-MM-dd";
+    } else if (employee.payFrequency === "Weekly" || employee.payFrequency === "Bi-Weekly") {
+      periodStart = startOfWeek(today, { weekStartsOn: 1 }); // Assuming week starts on Monday
+      periodEnd = endOfWeek(today, { weekStartsOn: 1 });
+      periodFormat = "yyyy-MM-dd";
+    } else {
+      showError(`Employee ${employee.firstName} ${employee.lastName} has an unsupported pay frequency: ${employee.payFrequency}.`);
+      return;
+    }
+
+    const targetPayPeriodString = `${format(periodStart, periodFormat)} - ${format(periodEnd, periodFormat)}`;
+
+    const foundPayslip = payslips.find(p =>
+      p.employeeId === selectedEmployeeId && p.payPeriod === targetPayPeriodString
+    );
+
+    if (foundPayslip) {
+      setSelectedPayslipId(foundPayslip.id);
+      showSuccess(`Payslip for ${employee.firstName} ${employee.lastName} for the current period (${foundPayslip.payPeriod}) selected.`);
+    } else {
+      showError(`No payslip found for ${employee.firstName} ${employee.lastName} for the current period (${targetPayPeriodString}).`);
+    }
+  }, [selectedEmployeeId, allEmployees, payslips, setSelectedPayslipId]);
+
 
   return (
     <Card>
@@ -238,11 +282,20 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             setSelectedPayslipId={setSelectedPayslipId}
             filteredPayslipsForEmployee={filteredPayslipsForEmployee}
           />
-          <IndividualPayslipActions
-            selectedPayslip={selectedPayslip}
-            onPrint={() => handlePrintOrDownloadIndividual('print')}
-            onDownload={() => handlePrintOrDownloadIndividual('download')}
-          />
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSelectCurrentPeriodPayslip}
+              disabled={!selectedEmployeeId}
+            >
+              <CalendarCheck className="mr-2 h-4 w-4" /> Select Current Period Payslip
+            </Button>
+            <IndividualPayslipActions
+              selectedPayslip={selectedPayslip}
+              onPrint={() => handlePrintOrDownloadIndividual('print')}
+              onDownload={() => handlePrintOrDownloadIndividual('download')}
+            />
+          </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end"> {/* Adjusted grid for bulk actions */}
           <BulkPayslipActions
