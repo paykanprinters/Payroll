@@ -3,22 +3,7 @@
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { cn, getPrintStyles } from "@/lib/utils";
-import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
-
-interface PayslipDesignSettings {
-  showCompanyLogo?: boolean;
-  showCompanyDetails?: boolean;
-  showEmployeeDetails?: boolean;
-  showEarningsBreakdown?: boolean;
-  showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  showYTD?: boolean;
-  showHourlyRate?: boolean; // New field
-  sectionOrder?: ("Earnings" | "Deductions")[];
-  layoutSize?: "Letter" | "A4" | "A5";
-  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
-}
+import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import the updated interface
 
 interface IndividualPayslipCardProps {
   payslip: MockPayslip;
@@ -50,7 +35,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     mainContactNumber,
     companyEmail,
     companyWebsite,
-    logoUrl: companyLogoUrl,
+    logoUrl: companyLogoUrl, // Main company logo
     logoSize: companyLogoSize,
   } = companyDetails;
 
@@ -67,7 +52,10 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       return;
     }
 
-    if (companyLogoUrl && imageRef.current) {
+    // Determine which logo URL to monitor for loading
+    const logoToMonitor = payslipDesignSettings.payslipLogoUrl || companyLogoUrl;
+
+    if (logoToMonitor && imageRef.current) {
       if (imageRef.current.complete) {
         setImagesLoaded(true);
       } else {
@@ -88,13 +76,29 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     } else {
       setImagesLoaded(true); // No logo or not PDF generation, so ready
     }
-  }, [companyLogoUrl, isPdfGeneration]);
+  }, [payslipDesignSettings.payslipLogoUrl, companyLogoUrl, isPdfGeneration]);
 
   React.useEffect(() => {
     if (imagesLoaded && onReadyForPdf) {
       onReadyForPdf();
     }
   }, [imagesLoaded, onReadyForPdf]);
+
+  // Determine which logo to use and its properties
+  const logoToUse = payslipDesignSettings.showCompanyLogo && payslipDesignSettings.payslipLogoUrl
+    ? payslipDesignSettings.payslipLogoUrl
+    : (payslipDesignSettings.showCompanyLogo && companyLogoUrl ? companyDetails.logoUrl : null);
+
+  const logoWidth = payslipDesignSettings.payslipLogoUrl
+    ? payslipDesignSettings.payslipLogoWidth
+    : companyLogoSize;
+  const logoHeight = payslipDesignSettings.payslipLogoUrl
+    ? payslipDesignSettings.payslipLogoHeight
+    : companyLogoSize;
+  const logoFit = payslipDesignSettings.payslipLogoUrl
+    ? payslipDesignSettings.payslipLogoFit
+    : 'contain';
+
 
   // Helper to render text with dynamic font size and line height
   const renderText = (text: string | number | undefined, scale: number = 1, className: string = "") => {
@@ -228,19 +232,19 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     >
       {/* Company Header */}
       <div style={isPdfGeneration ? { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: `${baseFontSizePx * 1.5}px` } : {}} className="flex justify-between items-start mb-4">
-        {payslipDesignSettings.showCompanyLogo && companyLogoUrl && (
-          <div style={isPdfGeneration ? { width: `${companyLogoSize}px`, height: `${companyLogoSize}px`, flexShrink: 0, marginRight: `${baseFontSizePx * 0.5}px` } : {}} className="flex-shrink-0 mr-2">
+        {logoToUse && (
+          <div style={isPdfGeneration ? { width: `${logoWidth}px`, height: `${logoHeight}px`, flexShrink: 0, marginRight: `${baseFontSizePx * 0.5}px` } : {}} className="flex-shrink-0 mr-2">
             <img
               ref={imageRef}
-              src={companyLogoUrl}
+              src={logoToUse}
               alt="Company Logo"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              style={{ width: '100%', height: '100%', objectFit: logoFit }}
               className="rounded-md"
             />
           </div>
         )}
         {payslipDesignSettings.showCompanyDetails && (
-          <div style={isPdfGeneration ? { textAlign: 'right', fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, flexGrow: 1, width: payslipDesignSettings.showCompanyLogo && companyLogoUrl ? 'calc(100% - ' + (companyLogoSize + baseFontSizePx * 0.5) + 'px)' : '100%' } : {}} className={cn("text-right flex-grow", !payslipDesignSettings.showCompanyLogo && "w-full")}>
+          <div style={isPdfGeneration ? { textAlign: 'right', fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, flexGrow: 1, width: logoToUse ? 'calc(100% - ' + (logoWidth + baseFontSizePx * 0.5) + 'px)' : '100%' } : {}} className={cn("text-right flex-grow", !logoToUse && "w-full")}>
             <h2 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.2}px`, lineHeight: `${baseFontSizePx * 1.2 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>{companyLegalName}</h2>
             {companyTradingName && companyTradingName !== companyLegalName && (
               <p style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1}px`, lineHeight: `${baseFontSizePx * 1 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>{companyTradingName}</p>

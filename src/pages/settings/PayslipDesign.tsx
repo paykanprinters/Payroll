@@ -10,33 +10,47 @@ import { ArrowUp, ArrowDown } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import the updated interface
 
 // Define default settings for payslip elements
-const defaultPayslipSettings = {
+const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
   showCompanyDetails: true,
   showEmployeeDetails: true,
   showEarningsBreakdown: true,
   showDeductionsBreakdown: true,
-  showLeaveSummary: true, // Now controlled by a toggle
-  showBankDetails: true, // Now controlled by a toggle
-  showYTD: true, // New setting for YTD calculations
-  showHourlyRate: true, // New setting for hourly rate visibility
-  sectionOrder: ["Earnings", "Deductions"] as ("Earnings" | "Deductions")[], // Only Earnings and Deductions are orderable
-  layoutSize: "A4" as "Letter" | "A4" | "A5", // Layout size setting
-  earningsDeductionsLayout: "deductions-left-earnings-right" as "deductions-left-earnings-right" | "earnings-left-deductions-right", // New layout setting
+  showLeaveSummary: true,
+  showBankDetails: true,
+  showYTD: true,
+  showHourlyRate: true,
+  sectionOrder: ["Earnings", "Deductions"],
+  layoutSize: "A4",
+  earningsDeductionsLayout: "deductions-left-earnings-right",
+  payslipLogoUrl: '',
+  payslipLogoWidth: 100,
+  payslipLogoHeight: 50,
+  payslipLogoFit: 'contain',
 };
 
-type PayslipSettings = typeof defaultPayslipSettings;
 type SectionName = "Earnings" | "Deductions"; // Only Earnings and Deductions are orderable
 
 const PayslipDesign: React.FC = () => {
-  const [settings, setSettings] = useState<PayslipSettings>(() => {
+  const [settings, setSettings] = useState<PayslipDesignSettings>(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
-    return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
+    const initial = savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
+    // Ensure new fields are initialized if not present in saved settings
+    return {
+      ...initial,
+      payslipLogoUrl: localStorage.getItem('payslipDesignLogoUrl') || initial.payslipLogoUrl || '',
+      payslipLogoWidth: parseFloat(localStorage.getItem('payslipDesignLogoWidth') || initial.payslipLogoWidth?.toString() || '100'),
+      payslipLogoHeight: parseFloat(localStorage.getItem('payslipDesignLogoHeight') || initial.payslipLogoHeight?.toString() || '50'),
+      payslipLogoFit: (localStorage.getItem('payslipDesignLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || initial.payslipLogoFit || 'contain',
+    };
   });
 
-  const handleToggleChange = (key: keyof PayslipSettings, checked: boolean) => {
+  const handleToggleChange = (key: keyof PayslipDesignSettings, checked: boolean) => {
     setSettings((prev) => ({ ...prev, [key]: checked }));
   };
 
@@ -63,14 +77,57 @@ const PayslipDesign: React.FC = () => {
     });
   };
 
+  const handlePayslipLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        setSettings(prev => ({ ...prev, payslipLogoUrl: dataUrl }));
+        localStorage.setItem('payslipDesignLogoUrl', dataUrl);
+        showSuccess("Payslip logo uploaded successfully!");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePayslipLogo = () => {
+    setSettings(prev => ({ ...prev, payslipLogoUrl: '', payslipLogoWidth: 100, payslipLogoHeight: 50, payslipLogoFit: 'contain' }));
+    localStorage.removeItem('payslipDesignLogoUrl');
+    localStorage.removeItem('payslipDesignLogoWidth');
+    localStorage.removeItem('payslipDesignLogoHeight');
+    localStorage.removeItem('payslipDesignLogoFit');
+    showSuccess("Payslip logo removed successfully!");
+  };
+
+  const handlePayslipLogoWidthChange = (value: number[]) => {
+    setSettings(prev => ({ ...prev, payslipLogoWidth: value[0] }));
+    localStorage.setItem('payslipDesignLogoWidth', value[0].toString());
+  };
+
+  const handlePayslipLogoHeightChange = (value: number[]) => {
+    setSettings(prev => ({ ...prev, payslipLogoHeight: value[0] }));
+    localStorage.setItem('payslipDesignLogoHeight', value[0].toString());
+  };
+
+  const handlePayslipLogoFitChange = (value: "contain" | "cover" | "fill" | "none" | "scale-down") => {
+    setSettings(prev => ({ ...prev, payslipLogoFit: value }));
+    localStorage.setItem('payslipDesignLogoFit', value);
+  };
+
   const handleSaveSettings = () => {
     localStorage.setItem("payslipDesignSettings", JSON.stringify(settings));
+    // Also save individual logo settings to ensure they persist even if the main settings object is not fully reloaded
+    localStorage.setItem('payslipDesignLogoUrl', settings.payslipLogoUrl || '');
+    localStorage.setItem('payslipDesignLogoWidth', settings.payslipLogoWidth?.toString() || '100');
+    localStorage.setItem('payslipDesignLogoHeight', settings.payslipLogoHeight?.toString() || '50');
+    localStorage.setItem('payslipDesignLogoFit', settings.payslipLogoFit || 'contain');
+
     showSuccess("Payslip design settings saved!");
-    // Dispatch a custom event if Payslips page needs to react immediately
     window.dispatchEvent(new Event('payslipDesignUpdated'));
   };
 
-  // Retrieve company details from localStorage for preview
+  // Retrieve company details from localStorage for preview fallback
   const companyTradingName = localStorage.getItem('companyTradingName') || "Your Company Name";
   const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
   const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
@@ -79,7 +136,7 @@ const PayslipDesign: React.FC = () => {
   const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
   const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
   const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
-  const companyLogoUrl = localStorage.getItem('companyLogoUrl');
+  const companyLogoUrl = localStorage.getItem('companyLogoUrl'); // Main company logo
   const companyLogoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
 
   const renderSection = (section: SectionName) => {
@@ -140,6 +197,13 @@ const PayslipDesign: React.FC = () => {
       </div>
     );
   };
+
+  // Determine which logo to use for the preview
+  const previewLogoUrl = settings.payslipLogoUrl || companyLogoUrl;
+  const previewLogoWidth = settings.payslipLogoUrl ? settings.payslipLogoWidth : companyLogoSize;
+  const previewLogoHeight = settings.payslipLogoUrl ? settings.payslipLogoHeight : companyLogoSize;
+  const previewLogoFit = settings.payslipLogoUrl ? settings.payslipLogoFit : 'contain';
+
 
   return (
     <div className="space-y-6">
@@ -292,6 +356,83 @@ const PayslipDesign: React.FC = () => {
               </div>
             </div>
 
+            <Separator />
+
+            {/* New Payslip Logo Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Payslip Logo</h3>
+              <p className="text-sm text-muted-foreground">Upload a specific logo for payslips, overriding the main company logo if provided.</p>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="payslipLogo">Upload Payslip Logo</Label>
+                <Input
+                  id="payslipLogo"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePayslipLogoUpload}
+                  className="mt-1 flex-1"
+                />
+                {settings.payslipLogoUrl && (
+                  <Button type="button" variant="outline" onClick={handleRemovePayslipLogo} className="mt-1">
+                    Remove Logo
+                  </Button>
+                )}
+              </div>
+              {settings.payslipLogoUrl && (
+                <div className="mt-4 space-y-4">
+                  <Label>Payslip Logo Preview</Label>
+                  <div className="flex items-center space-x-4 mt-2 border p-2 rounded-md">
+                    <img
+                      src={settings.payslipLogoUrl}
+                      alt="Payslip Logo"
+                      style={{ width: settings.payslipLogoWidth, height: settings.payslipLogoHeight, objectFit: settings.payslipLogoFit }}
+                      className="rounded-md border p-1"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <Label htmlFor="payslipLogoWidth">Width ({settings.payslipLogoWidth}px)</Label>
+                        <Slider
+                          id="payslipLogoWidth"
+                          min={20}
+                          max={200}
+                          step={1}
+                          value={[settings.payslipLogoWidth || 100]}
+                          onValueChange={handlePayslipLogoWidthChange}
+                          className="mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="payslipLogoHeight">Height ({settings.payslipLogoHeight}px)</Label>
+                        <Slider
+                          id="payslipLogoHeight"
+                          min={20}
+                          max={100}
+                          step={1}
+                          value={[settings.payslipLogoHeight || 50]}
+                          onValueChange={handlePayslipLogoHeightChange}
+                          className="mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="payslipLogoFit">Fit</Label>
+                        <Select onValueChange={handlePayslipLogoFitChange} value={settings.payslipLogoFit}>
+                          <SelectTrigger id="payslipLogoFit" className="mt-1">
+                            <SelectValue placeholder="Select fit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="contain">Contain</SelectItem>
+                            <SelectItem value="cover">Cover</SelectItem>
+                            <SelectItem value="fill">Fill</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="scale-down">Scale Down</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Button onClick={handleSaveSettings} className="w-full">
               Save Payslip Design
             </Button>
@@ -304,11 +445,11 @@ const PayslipDesign: React.FC = () => {
           )}>
             {/* Company Header */}
             <div className="flex justify-between items-start mb-4">
-              {settings.showCompanyLogo && companyLogoUrl && (
+              {settings.showCompanyLogo && previewLogoUrl && (
                 <img
-                  src={companyLogoUrl}
+                  src={previewLogoUrl}
                   alt="Company Logo"
-                  style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+                  style={{ width: previewLogoWidth, height: previewLogoHeight, objectFit: previewLogoFit }}
                   className="rounded-md"
                 />
               )}
@@ -349,12 +490,7 @@ const PayslipDesign: React.FC = () => {
                   <p><span className="font-semibold">ID No:</span> 9001015000087</p>
                   <p><span className="font-semibold">Job Title:</span> Software Developer</p>
                   {settings.showHourlyRate && (
-                    <>
-                      <p><span className="font-semibold">Hourly Rate:</span> R 150.00</p>
-                      <p className="text-xs text-muted-foreground italic">
-                        (This line only appears for employees with an hourly rate)
-                      </p>
-                    </>
+                    <p><span className="font-semibold">Hourly Rate:</span> R 150.00</p>
                   )}
                   <p><span className="font-semibold">Tax No:</span> 1234567890</p>
                 </div>

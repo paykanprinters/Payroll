@@ -14,6 +14,7 @@ import {
   generateMockPayslips,
   generateMockTimesheets,
   MockCompanyDetails,
+  PayslipDesignSettings, // Import PayslipDesignSettings
 } from "@/lib/mock-data";
 
 
@@ -77,9 +78,19 @@ const MockData: React.FC = () => {
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
 
+    // Clear payslip-specific logo settings
+    const payslipLogoKeys: (keyof PayslipDesignSettings)[] = [
+      "payslipLogoUrl", "payslipLogoWidth", "payslipLogoHeight", "payslipLogoFit"
+    ];
+    payslipLogoKeys.forEach(key => {
+      localStorage.removeItem(`payslipDesign${key.charAt(0).toUpperCase() + key.slice(1)}`);
+    });
+
+
     // Dispatch events to update components
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('mockDataUpdated')); // Generic event for other components
+    window.dispatchEvent(new Event('payslipDesignUpdated')); // Notify payslip design to reset
     showSuccess("Mock data cleared successfully!");
   };
 

@@ -140,3 +140,22 @@ export interface TimesheetEntry {
   approvedAt?: string; // ISO string
   auditLog?: { action: string; timestamp: string; user: string; captureMethod: "Manual" | "Biometric" | "Imported" }[];
 }
+
+export interface PayslipDesignSettings {
+  showCompanyLogo: boolean;
+  showCompanyDetails: boolean;
+  showEmployeeDetails: boolean;
+  showEarningsBreakdown: boolean;
+  showDeductionsBreakdown: boolean;
+  showLeaveSummary: boolean;
+  showBankDetails: boolean;
+  showYTD: boolean;
+  showHourlyRate: boolean;
+  sectionOrder: ("Earnings" | "Deductions")[];
+  layoutSize: "Letter" | "A4" | "A5";
+  earningsDeductionsLayout: "deductions-left-earnings-right" | "earnings-left-deductions-right";
+  payslipLogoUrl?: string; // New field for payslip-specific logo
+  payslipLogoWidth?: number; // New field for payslip logo width
+  payslipLogoHeight?: number; // New field for payslip logo height
+  payslipLogoFit?: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for payslip logo object-fit
+}
