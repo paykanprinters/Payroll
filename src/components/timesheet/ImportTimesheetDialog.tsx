@@ -19,6 +19,7 @@ import { useTimesheetImport } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
 import { XCircle } from "lucide-react"; // Import XCircle for the error message
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea for error list
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     columnMappings,
     parsedRawData,
     validatedData,
+    aggregationErrors, // Get aggregation errors
     isParsing,
     allRowsValid,
     canImport,
@@ -113,6 +115,30 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             parsedRawDataLength={parsedRawData.length}
           />
         </div>
+
+        {/* Aggregation Errors Section */}
+        {aggregationErrors.length > 0 && (
+          <Card className="border-red-500 bg-red-50 text-red-800">
+            <CardHeader>
+              <CardTitle className="text-lg">Aggregation Errors ({aggregationErrors.length})</CardTitle>
+              <CardDescription>
+                The following entries could not be processed into daily timesheets.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-40 w-full rounded-md border p-4 bg-white text-gray-900">
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {aggregationErrors.map((err, index) => (
+                    <li key={index}>
+                      <span className="font-semibold">Personal ID:</span> {err.personalIdAttempted || "N/A"},{" "}
+                      <span className="font-semibold">Date:</span> {err.dateAttempted || "N/A"} - {err.error}
+                    </li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Scrollable content area: Validated data table */}
         {validatedData.length > 0 && (

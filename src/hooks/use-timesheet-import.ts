@@ -35,6 +35,13 @@ export interface ParsedTimesheetRow {
   _errors: string[];
 }
 
+export interface AggregationError {
+  originalRow: any; // The raw CSV row that caused the error
+  personalIdAttempted: string;
+  dateAttempted: string;
+  error: string;
+}
+
 // Helper to extract date and time parts from a combined string (e.g., "YYYY-MM-DD HH:mm:ss")
 const extractDateAndTimeParts = (value: string) => {
   const dateTimeRegex = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/;
@@ -59,6 +66,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
   const [parsedRawData, setParsedRawData] = useState<any[]>([]);
   const [aggregatedData, setAggregatedData] = useState<ParsedTimesheetRow[]>([]);
   const [validatedData, setValidatedData] = useState<ParsedTimesheetRow[]>([]);
+  const [aggregationErrors, setAggregationErrors] = useState<AggregationError[]>([]); // New state for aggregation errors
   const [isParsing, setIsParsing] = useState(false);
 
   // Reset state when dialog opens/closes
@@ -76,6 +84,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       setParsedRawData([]);
       setAggregatedData([]);
       setValidatedData([]);
+      setAggregationErrors([]); // Reset aggregation errors
     }
   }, [isOpen]);
 
@@ -138,13 +147,18 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
     };
   }, []);
 
-  const aggregateClockTimes = useCallback((data: any[], currentMappings: ColumnMappings): ParsedTimesheetRow[] => {
+  const aggregateClockTimes = useCallback((data: any[], currentMappings: ColumnMappings): { aggregatedRows: ParsedTimesheetRow[]; errors: AggregationError[] } => {
     const employeeDailyPunches = new Map<string, Map<string, Date[]>>();
-    const aggregationErrors: { personalId: string; date: string; error: string }[] = [];
+    const currentAggregationErrors: AggregationError[] = [];
 
     if (!currentMappings.personalId || !currentMappings.combinedDateTime) {
-      aggregationErrors.push({ personalId: "N/A", date: "N/A", error: "Required columns for Personal ID and Date And Time are not mapped. Please select them from the dropdowns." });
-      return [];
+      currentAggregationErrors.push({
+        originalRow: {},
+        personalIdAttempted: "N/A",
+        dateAttempted: "N/A",
+        error: "Required columns for Personal ID and Date And Time are not mapped. Please select them from the dropdowns."
+      });
+      return { aggregatedRows: [], errors: currentAggregationErrors };
     }
 
     data.forEach(row => {
@@ -152,30 +166,30 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       const rawCombinedDateTime = String(row[currentMappings.combinedDateTime] || "").trim();
 
       if (!csvPersonalId) {
-        aggregationErrors.push({ personalId: "N/A", date: "N/A", error: `Skipped row: Missing Personal ID in row: ${JSON.stringify(row)}` });
+        currentAggregationErrors.push({ originalRow: row, personalIdAttempted: "N/A", dateAttempted: "N/A", error: `Skipped row: Missing Personal ID.` });
         return;
       }
       if (!rawCombinedDateTime) {
-        aggregationErrors.push({ personalId: csvPersonalId, date: "N/A", error: `Skipped row: Missing Date And Time for Personal ID '${csvPersonalId}'` });
+        currentAggregationErrors.push({ originalRow: row, personalIdAttempted: csvPersonalId, dateAttempted: "N/A", error: `Skipped row: Missing Date And Time for Personal ID '${csvPersonalId}'` });
         return;
       }
 
       const matchingEmployee = employees.find(emp => emp.personalId === csvPersonalId);
       if (!matchingEmployee) {
-        aggregationErrors.push({ personalId: csvPersonalId, date: "N/A", error: `Personal ID '${csvPersonalId}' not found in employee records. Ensure employee exists and has a 'Personal ID' set.` });
+        currentAggregationErrors.push({ originalRow: row, personalIdAttempted: csvPersonalId, dateAttempted: "N/A", error: `Personal ID '${csvPersonalId}' not found in employee records. Ensure employee exists and has a 'Personal ID' set.` });
         return;
       }
 
       const { datePart, timePart } = extractDateAndTimeParts(rawCombinedDateTime);
 
       if (!datePart || !timePart) {
-        aggregationErrors.push({ personalId: csvPersonalId, date: datePart || "N/A", error: `Invalid date/time format for '${rawCombinedDateTime}'. Expected YYYY-MM-DD HH:mm.` });
+        currentAggregationErrors.push({ originalRow: row, personalIdAttempted: csvPersonalId, dateAttempted: datePart || "N/A", error: `Invalid date/time format for '${rawCombinedDateTime}'. Expected YYYY-MM-DD HH:mm.` });
         return;
       }
 
       const punchDateTime = parse(`${datePart} ${timePart}`, 'yyyy-MM-dd HH:mm', new Date());
       if (!isValid(punchDateTime)) {
-        aggregationErrors.push({ personalId: csvPersonalId, date: datePart, error: `Could not parse date/time '${rawCombinedDateTime}'.` });
+        currentAggregationErrors.push({ originalRow: row, personalIdAttempted: csvPersonalId, dateAttempted: datePart, error: `Could not parse date/time '${rawCombinedDateTime}'.` });
         return;
       }
 
@@ -201,6 +215,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
           const timeOut = format(latestPunch, 'HH:mm');
 
           const employeePersonalId = employees.find(e => e.id === employeeId)?.personalId;
+          // Find a sample row for optional fields. This assumes optional fields are consistent per day.
           const sampleRowForOptionalFields = data.find(r => {
             const rowPersonalId = currentMappings.personalId ? String(r[currentMappings.personalId] || "").trim() : "";
             const rowCombinedDateTime = currentMappings.combinedDateTime ? String(r[currentMappings.combinedDateTime] || "").trim() : "";
@@ -230,25 +245,25 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       });
     });
 
-    if (aggregationErrors.length > 0) {
-      console.warn("Timesheet aggregation warnings/errors:", aggregationErrors);
-      if (aggregationErrors.some(e => e.error !== "Required columns for Personal ID and Date And Time are not mapped.")) {
-        showError(`Some entries could not be aggregated due to missing data or invalid format. See console for details.`);
-      }
-    }
-
-    return aggregatedRows;
+    return { aggregatedRows, errors: currentAggregationErrors };
   }, [employees]);
 
   const parseAndValidateData = useCallback((data: any[], currentMappings: ColumnMappings) => {
-    const aggregated = aggregateClockTimes(data, currentMappings);
-    setAggregatedData(aggregated);
-    const validated = aggregated.map(row => validateRow(row));
+    const { aggregatedRows, errors: aggregationErrorsFromFn } = aggregateClockTimes(data, currentMappings);
+    setAggregatedData(aggregatedRows);
+    setAggregationErrors(aggregationErrorsFromFn); // Set aggregation errors
+
+    const validated = aggregatedRows.map(row => validateRow(row));
     setValidatedData(validated);
-    if (validated.some(row => !row._isValid)) {
+
+    if (aggregationErrorsFromFn.length > 0) {
+      showError(`Some entries were skipped during aggregation. See 'Aggregation Errors' below.`);
+    } else if (validated.some(row => !row._isValid)) {
       showError("Some rows contain errors after aggregation. Please review the table below.");
     } else if (validated.length > 0) {
       showSuccess("All entries appear valid. Ready to import!");
+    } else {
+      showError("No valid entries could be processed. Check mappings and aggregation errors.");
     }
   }, [aggregateClockTimes, validateRow]);
 
@@ -267,6 +282,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       setParsedRawData([]);
       setAggregatedData([]);
       setValidatedData([]);
+      setAggregationErrors([]); // Clear aggregation errors on new file
     } else {
       setFile(null);
     }
@@ -332,6 +348,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
     parsedRawData,
     aggregatedData,
     validatedData,
+    aggregationErrors, // Expose aggregation errors
     isParsing,
     allRowsValid,
     canImport,
