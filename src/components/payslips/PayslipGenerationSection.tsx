@@ -3,14 +3,16 @@
 import React, { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { format, isSameMonth, isSameYear } from "date-fns";
+import { format, isSameMonth, isSameYear, isSameWeek, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import IndividualPayslipCard from "./IndividualPayslipCard";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import IndividualPayslipActions from "./IndividualPayslipActions";
 import BulkPayslipActions from "./BulkPayslipActions";
 import BulkPayslipsRenderer from "./BulkPayslipsRenderer"; // Import the new component
-import { showError } from "@/utils/toast"; // Ensure showError is imported
+import { showError, showSuccess } from "@/utils/toast"; // Ensure showError and showSuccess are imported
+import { Button } from "@/components/ui/button"; // Import Button
+import { FileStack } from "lucide-react"; // Import FileStack icon
 
 interface PayslipDesignSettings {
   showCompanyLogo?: boolean;
@@ -52,6 +54,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   allEmployees,
 }) => {
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
+  const [bulkGenerationMode, setBulkGenerationMode] = React.useState<"monthly" | "weekly">("monthly"); // New state for bulk mode
   const { generatePdf, printPdf } = usePdfGenerator();
 
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
@@ -99,20 +102,30 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
 
-  const handlePrintOrDownloadAll = useCallback(async (action: 'print' | 'download') => {
+  const handlePrintOrDownloadAll = useCallback(async (action: 'print' | 'download', mode: "monthly" | "weekly") => {
     if (!selectedPayPeriodDate) {
       showError("Please select a pay period date to generate all payslips.");
       return;
     }
 
     const payslipsForPeriod = payslips.filter(p => {
+      const employee = allEmployees.find(emp => emp.id === p.employeeId);
+      if (!employee) return false;
+
       const [startPeriodStr] = p.payPeriod.split(' - ');
       const payslipDate = new Date(startPeriodStr);
-      return isSameMonth(payslipDate, selectedPayPeriodDate) && isSameYear(payslipDate, selectedPayPeriodDate);
+
+      if (mode === "monthly" && employee.payFrequency === "Monthly") {
+        return isSameMonth(payslipDate, selectedPayPeriodDate) && isSameYear(payslipDate, selectedPayPeriodDate);
+      } else if (mode === "weekly" && (employee.payFrequency === "Weekly" || employee.payFrequency === "Bi-Weekly")) {
+        // Assuming week starts on Monday (1) for isSameWeek
+        return isSameWeek(payslipDate, selectedPayPeriodDate, { weekStartsOn: 1 }) && isSameYear(payslipDate, selectedPayPeriodDate);
+      }
+      return false;
     });
 
     if (payslipsForPeriod.length === 0) {
-      showError(`No payslips found for the selected pay period (${format(selectedPayPeriodDate, 'MMM yyyy')}).`);
+      showError(`No ${mode} payslips found for the selected period (${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}).`);
       return;
     }
 
@@ -128,7 +141,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     );
 
     const options = {
-      filename: `all-payslips-${format(selectedPayPeriodDate, 'yyyy-MM')}.pdf`,
+      filename: `all-${mode}-payslips-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`,
       format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
       documentType: 'payslip' as const, // Specify document type
     };
@@ -139,6 +152,71 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await printPdf(renderComponent, options);
     }
   }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
+
+  const handleGenerateAllCurrentPeriodPayslips = useCallback(async (action: 'print' | 'download') => {
+    const today = new Date();
+    const payslipsForCurrentPeriod: MockPayslip[] = [];
+
+    allEmployees.forEach(employee => {
+      let periodStart: Date;
+      let periodEnd: Date;
+      let periodFormat: string;
+
+      if (employee.payFrequency === "Monthly") {
+        periodStart = startOfMonth(today);
+        periodEnd = endOfMonth(today);
+        periodFormat = "yyyy-MM-dd";
+      } else if (employee.payFrequency === "Weekly" || employee.payFrequency === "Bi-Weekly") {
+        periodStart = startOfWeek(today, { weekStartsOn: 1 }); // Assuming week starts on Monday
+        periodEnd = endOfWeek(today, { weekStartsOn: 1 });
+        periodFormat = "yyyy-MM-dd";
+      } else {
+        console.warn(`Employee ${employee.id} has unsupported pay frequency: ${employee.payFrequency}. Skipping.`);
+        return;
+      }
+
+      const targetPayPeriodString = `${format(periodStart, periodFormat)} - ${format(periodEnd, periodFormat)}`;
+
+      const foundPayslip = payslips.find(p =>
+        p.employeeId === employee.id && p.payPeriod === targetPayPeriodString
+      );
+
+      if (foundPayslip) {
+        payslipsForCurrentPeriod.push(foundPayslip);
+      }
+    });
+
+    if (payslipsForCurrentPeriod.length === 0) {
+      showError("No payslips found for the current period for any employee. Ensure mock data is up-to-date.");
+      return;
+    }
+
+    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <BulkPayslipsRenderer
+        payslips={payslipsForCurrentPeriod}
+        payslipDesignSettings={payslipDesignSettings}
+        companyDetails={companyDetails}
+        employees={allEmployees}
+        getEmployeeName={getEmployeeName}
+        onReadyForPdf={onReadyForPdf}
+      />
+    );
+
+    const options = {
+      filename: `all-payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`,
+      format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
+      documentType: 'payslip' as const,
+    };
+
+    if (action === 'download') {
+      await generatePdf(renderComponent, options);
+      showSuccess(`All payslips for the current period downloaded successfully!`);
+    } else {
+      await printPdf(renderComponent, options);
+      showSuccess(`All payslips for the current period sent to printer!`);
+    }
+
+  }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, generatePdf, printPdf]);
 
 
   return (
@@ -166,14 +244,25 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             onDownload={() => handlePrintOrDownloadIndividual('download')}
           />
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 items-end">
+        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end"> {/* Adjusted grid for bulk actions */}
           <BulkPayslipActions
             payslips={payslips}
             selectedPayPeriodDate={selectedPayPeriodDate}
             setSelectedPayPeriodDate={setSelectedPayPeriodDate}
-            onPrintAll={() => handlePrintOrDownloadAll('print')}
-            onDownloadAll={() => handlePrintOrDownloadAll('download')}
+            bulkGenerationMode={bulkGenerationMode}
+            setBulkGenerationMode={setBulkGenerationMode}
+            onPrintAll={handlePrintOrDownloadAll}
+            onDownloadAll={handlePrintOrDownloadAll}
           />
+          <div className="md:col-span-2 lg:col-span-1 flex items-end"> {/* Adjusted span for button alignment */}
+            <Button
+              className="w-full"
+              onClick={() => handleGenerateAllCurrentPeriodPayslips('download')}
+              disabled={allEmployees.length === 0 || payslips.length === 0}
+            >
+              <FileStack className="mr-2 h-4 w-4" /> Generate All for Current Period
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
