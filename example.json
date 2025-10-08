@@ -1,0 +1,11 @@
+{
+  "id": "EMP001",
+  "personalId": "BIO1001", // This is the key field for matching!
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@acmecorp.co.za",
+  "jobTitle": "Software Engineer",
+  "salary": 45000,
+  "startDate": "2022-01-15",
+  // ... other employee details
+}
