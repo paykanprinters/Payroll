@@ -9,28 +9,34 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface BulkPayslipActionsProps {
   payslips: MockPayslip[];
   selectedPayPeriodDate: Date | undefined;
   setSelectedPayPeriodDate: (date: Date | undefined) => void;
-  onPrintAll: () => void;
-  onDownloadAll: () => void;
+  bulkGenerationMode: "monthly" | "weekly";
+  setBulkGenerationMode: (mode: "monthly" | "weekly") => void;
+  onPrintAll: (action: 'print' | 'download', mode: "monthly" | "weekly") => void;
+  onDownloadAll: (action: 'print' | 'download', mode: "monthly" | "weekly") => void;
 }
 
 const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
   payslips,
   selectedPayPeriodDate,
   setSelectedPayPeriodDate,
+  bulkGenerationMode,
+  setBulkGenerationMode,
   onPrintAll,
   onDownloadAll,
 }) => {
   return (
     <>
       <div>
-        <label htmlFor="pay-period-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+        <Label htmlFor="pay-period-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
           Select Pay Period for Bulk Payslips
-        </label>
+        </Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -41,7 +47,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedPayPeriodDate ? format(selectedPayPeriodDate, "MMM yyyy") : <span>Pick a month</span>}
+              {selectedPayPeriodDate ? format(selectedPayPeriodDate, bulkGenerationMode === "monthly" ? "MMM yyyy" : "PPP") : <span>Pick a {bulkGenerationMode === "monthly" ? "month" : "date"}</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
@@ -57,6 +63,20 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           </PopoverContent>
         </Popover>
       </div>
+      <div>
+        <Label htmlFor="bulk-mode-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Bulk Generation Mode
+        </Label>
+        <Select onValueChange={(value) => setBulkGenerationMode(value as "monthly" | "weekly")} value={bulkGenerationMode}>
+          <SelectTrigger id="bulk-mode-select" className="mt-1">
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="monthly">Monthly</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="w-full" variant="outline" disabled={!selectedPayPeriodDate || payslips.length === 0}>
@@ -64,10 +84,10 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={onPrintAll} disabled={!selectedPayPeriodDate || payslips.length === 0}>
+          <DropdownMenuItem onClick={() => onPrintAll('print', bulkGenerationMode)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
             <Printer className="mr-2 h-4 w-4" /> Print All Payslips
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onDownloadAll} disabled={!selectedPayPeriodDate || payslips.length === 0}>
+          <DropdownMenuItem onClick={() => onDownloadAll('download', bulkGenerationMode)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
             <Download className="mr-2 h-4 w-4" /> Download All Payslips PDF
           </DropdownMenuItem>
         </DropdownMenuContent>
