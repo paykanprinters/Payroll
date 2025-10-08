@@ -55,7 +55,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
     const timesheetsToImport = validEntries.map(row => ({
       employeeId: row.employeeId,
-      date: row.date,
+      date: new Date(row.date), // Convert date string to Date object here
       timeIn: row.timeIn,
       teaStart: row.teaStart,
       teaEnd: row.teaEnd,
@@ -64,6 +64,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       timeOut: row.timeOut,
     }));
 
+    console.log("ImportTimesheetDialog: Attempting to import these entries:", timesheetsToImport);
     onImport(timesheetsToImport);
     showSuccess(`${timesheetsToImport.length} timesheet entries imported successfully!`);
     onClose();
@@ -157,7 +158,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+          Cancel
           </Button>
           <Button onClick={handleImportData} disabled={!canImport}>
             Import Valid Entries

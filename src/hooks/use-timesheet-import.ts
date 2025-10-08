@@ -44,6 +44,7 @@ export interface AggregationError {
 
 // Helper to extract date and time parts from a combined string (e.g., "YYYY-MM-DD HH:mm:ss")
 const extractDateAndTimeParts = (value: string) => {
+  // This regex handles both "YYYY-MM-DD HH:mm:ss" and "YYYY-MM-DD HH:mm"
   const dateTimeRegex = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/;
   const match = value.match(dateTimeRegex);
 
@@ -165,6 +166,8 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       const csvPersonalId = String(row[currentMappings.personalId] || "").trim();
       const rawCombinedDateTime = String(row[currentMappings.combinedDateTime] || "").trim();
 
+      console.log(`Processing raw row: Personal ID: '${csvPersonalId}', DateTime: '${rawCombinedDateTime}'`);
+
       if (!csvPersonalId) {
         currentAggregationErrors.push({ originalRow: row, personalIdAttempted: "N/A", dateAttempted: "N/A", error: `Skipped row: Missing Personal ID.` });
         return;
@@ -177,10 +180,14 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       const matchingEmployee = employees.find(emp => emp.personalId === csvPersonalId);
       if (!matchingEmployee) {
         currentAggregationErrors.push({ originalRow: row, personalIdAttempted: csvPersonalId, dateAttempted: "N/A", error: `Personal ID '${csvPersonalId}' not found in employee records. Ensure employee exists and has a 'Personal ID' set.` });
+        console.log(`No matching employee for Personal ID: '${csvPersonalId}'`);
         return;
       }
+      console.log(`Matched employee: ${matchingEmployee.firstName} ${matchingEmployee.lastName} (ID: ${matchingEmployee.id}) for Personal ID: '${csvPersonalId}'`);
+
 
       const { datePart, timePart } = extractDateAndTimeParts(rawCombinedDateTime);
+      console.log(`Extracted from '${rawCombinedDateTime}': Date Part: '${datePart}', Time Part: '${timePart}'`);
 
       if (!datePart || !timePart) {
         currentAggregationErrors.push({ originalRow: row, personalIdAttempted: csvPersonalId, dateAttempted: datePart || "N/A", error: `Invalid date/time format for '${rawCombinedDateTime}'. Expected YYYY-MM-DD HH:mm.` });
@@ -192,6 +199,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
         currentAggregationErrors.push({ originalRow: row, personalIdAttempted: csvPersonalId, dateAttempted: datePart, error: `Could not parse date/time '${rawCombinedDateTime}'.` });
         return;
       }
+      console.log(`Parsed punchDateTime: ${punchDateTime}`);
 
       if (!employeeDailyPunches.has(matchingEmployee.id)) {
         employeeDailyPunches.set(matchingEmployee.id, new Map());
@@ -244,11 +252,12 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
         }
       });
     });
-
+    console.log(`Aggregation complete. Found ${aggregatedRows.length} aggregated rows. ${currentAggregationErrors.length} aggregation errors.`);
     return { aggregatedRows, errors: currentAggregationErrors };
   }, [employees]);
 
   const parseAndValidateData = useCallback((data: any[], currentMappings: ColumnMappings) => {
+    console.log("Starting parseAndValidateData with raw data length:", data.length, "and mappings:", currentMappings);
     const { aggregatedRows, errors: aggregationErrorsFromFn } = aggregateClockTimes(data, currentMappings);
     setAggregatedData(aggregatedRows);
     setAggregationErrors(aggregationErrorsFromFn); // Set aggregation errors

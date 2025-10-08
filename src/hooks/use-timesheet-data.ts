@@ -20,7 +20,7 @@ const calculateTimeDifferenceInHours = (start: string, end: string): number => {
 
 interface TimesheetFormValues {
   employeeId: string;
-  date: Date;
+  date: Date; // Expecting a Date object now
   timeIn: string;
   teaStart?: string;
   teaEnd?: string;
@@ -102,10 +102,18 @@ export const useTimesheetData = () => {
   }, []);
 
   const addOrUpdateTimesheet = useCallback((data: TimesheetFormValues) => {
+    console.log("addOrUpdateTimesheet: Received data:", data); // Log incoming data
     const employee = employees.find(emp => emp.id === data.employeeId);
+    if (!employee) {
+      console.error("addOrUpdateTimesheet: Employee not found for ID:", data.employeeId);
+      showError("Employee not found. Cannot add/update timesheet.");
+      return;
+    }
+
     const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(data, employee);
 
     const formattedDate = format(data.date, "yyyy-MM-dd");
+    console.log("addOrUpdateTimesheet: Formatted date:", formattedDate);
 
     const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
       employeeId: data.employeeId,
