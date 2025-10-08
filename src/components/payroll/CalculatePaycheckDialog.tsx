@@ -1,0 +1,203 @@
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { usePdfGenerator } from "@/hooks/use-pdf-generator";
+import { Printer, Download } from "lucide-react";
+import { showError } from "@/utils/toast";
+
+interface PayslipDesignSettings {
+  showCompanyLogo?: boolean;
+  showCompanyDetails?: boolean;
+  showEmployeeDetails?: boolean;
+  showEarningsBreakdown?: boolean;
+  showDeductionsBreakdown?: boolean;
+  showLeaveSummary?: boolean;
+  showBankDetails?: boolean;
+  showYTD?: boolean;
+  sectionOrder?: ("Earnings" | "Deductions")[];
+  layoutSize?: "Letter" | "A4" | "A5";
+  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
+}
+
+interface CalculatePaycheckDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  payslipDesignSettings: PayslipDesignSettings;
+}
+
+const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpen, onClose, payslipDesignSettings }) => {
+  const { employees, calculateSinglePayslipPreview, companyDetails } = usePayrollProcessor();
+  const { generatePdf, printPdf } = usePdfGenerator();
+
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [previewPayslip, setPreviewPayslip] = useState<MockPayslip | null>(null);
+  const [currentPeriodStart, setCurrentPeriodStart] = useState<Date | null>(null);
+  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<Date | null>(null);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedEmployeeId("");
+      setPreviewPayslip(null);
+      // Determine current period based on today's date for preview
+      const today = new Date();
+      setCurrentPeriodStart(startOfMonth(today)); // Default to monthly for preview
+      setCurrentPeriodEnd(endOfMonth(today));
+    }
+  }, [isOpen]);
+
+  const handleEmployeeSelect = useCallback((employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    setPreviewPayslip(null); // Clear previous preview
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (employee && companyDetails) {
+      let periodStart: Date;
+      let periodEnd: Date;
+
+      if (employee.payFrequency === "Monthly") {
+        periodStart = startOfMonth(new Date());
+        periodEnd = endOfMonth(new Date());
+      } else if (employee.payFrequency === "Weekly") {
+        periodStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday start
+        periodEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      } else if (employee.payFrequency === "Bi-Weekly") {
+        // For bi-weekly, we'll simplify to weekly for mock purposes or define a fixed bi-weekly cycle start
+        // For now, let's treat it as weekly for simplicity in preview
+        periodStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        periodEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      } else {
+        showError(`Unsupported pay frequency for employee ${employee.firstName} ${employee.lastName}.`);
+        return;
+      }
+
+      setCurrentPeriodStart(periodStart);
+      setCurrentPeriodEnd(periodEnd);
+
+      const calculatedPayslip = calculateSinglePayslipPreview(employeeId, periodStart, periodEnd);
+      setPreviewPayslip(calculatedPayslip);
+    }
+  }, [employees, companyDetails, calculateSinglePayslipPreview]);
+
+  const handlePrintOrDownload = useCallback(async (action: 'print' | 'download') => {
+    if (!previewPayslip || !companyDetails || !currentPeriodStart || !currentPeriodEnd) {
+      showError("No payslip preview available to print or download.");
+      return;
+    }
+
+    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <IndividualPayslipCard
+        payslip={previewPayslip}
+        payslipDesignSettings={payslipDesignSettings}
+        companyDetails={companyDetails}
+        employees={employees}
+        getEmployeeName={(id) => employees.find(emp => emp.id === id)?.firstName + " " + employees.find(emp => emp.id === id)?.lastName || "Unknown"}
+        isPdfGeneration={true}
+        onReadyForPdf={onReadyForPdf}
+      />
+    );
+
+    const filename = `payslip-preview-${previewPayslip.employeeId}-${format(currentPeriodStart, 'yyyy-MM-dd')}.pdf`;
+    const options = {
+      filename,
+      format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
+      documentType: 'payslip' as const,
+    };
+
+    if (action === 'download') {
+      await generatePdf(renderComponent, options);
+    } else {
+      await printPdf(renderComponent, options);
+    }
+  }, [previewPayslip, companyDetails, currentPeriodStart, currentPeriodEnd, payslipDesignSettings, employees, generatePdf, printPdf]);
+
+  const getEmployeeName = (employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Calculate Paycheck Preview</DialogTitle>
+          <DialogDescription>
+            Select an employee to preview their payslip for the current upcoming pay period.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4 flex-grow overflow-y-auto">
+          <div className="space-y-2">
+            <Label htmlFor="employee-select">Select Employee</Label>
+            <Select onValueChange={handleEmployeeSelect} value={selectedEmployeeId}>
+              <SelectTrigger id="employee-select">
+                <SelectValue placeholder="Select an employee" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.length > 0 ? (
+                  employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName} ({emp.id})
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-employees" disabled>
+                    No employees available (enable mock data)
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {previewPayslip && companyDetails && currentPeriodStart && currentPeriodEnd ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold mt-4">
+                Payslip Preview for {getEmployeeName(previewPayslip.employeeId)} ({format(currentPeriodStart, 'PPP')} - {format(currentPeriodEnd, 'PPP')})
+              </h3>
+              <div className="flex justify-center">
+                <IndividualPayslipCard
+                  payslip={previewPayslip}
+                  payslipDesignSettings={payslipDesignSettings}
+                  companyDetails={companyDetails}
+                  employees={employees}
+                  getEmployeeName={getEmployeeName}
+                  isPdfGeneration={false} // This is for UI preview
+                />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => handlePrintOrDownload('print')}>
+                  <Printer className="mr-2 h-4 w-4" /> Print Preview
+                </Button>
+                <Button onClick={() => handlePrintOrDownload('download')}>
+                  <Download className="mr-2 h-4 w-4" /> Download Preview PDF
+                </Button>
+              </div>
+            </div>
+          ) : (
+            selectedEmployeeId && <p className="text-center text-muted-foreground mt-8">Select an employee to see their paycheck preview.</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default CalculatePaycheckDialog;

@@ -6,12 +6,60 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
-import { format, addDays, subDays, differenceInCalendarDays } from "date-fns";
+import { format, addDays, subDays, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import the new hook
+import { useNavigate } from "react-router-dom"; // Import useNavigate
+import CalculatePaycheckDialog from "./CalculatePaycheckDialog"; // Import the new dialog
+import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
+
+interface PayslipDesignSettings {
+  showCompanyLogo?: boolean;
+  showCompanyDetails?: boolean;
+  showEmployeeDetails?: boolean;
+  showEarningsBreakdown?: boolean;
+  showDeductionsBreakdown?: boolean;
+  showLeaveSummary?: boolean;
+  showBankDetails?: boolean;
+  showYTD?: boolean;
+  sectionOrder?: ("Earnings" | "Deductions")[];
+  layoutSize?: "Letter" | "A4" | "A5";
+  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
+}
+
+const defaultPayslipSettings: PayslipDesignSettings = {
+  showCompanyLogo: true,
+  showCompanyDetails: true,
+  showEmployeeDetails: true,
+  showEarningsBreakdown: true,
+  showDeductionsBreakdown: true,
+  showLeaveSummary: true, // Now controlled by a toggle
+  showBankDetails: true, // Now controlled by a toggle
+  showYTD: true, // New setting for YTD calculations
+  sectionOrder: ["Earnings", "Deductions"],
+  layoutSize: "A4",
+  earningsDeductionsLayout: "deductions-left-earnings-right",
+};
+
+const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
+  defaultReportPaperSize: "A4",
+  includeCompanyLogo: true,
+  includeCompanyDetails: true,
+  reportContentFontSize: 14,
+  irp5ContentFontSize: 12, // Added irp5ContentFontSize
+};
 
 const UpcomingPayrollCard: React.FC = () => {
+  const navigate = useNavigate();
+  const { runPayrollProcess } = usePayrollProcessor(); // Use the payroll processor hook
+
   const [currentCheckDate, setCurrentCheckDate] = useState<Date>(new Date());
   const [payPeriodStart, setPayPeriodStart] = useState<Date>(new Date());
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date>(new Date());
+  const [isCalculatePaycheckDialogOpen, setIsCalculatePaycheckDialogOpen] = useState(false);
+  const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
+    const savedSettings = localStorage.getItem("payslipDesignSettings");
+    return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
+  });
 
   useEffect(() => {
     // Initialize dates for a weekly payroll cycle (mock data)
@@ -33,6 +81,16 @@ const UpcomingPayrollCard: React.FC = () => {
     const periodStart = subDays(periodEnd, 6);
     setPayPeriodStart(periodStart);
 
+    const handlePayslipDesignUpdate = () => {
+      const savedSettings = localStorage.getItem("payslipDesignSettings");
+      setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings);
+    };
+
+    window.addEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
+    return () => {
+      window.removeEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
+    };
+
   }, []);
 
   const handlePreviousPeriod = () => {
@@ -50,16 +108,21 @@ const UpcomingPayrollCard: React.FC = () => {
   };
 
   const handleRunPayroll = () => {
-    showSuccess("Payroll initiated successfully! Processing...");
-    console.log("Running payroll for:", format(payPeriodStart, "MM/dd"), "-", format(payPeriodEnd, "MM/dd"));
+    runPayrollProcess(payPeriodStart, payPeriodEnd);
+    // After running payroll, advance to the next period
+    const nextCheckDate = addDays(currentCheckDate, 7);
+    setCurrentCheckDate(nextCheckDate);
+    setPayPeriodEnd(nextCheckDate);
+    setPayPeriodStart(subDays(nextCheckDate, 6));
   };
 
   const handleNewOffCyclePayroll = () => {
-    showSuccess("New off-cycle payroll started.");
+    showSuccess("Starting new off-cycle payroll. Redirecting to Payslips page.");
+    navigate("/payslips/overview"); // Navigate to the Payslips overview page
   };
 
   const handleCalculatePaycheck = () => {
-    showSuccess("Paycheck calculation initiated.");
+    setIsCalculatePaycheckDialogOpen(true);
   };
 
   const daysUntilDue = differenceInCalendarDays(currentCheckDate, new Date());
@@ -120,6 +183,11 @@ const UpcomingPayrollCard: React.FC = () => {
           </div>
         </div>
       </CardContent>
+      <CalculatePaycheckDialog
+        isOpen={isCalculatePaycheckDialogOpen}
+        onClose={() => setIsCalculatePaycheckDialogOpen(false)}
+        payslipDesignSettings={payslipDesignSettings}
+      />
     </Card>
   );
 };

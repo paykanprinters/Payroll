@@ -25,10 +25,13 @@ import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard"; // I
 import TopToDosCard from "@/components/dashboard/TopToDosCard"; // Import new TopToDosCard
 import { Calendar } from "@/components/ui/calendar"; // Import Calendar component
 import { Link } from "react-router-dom"; // Import Link for navigation
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import the new hook
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
+  const { employees, payslips, leaveRecords } = usePayrollProcessor(); // Use the payroll processor hook to get data
+
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
   const [upcomingPayrollAmount, setUpcomingPayrollAmount] = useState(0);
@@ -43,17 +46,10 @@ const Dashboard: React.FC = () => {
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
-  const loadDashboardData = () => {
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    const employees: MockEmployee[] = storedEmployees ? JSON.parse(storedEmployees) : [];
+  const loadDashboardData = React.useCallback(() => { // Wrap in useCallback
     setEmployeeCount(employees.length);
 
-    const storedPayslips = localStorage.getItem("mockPayslips");
-    const payslips: MockPayslip[] = storedPayslips ? JSON.parse(storedPayslips) : [];
     setRecentPayslipCount(payslips.length);
-
-    const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
-    const leaveRecords: LeaveEntry[] = storedLeaveRecords ? JSON.parse(storedLeaveRecords) : [];
 
     // Calculate upcoming payroll amount (sum of all employee salaries for simplicity)
     const totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), 0); // Include hourly rate estimate
@@ -64,7 +60,7 @@ const Dashboard: React.FC = () => {
     employees.forEach((emp) => {
       jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
     });
-    setEmployeeJobTitleData(
+    setJobTitleDistribution(
       Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
     );
 
@@ -138,7 +134,7 @@ const Dashboard: React.FC = () => {
       }))
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
     setLeaveDaysTakenTrend(sortedLeaveDaysTrend);
-  };
+  }, [employees, payslips, leaveRecords]); // Add dependencies
 
   const loadCompanyDetails = () => {
     const legalName = localStorage.getItem('companyLegalName');
@@ -154,7 +150,7 @@ const Dashboard: React.FC = () => {
       window.removeEventListener('mockDataUpdated', loadDashboardData);
       window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
     };
-  }, []);
+  }, [loadDashboardData]); // Add loadDashboardData as dependency
 
   // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
@@ -162,7 +158,7 @@ const Dashboard: React.FC = () => {
     return `${value} (${percentage}%)`;
   };
 
-  const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
+  const totalJobTitles = jobTitleDistribution.reduce((sum, entry) => sum + entry.value, 0);
   const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
 
   return (
