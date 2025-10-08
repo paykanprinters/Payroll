@@ -14,6 +14,7 @@ interface PayslipDesignSettings {
   showLeaveSummary?: boolean;
   showBankDetails?: boolean;
   showYTD?: boolean;
+  showHourlyRate?: boolean; // New field
   sectionOrder?: ("Earnings" | "Deductions")[];
   layoutSize?: "Letter" | "A4" | "A5";
   earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
@@ -272,6 +273,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             {renderParagraph("Employee No", employee.id)}
             {renderParagraph("ID No", employee.idNumber)}
             {renderParagraph("Job Title", employee.jobTitle)}
+            {payslipDesignSettings.showHourlyRate && employee.hourlyRate !== undefined && (
+              renderParagraph("Hourly Rate", `R ${employee.hourlyRate.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`)
+            )}
             {renderParagraph("Tax No", employee.taxReferenceNumber)}
           </div>
           {payslipDesignSettings.showBankDetails && (

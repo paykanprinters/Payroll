@@ -21,6 +21,7 @@ const defaultPayslipSettings = {
   showLeaveSummary: true, // Now controlled by a toggle
   showBankDetails: true, // Now controlled by a toggle
   showYTD: true, // New setting for YTD calculations
+  showHourlyRate: true, // New setting for hourly rate visibility
   sectionOrder: ["Earnings", "Deductions"] as ("Earnings" | "Deductions")[], // Only Earnings and Deductions are orderable
   layoutSize: "A4" as "Letter" | "A4" | "A5", // Layout size setting
   earningsDeductionsLayout: "deductions-left-earnings-right" as "deductions-left-earnings-right" | "earnings-left-deductions-right", // New layout setting
@@ -210,6 +211,14 @@ const PayslipDesign: React.FC = () => {
                 />
               </div>
               <div className="flex items-center justify-between">
+                <Label htmlFor="showHourlyRate">Show Employee Hourly Rate</Label>
+                <Switch
+                  id="showHourlyRate"
+                  checked={settings.showHourlyRate}
+                  onCheckedChange={(checked) => handleToggleChange("showHourlyRate", checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
                 <Label htmlFor="showEarningsBreakdown">Show Earnings Breakdown</Label>
                 <Switch
                   id="showEarningsBreakdown"
@@ -339,6 +348,9 @@ const PayslipDesign: React.FC = () => {
                   <p><span className="font-semibold">Employee No:</span> EMP001</p>
                   <p><span className="font-semibold">ID No:</span> 9001015000087</p>
                   <p><span className="font-semibold">Job Title:</span> Software Developer</p>
+                  {settings.showHourlyRate && (
+                    <p><span className="font-semibold">Hourly Rate:</span> R 150.00</p>
+                  )}
                   <p><span className="font-semibold">Tax No:</span> 1234567890</p>
                 </div>
                 {settings.showBankDetails && (
