@@ -126,9 +126,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
-  const renderSidebarContent = (isCollapsed: boolean) => (
+  const renderSidebarContent = (isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void) => (
     <>
-      <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed && "justify-center")}>
+      <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed ? "justify-center" : "justify-between")}>
         {companyLogoUrl && !isCollapsed ? (
           <img
             src={companyLogoUrl}
@@ -148,6 +148,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
             alt="Company Logo"
             style={{ width: companyLogoSize * 0.7, height: companyLogoSize * 0.7, objectFit: 'contain' }}
           />
+        )}
+        {!isMobile && ( // Only show this toggle button on desktop
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(prev => !prev)}
+            className={cn(isCollapsed ? "ml-0" : "ml-auto")} // Adjust margin based on collapsed state
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
         )}
       </div>
       <nav className="grid items-start gap-1 p-4">
@@ -179,7 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
-            {renderSidebarContent(true)}
+            {renderSidebarContent(true, setIsCollapsed)}
           </div>
         </SheetContent>
       </Sheet>
@@ -193,7 +203,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         isCollapsed ? "w-[70px]" : "w-[240px]"
       )}
     >
-      {renderSidebarContent(false)}
+      {renderSidebarContent(false, setIsCollapsed)}
     </div>
   );
 };
