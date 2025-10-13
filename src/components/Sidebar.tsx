@@ -134,17 +134,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const renderSidebarContent = (isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void) => (
     <>
       <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed ? "justify-center" : "justify-between")}>
-        {!isCollapsed && companyLogoUrl && (
-          <img
-            src={companyLogoUrl}
-            alt="Company Logo"
-            style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-            className="mr-2"
-          />
-        )}
-        {!isCollapsed && (
-          <Link to="/" className="flex items-center gap-2 font-semibold">
-            <span className="text-lg">{displayCompanyName}</span>
+        {!isCollapsed && ( // This block for expanded state
+          <Link to="/" className="flex flex-col items-center flex-grow-0"> {/* Container for logo and name */}
+            {companyLogoUrl && (
+              <img
+                src={companyLogoUrl}
+                alt="Company Logo"
+                style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+                className="mb-1" // Add some margin below the logo
+              />
+            )}
+            <span className="text-lg whitespace-nowrap">{displayCompanyName}</span> {/* Ensure no wrapping */}
           </Link>
         )}
         {!isMobile && (
