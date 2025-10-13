@@ -39,6 +39,10 @@ const sidebarNavItems = [
     title: "Data Visuals",
     href: "/settings/data-visuals",
   },
+  {
+    title: "User Control Panel", // New item
+    href: "/settings/user-control-panel",
+  },
   // Add more settings sub-menus here
 ];
 
