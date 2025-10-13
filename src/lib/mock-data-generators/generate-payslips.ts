@@ -1,5 +1,5 @@
 import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO, isWithinInterval } from "date-fns";
-import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry } from "../mock-data-interfaces";
+import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
 
 // Helper to calculate working days (excluding weekends) - kept here as it's specific to payslip generation logic
 const calculateWorkingDays = (start: Date, end: Date): number => {
@@ -150,12 +150,24 @@ export const generatePayslipsForPeriod = (
     // Loan Deductions for this period
     currentLoans.forEach(loan => {
       if (loan.employeeId === emp.id && loan.status !== "completed" && new Date(loan.startDate) <= payPeriodEnd) {
+        if (loan.paused) {
+          // If paused, record a pause entry and then unpause for the next cycle
+          const pauseEntry: LoanDeductionHistoryEntry = {
+            date: format(payPeriodEnd, 'yyyy-MM-dd'),
+            amount: 0,
+            type: "pause",
+            notes: `Deduction paused for pay period ${payPeriodString}`,
+          };
+          loan.deductionHistory.push(pauseEntry);
+          loan.paused = false; // Auto-resume after one skipped period
+          return; // Skip deduction for this period
+        }
+
         let deductionAmount = 0;
-        if (loan.frequency === "monthly" && isSameMonth(new Date(loan.startDate), payPeriodStart)) {
-          deductionAmount = Math.min(loan.repaymentAmount, loan.remainingBalance);
-        } else if (loan.frequency === "weekly" && isWithinInterval(new Date(loan.startDate), { start: payPeriodStart, end: payPeriodEnd })) {
-          // For weekly, deduct if loan started within the pay period, or if it's an ongoing weekly deduction
-          // Simplified: assume one weekly deduction per pay period for mock
+        const isMonthly = loan.frequency === "monthly" && isSameMonth(new Date(loan.startDate), payPeriodStart);
+        const isWeekly = loan.frequency === "weekly" && isWithinInterval(new Date(loan.startDate), { start: payPeriodStart, end: payPeriodEnd });
+
+        if (isMonthly || isWeekly) {
           deductionAmount = Math.min(loan.repaymentAmount, loan.remainingBalance);
         }
 
@@ -163,6 +175,13 @@ export const generatePayslipsForPeriod = (
           deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: deductionAmount });
           totalDeductions += deductionAmount;
           loan.remainingBalance -= deductionAmount;
+          const deductionEntry: LoanDeductionHistoryEntry = {
+            date: format(payPeriodEnd, 'yyyy-MM-dd'),
+            amount: deductionAmount,
+            type: "deduction",
+            notes: `Payroll deduction for pay period ${payPeriodString}`,
+          };
+          loan.deductionHistory.push(deductionEntry);
           if (loan.remainingBalance <= 0) {
             loan.status = "completed";
             loan.remainingBalance = 0;

@@ -89,17 +89,33 @@ export const generateMockToDos = (
   }
 
   // --- Loans & Advancements To-Dos ---
-  const pendingLoanRequests = loans.filter(loan => loan.status === "active" && isBefore(new Date(loan.startDate), today)); // Simplified: active loans started in past
-  if (pendingLoanRequests.length > 0) {
+  const pausedLoans = loans.filter(loan => loan.paused);
+  if (pausedLoans.length > 0) {
     toDos.push({
       id: `TODO-LOAN-001`,
-      message: `${pendingLoanRequests.length} loan requests pending approval or review.`,
+      message: `${pausedLoans.length} loans are currently paused and require review.`,
       level: "warning",
       module: "Loans & Advancements",
       actionUrl: "/loans-advancements",
       status: "pending",
       assignedTo: "Finance",
     });
+  }
+
+  const pendingLoanRequests = loans.filter(loan => loan.status === "active" && isBefore(new Date(loan.startDate), today)); // Simplified: active loans started in past
+  if (pendingLoanRequests.length > 0) {
+    // Only add if not already covered by paused loans
+    if (!pausedLoans.some(pl => pendingLoanRequests.some(pr => pr.id === pl.id))) {
+      toDos.push({
+        id: `TODO-LOAN-002`,
+        message: `${pendingLoanRequests.length} loan requests pending approval or review.`,
+        level: "warning",
+        module: "Loans & Advancements",
+        actionUrl: "/loans-advancements",
+        status: "pending",
+        assignedTo: "Finance",
+      });
+    }
   }
 
   // --- Savings To-Dos ---

@@ -169,13 +169,13 @@ export const usePayrollProcessor = () => {
 
       // 4. Save all updated data to localStorage
       localStorage.setItem("mockPayslips", JSON.stringify(updatedAllPayslips));
-      localStorage.setItem("mockLoans", JSON.stringify(currentLoansCopy));
+      localStorage.setItem("mockLoans", JSON.stringify(currentLoansCopy)); // Save updated loans
       localStorage.setItem("mockSavingPlans", JSON.stringify(currentSavingPlansCopy));
       localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
 
       // 5. Update state and notify components
       setPayslips(updatedAllPayslips);
-      setLoans(currentLoansCopy);
+      setLoans(currentLoansCopy); // Update loans state
       setSavingPlans(currentSavingPlansCopy);
       setTimesheets(updatedTimesheets);
       window.dispatchEvent(new Event("mockDataUpdated"));

@@ -70,15 +70,26 @@ export interface MockEmployee {
   standardDailyHours?: number; // Added for timesheet calculations
 }
 
+export interface LoanDeductionHistoryEntry {
+  date: string; // YYYY-MM-DD
+  amount: number;
+  type: "deduction" | "manual" | "pause"; // 'pause' indicates a skipped deduction
+  notes?: string;
+}
+
 export interface Loan {
   id: string;
   employeeId: string;
+  loanType: "Personal" | "Emergency" | "Education" | "Other"; // New field
   loanAmount: number;
   repaymentAmount: number;
   frequency: "monthly" | "weekly";
   startDate: string;
   remainingBalance: number;
-  status?: "active" | "completed";
+  status: "active" | "completed";
+  paused: boolean; // New field
+  notes?: string; // New field
+  deductionHistory: LoanDeductionHistoryEntry[]; // New field
 }
 
 export interface SavingPlan {

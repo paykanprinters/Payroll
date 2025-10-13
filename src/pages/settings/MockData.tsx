@@ -35,7 +35,7 @@ const MockData: React.FC = () => {
   const applyMockData = useCallback(() => {
     const mockCompany = generateMockCompanyDetails();
     const mockEmployees: MockEmployee[] = generateMockEmployees();
-    const mockLoans: Loan[] = generateMockLoans();
+    const mockLoans: Loan[] = generateMockLoans(); // Generate new loan structure
     const mockSavingPlans: SavingPlan[] = generateMockSavingPlans();
     const mockLeaveRecords: LeaveEntry[] = generateMockLeaveRecords();
     const mockTimesheets: TimesheetEntry[] = generateMockTimesheets(mockEmployees);
@@ -47,7 +47,7 @@ const MockData: React.FC = () => {
     });
     localStorage.setItem("isMockDataEnabled", "true");
     localStorage.setItem("mockEmployees", JSON.stringify(mockEmployees));
-    localStorage.setItem("mockLoans", JSON.stringify(mockLoans));
+    localStorage.setItem("mockLoans", JSON.stringify(mockLoans)); // Store new loan structure
     localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans));
     localStorage.setItem("mockLeaveRecords", JSON.stringify(mockLeaveRecords));
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
