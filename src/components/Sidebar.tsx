@@ -41,14 +41,19 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
       asChild
       variant="ghost"
       className={cn(
-        "w-full justify-start",
-        isCollapsed ? "h-9 w-9 p-1.5" : "px-4 py-2",
+        "justify-start",
+        isCollapsed ? "h-9 w-9 p-1.5" : "w-full px-4 py-2",
         isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline"
       )}
     >
-      <Link to={to} className="flex items-center w-full">
+      <Link
+        to={to}
+        className="flex items-center w-full"
+      >
         <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-        {!isCollapsed && <span className="flex-1">{label}</span>}
+        <span className={cn("flex-1 whitespace-nowrap", isCollapsed && "hidden")}> {/* Use hidden when collapsed */}
+          {label}
+        </span>
         {badgeCount !== undefined && badgeCount > 0 && !isCollapsed && (
           <Badge className="ml-auto h-5 w-5 flex items-center justify-center p-0">
             {badgeCount}
@@ -200,7 +205,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     <div
       className={cn(
         "flex h-full max-h-screen flex-col gap-2 border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
-        isCollapsed ? "w-[70px]" : "w-[240px]"
+        isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[240px]" // Add overflow-x-hidden
       )}
     >
       {renderSidebarContent(false, setIsCollapsed)}
