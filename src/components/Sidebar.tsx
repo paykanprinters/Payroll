@@ -150,27 +150,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
       "flex items-center border-b px-4 lg:px-6",
       currentIsCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6"
     )}>
-      {!currentIsCollapsed && (
-        <Link to="/" className="flex flex-col items-center flex-grow-0">
-          {companyLogoUrl && (
-            <img
-              src={companyLogoUrl}
-              alt="Company Logo"
-              style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
-              className="mb-1"
-            />
-          )}
-          <span className="text-lg whitespace-nowrap">{displayCompanyName}</span>
-        </Link>
+      {currentIsCollapsed ? (
+        // When collapsed, only show the toggle button, centered
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => toggleCollapse(!currentIsCollapsed)}
+          className="mx-auto bg-gray-100 dark:bg-gray-700 z-10" // Added background and z-index
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      ) : (
+        // When expanded, show logo/name and toggle button to the right
+        <>
+          <Link to="/" className="flex flex-col items-center flex-grow-0">
+            {companyLogoUrl && (
+              <img
+                src={companyLogoUrl}
+                alt="Company Logo"
+                style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
+                className="mb-1"
+              />
+            )}
+            <span className="text-lg whitespace-nowrap">{displayCompanyName}</span>
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => toggleCollapse(!currentIsCollapsed)}
+            className="ml-auto bg-gray-100 dark:bg-gray-700 z-10" // Added background and z-index
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => toggleCollapse(!currentIsCollapsed)}
-        className={cn(currentIsCollapsed ? "mx-auto" : "ml-auto")}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
     </div>
   );
 
