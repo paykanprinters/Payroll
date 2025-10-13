@@ -2,21 +2,7 @@
 
 import React from "react";
 import IndividualPayslipCard from "./IndividualPayslipCard";
-import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
-
-interface PayslipDesignSettings {
-  showCompanyLogo?: boolean;
-  showCompanyDetails?: boolean;
-  showEmployeeDetails?: boolean;
-  showEarningsBreakdown?: boolean;
-  showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  showYTD?: boolean;
-  sectionOrder?: ("Earnings" | "Deductions")[];
-  layoutSize?: "Letter" | "A4" | "A5";
-  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
-}
+import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 
 interface BulkPayslipsRendererProps {
   payslips: MockPayslip[];

@@ -54,7 +54,7 @@ const LoanForm: React.FC<LoanFormProps> = ({ employees, onAddLoan }) => {
     };
     onAddLoan(newLoan);
     form.reset({
-      employeeId: "",
+      employeeId: "", // Ensure employeeId is reset to an empty string
       loanType: "Personal",
       loanAmount: 0,
       repaymentAmount: 0,

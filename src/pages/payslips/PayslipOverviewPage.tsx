@@ -7,23 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard directly
-import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
+import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
 import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
 import { showError } from "@/utils/toast"; // Import showError
-
-interface PayslipDesignSettings {
-  showCompanyLogo?: boolean;
-  showCompanyDetails?: boolean;
-  showEmployeeDetails?: boolean;
-  showEarningsBreakdown?: boolean;
-  showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  showYTD?: boolean;
-  sectionOrder?: ("Earnings" | "Deductions")[];
-  layoutSize?: "Letter" | "A4" | "A5";
-  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
-}
 
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
@@ -221,7 +207,7 @@ const PayslipOverviewPage: React.FC = () => {
 
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? `${emp.firstName} ${emp.lastName}` : "Unknown Employee";
+    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
   };
 
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);

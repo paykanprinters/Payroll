@@ -151,7 +151,7 @@ export interface TimesheetEntry {
   submittedAt?: string; // ISO string
   approvedBy?: string;
   approvedAt?: string; // ISO string
-  auditLog?: { action: string; timestamp: string; user: string; captureMethod: "Manual" | "Biometric" | "Imported" }[];
+  auditLog?: { action: string; timestamp: string; user: string; captureMethod: "Manual" | "Biometric" | "Imported" | "System" }[];
 }
 
 export interface PayslipDesignSettings {
@@ -163,7 +163,7 @@ export interface PayslipDesignSettings {
   showLeaveSummary: boolean;
   showBankDetails: boolean;
   showYTD: boolean;
-  showHourlyRate: boolean;
+  showHourlyRate: boolean; // Added showHourlyRate
   sectionOrder: ("Earnings" | "Deductions")[];
   layoutSize: "Letter" | "A4" | "A5";
   earningsDeductionsLayout: "deductions-left-earnings-right" | "earnings-left-deductions-right";

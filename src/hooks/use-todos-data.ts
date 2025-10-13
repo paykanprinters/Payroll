@@ -25,7 +25,7 @@ export const useToDosData = () => {
   const markToDoAsDone = useCallback((id: string) => {
     setToDos(prevToDos => {
       const updatedToDos = prevToDos.map(todo =>
-        todo.id === id ? { ...todo, status: "done" } : todo
+        todo.id === id ? { ...todo, status: "done" as const } : todo
       );
       localStorage.setItem("mockToDos", JSON.stringify(updatedToDos));
       setPendingCount(updatedToDos.filter(todo => todo.status === "pending").length);

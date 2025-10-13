@@ -10,21 +10,7 @@ import { format, addDays, subDays, differenceInCalendarDays, startOfWeek, endOfW
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import the new hook
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import CalculatePaycheckDialog from "./CalculatePaycheckDialog"; // Import the new dialog
-import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
-
-interface PayslipDesignSettings {
-  showCompanyLogo?: boolean;
-  showCompanyDetails?: boolean;
-  showEmployeeDetails?: boolean;
-  showEarningsBreakdown?: boolean;
-  showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  showYTD?: boolean;
-  sectionOrder?: ("Earnings" | "Deductions")[];
-  layoutSize?: "Letter" | "A4" | "A5";
-  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
-}
+import { PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import PayslipDesignSettings
 
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
@@ -43,14 +29,6 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   payslipLogoWidth: 100,
   payslipLogoHeight: 50,
   payslipLogoFit: 'contain',
-};
-
-const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
-  defaultReportPaperSize: "A4",
-  includeCompanyLogo: true,
-  includeCompanyDetails: true,
-  reportContentFontSize: 14,
-  irp5ContentFontSize: 12, // Added irp5ContentFontSize
 };
 
 const UpcomingPayrollCard: React.FC = () => {

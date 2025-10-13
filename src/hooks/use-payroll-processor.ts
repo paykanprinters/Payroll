@@ -61,7 +61,9 @@ export const usePayrollProcessor = () => {
       const branchCode = localStorage.getItem('branchCode') || "";
       const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
       const logoUrl = localStorage.getItem('companyLogoUrl') || '';
-      const logoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
+      const logoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+      const logoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+      const logoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
 
       setCompanyDetails({
         companyLegalName, companyTradingName, companyRegistrationNumber,
@@ -73,7 +75,7 @@ export const usePayrollProcessor = () => {
         coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
         physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
         companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
-        branchCode, accountType, logoUrl, logoSize,
+        branchCode, accountType, logoUrl, logoWidth, logoHeight, logoFit,
       });
     } else {
       // Clear all data if mock data is not enabled
@@ -81,7 +83,6 @@ export const usePayrollProcessor = () => {
       setPayslips([]);
       setLoans([]);
       setSavingPlans([]);
-      setLeaveRecords([]);
       setTimesheets([]);
       setCompanyDetails(null);
     }

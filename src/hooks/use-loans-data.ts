@@ -115,7 +115,7 @@ export const useLoansData = () => {
           return {
             ...loan,
             remainingBalance: Math.max(0, newBalance),
-            status: newBalance <= 0 ? "completed" : "active",
+            status: (newBalance <= 0 ? "completed" : "active") as Loan["status"], // Explicitly cast status
             deductionHistory: [...loan.deductionHistory, historyEntry],
           };
         }

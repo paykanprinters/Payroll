@@ -12,27 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import { Printer, Download } from "lucide-react";
 import { showError } from "@/utils/toast";
-
-interface PayslipDesignSettings {
-  showCompanyLogo?: boolean;
-  showCompanyDetails?: boolean;
-  showEmployeeDetails?: boolean;
-  showEarningsBreakdown?: boolean;
-  showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  showYTD?: boolean;
-  sectionOrder?: ("Earnings" | "Deductions")[];
-  layoutSize?: "Letter" | "A4" | "A5";
-  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
-}
 
 interface CalculatePaycheckDialogProps {
   isOpen: boolean;

@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
-import { format } from "date-fns"; // Import format for date formatting
+import { DayPicker, DropdownProps, useNavigation } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
@@ -26,6 +25,8 @@ function Calendar({
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
+        caption_dropdowns: "flex gap-1",
+        vhidden: "hidden",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -38,7 +39,7 @@ function Calendar({
         head_cell:
           "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-range-start)]:rounded-l-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-range-start)]:rounded-l-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent/50 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
@@ -57,21 +58,50 @@ function Calendar({
         ...classNames,
       }}
       components={{
+        Dropdown: ({ value, onChange, children, ...props }: DropdownProps) => {
+          const { captionLayout, fromYear, toYear } = props;
+          const { goToMonth, currentMonth } = useNavigation();
+          React.useEffect(() => {
+            if (captionLayout === "dropdown-buttons") {
+              const newDate = new Date(currentMonth);
+              if (props.name === "months") {
+                newDate.setMonth(Number(value));
+              } else {
+                newDate.setFullYear(Number(value));
+              }
+              goToMonth(newDate);
+            }
+          }, [value, captionLayout, goToMonth, currentMonth, props.name]);
+
+          return (
+            <Select
+              onValueChange={(newValue) => {
+                onChange?.({
+                  target: { value: newValue },
+                } as React.ChangeEvent<HTMLSelectElement>);
+              }}
+              value={value as string}
+            >
+              <SelectTrigger className="h-[28px] w-fit text-sm">
+                <SelectValue>{children}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>{children}</SelectContent>
+            </Select>
+          );
+        },
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        Caption: ({ displayMonth, goToMonth, ...props }) => (
-          // Modified this div to ensure month and year selects are side-by-side
-          <div className="flex flex-row gap-2 justify-center pt-1 relative">
-            {/* Month Select */}
+        Caption: ({ displayMonth, ...props }) => ( // Removed goToMonth from destructuring
+          <div className="flex gap-1">
             <Select
               onValueChange={(value) => {
                 const newDate = new Date(displayMonth);
-                newDate.setMonth(parseInt(value));
-                goToMonth(newDate);
+                newDate.setMonth(Number(value));
+                props.goToMonth(newDate);
               }}
               value={displayMonth.getMonth().toString()}
             >
-              <SelectTrigger className="w-[110px]">
+              <SelectTrigger className="h-[28px] w-fit text-sm">
                 <SelectValue>{format(displayMonth, "MMM")}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -82,23 +112,21 @@ function Calendar({
                 ))}
               </SelectContent>
             </Select>
-
-            {/* Year Select */}
             <Select
               onValueChange={(value) => {
                 const newDate = new Date(displayMonth);
-                newDate.setFullYear(parseInt(value));
-                goToMonth(newDate);
+                newDate.setFullYear(Number(value));
+                props.goToMonth(newDate);
               }}
               value={displayMonth.getFullYear().toString()}
             >
-              <SelectTrigger className="w-[110px]">
+              <SelectTrigger className="h-[28px] w-fit text-sm">
                 <SelectValue>{format(displayMonth, "yyyy")}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 10 }, (_, i) => (
-                  <SelectItem key={i} value={(new Date().getFullYear() - 5 + i).toString()}>
-                    {new Date().getFullYear() - 5 + i}
+                {Array.from({ length: props.toYear - props.fromYear + 1 }, (_, i) => (
+                  <SelectItem key={i} value={(props.fromYear + i).toString()}>
+                    {props.fromYear + i}
                   </SelectItem>
                 ))}
               </SelectContent>

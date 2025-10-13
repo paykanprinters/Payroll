@@ -2,7 +2,7 @@
 
 import React, { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { format, isSameMonth, isSameYear, isSameWeek, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import IndividualPayslipCard from "./IndividualPayslipCard";
@@ -13,20 +13,6 @@ import BulkPayslipsRenderer from "./BulkPayslipsRenderer"; // Import the new com
 import { showError, showSuccess } from "@/utils/toast"; // Ensure showError and showSuccess are imported
 import { Button } from "@/components/ui/button"; // Import Button
 import { FileStack, CalendarCheck } from "lucide-react"; // Import FileStack and CalendarCheck icons
-
-interface PayslipDesignSettings {
-  showCompanyLogo?: boolean;
-  showCompanyDetails?: boolean;
-  showEmployeeDetails?: boolean;
-  showEarningsBreakdown?: boolean;
-  showDeductionsBreakdown?: boolean;
-  showLeaveSummary?: boolean;
-  showBankDetails?: boolean;
-  showYTD?: boolean;
-  sectionOrder?: ("Earnings" | "Deductions")[];
-  layoutSize?: "Letter" | "A4" | "A5";
-  earningsDeductionsLayout?: "deductions-left-earnings-right" | "earnings-left-deductions-right";
-}
 
 interface PayslipGenerationSectionProps {
   employees: MockEmployee[];
