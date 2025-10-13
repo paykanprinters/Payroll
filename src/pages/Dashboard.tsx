@@ -26,6 +26,7 @@ import TopToDosCard from "@/components/dashboard/TopToDosCard";
 import { Calendar } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { format } from "date-fns"; // Import format for date formatting
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -62,15 +63,19 @@ const Dashboard: React.FC = () => {
       Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
     );
 
-    setMonthlyPayrollData([
-      { name: "Jan", payroll: 300000 },
-      { name: "Feb", payroll: 320000 },
-      { name: "Mar", payroll: 310000 },
-      { name: "Apr", payroll: 330000 },
-      { name: "May", payroll: 350000 },
-      { name: "Jun", payroll: 340000 },
-      { name: "Jul", payroll: totalSalaries },
-    ]);
+    // Dynamically calculate monthly payroll data from payslips
+    const monthlyGrossPayMap = new Map<string, number>();
+    payslips.forEach(p => {
+      const monthYear = p.payPeriod.substring(0, 7); // "YYYY-MM"
+      monthlyGrossPayMap.set(monthYear, (monthlyGrossPayMap.get(monthYear) || 0) + p.grossEarnings);
+    });
+    const sortedMonthlyPayrollData = Array.from(monthlyGrossPayMap.entries())
+      .map(([monthYear, payroll]) => ({
+        name: format(new Date(monthYear), 'MMM yyyy'),
+        payroll: payroll,
+      }))
+      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+    setMonthlyPayrollData(sortedMonthlyPayrollData);
 
     const deductionsMap = new Map<string, number>();
     payslips.forEach(p => {
