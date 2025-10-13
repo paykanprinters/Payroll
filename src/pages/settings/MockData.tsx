@@ -104,6 +104,7 @@ const MockData: React.FC = () => {
   };
 
   useEffect(() => {
+    // Call immediately on mount based on initial state
     if (isMockDataEnabled) {
       applyMockData();
     } else {
