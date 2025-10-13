@@ -133,26 +133,28 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
 
   const renderSidebarContent = (isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void) => (
     <>
-      <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed ? "justify-center" : "justify-between")}>
-        {!isCollapsed && ( // This block for expanded state
-          <Link to="/" className="flex flex-col items-center flex-grow-0"> {/* Container for logo and name */}
+      <div className={cn(
+        "flex items-center border-b px-4 lg:px-6",
+        isCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6" // Increased height for both states
+      )}>
+        {!isCollapsed && (
+          <Link to="/" className="flex flex-col items-center flex-grow-0">
             {companyLogoUrl && (
               <img
                 src={companyLogoUrl}
                 alt="Company Logo"
                 style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-                className="mb-1" // Add some margin below the logo
+                className="mb-1"
               />
             )}
-            <span className="text-lg whitespace-nowrap">{displayCompanyName}</span> {/* Ensure no wrapping */}
+            <span className="text-lg whitespace-nowrap">{displayCompanyName}</span>
           </Link>
         )}
-        {/* The toggle button is now always rendered in the header */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(prev => !prev)}
-          className={cn(isCollapsed ? "mx-auto" : "ml-auto")} // Center when collapsed, push right when expanded
+          className={cn(isCollapsed ? "mx-auto" : "ml-auto")}
         >
           <Menu className="h-5 w-5" />
         </Button>
@@ -186,8 +188,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
-            {/* For mobile, renderSidebarContent is always called with isCollapsed=true */}
-            {renderSidebarContent(true, setIsCollapsed)}
+            {/* For mobile, renderSidebarContent is always called with isCollapsed=false to show full menu */}
+            {renderSidebarContent(false, setIsCollapsed)}
           </div>
         </SheetContent>
       </Sheet>
