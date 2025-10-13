@@ -22,7 +22,6 @@ import {
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
 import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard";
-import TopToDosCard from "@/components/dashboard/TopToDosCard";
 import { Calendar } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
@@ -255,7 +254,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <TopToDosCard />
+        {/* Removed <TopToDosCard /> */}
 
         <Card>
           <CardHeader>
