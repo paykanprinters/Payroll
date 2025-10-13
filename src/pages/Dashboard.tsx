@@ -20,17 +20,17 @@ import {
   Line,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
-import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard"; // Import UpcomingPayrollCard
-import TopToDosCard from "@/components/dashboard/TopToDosCard"; // Import new TopToDosCard
-import { Calendar } from "@/components/ui/calendar"; // Import Calendar component
-import { Link } from "react-router-dom"; // Import Link for navigation
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import the new hook
+import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
+import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard";
+import TopToDosCard from "@/components/dashboard/TopToDosCard";
+import { Calendar } from "@/components/ui/calendar";
+import { Link } from "react-router-dom";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
-  const { employees, payslips, leaveRecords } = usePayrollProcessor(); // Use the payroll processor hook to get data
+  const { employees, payslips, leaveRecords, isMockDataEnabled } = usePayrollProcessor();
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -42,20 +42,18 @@ const Dashboard: React.FC = () => {
   const [averageNetPayTrend, setAverageNetPayTrend] = useState<{ name: string; avgNetPay: number }[]>([]);
   const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
-  const [date, setDate] = React.useState<Date | undefined>(new Date()); // State for the calendar
+  const [date, setDate] = React.useState<Date | undefined>(new Date());
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
-  const loadDashboardData = React.useCallback(() => { // Wrap in useCallback
+  const loadDashboardData = React.useCallback(() => {
     setEmployeeCount(employees.length);
 
     setRecentPayslipCount(payslips.length);
 
-    // Calculate upcoming payroll amount (sum of all employee salaries for simplicity)
-    const totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), 0); // Include hourly rate estimate
+    const totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), 0);
     setUpcomingPayrollAmount(totalSalaries);
 
-    // Process employee job title data for PieChart
     const jobTitleMap = new Map<string, number>();
     employees.forEach((emp) => {
       jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
@@ -64,7 +62,6 @@ const Dashboard: React.FC = () => {
       Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
     );
 
-    // Mock monthly payroll data for BarChart
     setMonthlyPayrollData([
       { name: "Jan", payroll: 300000 },
       { name: "Feb", payroll: 320000 },
@@ -72,10 +69,9 @@ const Dashboard: React.FC = () => {
       { name: "Apr", payroll: 330000 },
       { name: "May", payroll: 350000 },
       { name: "Jun", payroll: 340000 },
-      { name: "Jul", payroll: totalSalaries }, // Current month reflects actual mock data
+      { name: "Jul", payroll: totalSalaries },
     ]);
 
-    // Calculate Total Deductions Breakdown (Pie Chart)
     const deductionsMap = new Map<string, number>();
     payslips.forEach(p => {
       p.deductionsBreakdown.forEach(deduction => {
@@ -86,14 +82,13 @@ const Dashboard: React.FC = () => {
       Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
     );
 
-    // Calculate Average Net Pay Trend (Line Chart)
     const monthlyNetPayMap = new Map<string, { totalNetPay: number; employeeCount: number }>();
     payslips.forEach(p => {
-      const monthYear = p.payPeriod.substring(0, 7); // "YYYY-MM"
+      const monthYear = p.payPeriod.substring(0, 7);
       const current = monthlyNetPayMap.get(monthYear) || { totalNetPay: 0, employeeCount: 0 };
       monthlyNetPayMap.set(monthYear, {
         totalNetPay: current.totalNetPay + p.netPay,
-        employeeCount: current.employeeCount + 1, // Assuming one payslip per employee per month
+        employeeCount: current.employeeCount + 1,
       });
     });
     const sortedAverageNetPay = Array.from(monthlyNetPayMap.entries())
@@ -104,7 +99,6 @@ const Dashboard: React.FC = () => {
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
     setAverageNetPayTrend(sortedAverageNetPay);
 
-    // Calculate Employee Salary Distribution (Bar Chart)
     const salaryRanges = [
       { range: "R0 - R20k", min: 0, max: 20000, count: 0 },
       { range: "R20k - R40k", min: 20001, max: 40000, count: 0 },
@@ -121,10 +115,9 @@ const Dashboard: React.FC = () => {
     });
     setEmployeeSalaryDistribution(salaryRanges.map(r => ({ range: r.range, count: r.count })));
 
-    // Calculate Leave Days Taken Trend (Bar Chart)
     const monthlyLeaveDaysMap = new Map<string, number>();
     leaveRecords.forEach(record => {
-      const monthYear = record.startDate.substring(0, 7); // "YYYY-MM"
+      const monthYear = record.startDate.substring(0, 7);
       monthlyLeaveDaysMap.set(monthYear, (monthlyLeaveDaysMap.get(monthYear) || 0) + record.workingDays);
     });
     const sortedLeaveDaysTrend = Array.from(monthlyLeaveDaysMap.entries())
@@ -134,7 +127,7 @@ const Dashboard: React.FC = () => {
       }))
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
     setLeaveDaysTakenTrend(sortedLeaveDaysTrend);
-  }, [employees, payslips, leaveRecords]); // Add dependencies
+  }, [employees, payslips, leaveRecords]);
 
   const loadCompanyDetails = () => {
     const legalName = localStorage.getItem('companyLegalName');
@@ -145,14 +138,13 @@ const Dashboard: React.FC = () => {
     loadDashboardData();
     loadCompanyDetails();
     window.addEventListener('mockDataUpdated', loadDashboardData);
-    window.addEventListener('companyDetailsUpdated', loadCompanyDetails); // Listen for company detail updates
+    window.addEventListener('companyDetailsUpdated', loadCompanyDetails);
     return () => {
       window.removeEventListener('mockDataUpdated', loadDashboardData);
       window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
     };
-  }, [loadDashboardData]); // Add loadDashboardData as dependency
+  }, [loadDashboardData]);
 
-  // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
     return `${value} (${percentage}%)`;
@@ -176,7 +168,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{employeeCount}</div>
             <p className="text-xs text-muted-foreground">
-              {employeeCount > 0 ? "+20.1% from last month (mock)" : "No employees (mock)"}
+              {isMockDataEnabled ? "+20.1% from last month (mock)" : (employeeCount > 0 ? "+20.1% from last month" : "No employees")}
             </p>
           </CardContent>
         </Card>
@@ -188,7 +180,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">R {upcomingPayrollAmount.toLocaleString('en-ZA')}</div>
             <p className="text-xs text-muted-foreground">
-              Due: 25th of the month (mock)
+              {isMockDataEnabled ? "Due: 25th of the month (mock)" : "Due: 25th of the month"}
             </p>
           </CardContent>
         </Card>
@@ -200,7 +192,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{recentPayslipCount}</div>
             <p className="text-xs text-muted-foreground">
-              Generated this month (mock)
+              {isMockDataEnabled ? "Generated this month (mock)" : "Generated this month"}
             </p>
           </CardContent>
         </Card>
@@ -212,13 +204,12 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">Good</div>
             <p className="text-xs text-muted-foreground">
-              All regulations met (mock)
+              {isMockDataEnabled ? "All regulations met (mock)" : "All regulations met"}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Upcoming Payroll Card - Moved here */}
       <UpcomingPayrollCard />
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
@@ -241,7 +232,6 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Fixed Calendar Card */}
         <Card>
           <CardHeader>
             <CardTitle>Current Date</CardTitle>
@@ -253,15 +243,13 @@ const Dashboard: React.FC = () => {
               selected={date}
               onSelect={setDate}
               className="rounded-md border"
-              fixedWeeks // Ensures the calendar always displays 6 weeks
+              fixedWeeks
             />
           </CardContent>
         </Card>
       </div>
 
-      {/* New row for Top To-Dos and other charts */}
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        {/* Top To-Dos Card - Moved here */}
         <TopToDosCard />
 
         <Card>
@@ -276,11 +264,11 @@ const Dashboard: React.FC = () => {
                   data={employeeJobTitleData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60} // Added for Doughnut
+                  innerRadius={60}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  labelLine={false} // Ensure no lines to labels
+                  labelLine={false}
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {employeeJobTitleData.map((entry, index) => (
@@ -295,7 +283,6 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* New Charts */}
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -309,11 +296,11 @@ const Dashboard: React.FC = () => {
                   data={totalDeductionsBreakdown}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60} // Added for Doughnut
+                  innerRadius={60}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  labelLine={false} // Ensure no lines to labels
+                  labelLine={false}
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {totalDeductionsBreakdown.map((entry, index) => (

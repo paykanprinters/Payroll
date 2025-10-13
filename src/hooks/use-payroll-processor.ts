@@ -31,45 +31,60 @@ export const usePayrollProcessor = () => {
   const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
   const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null);
+  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(false); // New state for mock data status
 
   const loadData = useCallback(() => {
-    setEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
-    setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
-    setLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
-    setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
-    setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
-    setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
+    const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
+    setIsMockDataEnabled(mockEnabled);
 
-    const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-    const companyTradingName = localStorage.getItem('companyTradingName') || "";
-    const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
-    const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
-    const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
-    const postalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
-    const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-    const alternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
-    const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-    const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
-    const bankName = localStorage.getItem('bankName') || "";
-    const accountHolderName = localStorage.getItem('accountHolderName') || "";
-    const accountNumber = localStorage.getItem('accountNumber') || "";
-    const branchCode = localStorage.getItem('branchCode') || "";
-    const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
-    const logoUrl = localStorage.getItem('companyLogoUrl') || '';
-    const logoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
+    if (mockEnabled) {
+      setEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
+      setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
+      setLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
+      setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
+      setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
+      setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
 
-    setCompanyDetails({
-      companyLegalName, companyTradingName, companyRegistrationNumber,
-      companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
-      vatRegistrationNumber, industry: localStorage.getItem('industry') || "",
-      payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
-      uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
-      sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
-      coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
-      physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
-      companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
-      branchCode, accountType, logoUrl, logoSize,
-    });
+      const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
+      const companyTradingName = localStorage.getItem('companyTradingName') || "";
+      const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
+      const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
+      const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
+      const postalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
+      const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
+      const alternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
+      const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
+      const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
+      const bankName = localStorage.getItem('bankName') || "";
+      const accountHolderName = localStorage.getItem('accountHolderName') || "";
+      const accountNumber = localStorage.getItem('accountNumber') || "";
+      const branchCode = localStorage.getItem('branchCode') || "";
+      const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
+      const logoUrl = localStorage.getItem('companyLogoUrl') || '';
+      const logoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
+
+      setCompanyDetails({
+        companyLegalName, companyTradingName, companyRegistrationNumber,
+        companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
+        vatRegistrationNumber, industry: localStorage.getItem('industry') || "",
+        payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
+        uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
+        sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
+        coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
+        physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
+        companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
+        branchCode, accountType, logoUrl, logoSize,
+      });
+    } else {
+      // Clear all data if mock data is not enabled
+      setEmployees([]);
+      setPayslips([]);
+      setLoans([]);
+      setSavingPlans([]);
+      setLeaveRecords([]);
+      setTimesheets([]);
+      setCompanyDetails(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -217,6 +232,7 @@ export const usePayrollProcessor = () => {
     leaveRecords,
     timesheets,
     companyDetails,
+    isMockDataEnabled, // Expose mock data status
     runPayrollProcess,
     calculateSinglePayslipPreview,
   };
