@@ -147,16 +147,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
             <span className="text-lg whitespace-nowrap">{displayCompanyName}</span> {/* Ensure no wrapping */}
           </Link>
         )}
-        {!isMobile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(prev => !prev)}
-            className={cn(isCollapsed ? "mx-auto" : "ml-auto")} // Center when collapsed, push right when expanded
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        )}
+        {/* The toggle button is now always rendered in the header */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsCollapsed(prev => !prev)}
+          className={cn(isCollapsed ? "mx-auto" : "ml-auto")} // Center when collapsed, push right when expanded
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
       </div>
       <nav className="grid items-start gap-1 p-4">
         {navItems.map((item) => (
@@ -187,6 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
+            {/* For mobile, renderSidebarContent is always called with isCollapsed=true */}
             {renderSidebarContent(true, setIsCollapsed)}
           </div>
         </SheetContent>
