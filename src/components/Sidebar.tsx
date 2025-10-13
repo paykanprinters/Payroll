@@ -51,7 +51,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
         className="flex items-center w-full"
       >
         <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-        <span className={cn("flex-1 whitespace-nowrap", isCollapsed && "hidden")}> {/* Use hidden when collapsed */}
+        <span className={cn("flex-1 whitespace-nowrap", isCollapsed && "hidden")}>
           {label}
         </span>
         {badgeCount !== undefined && badgeCount > 0 && !isCollapsed && (
@@ -134,32 +134,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const renderSidebarContent = (isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void) => (
     <>
       <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed ? "justify-center" : "justify-between")}>
-        {companyLogoUrl && !isCollapsed ? (
+        {!isCollapsed && companyLogoUrl && (
           <img
             src={companyLogoUrl}
             alt="Company Logo"
             style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
             className="mr-2"
           />
-        ) : null}
+        )}
         {!isCollapsed && (
           <Link to="/" className="flex items-center gap-2 font-semibold">
             <span className="text-lg">{displayCompanyName}</span>
           </Link>
         )}
-        {isCollapsed && companyLogoUrl && (
-          <img
-            src={companyLogoUrl}
-            alt="Company Logo"
-            style={{ width: companyLogoSize * 0.7, height: companyLogoSize * 0.7, objectFit: 'contain' }}
-          />
-        )}
-        {!isMobile && ( // Only show this toggle button on desktop
+        {!isMobile && (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(prev => !prev)}
-            className={cn(isCollapsed ? "ml-0" : "ml-auto")} // Adjust margin based on collapsed state
+            className={cn(isCollapsed ? "mx-auto" : "ml-auto")} // Center when collapsed, push right when expanded
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -205,7 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     <div
       className={cn(
         "flex h-full max-h-screen flex-col gap-2 border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
-        isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[240px]" // Add overflow-x-hidden
+        isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[240px]"
       )}
     >
       {renderSidebarContent(false, setIsCollapsed)}
