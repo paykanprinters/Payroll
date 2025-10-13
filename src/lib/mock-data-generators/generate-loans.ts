@@ -9,13 +9,13 @@ export const generateMockLoans = (): Loan[] => [
     loanAmount: 5000,
     repaymentAmount: 500,
     frequency: "monthly",
-    startDate: "2024-07-01",
+    startDate: "2025-10-01", // Updated start date
     remainingBalance: 4500, // Assuming one repayment already
     status: "active",
     paused: false, // New field
     notes: "Initial personal loan for home improvements.", // New field
     deductionHistory: [ // New field
-      { date: "2024-07-25", amount: 500, type: "deduction", notes: "Monthly payroll deduction" }
+      { date: "2025-10-25", amount: 500, type: "deduction", notes: "Monthly payroll deduction" }
     ],
   },
   {
@@ -25,14 +25,14 @@ export const generateMockLoans = (): Loan[] => [
     loanAmount: 2000,
     repaymentAmount: 100,
     frequency: "weekly",
-    startDate: "2024-07-08",
+    startDate: "2025-10-08", // Updated start date
     remainingBalance: 1800, // Assuming two repayments already
     status: "active",
     paused: false, // New field
     notes: "Emergency medical expense loan.", // New field
     deductionHistory: [ // New field
-      { date: "2024-07-12", amount: 100, type: "deduction", notes: "Weekly payroll deduction" },
-      { date: "2024-07-19", amount: 100, type: "deduction", notes: "Weekly payroll deduction" }
+      { date: "2025-10-12", amount: 100, type: "deduction", notes: "Weekly payroll deduction" },
+      { date: "2025-10-19", amount: 100, type: "deduction", notes: "Weekly payroll deduction" }
     ],
   },
   {
@@ -42,7 +42,7 @@ export const generateMockLoans = (): Loan[] => [
     loanAmount: 10000,
     repaymentAmount: 1000,
     frequency: "monthly",
-    startDate: "2024-08-01",
+    startDate: "2025-10-01", // Updated start date
     remainingBalance: 10000,
     status: "active",
     paused: false, // New field
@@ -56,16 +56,16 @@ export const generateMockLoans = (): Loan[] => [
     loanAmount: 1500,
     repaymentAmount: 150,
     frequency: "weekly",
-    startDate: "2024-07-01",
+    startDate: "2025-10-01", // Updated start date
     remainingBalance: 1050, // Assuming 3 repayments
     status: "active",
     paused: true, // This loan is paused
     notes: "Small personal loan, deduction temporarily paused.", // New field
     deductionHistory: [ // New field
-      { date: "2024-07-05", amount: 150, type: "deduction", notes: "Weekly payroll deduction" },
-      { date: "2024-07-12", amount: 150, type: "deduction", notes: "Weekly payroll deduction" },
-      { date: "2024-07-19", amount: 150, type: "deduction", notes: "Weekly payroll deduction" },
-      { date: format(subDays(new Date(), 1), 'yyyy-MM-dd'), amount: 0, type: "pause", notes: "Deduction paused manually" }
+      { date: "2025-10-05", amount: 150, type: "deduction", notes: "Weekly payroll deduction" },
+      { date: "2025-10-12", amount: 150, type: "deduction", notes: "Weekly payroll deduction" },
+      { date: "2025-10-19", amount: 150, type: "deduction", notes: "Weekly payroll deduction" },
+      { date: format(subDays(new Date("2025-10-25"), 1), 'yyyy-MM-dd'), amount: 0, type: "pause", notes: "Deduction paused manually" } // Adjusted date
     ],
   },
 ];
