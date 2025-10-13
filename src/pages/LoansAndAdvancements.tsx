@@ -159,12 +159,12 @@ const LoansAndAdvancements: React.FC = () => {
                 {loansByTypeData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
-              </Pie>
+                </Pie>
               <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
               <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLoansByType)} />
             </PieChart>
-          </CardContent>
-        </Card>
+          </ResponsiveContainer>
+        </CardContent>
       </Card>
 
       <Card>
