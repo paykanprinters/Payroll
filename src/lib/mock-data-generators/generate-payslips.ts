@@ -149,6 +149,7 @@ export const generatePayslipsForPeriod = (
 
     // Loan Deductions for this period
     currentLoans.forEach(loan => {
+      // Check if loan is active and its start date is before or within the current pay period
       if (loan.employeeId === emp.id && loan.status !== "completed" && new Date(loan.startDate) <= payPeriodEnd) {
         if (loan.paused) {
           // If paused, record a pause entry and then unpause for the next cycle
@@ -164,14 +165,24 @@ export const generatePayslipsForPeriod = (
         }
 
         let deductionAmount = 0;
-        const isMonthly = loan.frequency === "monthly" && isSameMonth(new Date(loan.startDate), payPeriodStart);
-        const isWeekly = loan.frequency === "weekly" && isWithinInterval(new Date(loan.startDate), { start: payPeriodStart, end: payPeriodEnd });
-
-        if (isMonthly || isWeekly) {
-          deductionAmount = Math.min(loan.repaymentAmount, loan.remainingBalance);
+        
+        // Determine if a deduction is due for THIS pay period based on frequency
+        if (loan.frequency === "monthly" && emp.payFrequency === "Monthly") {
+          // For monthly loans, deduct if the current pay period is a full month period.
+          const isFullMonthPeriod = format(payPeriodStart, 'dd') === '01' && isSameMonth(payPeriodStart, payPeriodEnd);
+          if (isFullMonthPeriod) {
+            deductionAmount = loan.repaymentAmount;
+          }
+        } else if (loan.frequency === "weekly" && (emp.payFrequency === "Weekly" || emp.payFrequency === "Bi-Weekly")) {
+          // For weekly loans, deduct if the current pay period is a full week period.
+          const isFullWeekPeriod = (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6; // 7 days interval
+          if (isFullWeekPeriod) {
+            deductionAmount = loan.repaymentAmount;
+          }
         }
 
         if (deductionAmount > 0) {
+          deductionAmount = Math.min(deductionAmount, loan.remainingBalance); // Ensure not to over-deduct
           deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: deductionAmount });
           totalDeductions += deductionAmount;
           loan.remainingBalance -= deductionAmount;
@@ -192,14 +203,27 @@ export const generatePayslipsForPeriod = (
 
     // Savings Deductions for this period
     currentSavingPlans.forEach(plan => {
+      // Check if plan is active and its start date is before or within the current pay period
       if (plan.employeeId === emp.id && plan.status === "active" && new Date(plan.startDate) <= payPeriodEnd) {
+        // Check if plan has an end date and if the current period is before or within it
         if (!plan.endDate || new Date(plan.endDate) >= payPeriodStart) {
           let deductionAmount = 0;
-          if (plan.frequency === "monthly" && isSameMonth(new Date(plan.startDate), payPeriodStart)) {
-            deductionAmount = plan.amount;
-          } else if (plan.frequency === "weekly" && isWithinInterval(new Date(plan.startDate), { start: payPeriodStart, end: payPeriodEnd })) {
-            deductionAmount = plan.amount;
+          
+          // Determine if a deduction is due for THIS pay period based on frequency
+          if (plan.frequency === "monthly" && emp.payFrequency === "Monthly") {
+            // For monthly plans, deduct if the current pay period is a full month period.
+            const isFullMonthPeriod = format(payPeriodStart, 'dd') === '01' && isSameMonth(payPeriodStart, payPeriodEnd);
+            if (isFullMonthPeriod) {
+              deductionAmount = plan.amount;
+            }
+          } else if (plan.frequency === "weekly" && (emp.payFrequency === "Weekly" || emp.payFrequency === "Bi-Weekly")) {
+            // For weekly plans, deduct if the current pay period is a full week period.
+            const isFullWeekPeriod = (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6; // 7 days interval
+            if (isFullWeekPeriod) {
+              deductionAmount = plan.amount;
+            }
           }
+          
           if (deductionAmount > 0) {
             deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: deductionAmount });
             totalDeductions += deductionAmount;
