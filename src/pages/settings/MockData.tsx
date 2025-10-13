@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -13,24 +13,26 @@ import {
   generateMockLeaveRecords,
   generateMockPayslips,
   generateMockTimesheets,
-  generateMockToDos, // New import
+  generateMockToDos,
   MockCompanyDetails,
   PayslipDesignSettings,
-  MockEmployee, // Import MockEmployee for generateMockToDos
-  MockPayslip, // Import MockPayslip for generateMockToDos
-  Loan, // Import Loan for generateMockToDos
-  SavingPlan, // Import SavingPlan for generateMockToDos
-  LeaveEntry, // Import LeaveEntry for generateMockToDos
-  TimesheetEntry, // Import TimesheetEntry for generateMockToDos
+  MockEmployee,
+  MockPayslip,
+  Loan,
+  SavingPlan,
+  LeaveEntry,
+  TimesheetEntry,
 } from "@/lib/mock-data";
 
 
 const MockData: React.FC = () => {
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
+    // Initialize from localStorage on first render
     return localStorage.getItem("isMockDataEnabled") === "true";
   });
 
-  const applyMockData = () => {
+  // Wrap these functions in useCallback to ensure they are stable
+  const applyMockData = useCallback(() => {
     const mockCompany = generateMockCompanyDetails();
     const mockEmployees: MockEmployee[] = generateMockEmployees();
     const mockLoans: Loan[] = generateMockLoans();
@@ -38,9 +40,8 @@ const MockData: React.FC = () => {
     const mockLeaveRecords: LeaveEntry[] = generateMockLeaveRecords();
     const mockTimesheets: TimesheetEntry[] = generateMockTimesheets(mockEmployees);
     const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets);
-    const mockToDos = generateMockToDos(mockEmployees, mockPayslips, mockLeaveRecords, mockLoans, mockSavingPlans, mockTimesheets); // Generate mock to-dos
+    const mockToDos = generateMockToDos(mockEmployees, mockPayslips, mockLeaveRecords, mockLoans, mockSavingPlans, mockTimesheets);
 
-    // Save company details
     Object.entries(mockCompany).forEach(([key, value]) => {
       localStorage.setItem(key, String(value));
     });
@@ -51,18 +52,16 @@ const MockData: React.FC = () => {
     localStorage.setItem("mockLeaveRecords", JSON.stringify(mockLeaveRecords));
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
     localStorage.setItem("mockTimesheets", JSON.stringify(mockTimesheets));
-    localStorage.setItem("mockToDos", JSON.stringify(mockToDos)); // Save mock to-dos
-    localStorage.setItem("applyPAYE", "true"); // Enable PAYE for mock data
-    localStorage.setItem("applySDL", "true"); // Enable SDL for mock data
+    localStorage.setItem("mockToDos", JSON.stringify(mockToDos));
+    localStorage.setItem("applyPAYE", "true");
+    localStorage.setItem("applySDL", "true");
 
-    // Dispatch events to update components
     window.dispatchEvent(new Event('companyDetailsUpdated'));
-    window.dispatchEvent(new Event('mockDataUpdated')); // Generic event for other components
+    window.dispatchEvent(new Event('mockDataUpdated'));
     showSuccess("Mock data populated successfully!");
-  };
+  }, []); // No dependencies needed as it generates fresh data
 
-  const clearMockData = () => {
-    // Clear company details
+  const clearMockData = useCallback(() => {
     const mockCompanyKeys: (keyof MockCompanyDetails)[] = [
       "companyLegalName", "companyTradingName", "companyRegistrationNumber",
       "companyTaxNumber", "vatRegistrationNumber", "industry",
@@ -83,11 +82,10 @@ const MockData: React.FC = () => {
     localStorage.removeItem("mockLeaveRecords");
     localStorage.removeItem("mockPayslips");
     localStorage.removeItem("mockTimesheets");
-    localStorage.removeItem("mockToDos"); // Clear mock to-dos
+    localStorage.removeItem("mockToDos");
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
 
-    // Clear payslip-specific logo settings
     const payslipLogoKeys: (keyof PayslipDesignSettings)[] = [
       "payslipLogoUrl", "payslipLogoWidth", "payslipLogoHeight", "payslipLogoFit"
     ];
@@ -95,22 +93,22 @@ const MockData: React.FC = () => {
       localStorage.removeItem(`payslipDesign${key.charAt(0).toUpperCase() + key.slice(1)}`);
     });
 
-
-    // Dispatch events to update components
     window.dispatchEvent(new Event('companyDetailsUpdated'));
-    window.dispatchEvent(new Event('mockDataUpdated')); // Generic event for other components
-    window.dispatchEvent(new Event('payslipDesignUpdated')); // Notify payslip design to reset
+    window.dispatchEvent(new Event('mockDataUpdated'));
+    window.dispatchEvent(new Event('payslipDesignUpdated'));
     showSuccess("Mock data cleared successfully!");
-  };
+  }, []); // No dependencies needed as it clears data
 
   useEffect(() => {
-    // Call immediately on mount based on initial state
+    // This effect runs on mount and whenever isMockDataEnabled, applyMockData, or clearMockData changes.
+    // Since applyMockData and clearMockData are wrapped in useCallback with empty dependency arrays,
+    // they are stable and won't cause this effect to re-run unnecessarily unless isMockDataEnabled changes.
     if (isMockDataEnabled) {
       applyMockData();
     } else {
       clearMockData();
     }
-  }, [isMockDataEnabled]); // Only run when isMockDataEnabled changes
+  }, [isMockDataEnabled, applyMockData, clearMockData]); // Corrected dependencies
 
   const handleToggleChange = (checked: boolean) => {
     setIsMockDataEnabled(checked);
