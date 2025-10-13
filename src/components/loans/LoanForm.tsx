@@ -48,13 +48,19 @@ const LoanForm: React.FC<LoanFormProps> = ({ employees, onAddLoan }) => {
   });
 
   const onSubmit = (data: LoanFormValues) => {
-    const newLoan = {
-      ...data,
+    // Explicitly define the type of newLoan to match what onAddLoan expects
+    const newLoan: Omit<Loan, 'id' | 'status' | 'remainingBalance' | 'deductionHistory' | 'paused'> = {
+      employeeId: data.employeeId,
+      loanType: data.loanType,
+      loanAmount: data.loanAmount,
+      repaymentAmount: data.repaymentAmount,
+      frequency: data.frequency,
       startDate: format(data.startDate, "yyyy-MM-dd"),
+      notes: data.notes,
     };
     onAddLoan(newLoan);
     form.reset({
-      employeeId: "", // Ensure employeeId is reset to an empty string
+      employeeId: "",
       loanType: "Personal",
       loanAmount: 0,
       repaymentAmount: 0,

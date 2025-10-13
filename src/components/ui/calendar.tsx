@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker, DropdownProps, useNavigation } from "react-day-picker";
+import { DayPicker, DropdownProps, useNavigation, CaptionProps } from "react-day-picker";
+import { format } from "date-fns"; // Import format
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -14,8 +15,61 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  fromYear, // Destructure fromYear
+  toYear,   // Destructure toYear
   ...props
 }: CalendarProps) {
+  const CustomCaption = ({ displayMonth }: CaptionProps) => {
+    const { goToMonth } = useNavigation();
+    
+    // Use fromYear and toYear passed to the main Calendar component
+    const currentFromYear = fromYear || new Date().getFullYear() - 10; // Fallback
+    const currentToYear = toYear || new Date().getFullYear() + 10; // Fallback
+
+    return (
+      <div className="flex gap-1">
+        <Select
+          onValueChange={(value) => {
+            const newDate = new Date(displayMonth);
+            newDate.setMonth(Number(value));
+            goToMonth(newDate);
+          }}
+          value={displayMonth.getMonth().toString()}
+        >
+          <SelectTrigger className="h-[28px] w-fit text-sm">
+            <SelectValue>{format(displayMonth, "MMM")}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: 12 }, (_, i) => (
+              <SelectItem key={i} value={i.toString()}>
+                {format(new Date(displayMonth.getFullYear(), i, 1), "MMM")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          onValueChange={(value) => {
+            const newDate = new Date(displayMonth);
+            newDate.setFullYear(Number(value));
+            goToMonth(newDate);
+          }}
+          value={displayMonth.getFullYear().toString()}
+        >
+          <SelectTrigger className="h-[28px] w-fit text-sm">
+            <SelectValue>{format(displayMonth, "yyyy")}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: currentToYear - currentFromYear + 1 }, (_, i) => (
+              <SelectItem key={i} value={(currentFromYear + i).toString()}>
+                {currentFromYear + i}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -58,21 +112,9 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Dropdown: ({ value, onChange, children, ...props }: DropdownProps) => {
-          const { captionLayout, fromYear, toYear } = props;
+        Dropdown: ({ value, onChange, children, name }: DropdownProps) => {
           const { goToMonth, currentMonth } = useNavigation();
-          React.useEffect(() => {
-            if (captionLayout === "dropdown-buttons") {
-              const newDate = new Date(currentMonth);
-              if (props.name === "months") {
-                newDate.setMonth(Number(value));
-              } else {
-                newDate.setFullYear(Number(value));
-              }
-              goToMonth(newDate);
-            }
-          }, [value, captionLayout, goToMonth, currentMonth, props.name]);
-
+          
           return (
             <Select
               onValueChange={(newValue) => {
@@ -91,49 +133,10 @@ function Calendar({
         },
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        Caption: ({ displayMonth, ...props }) => ( // Removed goToMonth from destructuring
-          <div className="flex gap-1">
-            <Select
-              onValueChange={(value) => {
-                const newDate = new Date(displayMonth);
-                newDate.setMonth(Number(value));
-                props.goToMonth(newDate);
-              }}
-              value={displayMonth.getMonth().toString()}
-            >
-              <SelectTrigger className="h-[28px] w-fit text-sm">
-                <SelectValue>{format(displayMonth, "MMM")}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <SelectItem key={i} value={i.toString()}>
-                    {format(new Date(displayMonth.getFullYear(), i, 1), "MMM")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              onValueChange={(value) => {
-                const newDate = new Date(displayMonth);
-                newDate.setFullYear(Number(value));
-                props.goToMonth(newDate);
-              }}
-              value={displayMonth.getFullYear().toString()}
-            >
-              <SelectTrigger className="h-[28px] w-fit text-sm">
-                <SelectValue>{format(displayMonth, "yyyy")}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: props.toYear - props.fromYear + 1 }, (_, i) => (
-                  <SelectItem key={i} value={(props.fromYear + i).toString()}>
-                    {props.fromYear + i}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ),
+        Caption: CustomCaption, // Use the custom caption component
       }}
+      fromYear={fromYear} // Pass fromYear to DayPicker
+      toYear={toYear}     // Pass toYear to DayPicker
       {...props}
     />
   );

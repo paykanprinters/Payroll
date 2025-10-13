@@ -36,7 +36,9 @@ interface ReportPreviewDialogProps {
   companyRegistrationNumber: string;
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
-  companyLogoSize: number; // This is the old size, will be replaced by width/height
+  companyLogoWidth: number; // New field for logo width
+  companyLogoHeight: number; // New field for logo height
+  companyLogoFit: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for object-fit
   reportDesignSettings: ReportDesignSettings; // Prop for report design settings
   documentType: 'payslip' | 'report'; // New prop for document type
 }
@@ -55,14 +57,15 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   companyRegistrationNumber,
   vatRegistrationNumber,
   companyLogoUrl,
-  companyLogoSize, // This is the old size, will be replaced by width/height
+  companyLogoWidth, // This is the old size, will be replaced by width/height
+  companyLogoHeight, // This is the old size, will be replaced by width/height
+  companyLogoFit, // This is the old size, will be replaced by width/height
   reportDesignSettings,
   documentType,
 }) => {
   // Retrieve new logo properties from localStorage for the preview
-  const companyLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
-  const companyLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-  const companyLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+  // These are already passed as props, so no need to retrieve from localStorage again.
+  // The props should be used directly.
 
   const companyDetails: MockCompanyDetails = {
     companyLegalName, companyTradingName, companyRegistrationNumber,
