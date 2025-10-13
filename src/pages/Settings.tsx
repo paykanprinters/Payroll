@@ -9,7 +9,8 @@ import TaxLiabilities from "./settings/TaxLiabilities";
 import PayslipDesign from "./settings/PayslipDesign";
 import MockData from "./settings/MockData";
 import DataVisuals from "./settings/DataVisuals";
-import ReportDesign from "./settings/ReportDesign"; // New import
+import ReportDesign from "./settings/ReportDesign";
+import WorkHours from "./settings/WorkHours"; // New import
 
 const Settings: React.FC = () => {
   return (
@@ -18,10 +19,11 @@ const Settings: React.FC = () => {
         {/* Default route for /settings, redirects to /settings/company-details */}
         <Route index element={<Navigate to="company-details" replace />} />
         <Route path="company-details" element={<CompanyDetails />} />
+        <Route path="work-hours" element={<WorkHours />} /> {/* New route */}
         <Route path="biometric-devices" element={<BiometricDevices />} />
         <Route path="tax-liabilities" element={<TaxLiabilities />} />
         <Route path="payslip-design" element={<PayslipDesign />} />
-        <Route path="report-design" element={<ReportDesign />} /> {/* New route */}
+        <Route path="report-design" element={<ReportDesign />} />
         <Route path="mock-data" element={<MockData />} />
         <Route path="data-visuals" element={<DataVisuals />} />
         {/* Add more settings sub-routes here */}

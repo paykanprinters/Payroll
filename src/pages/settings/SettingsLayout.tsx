@@ -12,6 +12,10 @@ const sidebarNavItems = [
     href: "/settings/company-details",
   },
   {
+    title: "Work Hours", // New sub-menu item
+    href: "/settings/work-hours",
+  },
+  {
     title: "Biometric Devices",
     href: "/settings/biometric-devices",
   },
@@ -24,7 +28,7 @@ const sidebarNavItems = [
     href: "/settings/payslip-design",
   },
   {
-    title: "Report Design", // New sub-menu item
+    title: "Report Design",
     href: "/settings/report-design",
   },
   {
@@ -32,7 +36,7 @@ const sidebarNavItems = [
     href: "/settings/mock-data",
   },
   {
-    title: "Data Visuals", // New sub-menu item
+    title: "Data Visuals",
     href: "/settings/data-visuals",
   },
   // Add more settings sub-menus here
