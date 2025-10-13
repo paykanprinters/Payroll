@@ -16,18 +16,22 @@ import {
   CalendarDays,
   LineChart, // New icon for Analytics
   Clock, // Icon for Timesheet
+  ListTodo, // New icon for To-Dos
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge"; // Import Badge
+import { useToDosData } from "@/hooks/use-todos-data"; // New import
 
 interface NavLinkProps {
   to: string;
   icon: React.ElementType;
   label: string;
   isCollapsed: boolean;
+  badgeCount?: number; // Optional badge count
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed }) => {
+const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, badgeCount }) => {
   const location = useLocation();
   const isActive = location.pathname.startsWith(to);
 
@@ -41,9 +45,14 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed })
         isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline"
       )}
     >
-      <Link to={to}>
+      <Link to={to} className="flex items-center w-full">
         <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-        {!isCollapsed && label}
+        {!isCollapsed && <span className="flex-1">{label}</span>}
+        {badgeCount !== undefined && badgeCount > 0 && !isCollapsed && (
+          <Badge className="ml-auto h-5 w-5 flex items-center justify-center p-0">
+            {badgeCount}
+          </Badge>
+        )}
       </Link>
     </Button>
   );
@@ -56,6 +65,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const isMobile = useIsMobile();
+  const { pendingCount } = useToDosData(); // Use the hook to get pending to-dos count
+
   const [companyTradingName, setCompanyTradingName] = React.useState<string>(
     localStorage.getItem('companyTradingName') || ""
   );
@@ -101,6 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingCount }, // New To-Dos item
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/timesheet", icon: Clock, label: "Timesheet" },
     { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },
@@ -150,6 +162,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
               icon={item.icon}
               label={item.label}
               isCollapsed={isCollapsed && !isMobileView}
+              badgeCount={item.badgeCount}
             />
           ))}
         </nav>

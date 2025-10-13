@@ -15,8 +15,7 @@ import VacationAbsence from "./pages/VacationAbsence";
 import Analytics from "./pages/Analytics";
 import Timesheet from "./pages/Timesheet";
 import NotFound from "./pages/NotFound";
-import PayslipOverviewPage from "./pages/payslips/PayslipOverviewPage"; // Import the new overview page
-import Irp5ExportPage from "./pages/payslips/Irp5ExportPage"; // Import the new IRP5 export page
+import ToDosPage from "./pages/ToDosPage"; // New import for ToDosPage
 
 const queryClient = new QueryClient();
 
@@ -30,6 +29,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/todos" element={<ToDosPage />} /> {/* New route for To-Dos */}
             <Route path="/employees" element={<Employees />} />
             <Route path="/timesheet" element={<Timesheet />} />
             {/* Updated Payslips route to use the layout component */}

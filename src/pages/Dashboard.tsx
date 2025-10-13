@@ -26,6 +26,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format } from "date-fns"; // Import format for date formatting
+import ToDoList from "@/components/ToDoList"; // New import
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -216,6 +217,8 @@ const Dashboard: React.FC = () => {
 
       <UpcomingPayrollCard />
 
+      <ToDoList /> {/* New To-Do List component */}
+
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -254,8 +257,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        {/* Removed <TopToDosCard /> */}
-
         <Card>
           <CardHeader>
             <CardTitle>Employee Distribution by Job Title</CardTitle>

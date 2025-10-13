@@ -13,8 +13,15 @@ import {
   generateMockLeaveRecords,
   generateMockPayslips,
   generateMockTimesheets,
+  generateMockToDos, // New import
   MockCompanyDetails,
-  PayslipDesignSettings, // Import PayslipDesignSettings
+  PayslipDesignSettings,
+  MockEmployee, // Import MockEmployee for generateMockToDos
+  MockPayslip, // Import MockPayslip for generateMockToDos
+  Loan, // Import Loan for generateMockToDos
+  SavingPlan, // Import SavingPlan for generateMockToDos
+  LeaveEntry, // Import LeaveEntry for generateMockToDos
+  TimesheetEntry, // Import TimesheetEntry for generateMockToDos
 } from "@/lib/mock-data";
 
 
@@ -25,13 +32,13 @@ const MockData: React.FC = () => {
 
   const applyMockData = () => {
     const mockCompany = generateMockCompanyDetails();
-    const mockEmployees = generateMockEmployees();
-    const mockLoans = generateMockLoans();
-    const mockSavingPlans = generateMockSavingPlans();
-    const mockLeaveRecords = generateMockLeaveRecords();
-    const mockTimesheets = generateMockTimesheets(mockEmployees); // Generate mock timesheets
-    // Pass timesheets to payslip generation
-    const mockPayslips = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets);
+    const mockEmployees: MockEmployee[] = generateMockEmployees();
+    const mockLoans: Loan[] = generateMockLoans();
+    const mockSavingPlans: SavingPlan[] = generateMockSavingPlans();
+    const mockLeaveRecords: LeaveEntry[] = generateMockLeaveRecords();
+    const mockTimesheets: TimesheetEntry[] = generateMockTimesheets(mockEmployees);
+    const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets);
+    const mockToDos = generateMockToDos(mockEmployees, mockPayslips, mockLeaveRecords, mockLoans, mockSavingPlans, mockTimesheets); // Generate mock to-dos
 
     // Save company details
     Object.entries(mockCompany).forEach(([key, value]) => {
@@ -43,7 +50,8 @@ const MockData: React.FC = () => {
     localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans));
     localStorage.setItem("mockLeaveRecords", JSON.stringify(mockLeaveRecords));
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
-    localStorage.setItem("mockTimesheets", JSON.stringify(mockTimesheets)); // Save mock timesheets
+    localStorage.setItem("mockTimesheets", JSON.stringify(mockTimesheets));
+    localStorage.setItem("mockToDos", JSON.stringify(mockToDos)); // Save mock to-dos
     localStorage.setItem("applyPAYE", "true"); // Enable PAYE for mock data
     localStorage.setItem("applySDL", "true"); // Enable SDL for mock data
 
@@ -74,7 +82,8 @@ const MockData: React.FC = () => {
     localStorage.removeItem("mockSavingPlans");
     localStorage.removeItem("mockLeaveRecords");
     localStorage.removeItem("mockPayslips");
-    localStorage.removeItem("mockTimesheets"); // Clear mock timesheets
+    localStorage.removeItem("mockTimesheets");
+    localStorage.removeItem("mockToDos"); // Clear mock to-dos
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
 

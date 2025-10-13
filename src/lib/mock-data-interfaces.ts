@@ -159,3 +159,13 @@ export interface PayslipDesignSettings {
   payslipLogoHeight?: number; // New field for payslip logo height
   payslipLogoFit?: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for payslip logo object-fit
 }
+
+export interface ToDoEntry {
+  id: string;
+  message: string;
+  level: "critical" | "warning" | "info";
+  module: string; // e.g., 'Employees', 'Timesheet', 'Payslips'
+  actionUrl?: string; // Optional link to resolve the to-do
+  status: "pending" | "done";
+  assignedTo?: string; // Mock user role/ID
+}
