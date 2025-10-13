@@ -103,8 +103,8 @@ const UserControlPanel: React.FC = () => {
                           {user.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Button variant="outline" size="sm" className="mr-2">Edit</Button>
+                      <TableCell className="flex justify-center items-center gap-2"> {/* Added flex, justify-center, items-center, gap-2 */}
+                        <Button variant="outline" size="sm">Edit</Button> {/* Removed mr-2 */}
                         <Button variant="destructive" size="sm">Delete</Button>
                       </TableCell>
                     </TableRow>

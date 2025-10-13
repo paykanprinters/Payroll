@@ -78,7 +78,7 @@ const SettingsLayout: React.FC = () => {
             ))}
           </nav>
         </aside>
-        <div className="flex-1 lg:max-w-2xl">
+        <div className="flex-1 lg:max-w-full"> {/* Changed from lg:max-w-2xl to lg:max-w-full */}
           <Outlet /> {/* This is where nested routes will render */}
         </div>
       </div>
