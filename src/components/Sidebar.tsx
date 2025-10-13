@@ -126,6 +126,45 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
+  const renderSidebarContent = (isCollapsed: boolean) => (
+    <>
+      <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed && "justify-center")}>
+        {companyLogoUrl && !isCollapsed ? (
+          <img
+            src={companyLogoUrl}
+            alt="Company Logo"
+            style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+            className="mr-2"
+          />
+        ) : null}
+        {!isCollapsed && (
+          <Link to="/" className="flex items-center gap-2 font-semibold">
+            <span className="text-lg">{displayCompanyName}</span>
+          </Link>
+        )}
+        {isCollapsed && companyLogoUrl && (
+          <img
+            src={companyLogoUrl}
+            alt="Company Logo"
+            style={{ width: companyLogoSize * 0.7, height: companyLogoSize * 0.7, objectFit: 'contain' }}
+          />
+        )}
+      </div>
+      <nav className="grid items-start gap-1 p-4">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            icon={item.icon}
+            label={item.label}
+            isCollapsed={isCollapsed}
+            badgeCount={item.badgeCount}
+          />
+        ))}
+      </nav>
+    </>
+  );
+
   if (!isAuthenticated) {
     return null;
   }
