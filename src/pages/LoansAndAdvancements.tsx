@@ -33,6 +33,9 @@ const LoansAndAdvancements: React.FC = () => {
   const [loansByTypeData, setLoansByTypeData] = useState<{ name: string; value: number }[]>([]); // New state for loans by type
 
   useEffect(() => {
+    console.log("LoansAndAdvancements: Current loans state:", loans); // Added log
+    console.log("LoansAndAdvancements: Current employees state:", employees); // Added log
+
     // Calculate loan summary for BarChart
     const totalLoanAmount = loans.reduce((sum, loan) => sum + loan.loanAmount, 0);
     const totalRemainingBalance = loans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
@@ -63,7 +66,7 @@ const LoansAndAdvancements: React.FC = () => {
       Array.from(loanTypeCounts.entries()).map(([name, value]) => ({ name, value }))
     );
 
-  }, [loans, getEmployeeName]);
+  }, [loans, employees, getEmployeeName]); // Added employees to dependencies
 
   const handleAddLoan = (newLoanData: Omit<Loan, 'id' | 'status' | 'remainingBalance' | 'deductionHistory' | 'paused'>) => {
     addLoan(newLoanData);
@@ -159,7 +162,7 @@ const LoansAndAdvancements: React.FC = () => {
                 {loansByTypeData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
-                </Pie>
+              </Pie>
               <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
               <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLoansByType)} />
             </PieChart>

@@ -11,9 +11,14 @@ export const useLoansData = () => {
 
   const loadLoans = useCallback(() => {
     const storedLoans = localStorage.getItem("mockLoans");
-    setLoans(storedLoans ? JSON.parse(storedLoans) : []);
+    const loadedLoans = storedLoans ? JSON.parse(storedLoans) : [];
+    setLoans(loadedLoans);
+    console.log("useLoansData: Loaded loans:", loadedLoans); // Added log
+
     const storedEmployees = localStorage.getItem("mockEmployees");
-    setEmployees(storedEmployees ? JSON.parse(storedEmployees) : []);
+    const loadedEmployees = storedEmployees ? JSON.parse(storedEmployees) : [];
+    setEmployees(loadedEmployees);
+    console.log("useLoansData: Loaded employees:", loadedEmployees); // Added log
   }, []);
 
   useEffect(() => {
