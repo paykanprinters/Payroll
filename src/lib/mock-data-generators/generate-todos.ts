@@ -1,5 +1,5 @@
 import { ToDoEntry, MockEmployee, MockPayslip, LeaveEntry, Loan, SavingPlan, TimesheetEntry } from "../mock-data-interfaces";
-import { format, isSameMonth, isPast, subMonths, isBefore } from "date-fns";
+import { format, isSameMonth, isPast, subMonths, isBefore, isWithinInterval } from "date-fns"; // Added isWithinInterval
 
 export const generateMockToDos = (
   employees: MockEmployee[],
