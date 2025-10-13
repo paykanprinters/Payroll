@@ -33,7 +33,9 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     companyEmail,
     companyWebsite,
     logoUrl: companyLogoUrl,
-    logoSize: companyLogoSize,
+    logoWidth: companyLogoWidth, // Use new width
+    logoHeight: companyLogoHeight, // Use new height
+    logoFit: companyLogoFit, // Use new fit
   } = companyDetails;
 
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
@@ -130,7 +132,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
               ref={el => { if (el) imageRefs.current.push(el); }}
               src={companyLogoUrl}
               alt="Company Logo"
-              style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+              style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
               className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
             />
           )}

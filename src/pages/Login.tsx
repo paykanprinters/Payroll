@@ -26,7 +26,9 @@ const Login: React.FC = () => {
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [companyTradingName, setCompanyTradingName] = useState<string>("");
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
-  const [companyLogoSize, setCompanyLogoSize] = useState<number>(40);
+  const [companyLogoWidth, setCompanyLogoWidth] = useState<number>(100);
+  const [companyLogoHeight, setCompanyLogoHeight] = useState<number>(50);
+  const [companyLogoFit, setCompanyLogoFit] = useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -43,7 +45,9 @@ const Login: React.FC = () => {
       setCompanyTradingName(tradingName && tradingName.trim() !== '' ? tradingName : "");
       setCompanyLegalName(legalName && legalName.trim() !== '' ? legalName : "");
       setCompanyLogoUrl(localStorage.getItem('companyLogoUrl'));
-      setCompanyLogoSize(parseFloat(localStorage.getItem('companyLogoSize') || '40'));
+      setCompanyLogoWidth(parseFloat(localStorage.getItem('companyLogoWidth') || '100'));
+      setCompanyLogoHeight(parseFloat(localStorage.getItem('companyLogoHeight') || '50'));
+      setCompanyLogoFit((localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain");
     };
 
     loadCompanyDetails();
@@ -86,7 +90,7 @@ const Login: React.FC = () => {
             <img
               src={companyLogoUrl}
               alt="Company Logo"
-              style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+              style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
               className="mx-auto"
             />
           )}

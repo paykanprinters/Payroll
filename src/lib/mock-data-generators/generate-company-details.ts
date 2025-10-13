@@ -23,5 +23,7 @@ export const generateMockCompanyDetails = (): MockCompanyDetails => ({
   branchCode: "250655",
   accountType: "Business",
   logoUrl: "https://via.placeholder.com/150/0000FF/FFFFFF?text=ACME", // Placeholder logo
-  logoSize: 50,
+  logoWidth: 100, // Default width
+  logoHeight: 50, // Default height
+  logoFit: 'contain', // Default object-fit
 });

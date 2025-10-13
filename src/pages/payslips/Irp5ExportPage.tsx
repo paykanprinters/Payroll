@@ -53,7 +53,7 @@ const Irp5ExportPage: React.FC = () => {
     const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
     const postalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
     const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-    const alternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
+    const alternativeContactNumber = localStorage.Item('alternativeContactNumber') || "";
     const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
     const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
     const bankName = localStorage.getItem('bankName') || "";
@@ -62,7 +62,9 @@ const Irp5ExportPage: React.FC = () => {
     const branchCode = localStorage.getItem('branchCode') || "";
     const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
     const logoUrl = localStorage.getItem('companyLogoUrl') || '';
-    const logoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
+    const logoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+    const logoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+    const logoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
 
     setCompanyDetails({
       companyLegalName, companyTradingName, companyRegistrationNumber,
@@ -74,7 +76,7 @@ const Irp5ExportPage: React.FC = () => {
       coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
       physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
       companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
-      branchCode, accountType, logoUrl, logoSize,
+      branchCode, accountType, logoUrl, logoWidth, logoHeight, logoFit,
     });
 
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");

@@ -31,7 +31,7 @@ export const generateEmployeeProfileReportContent = (
 
   const companyLogoHtml =
     reportDesignSettings.includeCompanyLogo && companyDetails.logoUrl
-      ? `<img src="${companyDetails.logoUrl}" alt="Company Logo" style="width: ${companyDetails.logoSize}px; height: ${companyDetails.logoSize}px; object-fit: contain;" class="rounded-md flex-shrink-0" />`
+      ? `<img src="${companyDetails.logoUrl}" alt="Company Logo" style="width: ${companyDetails.logoWidth}px; height: ${companyDetails.logoHeight}px; object-fit: ${companyDetails.logoFit};" class="rounded-md flex-shrink-0" />`
       : "";
 
   const companyDetailsHtml = reportDesignSettings.includeCompanyDetails

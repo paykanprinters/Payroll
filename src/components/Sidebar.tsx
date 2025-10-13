@@ -83,8 +83,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
     localStorage.getItem('companyLogoUrl')
   );
-  const [companyLogoSize, setCompanyLogoSize] = React.useState<number>(
-    parseFloat(localStorage.getItem('companyLogoSize') || '40')
+  const [companyLogoWidth, setCompanyLogoWidth] = React.useState<number>(
+    parseFloat(localStorage.getItem('companyLogoWidth') || '100')
+  );
+  const [companyLogoHeight, setCompanyLogoHeight] = React.useState<number>(
+    parseFloat(localStorage.getItem('companyLogoHeight') || '50')
+  );
+  const [companyLogoFit, setCompanyLogoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">(
+    (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain"
   );
 
   React.useEffect(() => {
@@ -98,11 +104,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
       const logo = localStorage.getItem('companyLogoUrl');
       setCompanyLogoUrl(logo && logo.trim() !== '' ? logo : null);
 
-      const sizeStr = localStorage.getItem('companyLogoSize');
-      const size = parseFloat(sizeStr || '40');
-      setCompanyLogoSize(isNaN(size) ? 40 : size);
+      const widthStr = localStorage.getItem('companyLogoWidth');
+      const width = parseFloat(widthStr || '100');
+      setCompanyLogoWidth(isNaN(width) ? 100 : width);
+
+      const heightStr = localStorage.getItem('companyLogoHeight');
+      const height = parseFloat(heightStr || '50');
+      setCompanyLogoHeight(isNaN(height) ? 50 : height);
+
+      const fit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+      setCompanyLogoFit(fit);
       
-      console.log("Sidebar: Received update. Current localStorage values:", { tradingName, legalName, logo, size });
+      console.log("Sidebar: Received update. Current localStorage values:", { tradingName, legalName, logo, width, height, fit });
     };
 
     window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
@@ -143,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
             <img
               src={companyLogoUrl}
               alt="Company Logo"
-              style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+              style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
               className="mb-1"
             />
           )}

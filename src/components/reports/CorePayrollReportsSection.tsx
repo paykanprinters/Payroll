@@ -79,7 +79,9 @@ interface CorePayrollReportsSectionProps {
   companyRegistrationNumber: string;
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
-  companyLogoSize: number;
+  companyLogoWidth: number; // New prop for logo width
+  companyLogoHeight: number; // New prop for logo height
+  companyLogoFit: "contain" | "cover" | "fill" | "none" | "scale-down"; // New prop for logo fit
   reportDesignSettings: ReportDesignSettings; // Prop for report design settings
 }
 
@@ -96,7 +98,9 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   companyRegistrationNumber,
   vatRegistrationNumber,
   companyLogoUrl,
-  companyLogoSize,
+  companyLogoWidth, // Destructure new width
+  companyLogoHeight, // Destructure new height
+  companyLogoFit, // Destructure new fit
   reportDesignSettings, // Destructure reportDesignSettings
 }) => {
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
@@ -251,7 +255,9 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
         companyRegistrationNumber={companyRegistrationNumber}
         vatRegistrationNumber={vatRegistrationNumber}
         companyLogoUrl={companyLogoUrl}
-        companyLogoSize={companyLogoSize}
+        companyLogoWidth={companyLogoWidth} // Pass new width
+        companyLogoHeight={companyLogoHeight} // Pass new height
+        companyLogoFit={companyLogoFit} // Pass new fit
         reportDesignSettings={reportDesignSettings}
         documentType={currentDocumentType} // Pass document type to dialog
       />

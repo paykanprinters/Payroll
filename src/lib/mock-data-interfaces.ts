@@ -22,7 +22,9 @@ export interface MockCompanyDetails {
   branchCode: string;
   accountType: "Cheque" | "Savings" | "Business";
   logoUrl: string;
-  logoSize: number;
+  logoWidth: number; // New field for logo width
+  logoHeight: number; // New field for logo height
+  logoFit: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for object-fit
 }
 
 export interface MockEmployee {

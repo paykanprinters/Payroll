@@ -37,7 +37,9 @@ const companyDetailsSchema = z.object({
   branchCode: z.string().optional(),
   accountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
   logoUrl: z.string().optional(),
-  logoSize: z.number().min(20).max(100).default(40),
+  logoWidth: z.number().min(20).max(200).default(100), // New field for logo width
+  logoHeight: z.number().min(20).max(100).default(50), // New field for logo height
+  logoFit: z.enum(["contain", "cover", "fill", "none", "scale-down"]).default("contain"), // New field for object-fit
 });
 
 type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
@@ -68,7 +70,9 @@ const CompanyDetails: React.FC = () => {
       branchCode: localStorage.getItem('branchCode') || "",
       accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
       logoUrl: localStorage.getItem('companyLogoUrl') || '',
-      logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
+      logoWidth: parseFloat(localStorage.getItem('companyLogoWidth') || '100'),
+      logoHeight: parseFloat(localStorage.getItem('companyLogoHeight') || '50'),
+      logoFit: (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain",
     },
   });
 
@@ -98,7 +102,9 @@ const CompanyDetails: React.FC = () => {
         branchCode: localStorage.getItem('branchCode') || "",
         accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
         logoUrl: localStorage.getItem('companyLogoUrl') || '',
-        logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
+        logoWidth: parseFloat(localStorage.getItem('companyLogoWidth') || '100'),
+        logoHeight: parseFloat(localStorage.getItem('companyLogoHeight') || '50'),
+        logoFit: (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain",
       });
     };
 
@@ -119,6 +125,13 @@ const CompanyDetails: React.FC = () => {
         const dataUrl = reader.result as string;
         form.setValue("logoUrl", dataUrl);
         localStorage.setItem('companyLogoUrl', dataUrl);
+        // Reset to default dimensions and fit when new logo is uploaded
+        form.setValue("logoWidth", 100);
+        localStorage.setItem('companyLogoWidth', '100');
+        form.setValue("logoHeight", 50);
+        localStorage.setItem('companyLogoHeight', '50');
+        form.setValue("logoFit", "contain");
+        localStorage.setItem('companyLogoFit', 'contain');
         window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
       };
       reader.readAsDataURL(file);
@@ -127,16 +140,32 @@ const CompanyDetails: React.FC = () => {
 
   const handleRemoveLogo = () => {
     form.setValue("logoUrl", "");
-    form.setValue("logoSize", 40); // Reset to default size
+    form.setValue("logoWidth", 100); // Reset to default size
+    form.setValue("logoHeight", 50); // Reset to default size
+    form.setValue("logoFit", "contain"); // Reset to default fit
     localStorage.removeItem('companyLogoUrl');
-    localStorage.removeItem('companyLogoSize');
+    localStorage.removeItem('companyLogoWidth');
+    localStorage.removeItem('companyLogoHeight');
+    localStorage.removeItem('companyLogoFit');
     window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
     showSuccess("Company logo removed successfully!");
   };
 
-  const handleLogoSizeChange = (value: number[]) => {
-    form.setValue("logoSize", value[0]);
-    localStorage.setItem('companyLogoSize', value[0].toString());
+  const handleLogoWidthChange = (value: number[]) => {
+    form.setValue("logoWidth", value[0]);
+    localStorage.setItem('companyLogoWidth', value[0].toString());
+    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
+  };
+
+  const handleLogoHeightChange = (value: number[]) => {
+    form.setValue("logoHeight", value[0]);
+    localStorage.setItem('companyLogoHeight', value[0].toString());
+    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
+  };
+
+  const handleLogoFitChange = (value: "contain" | "cover" | "fill" | "none" | "scale-down") => {
+    form.setValue("logoFit", value);
+    localStorage.setItem('companyLogoFit', value);
     window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
   };
 
@@ -158,7 +187,9 @@ const CompanyDetails: React.FC = () => {
   };
 
   const logoUrl = form.watch("logoUrl");
-  const logoSize = form.watch("logoSize");
+  const logoWidth = form.watch("logoWidth");
+  const logoHeight = form.watch("logoHeight");
+  const logoFit = form.watch("logoFit");
 
   return (
     <Card>
@@ -392,26 +423,55 @@ const CompanyDetails: React.FC = () => {
               )}
             </div>
             {logoUrl && (
-              <div className="mt-4">
+              <div className="mt-4 space-y-4">
                 <Label>Logo Preview</Label>
-                <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-4 mt-2 border p-2 rounded-md">
                   <img
                     src={logoUrl}
                     alt="Company Logo"
-                    style={{ width: logoSize, height: logoSize, objectFit: 'contain' }}
+                    style={{ width: logoWidth, height: logoHeight, objectFit: logoFit }}
                     className="rounded-md border p-1"
                   />
-                  <div className="flex-1">
-                    <Label htmlFor="logoSize">Logo Size ({logoSize}px)</Label>
-                    <Slider
-                      id="logoSize"
-                      min={20}
-                      max={100}
-                      step={1}
-                      value={[logoSize]}
-                      onValueChange={handleLogoSizeChange}
-                      className="mt-2"
-                    />
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <Label htmlFor="logoWidth">Logo Width ({logoWidth}px)</Label>
+                      <Slider
+                        id="logoWidth"
+                        min={20}
+                        max={200}
+                        step={1}
+                        value={[logoWidth]}
+                        onValueChange={handleLogoWidthChange}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="logoHeight">Logo Height ({logoHeight}px)</Label>
+                      <Slider
+                        id="logoHeight"
+                        min={20}
+                        max={100}
+                        step={1}
+                        value={[logoHeight]}
+                        onValueChange={handleLogoHeightChange}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="logoFit">Object Fit</Label>
+                      <Select onValueChange={handleLogoFitChange} value={logoFit}>
+                        <SelectTrigger id="logoFit" className="mt-1">
+                          <SelectValue placeholder="Select fit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contain">Contain</SelectItem>
+                          <SelectItem value="cover">Cover</SelectItem>
+                          <SelectItem value="fill">Fill</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="scale-down">Scale Down</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>

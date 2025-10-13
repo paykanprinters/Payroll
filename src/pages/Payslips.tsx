@@ -1,76 +1,61 @@
-"use client";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MainLayout from "./components/MainLayout";
+import Dashboard from "./pages/Dashboard";
+import Employees from "./pages/Employees";
+import Payslips from "./pages/Payslips";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import LoansAndAdvancements from "./pages/LoansAndAdvancements";
+import Savings from "./pages/Savings";
+import VacationAbsence from "./pages/VacationAbsence";
+import Analytics from "./pages/Analytics";
+import Timesheet from "./pages/Timesheet";
+import NotFound from "./pages/NotFound";
+import ToDosPage from "./pages/ToDosPage";
+import Login from "./pages/Login";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-import React from "react";
-import { Outlet, Link, useLocation, Navigate, Routes, Route } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator"; // Removed the extra '1'
-import PayslipOverviewPage from "./payslips/PayslipOverviewPage";
-import Irp5ExportPage from "./payslips/Irp5ExportPage";
+const queryClient = new QueryClient();
 
-const payslipsNavItems = [
-  {
-    title: "Payslip Overview",
-    href: "/payslips/overview",
-  },
-  {
-    title: "IRP5 Export",
-    href: "/payslips/irp5-export",
-  },
-];
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-const PayslipsLayout: React.FC = () => {
-  const location = useLocation();
-  console.log("PayslipsLayout rendered. Current path:", location.pathname);
-  console.log("Payslips nav items:", payslipsNavItems);
+            {/* Protected Routes wrapped by MainLayout */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/todos" element={<ToDosPage />} />
+                <Route path="/employees" element={<Employees />} />
+                <Route path="/timesheet" element={<Timesheet />} />
+                <Route path="/payslips/*" element={<Payslips />} />
+                <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
+                <Route path="/savings" element={<Savings />} />
+                <Route path="/vacation-absence" element={<VacationAbsence />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings/*" element={<Settings />} />
+                {/* Catch-all for 404 within protected routes */}
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
-  return (
-    <div className="space-y-6 p-4 pb-16 md:block">
-      <div className="space-y-0.5">
-        <h2 className="text-2xl font-bold tracking-tight">Payslips</h2>
-      </div>
-      <Separator className="my-6" />
-      <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-        <aside className="-mx-4 lg:w-1/5">
-          <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1">
-            {payslipsNavItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  location.pathname === item.href
-                    ? "bg-muted hover:bg-muted"
-                    : "hover:bg-transparent hover:underline",
-                  "justify-start"
-                )}
-              >
-                {item.title}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-        <div className="flex-1 lg:max-w-full">
-          <Outlet /> {/* This is where nested routes will render */}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Payslips: React.FC = () => {
-  console.log("Payslips component rendered.");
-  return (
-    <Routes>
-      <Route path="/" element={<PayslipsLayout />}>
-        {/* Default route for /payslips, redirects to /payslips/overview */}
-        <Route index element={<Navigate to="overview" replace />} />
-        <Route path="overview" element={<PayslipOverviewPage />} />
-        <Route path="irp5-export" element={<Irp5ExportPage />} />
-        {/* Add more payslips sub-routes here */}
-      </Route>
-    </Routes>
-  );
-};
-
-export default Payslips;
+export default App;

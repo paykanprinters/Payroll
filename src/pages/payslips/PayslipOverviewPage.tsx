@@ -34,9 +34,14 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showLeaveSummary: true, // Now controlled by a toggle
   showBankDetails: true, // Now controlled by a toggle
   showYTD: true, // New setting for YTD calculations
+  showHourlyRate: true,
   sectionOrder: ["Earnings", "Deductions"],
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
+  payslipLogoUrl: '',
+  payslipLogoWidth: 100,
+  payslipLogoHeight: 50,
+  payslipLogoFit: 'contain',
 };
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
@@ -135,7 +140,9 @@ const PayslipOverviewPage: React.FC = () => {
     const branchCode = localStorage.getItem('branchCode') || "";
     const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
     const logoUrl = localStorage.getItem('companyLogoUrl') || '';
-    const logoSize = parseFloat(localStorage.getItem('companyLogoSize') || '40');
+    const logoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+    const logoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+    const logoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
 
     setCompanyDetails({
       companyLegalName, companyTradingName, companyRegistrationNumber,
@@ -147,7 +154,7 @@ const PayslipOverviewPage: React.FC = () => {
       coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
       physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
       companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
-      branchCode, accountType, logoUrl, logoSize,
+      branchCode, accountType, logoUrl, logoWidth, logoHeight, logoFit,
     });
   }, []);
 
@@ -214,7 +221,7 @@ const PayslipOverviewPage: React.FC = () => {
 
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
+    return employee ? `${emp.firstName} ${emp.lastName}` : "Unknown Employee";
   };
 
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);

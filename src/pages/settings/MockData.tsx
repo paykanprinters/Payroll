@@ -55,6 +55,11 @@ const MockData: React.FC = () => {
     localStorage.setItem("mockToDos", JSON.stringify(mockToDos));
     localStorage.setItem("applyPAYE", "true");
     localStorage.setItem("applySDL", "true");
+    // Set new logo properties
+    localStorage.setItem("companyLogoWidth", mockCompany.logoWidth.toString());
+    localStorage.setItem("companyLogoHeight", mockCompany.logoHeight.toString());
+    localStorage.setItem("companyLogoFit", mockCompany.logoFit);
+
 
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('mockDataUpdated'));
@@ -69,7 +74,8 @@ const MockData: React.FC = () => {
       "coidaRegistrationNumber", "physicalAddress", "postalAddress",
       "mainContactNumber", "alternativeContactNumber", "companyEmail",
       "companyWebsite", "bankName", "accountHolderName", "accountNumber",
-      "branchCode", "accountType", "logoUrl", "logoSize"
+      "branchCode", "accountType", "logoUrl", "logoSize", // Old logoSize
+      "logoWidth", "logoHeight", "logoFit" // New logo properties
     ];
 
     mockCompanyKeys.forEach(key => {

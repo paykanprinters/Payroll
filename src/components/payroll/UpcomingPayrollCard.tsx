@@ -35,9 +35,14 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showLeaveSummary: true, // Now controlled by a toggle
   showBankDetails: true, // Now controlled by a toggle
   showYTD: true, // New setting for YTD calculations
+  showHourlyRate: true,
   sectionOrder: ["Earnings", "Deductions"],
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
+  payslipLogoUrl: '',
+  payslipLogoWidth: 100,
+  payslipLogoHeight: 50,
+  payslipLogoFit: 'contain',
 };
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {

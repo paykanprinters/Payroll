@@ -41,7 +41,9 @@ const Reports: React.FC = () => {
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState<string>("");
   const [vatRegistrationNumber, setVatRegistrationNumber] = useState<string>("");
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
-  const [companyLogoSize, setCompanyLogoSize] = useState<number>(40);
+  const [companyLogoWidth, setCompanyLogoWidth] = useState<number>(100); // New state for logo width
+  const [companyLogoHeight, setCompanyLogoHeight] = useState<number>(50); // New state for logo height
+  const [companyLogoFit, setCompanyLogoFit] = useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain"); // New state for logo fit
 
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
@@ -96,7 +98,9 @@ const Reports: React.FC = () => {
     setCompanyRegistrationNumber(localStorage.getItem('companyRegistrationNumber') || "N/A");
     setVatRegistrationNumber(localStorage.getItem('vatRegistrationNumber') || "N/A");
     setCompanyLogoUrl(localStorage.getItem('companyLogoUrl'));
-    setCompanyLogoSize(parseFloat(localStorage.getItem('companyLogoSize') || '40'));
+    setCompanyLogoWidth(parseFloat(localStorage.getItem('companyLogoWidth') || '100'));
+    setCompanyLogoHeight(parseFloat(localStorage.getItem('companyLogoHeight') || '50'));
+    setCompanyLogoFit((localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain");
 
     // Load report design settings
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
@@ -141,7 +145,9 @@ const Reports: React.FC = () => {
         companyRegistrationNumber={companyRegistrationNumber}
         vatRegistrationNumber={vatRegistrationNumber}
         companyLogoUrl={companyLogoUrl}
-        companyLogoSize={companyLogoSize}
+        companyLogoWidth={companyLogoWidth} // Pass new width
+        companyLogoHeight={companyLogoHeight} // Pass new height
+        companyLogoFit={companyLogoFit} // Pass new fit
         reportDesignSettings={reportDesignSettings} // Pass report design settings
       />
 

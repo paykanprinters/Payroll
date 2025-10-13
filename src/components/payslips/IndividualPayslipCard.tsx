@@ -36,7 +36,9 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     companyEmail,
     companyWebsite,
     logoUrl: companyLogoUrl, // Main company logo
-    logoSize: companyLogoSize,
+    logoWidth: companyLogoWidth, // Use new width
+    logoHeight: companyLogoHeight, // Use new height
+    logoFit: companyLogoFit, // Use new fit
   } = companyDetails;
 
   // Get explicit print styles based on layout size
@@ -91,13 +93,13 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
   const logoWidth = payslipDesignSettings.payslipLogoUrl
     ? payslipDesignSettings.payslipLogoWidth
-    : companyLogoSize;
+    : companyLogoWidth; // Use new companyLogoWidth
   const logoHeight = payslipDesignSettings.payslipLogoUrl
     ? payslipDesignSettings.payslipLogoHeight
-    : companyLogoSize;
+    : companyLogoHeight; // Use new companyLogoHeight
   const logoFit = payslipDesignSettings.payslipLogoUrl
     ? payslipDesignSettings.payslipLogoFit
-    : 'contain';
+    : companyLogoFit; // Use new companyLogoFit
 
 
   // Helper to render text with dynamic font size and line height

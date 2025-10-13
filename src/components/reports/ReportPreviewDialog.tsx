@@ -36,7 +36,7 @@ interface ReportPreviewDialogProps {
   companyRegistrationNumber: string;
   vatRegistrationNumber: string;
   companyLogoUrl: string | null;
-  companyLogoSize: number;
+  companyLogoSize: number; // This is the old size, will be replaced by width/height
   reportDesignSettings: ReportDesignSettings; // Prop for report design settings
   documentType: 'payslip' | 'report'; // New prop for document type
 }
@@ -55,10 +55,15 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   companyRegistrationNumber,
   vatRegistrationNumber,
   companyLogoUrl,
-  companyLogoSize,
+  companyLogoSize, // This is the old size, will be replaced by width/height
   reportDesignSettings,
   documentType,
 }) => {
+  // Retrieve new logo properties from localStorage for the preview
+  const companyLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+  const companyLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+  const companyLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+
   const companyDetails: MockCompanyDetails = {
     companyLegalName, companyTradingName, companyRegistrationNumber,
     companyTaxNumber: "", // Not used in report header, but required by interface
@@ -66,7 +71,10 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     payeReferenceNumber: "", uifReferenceNumber: "", sdlReferenceNumber: "", coidaRegistrationNumber: "", // Not used
     physicalAddress, postalAddress: "", mainContactNumber, alternativeContactNumber: "",
     companyEmail, companyWebsite, bankName: "", accountHolderName: "", accountNumber: "",
-    branchCode: "", accountType: "Cheque", logoUrl: companyLogoUrl || "", logoSize: companyLogoSize,
+    branchCode: "", accountType: "Cheque", logoUrl: companyLogoUrl || "",
+    logoWidth: companyLogoWidth, // Use new width
+    logoHeight: companyLogoHeight, // Use new height
+    logoFit: companyLogoFit, // Use new fit
   };
 
   // Define displayCompanyName within this component's scope
@@ -142,7 +150,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
                   <img
                     src={companyLogoUrl}
                     alt="Company Logo"
-                    style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+                    style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
                     className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
                   />
                 )}

@@ -125,7 +125,9 @@ const Employees: React.FC = () => {
           branchCode: localStorage.getItem('branchCode') || "",
           accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
           logoUrl: localStorage.getItem('companyLogoUrl') || '',
-          logoSize: parseFloat(localStorage.getItem('companyLogoSize') || '40'),
+          logoWidth: parseFloat(localStorage.getItem('companyLogoWidth') || '100'),
+          logoHeight: parseFloat(localStorage.getItem('companyLogoHeight') || '50'),
+          logoFit: (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain",
         }
       : null;
     setCompanyDetails(storedCompanyDetails as MockCompanyDetails);
