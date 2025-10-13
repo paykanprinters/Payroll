@@ -131,47 +131,34 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
-  const renderSidebarContent = (isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void) => (
-    <>
-      <div className={cn(
-        "flex items-center border-b px-4 lg:px-6",
-        isCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6" // Increased height for both states
-      )}>
-        {!isCollapsed && (
-          <Link to="/" className="flex flex-col items-center flex-grow-0">
-            {companyLogoUrl && (
-              <img
-                src={companyLogoUrl}
-                alt="Company Logo"
-                style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-                className="mb-1"
-              />
-            )}
-            <span className="text-lg whitespace-nowrap">{displayCompanyName}</span>
-          </Link>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsCollapsed(prev => !prev)}
-          className={cn(isCollapsed ? "mx-auto" : "ml-auto")}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      </div>
-      <nav className="grid items-start gap-1 p-4">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            icon={item.icon}
-            label={item.label}
-            isCollapsed={isCollapsed}
-            badgeCount={item.badgeCount}
-          />
-        ))}
-      </nav>
-    </>
+  // Extracted header rendering logic
+  const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
+    <div className={cn(
+      "flex items-center border-b px-4 lg:px-6",
+      currentIsCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6"
+    )}>
+      {!currentIsCollapsed && (
+        <Link to="/" className="flex flex-col items-center flex-grow-0">
+          {companyLogoUrl && (
+            <img
+              src={companyLogoUrl}
+              alt="Company Logo"
+              style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
+              className="mb-1"
+            />
+          )}
+          <span className="text-lg whitespace-nowrap">{displayCompanyName}</span>
+        </Link>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => toggleCollapse(!currentIsCollapsed)}
+        className={cn(currentIsCollapsed ? "mx-auto" : "ml-auto")}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+    </div>
   );
 
   if (!isAuthenticated) {
@@ -188,8 +175,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
-            {/* For mobile, renderSidebarContent is always called with isCollapsed=false to show full menu */}
-            {renderSidebarContent(false, setIsCollapsed)}
+            {/* For mobile, renderSidebarHeader is always called with isCollapsed=false to show full menu */}
+            {renderSidebarHeader(false, setIsCollapsed)}
+            <nav className="grid items-start gap-1 p-4">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                  isCollapsed={false} // Mobile nav links are never collapsed
+                  badgeCount={item.badgeCount}
+                />
+              ))}
+            </nav>
           </div>
         </SheetContent>
       </Sheet>
@@ -203,7 +202,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[240px]"
       )}
     >
-      {renderSidebarContent(false, setIsCollapsed)}
+      {renderSidebarHeader(isCollapsed, setIsCollapsed)} {/* Desktop uses the actual isCollapsed state */}
+      <nav className="grid items-start gap-1 p-4">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            icon={item.icon}
+            label={item.label}
+            isCollapsed={isCollapsed}
+            badgeCount={item.badgeCount}
+          />
+        ))}
+      </nav>
     </div>
   );
 };
