@@ -8,27 +8,28 @@ import {
   LayoutDashboard,
   Users,
   ReceiptText,
-  BarChart, // Using BarChart for Reports
+  BarChart,
   Settings,
   Menu,
   Landmark,
   PiggyBank,
   CalendarDays,
-  LineChart, // New icon for Analytics
-  Clock, // Icon for Timesheet
-  ListTodo, // New icon for To-Dos
+  LineChart,
+  Clock,
+  ListTodo,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Badge } from "@/components/ui/badge"; // Import Badge
-import { useToDosData } from "@/hooks/use-todos-data"; // New import
+import { Badge } from "@/components/ui/badge";
+import { useToDosData } from "@/hooks/use-todos-data";
+import { useAuth } from "@/context/AuthContext";
 
 interface NavLinkProps {
   to: string;
   icon: React.ElementType;
   label: string;
   isCollapsed: boolean;
-  badgeCount?: number; // Optional badge count
+  badgeCount?: number;
 }
 
 const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, badgeCount }) => {
@@ -41,7 +42,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
       variant="ghost"
       className={cn(
         "w-full justify-start",
-        isCollapsed ? "h-9 w-9 p-1.5" : "px-4 py-2", // Adjusted padding for collapsed state
+        isCollapsed ? "h-9 w-9 p-1.5" : "px-4 py-2",
         isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline"
       )}
     >
@@ -65,7 +66,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const isMobile = useIsMobile();
-  const { pendingCount } = useToDosData(); // Use the hook to get pending to-dos count
+  const { pendingCount } = useToDosData();
+  const { isAuthenticated } = useAuth();
 
   const [companyTradingName, setCompanyTradingName] = React.useState<string>(
     localStorage.getItem('companyTradingName') || ""
@@ -112,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingCount }, // New To-Dos item
+    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingCount },
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/timesheet", icon: Clock, label: "Timesheet" },
     { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },
@@ -124,51 +126,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
-  const renderSidebarContent = (isMobileView: boolean) => (
-    <>
-      <div className="flex min-h-14 items-center border-b px-4 lg:min-h-[60px] lg:px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-foreground flex-1 min-w-0">
-          {companyLogoUrl && (
-            <img
-              src={companyLogoUrl}
-              alt="Company Logo"
-              style={{ width: companyLogoSize, height: companyLogoSize, objectFit: 'contain' }}
-              className="rounded-md flex-shrink-0"
-            />
-          )}
-          {!isCollapsed && (
-            <span className="text-lg font-bold flex-1 min-w-0">
-              {displayCompanyName}
-            </span>
-          )}
-        </Link>
-        {!isMobileView && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="ml-auto h-8 w-8"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto py-2">
-        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              icon={item.icon}
-              label={item.label}
-              isCollapsed={isCollapsed && !isMobileView}
-              badgeCount={item.badgeCount}
-            />
-          ))}
-        </nav>
-      </div>
-    </>
-  );
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (isMobile) {
     return (
