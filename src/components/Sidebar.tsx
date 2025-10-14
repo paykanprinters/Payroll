@@ -87,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
       const mockLogoUrl = localStorage.getItem('companyLogoUrl');
       const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
       const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-      const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+      const mockLogoFit = (localStorage.getItem('companyLogoFit') as MockCompanyDetails['logoFit']) || "contain";
 
       return {
         name: mockLegalName || mockTradingName || "Your Company Name",
@@ -106,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
         logoFit: companyDetails.logoFit || "contain",
       };
     }
-    return { name: "Your Company Name", logoUrl: null, logoWidth: 100, logoHeight: 50, logoFit: "contain" };
+    return { name: "Your Company Name", logoUrl: null, logoWidth: 100, height: 50, logoFit: "contain" };
   }, [companyDetails, isMockDataEnabled]);
 
 
@@ -148,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
               <img
                 src={displayCompanyDetails.logoUrl}
                 alt="Company Logo"
-                style={{ width: displayCompanyDetails.logoWidth, height: displayCompanyDetails.logoHeight, objectFit: displayCompanyDetails.logoFit }}
+                style={{ width: displayCompanyDetails.logoWidth, height: displayCompanyDetails.logoHeight, objectFit: displayCompanyDetails.logoFit as React.CSSProperties['objectFit'] }}
                 className="mb-1"
               />
             )}

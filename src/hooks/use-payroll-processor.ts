@@ -245,6 +245,7 @@ export const usePayrollProcessor = () => {
 
   return {
     employees,
+    setEmployees, // Expose setEmployees
     payslips,
     loans,
     savingPlans,

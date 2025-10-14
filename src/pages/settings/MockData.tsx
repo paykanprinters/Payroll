@@ -74,7 +74,7 @@ const MockData: React.FC = () => {
       "payeReferenceNumber", "uifReferenceNumber", "sdlReferenceNumber",
       "coidaRegistrationNumber", "physicalAddress", "postalAddress",
       "mainContactNumber", "alternativeContactNumber", "companyEmail",
-      "companyWebsite", "bankName", "accountHolderName", "accountNumber",
+      "companyWebsite", "bankName", "accountholdername", "accountNumber",
       "branchCode", "accountType", "logoUrl",
       "logoWidth", "logoHeight", "logoFit" // New logo properties
     ];
