@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDialog"; // Import the new dialog
+import { showSuccess } from "@/utils/toast"; // Import showSuccess for toast messages
 
 interface UserData {
   id: string;
@@ -38,8 +39,10 @@ const initialMockUsers: UserData[] = [
   { id: "5", name: "Inactive User", email: "inactive@example.com", role: "Staff", status: "Inactive", password: "password" },
 ];
 
+const USER_STORAGE_KEY = "mockUsersData"; // Define a key for localStorage
+
 const UserControlPanel: React.FC = () => {
-  const [users, setUsers] = React.useState<UserData[]>(initialMockUsers);
+  const [users, setUsers] = React.useState<UserData[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterRole, setFilterRole] = React.useState("All");
 
@@ -47,6 +50,24 @@ const UserControlPanel: React.FC = () => {
   const [editingUser, setEditingUser] = React.useState<UserFormValues | null>(null);
   const [isUserDeleteDialogOpen, setIsUserDeleteDialogOpen] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState<UserData | null>(null);
+
+  // Load users from localStorage on mount
+  React.useEffect(() => {
+    const storedUsers = localStorage.getItem(USER_STORAGE_KEY);
+    if (storedUsers) {
+      setUsers(JSON.parse(storedUsers));
+    } else {
+      setUsers(initialMockUsers);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(initialMockUsers));
+    }
+  }, []);
+
+  // Save users to localStorage whenever the users state changes
+  React.useEffect(() => {
+    if (users.length > 0) { // Only save if there are users to prevent overwriting with empty array on initial load
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
+    }
+  }, [users]);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,7 +93,11 @@ const UserControlPanel: React.FC = () => {
 
   const confirmDeleteUser = () => {
     if (userToDelete) {
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
+      setUsers(prevUsers => {
+        const updatedUsers = prevUsers.filter(user => user.id !== userToDelete.id);
+        showSuccess(`User ${userToDelete.name} deleted successfully!`);
+        return updatedUsers;
+      });
       setIsUserDeleteDialogOpen(false);
       setUserToDelete(null);
     }
@@ -81,13 +106,18 @@ const UserControlPanel: React.FC = () => {
   const handleSaveUser = (userData: UserFormValues) => {
     if (userData.id) {
       // Update existing user
-      setUsers(prevUsers => prevUsers.map(user =>
-        user.id === userData.id ? { ...user, ...userData } : user
-      ));
+      setUsers(prevUsers => {
+        const updatedUsers = prevUsers.map(user =>
+          user.id === userData.id ? { ...user, ...userData } : user
+        );
+        showSuccess(`User ${userData.name} updated successfully!`);
+        return updatedUsers;
+      });
     } else {
       // Add new user
       setUsers(prevUsers => {
-        const newId = (Math.max(...prevUsers.map(u => parseInt(u.id))) + 1).toString();
+        const maxId = prevUsers.length > 0 ? Math.max(...prevUsers.map(u => parseInt(u.id))) : 0;
+        const newId = (maxId + 1).toString();
         const newUser: UserData = {
           id: newId,
           name: userData.name,
@@ -96,6 +126,7 @@ const UserControlPanel: React.FC = () => {
           status: userData.status,
           password: userData.password,
         };
+        showSuccess(`User ${userData.name} added successfully!`);
         return [...prevUsers, newUser];
       });
     }
