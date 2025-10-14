@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm } from "@hookform/resolvers/zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react"; // For loading spinner
+import AdminCreator from "@/components/AdminCreator"; // Import the new component
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address").min(1, "Email is required"),
@@ -142,6 +143,7 @@ const Login: React.FC = () => {
               <a href="#" className="hover:underline">Forgot Password?</a>
             </div>
           </form>
+          <AdminCreator /> {/* Temporarily added here */}
         </CardContent>
         <div className="p-6 text-center text-sm text-muted-foreground border-t dark:border-gray-800">
           <p>© 2025 {displayCompanyName}</p>
