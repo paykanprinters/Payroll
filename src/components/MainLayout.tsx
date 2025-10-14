@@ -48,9 +48,12 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 flex items-center justify-center space-x-2">
+              <Button variant="ghost" className="relative h-auto flex items-center justify-center space-x-2 py-1">
                 <User className="h-4 w-4" />
-                <span className="font-medium">{user?.name || user?.email || "User"}</span>
+                <div className="flex flex-col items-start">
+                  <span className="font-medium text-sm leading-none">{user?.name || "User"}</span>
+                  <span className="text-xs text-muted-foreground leading-none">{user?.email || ""}</span>
+                </div>
                 <SettingsIcon className="h-4 w-4 ml-1" />
               </Button>
             </DropdownMenuTrigger>
