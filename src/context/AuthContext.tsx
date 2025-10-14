@@ -10,6 +10,7 @@ interface AuthUser {
   id: string;
   email: string;
   role: 'Admin' | 'Manager' | 'Staff' | 'Viewer';
+  name: string;
 }
 
 interface AuthContextType {
@@ -50,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             id: profile.id,
             email: profile.email,
             role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+            name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
           });
           setIsAuthenticated(true);
         }
@@ -88,6 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             id: profile.id,
             email: profile.email,
             role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+            name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
           });
           setIsAuthenticated(true);
         }
@@ -138,6 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: profile.id,
           email: profile.email,
           role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+          name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
         });
         setIsAuthenticated(true);
         showSuccess('Login successful! Redirecting...');
