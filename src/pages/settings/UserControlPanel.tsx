@@ -86,8 +86,18 @@ const UserControlPanel: React.FC = () => {
       ));
     } else {
       // Add new user
-      const newId = (Math.max(...prevUsers.map(u => parseInt(u.id))) + 1).toString();
-      setUsers(prevUsers => [...prevUsers, { ...userData, id: newId }]);
+      setUsers(prevUsers => {
+        const newId = (Math.max(...prevUsers.map(u => parseInt(u.id))) + 1).toString();
+        const newUser: UserData = {
+          id: newId,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          status: userData.status,
+          password: userData.password,
+        };
+        return [...prevUsers, newUser];
+      });
     }
     setIsUserFormOpen(false);
     setEditingUser(null);
