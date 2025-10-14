@@ -16,8 +16,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { showSuccess } from "@/utils/toast";
-import { Eye, EyeOff, RefreshCcw } from "lucide-react"; // Import icons
+import { showSuccess, showError } from "@/utils/toast";
+import { Eye, EyeOff, RefreshCcw, Mail } from "lucide-react"; // Import Mail icon
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
 
 // Define the schema for user form validation
 const userSchema = z.object({
@@ -88,6 +89,25 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     }
     form.setValue("password", newPassword, { shouldValidate: true });
     showSuccess("Password generated!");
+  };
+
+  const handleResendConfirmationEmail = async () => {
+    if (!initialUser?.email) {
+      showError("No email address available to resend confirmation.");
+      return;
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: initialUser.email,
+    });
+
+    if (error) {
+      console.error("Error resending confirmation email:", error);
+      showError(`Failed to resend confirmation email: ${error.message}`);
+    } else {
+      showSuccess(`Confirmation email sent to ${initialUser.email}!`);
+    }
   };
 
   const onSubmit = (data: UserFormValues) => {
@@ -168,7 +188,12 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
               <RefreshCcw className="mr-2 h-4 w-4" /> Generate Password
             </Button>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
+            {initialUser && (
+              <Button type="button" variant="outline" onClick={handleResendConfirmationEmail}>
+                <Mail className="mr-2 h-4 w-4" /> Resend Confirmation
+              </Button>
+            )}
             <Button type="submit">{initialUser ? "Save Changes" : "Add User"}</Button>
           </DialogFooter>
         </form>
