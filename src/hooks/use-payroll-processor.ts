@@ -62,7 +62,7 @@ export const usePayrollProcessor = () => {
       const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
       const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
       const mockBankName = localStorage.getItem('bankName') || "";
-      const mockAccountHolderName = localStorage.getItem('accountHolderName') || "";
+      const mockAccountholdername = localStorage.getItem('accountholdername') || ""; // Corrected
       const mockAccountNumber = localStorage.getItem('accountNumber') || "";
       const mockBranchCode = localStorage.getItem('branchCode') || "";
       const mockAccountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
@@ -80,7 +80,7 @@ export const usePayrollProcessor = () => {
         sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
         coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
         physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
-        companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountHolderName: mockAccountHolderName, accountNumber: mockAccountNumber,
+        companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber, // Corrected
         branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
       });
 

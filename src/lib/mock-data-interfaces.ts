@@ -17,7 +17,7 @@ export interface MockCompanyDetails {
   companyEmail?: string;
   companyWebsite?: string;
   bankName?: string;
-  accountHolderName?: string;
+  accountholdername?: string; // Corrected to match Supabase schema
   accountNumber?: string;
   branchCode?: string;
   accountType?: "Cheque" | "Savings" | "Business";

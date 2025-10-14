@@ -18,7 +18,7 @@ export const generateMockCompanyDetails = (): MockCompanyDetails => ({
   companyEmail: "info@acmecorp.co.za",
   companyWebsite: "https://www.acmecorp.co.za",
   bankName: "FNB",
-  accountHolderName: "Acme Corp (Pty) Ltd",
+  accountholdername: "Acme Corp (Pty) Ltd", // Corrected to match Supabase schema
   accountNumber: "62001234567",
   branchCode: "250655",
   accountType: "Business",

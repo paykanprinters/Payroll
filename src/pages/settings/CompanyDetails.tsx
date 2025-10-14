@@ -34,7 +34,7 @@ const companyDetailsSchema = z.object({
   companyEmail: z.string().email("Invalid email address").optional().or(z.literal('')),
   companyWebsite: z.string().url("Invalid URL").optional().or(z.literal('')),
   bankName: z.string().optional(),
-  accountHolderName: z.string().optional(),
+  accountholdername: z.string().optional(), // Corrected to match Supabase schema
   accountNumber: z.string().optional(),
   branchCode: z.string().optional(),
   accountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
@@ -69,7 +69,7 @@ const CompanyDetails: React.FC = () => {
       companyEmail: "",
       companyWebsite: "",
       bankName: "",
-      accountHolderName: "",
+      accountholdername: "", // Corrected to match Supabase schema
       accountNumber: "",
       branchCode: "",
       accountType: "Cheque",
@@ -101,7 +101,7 @@ const CompanyDetails: React.FC = () => {
         companyEmail: companyDetails.companyEmail || "",
         companyWebsite: companyDetails.companyWebsite || "",
         bankName: companyDetails.bankName || "",
-        accountHolderName: companyDetails.accountHolderName || "",
+        accountholdername: companyDetails.accountholdername || "", // Corrected to match Supabase schema
         accountNumber: companyDetails.accountNumber || "",
         branchCode: companyDetails.branchCode || "",
         accountType: companyDetails.accountType || "Cheque",
@@ -118,7 +118,7 @@ const CompanyDetails: React.FC = () => {
         payeReferenceNumber: "", uifReferenceNumber: "", sdlReferenceNumber: "",
         coidaRegistrationNumber: "", physicalAddress: "", postalAddress: "",
         mainContactNumber: "", alternativeContactNumber: "", companyEmail: "",
-        companyWebsite: "", bankName: "", accountHolderName: "", accountNumber: "",
+        companyWebsite: "", bankName: "", accountholdername: "", accountNumber: "", // Corrected
         branchCode: "", accountType: "Cheque", logoUrl: "",
         logoWidth: 100, logoHeight: 50, logoFit: "contain",
       });
@@ -354,10 +354,10 @@ const CompanyDetails: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="accountHolderName">Account Holder Name</Label>
+              <Label htmlFor="accountholdername">Account Holder Name</Label>
               <Input
-                id="accountHolderName"
-                {...form.register("accountHolderName")}
+                id="accountholdername" // Corrected to match Supabase schema
+                {...form.register("accountholdername")} // Corrected to match Supabase schema
                 className="mt-1"
               />
             </div>
