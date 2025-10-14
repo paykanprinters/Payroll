@@ -192,6 +192,21 @@ const UserControlPanel: React.FC = () => {
         fetchUsers();
       }
 
+      // Update user_metadata in auth.users via Edge Function
+      const { data: metadataUpdate, error: metadataError } = await supabase.functions.invoke('update-user-metadata', {
+        body: JSON.stringify({
+          userId: userData.id,
+          metadata: { name: userData.name, role: userData.role, status: userData.status },
+        }),
+      });
+
+      if (metadataError) {
+        console.error("Error updating user metadata via Edge Function:", metadataError);
+        showError("Failed to update user display name in Auth system.");
+      } else {
+        console.log("User metadata updated:", metadataUpdate);
+      }
+
       // If password is provided, update it (requires admin context or separate flow)
       if (userData.password) {
         // This would typically be an Edge Function call for security and admin privileges
