@@ -9,8 +9,27 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDialog"; // Import the new dialog
 
-const mockUsers = [
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  role: "Admin" | "Manager" | "Staff" | "Viewer";
+  status: "Active" | "Inactive";
+}
+
+const initialMockUsers: UserData[] = [
   { id: "1", name: "Admin User", email: "admin@example.com", role: "Admin", status: "Active" },
   { id: "2", name: "Manager Smith", email: "manager@example.com", role: "Manager", status: "Active" },
   { id: "3", name: "Staff Johnson", email: "staff@example.com", role: "Staff", status: "Active" },
@@ -19,9 +38,14 @@ const mockUsers = [
 ];
 
 const UserControlPanel: React.FC = () => {
-  const [users, setUsers] = React.useState(mockUsers);
+  const [users, setUsers] = React.useState<UserData[]>(initialMockUsers);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterRole, setFilterRole] = React.useState("All");
+
+  const [isUserFormOpen, setIsUserFormOpen] = React.useState(false);
+  const [editingUser, setEditingUser] = React.useState<UserFormValues | null>(null);
+  const [isUserDeleteDialogOpen, setIsUserDeleteDialogOpen] = React.useState(false);
+  const [userToDelete, setUserToDelete] = React.useState<UserData | null>(null);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -29,6 +53,44 @@ const UserControlPanel: React.FC = () => {
     const matchesRole = filterRole === "All" || user.role === filterRole;
     return matchesSearch && matchesRole;
   });
+
+  const handleAddUserClick = () => {
+    setEditingUser(null);
+    setIsUserFormOpen(true);
+  };
+
+  const handleEditUserClick = (user: UserData) => {
+    setEditingUser(user);
+    setIsUserFormOpen(true);
+  };
+
+  const handleDeleteUserClick = (user: UserData) => {
+    setUserToDelete(user);
+    setIsUserDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteUser = () => {
+    if (userToDelete) {
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
+      setIsUserDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const handleSaveUser = (userData: UserFormValues) => {
+    if (userData.id) {
+      // Update existing user
+      setUsers(prevUsers => prevUsers.map(user =>
+        user.id === userData.id ? { ...user, ...userData } : user
+      ));
+    } else {
+      // Add new user
+      const newId = (Math.max(...prevUsers.map(u => parseInt(u.id))) + 1).toString();
+      setUsers(prevUsers => [...prevUsers, { ...userData, id: newId }]);
+    }
+    setIsUserFormOpen(false);
+    setEditingUser(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -42,7 +104,7 @@ const UserControlPanel: React.FC = () => {
         <CardContent>
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-semibold">All Users</h3>
-            <Button>
+            <Button onClick={handleAddUserClick}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add New User
             </Button>
           </div>
@@ -103,9 +165,9 @@ const UserControlPanel: React.FC = () => {
                           {user.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="flex justify-center items-center gap-2"> {/* Added flex, justify-center, items-center, gap-2 */}
-                        <Button variant="outline" size="sm">Edit</Button> {/* Removed mr-2 */}
-                        <Button variant="destructive" size="sm">Delete</Button>
+                      <TableCell className="flex justify-center items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEditUserClick(user)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteUserClick(user)}>Delete</Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -128,6 +190,31 @@ const UserControlPanel: React.FC = () => {
           This is a mock-up of a user control panel. In a real application, user data would be fetched from a backend database, and actions like adding, editing, or deleting users would involve API calls to manage user accounts and roles securely.
         </p>
       </div>
+
+      <UserFormDialog
+        isOpen={isUserFormOpen}
+        onClose={() => setIsUserFormOpen(false)}
+        onSave={handleSaveUser}
+        initialUser={editingUser}
+      />
+
+      <AlertDialog open={isUserDeleteDialogOpen} onOpenChange={setIsUserDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user{" "}
+              <span className="font-semibold">{userToDelete?.name}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
