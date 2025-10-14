@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change event:", event, "session:", session); // Debugging log
       if (session) {
         // Fetch user role from public.users table
         const { data: profile, error } = await supabase
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           setIsAuthenticated(false);
           showError('Failed to load user profile. Please try logging in again.');
-          navigate('/login');
+          navigate('/login', { replace: true }); // Redirect on profile fetch error
         } else if (profile) {
           setUser({
             id: profile.id,
@@ -53,13 +54,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsAuthenticated(true);
         }
       } else {
+        // This block handles SIGNED_OUT, INITIAL_SESSION (if no session), etc.
         setUser(null);
         setIsAuthenticated(false);
+        // Only navigate to login if the event is explicitly SIGNED_OUT
+        // or if it's an initial session check and there's no session.
+        if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+          navigate('/login', { replace: true });
+        }
       }
-      setIsLoadingAuth(false); // Auth state determined
+      setIsLoadingAuth(false); // Auth state determined after processing event
     });
 
-    // Check initial session
+    // Check initial session on mount
     const checkInitialSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (session) {
@@ -75,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           setIsAuthenticated(false);
           showError('Failed to load user profile. Please try logging in again.');
-          navigate('/login');
+          navigate('/login', { replace: true });
         } else if (profile) {
           setUser({
             id: profile.id,
@@ -87,6 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUser(null);
         setIsAuthenticated(false);
+        navigate('/login', { replace: true }); // Navigate to login if no initial session
       }
       setIsLoadingAuth(false);
     };
@@ -140,20 +148,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    setIsLoadingAuth(true);
+    setIsLoadingAuth(true); // Indicate loading while signing out
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       showError(error.message);
-      setIsLoadingAuth(false);
+      setIsLoadingAuth(false); // If sign out itself fails, stop loading
       throw error;
     }
-
-    setUser(null);
-    setIsAuthenticated(false);
     showSuccess('Logged out successfully.');
-    navigate('/login');
-    setIsLoadingAuth(false);
+    // The onAuthStateChange listener will now handle setting isAuthenticated/user to null
+    // and navigating to /login when it receives the 'SIGNED_OUT' event.
+    // No need to call navigate('/login') or set state here directly.
   };
 
   return (
