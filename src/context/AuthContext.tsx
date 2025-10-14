@@ -3,12 +3,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 interface AuthUser {
   id: string;
   email: string;
   role: 'Admin' | 'Manager' | 'Staff' | 'Viewer';
-  token: string;
 }
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  isLoadingAuth: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,93 +25,139 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // New loading state
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('authUser');
-    if (storedUser) {
-      try {
-        const parsedUser: AuthUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (e) {
-        console.error("Failed to parse stored user:", e);
-        localStorage.removeItem('authUser');
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        // Fetch user role from public.users table
+        const { data: profile, error } = await supabase
+          .from('users')
+          .select('id, email, name, role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          setUser(null);
+          setIsAuthenticated(false);
+          showError('Failed to load user profile. Please try logging in again.');
+          navigate('/login');
+        } else if (profile) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+          });
+          setIsAuthenticated(true);
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
       }
-    }
-  }, []);
+      setIsLoadingAuth(false); // Auth state determined
+    });
+
+    // Check initial session
+    const checkInitialSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (session) {
+        // Session exists, fetch profile
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('id, email, name, role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching initial user profile:', profileError);
+          setUser(null);
+          setIsAuthenticated(false);
+          showError('Failed to load user profile. Please try logging in again.');
+          navigate('/login');
+        } else if (profile) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+          });
+          setIsAuthenticated(true);
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      setIsLoadingAuth(false);
+    };
+
+    checkInitialSession();
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   const login = async (email: string, password: string) => {
-    // Simulate API call
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (email === 'admin@example.com' && password === 'password') {
-          const mockUser: AuthUser = {
-            id: 'user-admin-123',
-            email: 'admin@example.com',
-            role: 'Admin',
-            token: 'mock-admin-token',
-          };
-          localStorage.setItem('authUser', JSON.stringify(mockUser));
-          setUser(mockUser);
-          setIsAuthenticated(true);
-          showSuccess('Login successful! Redirecting...');
-          resolve();
-        } else if (email === 'manager@example.com' && password === 'password') {
-          const mockUser: AuthUser = {
-            id: 'user-manager-123',
-            email: 'manager@example.com',
-            role: 'Manager',
-            token: 'mock-manager-token',
-          };
-          localStorage.setItem('authUser', JSON.stringify(mockUser));
-          setUser(mockUser);
-          setIsAuthenticated(true);
-          showSuccess('Login successful! Redirecting...');
-          resolve();
-        } else if (email === 'staff@example.com' && password === 'password') {
-          const mockUser: AuthUser = {
-            id: 'user-staff-123',
-            email: 'staff@example.com',
-            role: 'Staff',
-            token: 'mock-staff-token',
-          };
-          localStorage.setItem('authUser', JSON.stringify(mockUser));
-          setUser(mockUser);
-          setIsAuthenticated(true);
-          showSuccess('Login successful! Redirecting...');
-          resolve();
-        } else if (email === 'viewer@example.com' && password === 'password') {
-          const mockUser: AuthUser = {
-            id: 'user-viewer-123',
-            email: 'viewer@example.com',
-            role: 'Viewer',
-            token: 'mock-viewer-token',
-          };
-          localStorage.setItem('authUser', JSON.stringify(mockUser));
-          setUser(mockUser);
-          setIsAuthenticated(true);
-          showSuccess('Login successful! Redirecting...');
-          resolve();
-        }
-        else {
-          showError('Invalid email or password.');
-          reject(new Error('Invalid credentials'));
-        }
-      }, 1000);
+    setIsLoadingAuth(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
+
+    if (error) {
+      showError(error.message);
+      setIsLoadingAuth(false);
+      throw error;
+    }
+
+    if (data.user) {
+      // Fetch user role from public.users table
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('id, email, name, role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile after login:', profileError);
+        showError('Login successful, but failed to load user profile. Please contact support.');
+        await supabase.auth.signOut(); // Log out if profile fetch fails
+        setIsLoadingAuth(false);
+        throw profileError;
+      } else if (profile) {
+        setUser({
+          id: profile.id,
+          email: profile.email,
+          role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+        });
+        setIsAuthenticated(true);
+        showSuccess('Login successful! Redirecting...');
+        navigate('/dashboard', { replace: true });
+      }
+    }
+    setIsLoadingAuth(false);
   };
 
-  const logout = () => {
-    localStorage.removeItem('authUser');
+  const logout = async () => {
+    setIsLoadingAuth(true);
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      showError(error.message);
+      setIsLoadingAuth(false);
+      throw error;
+    }
+
     setUser(null);
     setIsAuthenticated(false);
     showSuccess('Logged out successfully.');
     navigate('/login');
+    setIsLoadingAuth(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, isLoadingAuth }}>
       {children}
     </AuthContext.Provider>
   );

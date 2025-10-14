@@ -20,9 +20,9 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login: React.FC = () => {
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, isAuthenticated, user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Separate state for form submission
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [companyTradingName, setCompanyTradingName] = useState<string>("");
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
@@ -61,26 +61,31 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Redirect based on role (simplified for now, all go to dashboard)
-      // In a real app, you'd have more granular redirection logic here
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
   const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       await login(data.email, data.password);
-      // Redirection handled by useEffect
     } catch (error) {
-      console.error("Login failed:", error);
       // Error toast handled by AuthContext
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
+
+  // Show a full-page loader if authentication state is still being determined
+  if (isLoadingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950 p-4">
@@ -129,8 +134,8 @@ const Login: React.FC = () => {
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.password.message}</p>
               )}
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
             <div className="text-center text-sm text-muted-foreground">

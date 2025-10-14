@@ -17,6 +17,7 @@ import {
   LineChart,
   Clock,
   ListTodo,
+  Loader2, // Import Loader2
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -72,7 +73,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   const isMobile = useIsMobile();
   const { pendingCount } = useToDosData();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoadingAuth } = useAuth(); // Use isLoadingAuth
 
   const [companyTradingName, setCompanyTradingName] = React.useState<string>(
     localStorage.getItem('companyTradingName') || ""
@@ -187,8 +188,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
     </div>
   );
 
-  if (!isAuthenticated) {
-    return null;
+  if (isLoadingAuth || !isAuthenticated) {
+    return null; // Don't render sidebar if auth is loading or not authenticated
   }
 
   if (isMobile) {
