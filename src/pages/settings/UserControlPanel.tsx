@@ -27,14 +27,15 @@ interface UserData {
   email: string;
   role: "Admin" | "Manager" | "Staff" | "Viewer";
   status: "Active" | "Inactive";
+  password?: string; // Added password field
 }
 
 const initialMockUsers: UserData[] = [
-  { id: "1", name: "Admin User", email: "admin@example.com", role: "Admin", status: "Active" },
-  { id: "2", name: "Manager Smith", email: "manager@example.com", role: "Manager", status: "Active" },
-  { id: "3", name: "Staff Johnson", email: "staff@example.com", role: "Staff", status: "Active" },
-  { id: "4", name: "Viewer Brown", email: "viewer@example.com", role: "Viewer", status: "Active" },
-  { id: "5", name: "Inactive User", email: "inactive@example.com", role: "Staff", status: "Inactive" },
+  { id: "1", name: "Admin User", email: "admin@example.com", role: "Admin", status: "Active", password: "password" },
+  { id: "2", name: "Manager Smith", email: "manager@example.com", role: "Manager", status: "Active", password: "password" },
+  { id: "3", name: "Staff Johnson", email: "staff@example.com", role: "Staff", status: "Active", password: "password" },
+  { id: "4", name: "Viewer Brown", email: "viewer@example.com", role: "Viewer", status: "Active", password: "password" },
+  { id: "5", name: "Inactive User", email: "inactive@example.com", role: "Staff", status: "Inactive", password: "password" },
 ];
 
 const UserControlPanel: React.FC = () => {
