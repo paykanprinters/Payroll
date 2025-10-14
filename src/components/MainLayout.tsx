@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings as SettingsIcon, LayoutDashboard, User } from "lucide-react"; // Import User icon
+import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react"; // Import User icon
 import { Outlet, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -17,13 +17,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCompanyDetails } from "@/hooks/use-company-details"; // Import the new hook
 
 interface MainLayoutProps {
   // children: React.ReactNode; // No longer directly takes children, uses Outlet
 }
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
+  const { companyDetails, isLoading: isLoadingCompanyDetails } = useCompanyDetails(); // Fetch company details from Supabase
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
@@ -33,6 +35,17 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"
     : "md:grid-cols-[240px_1fr] lg:grid-cols-[240px_1fr]";
 
+  // Check mock data status from localStorage
+  const isMockDataEnabled = localStorage.getItem("isMockDataEnabled") === "true";
+
+  if (isLoadingAuth || isLoadingCompanyDetails) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     // If not authenticated, don't render the layout, just the content (e.g., Login page)
     return <Outlet />;
@@ -40,7 +53,14 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
 
   return (
     <div className={cn("grid min-h-screen w-full", gridColsClass)}>
-      {!isMobile && <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}
+      {!isMobile && (
+        <Sidebar
+          isCollapsed={isCollapsed}
+          setIsCollapsed={setIsCollapsed}
+          companyDetails={companyDetails} // Pass Supabase company details
+          isMockDataEnabled={isMockDataEnabled} // Pass mock data status
+        />
+      )}
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
           <div className="flex-1">
@@ -88,7 +108,14 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
         </main>
         <MadeWithDyad />
       </div>
-      {isMobile && <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}
+      {isMobile && (
+        <Sidebar
+          isCollapsed={isCollapsed}
+          setIsCollapsed={setIsCollapsed}
+          companyDetails={companyDetails} // Pass Supabase company details
+          isMockDataEnabled={isMockDataEnabled} // Pass mock data status
+        />
+      )}
     </div>
   );
 };

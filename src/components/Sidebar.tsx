@@ -17,13 +17,14 @@ import {
   LineChart,
   Clock,
   ListTodo,
-  Loader2, // Import Loader2
+  Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { useToDosData } from "@/hooks/use-todos-data";
 import { useAuth } from "@/context/AuthContext";
+import { MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
 
 interface NavLinkProps {
   to: string;
@@ -68,68 +69,46 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
+  companyDetails: MockCompanyDetails | null; // Receive company details as prop
+  isMockDataEnabled: boolean; // Receive mock data status as prop
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyDetails, isMockDataEnabled }) => {
   const isMobile = useIsMobile();
   const { pendingCount } = useToDosData();
-  const { isAuthenticated, isLoadingAuth } = useAuth(); // Use isLoadingAuth
+  const { isAuthenticated, isLoadingAuth } = useAuth();
 
-  const [companyTradingName, setCompanyTradingName] = React.useState<string>(
-    localStorage.getItem('companyTradingName') || ""
-  );
-  const [companyLegalName, setCompanyLegalName] = React.useState<string>(
-    localStorage.getItem('companyLegalName') || ""
-  );
-  const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | null>(
-    localStorage.getItem('companyLogoUrl')
-  );
-  const [companyLogoWidth, setCompanyLogoWidth] = React.useState<number>(
-    parseFloat(localStorage.getItem('companyLogoWidth') || '100')
-  );
-  const [companyLogoHeight, setCompanyLogoHeight] = React.useState<number>(
-    parseFloat(localStorage.getItem('companyLogoHeight') || '50')
-  );
-  const [companyLogoFit, setCompanyLogoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">(
-    (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain"
-  );
+  // Determine which company details to display
+  const displayCompanyDetails = React.useMemo(() => {
+    if (isMockDataEnabled) {
+      // If mock data is enabled, read from localStorage for mock company details
+      const mockTradingName = localStorage.getItem('companyTradingName') || "";
+      const mockLegalName = localStorage.getItem('companyLegalName') || "";
+      const mockLogoUrl = localStorage.getItem('companyLogoUrl');
+      const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+      const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+      const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
 
-  React.useEffect(() => {
-    const updateCompanyDetails = () => {
-      const tradingName = localStorage.getItem('companyTradingName');
-      const legalName = localStorage.getItem('companyLegalName');
+      return {
+        name: mockLegalName || mockTradingName || "Your Company Name",
+        logoUrl: mockLogoUrl,
+        logoWidth: isNaN(mockLogoWidth) ? 100 : mockLogoWidth,
+        logoHeight: isNaN(mockLogoHeight) ? 50 : mockLogoHeight,
+        logoFit: mockLogoFit,
+      };
+    } else if (companyDetails) {
+      // Otherwise, use the Supabase-fetched company details
+      return {
+        name: companyDetails.companyLegalName || companyDetails.companyTradingName || "Your Company Name",
+        logoUrl: companyDetails.logoUrl,
+        logoWidth: companyDetails.logoWidth || 100,
+        logoHeight: companyDetails.logoHeight || 50,
+        logoFit: companyDetails.logoFit || "contain",
+      };
+    }
+    return { name: "Your Company Name", logoUrl: null, logoWidth: 100, logoHeight: 50, logoFit: "contain" };
+  }, [companyDetails, isMockDataEnabled]);
 
-      setCompanyTradingName(tradingName && tradingName.trim() !== '' ? tradingName : "");
-      setCompanyLegalName(legalName && legalName.trim() !== '' ? legalName : "");
-
-      const logo = localStorage.getItem('companyLogoUrl');
-      setCompanyLogoUrl(logo && logo.trim() !== '' ? logo : null);
-
-      const widthStr = localStorage.getItem('companyLogoWidth');
-      const width = parseFloat(widthStr || '100');
-      setCompanyLogoWidth(isNaN(width) ? 100 : width);
-
-      const heightStr = localStorage.getItem('companyLogoHeight');
-      const height = parseFloat(heightStr || '50');
-      setCompanyLogoHeight(isNaN(height) ? 50 : height);
-
-      const fit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
-      setCompanyLogoFit(fit);
-      
-      console.log("Sidebar: Received update. Current localStorage values:", { tradingName, legalName, logo, width, height, fit });
-    };
-
-    window.addEventListener('companyDetailsUpdated', updateCompanyDetails);
-    window.addEventListener('mockDataUpdated', updateCompanyDetails);
-    updateCompanyDetails();
-    
-    return () => {
-      window.removeEventListener('companyDetailsUpdated', updateCompanyDetails);
-      window.removeEventListener('mockDataUpdated', updateCompanyDetails);
-    };
-  }, []);
-
-  const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -157,7 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
           variant="ghost"
           size="icon"
           onClick={() => toggleCollapse(!currentIsCollapsed)}
-          className="mx-auto bg-gray-100 dark:bg-gray-700 z-10" // Added background and z-index
+          className="mx-auto bg-gray-100 dark:bg-gray-700 z-10"
         >
           <Menu className="h-5 w-5" />
         </Button>
@@ -165,21 +144,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         // When expanded, show logo/name and toggle button to the right
         <>
           <Link to="/" className="flex flex-col items-center flex-grow-0">
-            {companyLogoUrl && (
+            {displayCompanyDetails.logoUrl && (
               <img
-                src={companyLogoUrl}
+                src={displayCompanyDetails.logoUrl}
                 alt="Company Logo"
-                style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
+                style={{ width: displayCompanyDetails.logoWidth, height: displayCompanyDetails.logoHeight, objectFit: displayCompanyDetails.logoFit }}
                 className="mb-1"
               />
             )}
-            <span className="text-lg whitespace-nowrap">{displayCompanyName}</span>
+            <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
           </Link>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => toggleCollapse(!currentIsCollapsed)}
-            className="ml-auto bg-gray-100 dark:bg-gray-700 z-10" // Added background and z-index
+            className="ml-auto bg-gray-100 dark:bg-gray-700 z-10"
           >
             <Menu className="h-5 w-5" />
           </Button>

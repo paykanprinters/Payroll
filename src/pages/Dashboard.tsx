@@ -31,7 +31,7 @@ import ToDoList from "@/components/ToDoList"; // New import
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
-  const { employees, payslips, leaveRecords, isMockDataEnabled } = usePayrollProcessor();
+  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails } = usePayrollProcessor(); // Get companyDetails
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -134,21 +134,18 @@ const Dashboard: React.FC = () => {
     setLeaveDaysTakenTrend(sortedLeaveDaysTrend);
   }, [employees, payslips, leaveRecords]);
 
-  const loadCompanyDetails = () => {
-    const legalName = localStorage.getItem('companyLegalName');
-    setCompanyLegalName(legalName || "");
-  };
-
   useEffect(() => {
     loadDashboardData();
-    loadCompanyDetails();
+    if (companyDetails) {
+      setCompanyLegalName(companyDetails.companyLegalName || "");
+    }
     window.addEventListener('mockDataUpdated', loadDashboardData);
-    window.addEventListener('companyDetailsUpdated', loadCompanyDetails);
+    window.addEventListener('companyDetailsUpdated', loadDashboardData); // Listen for company detail updates
     return () => {
       window.removeEventListener('mockDataUpdated', loadDashboardData);
-      window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
+      window.removeEventListener('companyDetailsUpdated', loadDashboardData);
     };
-  }, [loadDashboardData]);
+  }, [loadDashboardData, companyDetails]); // Add companyDetails to dependencies
 
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;

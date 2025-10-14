@@ -10,6 +10,7 @@ import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
 import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
 import { showError } from "@/utils/toast"; // Import showError
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
@@ -39,9 +40,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const PayslipOverviewPage: React.FC = () => {
-  const [payslips, setPayslips] = useState<MockPayslip[]>([]);
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null); // New state for company details
+  const { employees, payslips, companyDetails } = usePayrollProcessor(); // Get companyDetails
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
@@ -54,95 +53,30 @@ const PayslipOverviewPage: React.FC = () => {
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
 
   const loadPayslipsAndEmployees = useCallback(() => {
-    const storedPayslips = localStorage.getItem("mockPayslips");
-    console.log("PayslipOverviewPage: Loading payslips. Raw storedPayslips:", storedPayslips);
-    if (storedPayslips) {
-      try {
-        const loadedPayslips: MockPayslip[] = JSON.parse(storedPayslips);
-        setPayslips(loadedPayslips);
-        console.log("PayslipOverviewPage: Loaded payslips count:", loadedPayslips.length);
+    // This function now relies on the 'payslips' and 'employees' states from usePayrollProcessor
+    // which are updated by the 'mockDataUpdated' event.
+    if (payslips.length > 0) {
+      const totalGross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+      const totalNet = payslips.reduce((sum, p) => sum + p.netPay, 0);
+      setPayrollSummaryData([
+        { name: "Total Payroll", gross: totalGross, net: totalNet },
+      ]);
 
-        const totalGross = loadedPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-        const totalNet = loadedPayslips.reduce((sum, p) => sum + p.netPay, 0);
-        setPayrollSummaryData([
-          { name: "Total Payroll", gross: totalGross, net: totalNet },
-        ]);
-
-        const deductionsMap = new Map<string, number>();
-        loadedPayslips.forEach(payslip => {
-          payslip.deductionsBreakdown.forEach(deduction => {
-            deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
-          });
+      const deductionsMap = new Map<string, number>();
+      payslips.forEach(payslip => {
+        payslip.deductionsBreakdown.forEach(deduction => {
+          deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
         });
-        setDeductionsBreakdownData(
-          Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
-        );
+      });
+      setDeductionsBreakdownData(
+        Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
+      );
 
-      } catch (error) {
-        console.error("PayslipOverviewPage: Error parsing mockPayslips from localStorage:", error);
-        setPayslips([]);
-        setPayrollSummaryData([]);
-        setDeductionsBreakdownData([]);
-        showError("Failed to load payslip data. Please check browser console for details.");
-      }
     } else {
-      console.log("PayslipOverviewPage: No mockPayslips found in localStorage.");
-      setPayslips([]);
       setPayrollSummaryData([]);
       setDeductionsBreakdownData([]);
     }
-
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    console.log("PayslipOverviewPage: Loading employees. Raw storedEmployees:", storedEmployees);
-    if (storedEmployees) {
-      try {
-        setEmployees(JSON.parse(storedEmployees));
-        console.log("PayslipOverviewPage: Loaded employees count:", JSON.parse(storedEmployees).length);
-      } catch (error) {
-        console.error("PayslipOverviewPage: Error parsing mockEmployees from localStorage:", error);
-        setEmployees([]);
-        showError("Failed to load employee data. Please check browser console for details.");
-      }
-    } else {
-      console.log("PayslipOverviewPage: No mockEmployees found in localStorage.");
-      setEmployees([]);
-    }
-  }, []);
-
-  const loadCompanyDetails = useCallback(() => {
-    const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-    const companyTradingName = localStorage.getItem('companyTradingName') || "";
-    const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
-    const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
-    const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
-    const postalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
-    const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-    const alternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
-    const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-    const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
-    const bankName = localStorage.getItem('bankName') || "";
-    const accountHolderName = localStorage.getItem('accountHolderName') || "";
-    const accountNumber = localStorage.getItem('accountNumber') || "";
-    const branchCode = localStorage.getItem('branchCode') || "";
-    const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
-    const logoUrl = localStorage.getItem('companyLogoUrl') || '';
-    const logoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
-    const logoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-    const logoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
-
-    setCompanyDetails({
-      companyLegalName, companyTradingName, companyRegistrationNumber,
-      companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
-      vatRegistrationNumber, industry: localStorage.getItem('industry') || "",
-      payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
-      uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
-      sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
-      coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
-      physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
-      companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
-      branchCode, accountType, logoUrl, logoWidth, logoHeight, logoFit,
-    });
-  }, []);
+  }, [payslips, employees]); // Depend on payslips and employees from usePayrollProcessor
 
   const loadPayslipDesignSettings = useCallback(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
@@ -161,16 +95,11 @@ const PayslipOverviewPage: React.FC = () => {
 
   useEffect(() => {
     loadPayslipsAndEmployees();
-    loadCompanyDetails();
     loadPayslipDesignSettings();
     loadReportDesignSettings();
 
     const handleMockDataUpdate = () => {
       loadPayslipsAndEmployees();
-      loadCompanyDetails();
-    };
-    const handleCompanyDetailsUpdate = () => {
-      loadCompanyDetails();
     };
     const handlePayslipDesignUpdate = () => {
       loadPayslipDesignSettings();
@@ -180,17 +109,15 @@ const PayslipOverviewPage: React.FC = () => {
     };
 
     window.addEventListener('mockDataUpdated', handleMockDataUpdate);
-    window.addEventListener('companyDetailsUpdated', handleCompanyDetailsUpdate);
     window.addEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
     window.addEventListener('reportDesignUpdated', handleReportDesignUpdate);
 
     return () => {
       window.removeEventListener('mockDataUpdated', handleMockDataUpdate);
-      window.removeEventListener('companyDetailsUpdated', handleCompanyDetailsUpdate);
       window.removeEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
       window.removeEventListener('reportDesignUpdated', handleReportDesignUpdate);
     };
-  }, [loadPayslipsAndEmployees, loadCompanyDetails, loadPayslipDesignSettings, loadReportDesignSettings]);
+  }, [loadPayslipsAndEmployees, loadPayslipDesignSettings, loadReportDesignSettings]);
 
   // Effect to reset selected payslip if employee changes or payslips update
   useEffect(() => {

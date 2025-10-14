@@ -27,19 +27,8 @@ interface ReportPreviewDialogProps {
   onClose: () => void;
   reportTitle: string;
   reportContent: string; // HTML string for the report body
-  companyLegalName: string;
-  companyTradingName: string;
-  physicalAddress: string;
-  mainContactNumber: string;
-  companyEmail: string;
-  companyWebsite: string;
-  companyRegistrationNumber: string;
-  vatRegistrationNumber: string;
-  companyLogoUrl: string | null;
-  companyLogoWidth: number; // New field for logo width
-  companyLogoHeight: number; // New field for logo height
-  companyLogoFit: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for object-fit
-  reportDesignSettings: ReportDesignSettings; // Prop for report design settings
+  companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
+  reportDesignSettings: ReportDesignSettings;
   documentType: 'payslip' | 'report'; // New prop for document type
 }
 
@@ -48,40 +37,23 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   onClose,
   reportTitle,
   reportContent,
-  companyLegalName,
-  companyTradingName,
-  physicalAddress,
-  mainContactNumber,
-  companyEmail,
-  companyWebsite,
-  companyRegistrationNumber,
-  vatRegistrationNumber,
-  companyLogoUrl,
-  companyLogoWidth, // This is the old size, will be replaced by width/height
-  companyLogoHeight, // This is the old size, will be replaced by width/height
-  companyLogoFit, // This is the old size, will be replaced by width/height
+  companyDetails, // Destructure companyDetails
   reportDesignSettings,
   documentType,
 }) => {
-  // Retrieve new logo properties from localStorage for the preview
-  // These are already passed as props, so no need to retrieve from localStorage again.
-  // The props should be used directly.
-
-  const companyDetails: MockCompanyDetails = {
-    companyLegalName, companyTradingName, companyRegistrationNumber,
-    companyTaxNumber: "", // Not used in report header, but required by interface
-    vatRegistrationNumber, industry: "", // Not used in report header
-    payeReferenceNumber: "", uifReferenceNumber: "", sdlReferenceNumber: "", coidaRegistrationNumber: "", // Not used
-    physicalAddress, postalAddress: "", mainContactNumber, alternativeContactNumber: "",
-    companyEmail, companyWebsite, bankName: "", accountHolderName: "", accountNumber: "",
-    branchCode: "", accountType: "Cheque", logoUrl: companyLogoUrl || "",
-    logoWidth: companyLogoWidth, // Use new width
-    logoHeight: companyLogoHeight, // Use new height
-    logoFit: companyLogoFit, // Use new fit
-  };
-
   // Define displayCompanyName within this component's scope
-  const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
+  const displayCompanyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name";
+  const companyLogoUrl = companyDetails?.logoUrl;
+  const companyLogoWidth = companyDetails?.logoWidth || 100;
+  const companyLogoHeight = companyDetails?.logoHeight || 50;
+  const companyLogoFit = companyDetails?.logoFit || "contain";
+  const physicalAddress = companyDetails?.physicalAddress;
+  const companyRegistrationNumber = companyDetails?.companyRegistrationNumber;
+  const vatRegistrationNumber = companyDetails?.vatRegistrationNumber;
+  const mainContactNumber = companyDetails?.mainContactNumber;
+  const companyEmail = companyDetails?.companyEmail;
+  const companyWebsite = companyDetails?.companyWebsite;
+
 
   // Get explicit print styles for the preview display
   const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
@@ -108,8 +80,8 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         reportContent={reportContent}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
-        onReadyForPdf={onReadyForPdf}
         isPdfGeneration={true}
+        onReadyForPdf={onReadyForPdf}
       />
     );
 
@@ -160,8 +132,8 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
                 {reportDesignSettings.includeCompanyDetails && (
                   <div className="text-right text-[13px] print:text-[13px] w-full" style={{ fontSize: `${baseFontSizePx * 0.9}px` }}>
                     <h2 className="text-md font-bold print:text-lg" style={{ fontSize: `${baseFontSizePx * 1.2}px` }}>{displayCompanyName}</h2>
-                    {companyTradingName && companyTradingName !== companyLegalName && (
-                      <p className="text-[13px] print:text-[13px]" style={{ fontSize: `${baseFontSizePx * 1}px` }}>{companyTradingName}</p>
+                    {companyDetails?.companyTradingName && companyDetails?.companyTradingName !== companyDetails?.companyLegalName && (
+                      <p className="text-[13px] print:text-[13px]" style={{ fontSize: `${baseFontSizePx * 1}px` }}>{companyDetails?.companyTradingName}</p>
                     )}
                     <p>{physicalAddress}</p>
                     <p>Reg. No: {companyRegistrationNumber}</p>

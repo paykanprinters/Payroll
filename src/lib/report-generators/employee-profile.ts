@@ -4,7 +4,7 @@ import { format } from "date-fns";
 
 export const generateEmployeeProfileReportContent = (
   employee: MockEmployee,
-  companyDetails: MockCompanyDetails,
+  companyDetails: MockCompanyDetails | null, // Now accepts null
   reportDesignSettings: ReportDesignSettings, // Add reportDesignSettings
 ): string => {
   const renderField = (label: string, value: string | number | boolean | undefined) => {
@@ -30,11 +30,11 @@ export const generateEmployeeProfileReportContent = (
   };
 
   const companyLogoHtml =
-    reportDesignSettings.includeCompanyLogo && companyDetails.logoUrl
+    reportDesignSettings.includeCompanyLogo && companyDetails?.logoUrl
       ? `<img src="${companyDetails.logoUrl}" alt="Company Logo" style="width: ${companyDetails.logoWidth}px; height: ${companyDetails.logoHeight}px; object-fit: ${companyDetails.logoFit};" class="rounded-md flex-shrink-0" />`
       : "";
 
-  const companyDetailsHtml = reportDesignSettings.includeCompanyDetails
+  const companyDetailsHtml = reportDesignSettings.includeCompanyDetails && companyDetails
     ? `
     <div class="text-right text-xs">
       <h2 class="text-md font-bold">${companyDetails.companyLegalName || "Your Company Legal Name"}</h2>

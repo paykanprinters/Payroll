@@ -33,7 +33,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
 
 const UpcomingPayrollCard: React.FC = () => {
   const navigate = useNavigate();
-  const { runPayrollProcess } = usePayrollProcessor(); // Use the payroll processor hook
+  const { runPayrollProcess, companyDetails } = usePayrollProcessor(); // Use the payroll processor hook
 
   const [currentCheckDate, setCurrentCheckDate] = useState<Date>(new Date());
   const [payPeriodStart, setPayPeriodStart] = useState<Date>(new Date());
@@ -105,6 +105,10 @@ const UpcomingPayrollCard: React.FC = () => {
   };
 
   const handleCalculatePaycheck = () => {
+    if (!companyDetails) {
+      showError("Company details are not loaded. Cannot calculate paycheck.");
+      return;
+    }
     setIsCalculatePaycheckDialogOpen(true);
   };
 

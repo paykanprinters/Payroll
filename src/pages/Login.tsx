@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react"; // For loading spinner
+import { useCompanyDetails } from "@/hooks/use-company-details"; // Import the new hook
 
 
 const loginSchema = z.object({
@@ -22,14 +23,9 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login: React.FC = () => {
   const { login, isAuthenticated, user, isLoadingAuth } = useAuth();
+  const { companyDetails, isLoading: isLoadingCompanyDetails } = useCompanyDetails(); // Use the new hook
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false); // Separate state for form submission
-  const [companyLegalName, setCompanyLegalName] = useState<string>("");
-  const [companyTradingName, setCompanyTradingName] = useState<string>("");
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
-  const [companyLogoWidth, setCompanyLogoWidth] = useState<number>(100);
-  const [companyLogoHeight, setCompanyLogoHeight] = useState<number>(50);
-  const [companyLogoFit, setCompanyLogoFit] = useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -38,27 +34,6 @@ const Login: React.FC = () => {
       password: "",
     },
   });
-
-  useEffect(() => {
-    const loadCompanyDetails = () => {
-      const tradingName = localStorage.getItem('companyTradingName');
-      const legalName = localStorage.getItem('companyLegalName');
-      setCompanyTradingName(tradingName && tradingName.trim() !== '' ? tradingName : "");
-      setCompanyLegalName(legalName && legalName.trim() !== '' ? legalName : "");
-      setCompanyLogoUrl(localStorage.getItem('companyLogoUrl'));
-      setCompanyLogoWidth(parseFloat(localStorage.getItem('companyLogoWidth') || '100'));
-      setCompanyLogoHeight(parseFloat(localStorage.getItem('companyLogoHeight') || '50'));
-      setCompanyLogoFit((localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain");
-    };
-
-    loadCompanyDetails();
-    window.addEventListener('companyDetailsUpdated', loadCompanyDetails);
-    window.addEventListener('mockDataUpdated', loadCompanyDetails); // Also listen for mock data changes
-    return () => {
-      window.removeEventListener('companyDetailsUpdated', loadCompanyDetails);
-      window.removeEventListener('mockDataUpdated', loadCompanyDetails);
-    };
-  }, []);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -77,10 +52,14 @@ const Login: React.FC = () => {
     }
   };
 
-  const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
+  const displayCompanyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name";
+  const displayLogoUrl = companyDetails?.logoUrl;
+  const displayLogoWidth = companyDetails?.logoWidth || 100;
+  const displayLogoHeight = companyDetails?.logoHeight || 50;
+  const displayLogoFit = companyDetails?.logoFit || "contain";
 
-  // Show a full-page loader if authentication state is still being determined
-  if (isLoadingAuth) {
+  // Show a full-page loader if authentication state or company details are still being determined
+  if (isLoadingAuth || isLoadingCompanyDetails) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -92,11 +71,11 @@ const Login: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          {companyLogoUrl && (
+          {displayLogoUrl && (
             <img
-              src={companyLogoUrl}
+              src={displayLogoUrl}
               alt="Company Logo"
-              style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
+              style={{ width: displayLogoWidth, height: displayLogoHeight, objectFit: displayLogoFit }}
               className="mx-auto"
             />
           )}

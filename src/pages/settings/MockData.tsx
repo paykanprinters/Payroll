@@ -42,6 +42,7 @@ const MockData: React.FC = () => {
     const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets);
     const mockToDos = generateMockToDos(mockEmployees, mockPayslips, mockLeaveRecords, mockLoans, mockSavingPlans, mockTimesheets);
 
+    // Store mock company details in localStorage (DO NOT touch Supabase here)
     Object.entries(mockCompany).forEach(([key, value]) => {
       localStorage.setItem(key, String(value));
     });
@@ -78,6 +79,7 @@ const MockData: React.FC = () => {
       "logoWidth", "logoHeight", "logoFit" // New logo properties
     ];
 
+    // Clear mock company details from localStorage (DO NOT touch Supabase here)
     mockCompanyKeys.forEach(key => {
       localStorage.removeItem(key);
     });

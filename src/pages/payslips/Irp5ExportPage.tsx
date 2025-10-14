@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, isSameYear } from "date-fns";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -26,9 +27,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Irp5ExportPage: React.FC = () => {
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [payslips, setPayslips] = useState<MockPayslip[]>([]);
-  const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null);
+  const { employees, payslips, companyDetails } = usePayrollProcessor(); // Get companyDetails
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
   const [isIrp5ExportEnabled, setIsIrp5ExportEnabled] = useState<boolean>(() => {
     return localStorage.getItem("enableIrp5Export") === "true";
@@ -40,45 +39,6 @@ const Irp5ExportPage: React.FC = () => {
   const { generatePdf, printPdf } = usePdfGenerator();
 
   const loadData = useCallback(() => {
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    setEmployees(storedEmployees ? JSON.parse(storedEmployees) : []);
-
-    const storedPayslips = localStorage.getItem("mockPayslips");
-    setPayslips(storedPayslips ? JSON.parse(storedPayslips) : []);
-
-    const companyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-    const companyTradingName = localStorage.getItem('companyTradingName') || "";
-    const companyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
-    const vatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
-    const physicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
-    const postalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
-    const mainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-    const alternativeContactNumber = localStorage.Item('alternativeContactNumber') || "";
-    const companyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-    const companyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
-    const bankName = localStorage.getItem('bankName') || "";
-    const accountHolderName = localStorage.getItem('accountHolderName') || "";
-    const accountNumber = localStorage.getItem('accountNumber') || "";
-    const branchCode = localStorage.getItem('branchCode') || "";
-    const accountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
-    const logoUrl = localStorage.getItem('companyLogoUrl') || '';
-    const logoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
-    const logoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-    const logoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
-
-    setCompanyDetails({
-      companyLegalName, companyTradingName, companyRegistrationNumber,
-      companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
-      vatRegistrationNumber, industry: localStorage.getItem('industry') || "",
-      payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
-      uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
-      sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
-      coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
-      physicalAddress, postalAddress, mainContactNumber, alternativeContactNumber,
-      companyEmail, companyWebsite, bankName, accountHolderName, accountNumber,
-      branchCode, accountType, logoUrl, logoWidth, logoHeight, logoFit,
-    });
-
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     const savedIrp5FontSize = parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize.toString());
 
@@ -137,8 +97,8 @@ const Irp5ExportPage: React.FC = () => {
         reportContent={generateIrp5ExportContent(selectedEmployee, payslipsForYear, companyDetails, reportDesignSettings, year)}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
-        onReadyForPdf={onReadyForPdf}
         isPdfGeneration={true}
+        onReadyForPdf={onReadyForPdf}
       />
     );
 

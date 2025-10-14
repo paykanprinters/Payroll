@@ -16,6 +16,7 @@ import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -26,46 +27,17 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Reports: React.FC = () => {
+  const { employees, payslips, leaveRecords, companyDetails } = usePayrollProcessor(); // Get companyDetails
+
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [payslips, setPayslips] = useState<MockPayslip[]>([]);
-  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
-
-  // Company details for reports
-  const [companyLegalName, setCompanyLegalName] = useState<string>("");
-  const [companyTradingName, setCompanyTradingName] = useState<string>("");
-  const [physicalAddress, setPhysicalAddress] = useState<string>("");
-  const [mainContactNumber, setMainContactNumber] = useState<string>("");
-  const [companyEmail, setCompanyEmail] = useState<string>("");
-  const [companyWebsite, setCompanyWebsite] = useState<string>("");
-  const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState<string>("");
-  const [vatRegistrationNumber, setVatRegistrationNumber] = useState<string>("");
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
-  const [companyLogoWidth, setCompanyLogoWidth] = useState<number>(100); // New state for logo width
-  const [companyLogoHeight, setCompanyLogoHeight] = useState<number>(50); // New state for logo height
-  const [companyLogoFit, setCompanyLogoFit] = useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain"); // New state for logo fit
-
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
-
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   const loadReportData = () => {
-    const storedPayslips = localStorage.getItem("mockPayslips");
-    const loadedPayslips: MockPayslip[] = storedPayslips ? JSON.parse(storedPayslips) : [];
-    setPayslips(loadedPayslips);
-
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    const loadedEmployees: MockEmployee[] = storedEmployees ? JSON.parse(storedEmployees) : [];
-    setEmployees(loadedEmployees);
-
-    const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
-    const loadedLeaveRecords: LeaveEntry[] = storedLeaveRecords ? JSON.parse(storedLeaveRecords) : [];
-    setLeaveRecords(loadedLeaveRecords);
-
     // Aggregate payroll data by month (simplified for mock data)
     const monthlyDataMap = new Map<string, { gross: number; net: number }>();
-    loadedPayslips.forEach(p => {
+    payslips.forEach(p => {
       const month = p.payPeriod.substring(5, 7); // e.g., "07" for July
       const year = p.payPeriod.substring(0, 4); // e.g., "2024"
       const monthYear = `${year}-${month}`;
@@ -88,20 +60,6 @@ const Reports: React.FC = () => {
 
     setMonthlyPayrollTrend(trendData);
 
-    // Load company details
-    setCompanyLegalName(localStorage.getItem('companyLegalName') || "Your Company Legal Name");
-    setCompanyTradingName(localStorage.getItem('companyTradingName') || "Your Company Trading Name");
-    setPhysicalAddress(localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234");
-    setMainContactNumber(localStorage.getItem('mainContactNumber') || "+27 11 123 4567");
-    setCompanyEmail(localStorage.getItem('companyEmail') || "info@yourcompany.co.za");
-    setCompanyWebsite(localStorage.getItem('companyWebsite') || "www.yourcompany.co.za");
-    setCompanyRegistrationNumber(localStorage.getItem('companyRegistrationNumber') || "N/A");
-    setVatRegistrationNumber(localStorage.getItem('vatRegistrationNumber') || "N/A");
-    setCompanyLogoUrl(localStorage.getItem('companyLogoUrl'));
-    setCompanyLogoWidth(parseFloat(localStorage.getItem('companyLogoWidth') || '100'));
-    setCompanyLogoHeight(parseFloat(localStorage.getItem('companyLogoHeight') || '50'));
-    setCompanyLogoFit((localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain");
-
     // Load report design settings
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     if (savedReportDesignSettings) {
@@ -123,7 +81,7 @@ const Reports: React.FC = () => {
       window.removeEventListener('companyDetailsUpdated', loadReportData);
       window.removeEventListener('reportDesignUpdated', loadReportData);
     };
-  }, []);
+  }, [employees, payslips, leaveRecords, companyDetails]); // Add companyDetails to dependencies
 
   return (
     <div className="flex flex-col gap-4">
@@ -136,18 +94,7 @@ const Reports: React.FC = () => {
         employees={employees}
         payslips={payslips}
         leaveRecords={leaveRecords}
-        companyLegalName={companyLegalName}
-        companyTradingName={companyTradingName}
-        physicalAddress={physicalAddress}
-        mainContactNumber={mainContactNumber}
-        companyEmail={companyEmail}
-        companyWebsite={companyWebsite}
-        companyRegistrationNumber={companyRegistrationNumber}
-        vatRegistrationNumber={vatRegistrationNumber}
-        companyLogoUrl={companyLogoUrl}
-        companyLogoWidth={companyLogoWidth} // Pass new width
-        companyLogoHeight={companyLogoHeight} // Pass new height
-        companyLogoFit={companyLogoFit} // Pass new fit
+        companyDetails={companyDetails} // Pass companyDetails directly
         reportDesignSettings={reportDesignSettings} // Pass report design settings
       />
 

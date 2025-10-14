@@ -5,7 +5,7 @@ import { format } from "date-fns";
 export const generateIrp5ExportContent = (
   employee: MockEmployee,
   payslipsForYear: MockPayslip[], // Changed from single payslip to array of payslips for the year
-  companyDetails: MockCompanyDetails,
+  companyDetails: MockCompanyDetails | null, // Now accepts null
   reportDesignSettings: ReportDesignSettings,
   selectedYear: number, // Added selectedYear for clarity
 ): string => {
@@ -50,11 +50,11 @@ export const generateIrp5ExportContent = (
 
       <div class="space-y-2 mb-4">
         <h4 class="font-semibold underline mb-2" style="font-size: ${contentFontSize * 1.1}px;">Employer Details</h4>
-        ${renderField("Employer Name", companyDetails.companyLegalName)}
-        ${renderField("PAYE Ref No", companyDetails.payeReferenceNumber)}
-        ${renderField("UIF Ref No", companyDetails.uifReferenceNumber)}
-        ${renderField("SDL Ref No", companyDetails.sdlReferenceNumber)}
-        ${renderField("Address", companyDetails.physicalAddress)}
+        ${renderField("Employer Name", companyDetails?.companyLegalName)}
+        ${renderField("PAYE Ref No", companyDetails?.payeReferenceNumber)}
+        ${renderField("UIF Ref No", companyDetails?.uifReferenceNumber)}
+        ${renderField("SDL Ref No", companyDetails?.sdlReferenceNumber)}
+        ${renderField("Address", companyDetails?.physicalAddress)}
       </div>
 
       <div class="space-y-2 mb-4">

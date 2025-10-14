@@ -8,7 +8,7 @@ import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } 
 interface IndividualPayslipCardProps {
   payslip: MockPayslip;
   payslipDesignSettings: PayslipDesignSettings;
-  companyDetails: MockCompanyDetails;
+  companyDetails: MockCompanyDetails | null; // Now accepts null
   employees: MockEmployee[];
   getEmployeeName: (employeeId: string) => string;
   isPdfGeneration?: boolean;
@@ -39,7 +39,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     logoWidth: companyLogoWidth, // Use new width
     logoHeight: companyLogoHeight, // Use new height
     logoFit: companyLogoFit, // Use new fit
-  } = companyDetails;
+  } = companyDetails || {}; // Destructure with fallback to empty object
 
   // Get explicit print styles based on layout size
   const printStyles = getPrintStyles(payslipDesignSettings.layoutSize);
@@ -89,7 +89,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   // Determine which logo to use and its properties
   const logoToUse = payslipDesignSettings.showCompanyLogo && payslipDesignSettings.payslipLogoUrl
     ? payslipDesignSettings.payslipLogoUrl
-    : (payslipDesignSettings.showCompanyLogo && companyLogoUrl ? companyDetails.logoUrl : null);
+    : (payslipDesignSettings.showCompanyLogo && companyLogoUrl ? companyLogoUrl : null);
 
   const logoWidth = payslipDesignSettings.payslipLogoUrl
     ? payslipDesignSettings.payslipLogoWidth
@@ -245,7 +245,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             />
           </div>
         )}
-        {payslipDesignSettings.showCompanyDetails && (
+        {payslipDesignSettings.showCompanyDetails && companyDetails && (
           <div style={isPdfGeneration ? { textAlign: 'right', fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, flexGrow: 1, width: logoToUse ? 'calc(100% - ' + (logoWidth + baseFontSizePx * 0.5) + 'px)' : '100%' } : {}} className={cn("text-right flex-grow", !logoToUse && "w-full")}>
             <h2 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.2}px`, lineHeight: `${baseFontSizePx * 1.2 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>{companyLegalName}</h2>
             {companyTradingName && companyTradingName !== companyLegalName && (

@@ -21,6 +21,7 @@ import {
 } from "@/lib/report-generators";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
 
 interface ReportItemProps {
   icon: React.ElementType;
@@ -70,18 +71,7 @@ interface CorePayrollReportsSectionProps {
   employees: MockEmployee[];
   payslips: MockPayslip[];
   leaveRecords: LeaveEntry[];
-  companyLegalName: string;
-  companyTradingName: string;
-  physicalAddress: string;
-  mainContactNumber: string;
-  companyEmail: string;
-  companyWebsite: string;
-  companyRegistrationNumber: string;
-  vatRegistrationNumber: string;
-  companyLogoUrl: string | null;
-  companyLogoWidth: number; // New prop for logo width
-  companyLogoHeight: number; // New prop for logo height
-  companyLogoFit: "contain" | "cover" | "fill" | "none" | "scale-down"; // New prop for logo fit
+  companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
   reportDesignSettings: ReportDesignSettings; // Prop for report design settings
 }
 
@@ -89,18 +79,7 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   employees,
   payslips,
   leaveRecords,
-  companyLegalName,
-  companyTradingName,
-  physicalAddress,
-  mainContactNumber,
-  companyEmail,
-  companyWebsite,
-  companyRegistrationNumber,
-  vatRegistrationNumber,
-  companyLogoUrl,
-  companyLogoWidth, // Destructure new width
-  companyLogoHeight, // Destructure new height
-  companyLogoFit, // Destructure new fit
+  companyDetails, // Destructure companyDetails
   reportDesignSettings, // Destructure reportDesignSettings
 }) => {
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
@@ -246,18 +225,7 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
         onClose={() => setIsReportPreviewOpen(false)}
         reportTitle={currentReportTitle}
         reportContent={currentReportContent}
-        companyLegalName={companyLegalName}
-        companyTradingName={companyTradingName}
-        physicalAddress={physicalAddress}
-        mainContactNumber={mainContactNumber}
-        companyEmail={companyEmail}
-        companyWebsite={companyWebsite}
-        companyRegistrationNumber={companyRegistrationNumber}
-        vatRegistrationNumber={vatRegistrationNumber}
-        companyLogoUrl={companyLogoUrl}
-        companyLogoWidth={companyLogoWidth} // Pass new width
-        companyLogoHeight={companyLogoHeight} // Pass new height
-        companyLogoFit={companyLogoFit} // Pass new fit
+        companyDetails={companyDetails} // Pass companyDetails directly
         reportDesignSettings={reportDesignSettings}
         documentType={currentDocumentType} // Pass document type to dialog
       />

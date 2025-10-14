@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError } from "@/utils/toast";
+import { useCompanyDetails } from "@/hooks/use-company-details"; // Import the new hook
+import { Loader2 } from "lucide-react"; // Import Loader2
 
 // Define the schema for form validation
 const companyDetailsSchema = z.object({
@@ -45,77 +47,83 @@ const companyDetailsSchema = z.object({
 type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
 
 const CompanyDetails: React.FC = () => {
+  const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails(); // Use the new hook
+
   const form = useForm<CompanyDetailsFormValues>({
     resolver: zodResolver(companyDetailsSchema),
     defaultValues: {
-      companyLegalName: localStorage.getItem('companyLegalName') || "",
-      companyTradingName: localStorage.getItem('companyTradingName') || "",
-      companyRegistrationNumber: localStorage.getItem('companyRegistrationNumber') || "",
-      companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
-      vatRegistrationNumber: localStorage.getItem('vatRegistrationNumber') || "",
-      industry: localStorage.getItem('industry') || "",
-      payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
-      uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
-      sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
-      coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
-      physicalAddress: localStorage.getItem('physicalAddress') || "",
-      postalAddress: localStorage.getItem('postalAddress') || "",
-      mainContactNumber: localStorage.getItem('mainContactNumber') || "",
-      alternativeContactNumber: localStorage.getItem('alternativeContactNumber') || "",
-      companyEmail: localStorage.getItem('companyEmail') || "",
-      companyWebsite: localStorage.getItem('companyWebsite') || "",
-      bankName: localStorage.getItem('bankName') || "",
-      accountHolderName: localStorage.getItem('accountHolderName') || "",
-      accountNumber: localStorage.getItem('accountNumber') || "",
-      branchCode: localStorage.getItem('branchCode') || "",
-      accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
-      logoUrl: localStorage.getItem('companyLogoUrl') || '',
-      logoWidth: parseFloat(localStorage.getItem('companyLogoWidth') || '100'),
-      logoHeight: parseFloat(localStorage.getItem('companyLogoHeight') || '50'),
-      logoFit: (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain",
+      companyLegalName: "",
+      companyTradingName: "",
+      companyRegistrationNumber: "",
+      companyTaxNumber: "",
+      vatRegistrationNumber: "",
+      industry: "",
+      payeReferenceNumber: "",
+      uifReferenceNumber: "",
+      sdlReferenceNumber: "",
+      coidaRegistrationNumber: "",
+      physicalAddress: "",
+      postalAddress: "",
+      mainContactNumber: "",
+      alternativeContactNumber: "",
+      companyEmail: "",
+      companyWebsite: "",
+      bankName: "",
+      accountHolderName: "",
+      accountNumber: "",
+      branchCode: "",
+      accountType: "Cheque",
+      logoUrl: "",
+      logoWidth: 100,
+      logoHeight: 50,
+      logoFit: "contain",
     },
   });
 
-  // Effect to update form defaults when mock data is toggled
+  // Populate form with data from Supabase when it loads
   React.useEffect(() => {
-    const updateFormDefaults = () => {
+    if (companyDetails) {
       form.reset({
-        companyLegalName: localStorage.getItem('companyLegalName') || "",
-        companyTradingName: localStorage.getItem('companyTradingName') || "",
-        companyRegistrationNumber: localStorage.getItem('companyRegistrationNumber') || "",
-        companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
-        vatRegistrationNumber: localStorage.getItem('vatRegistrationNumber') || "",
-        industry: localStorage.getItem('industry') || "",
-        payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
-        uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
-        sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
-        coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
-        physicalAddress: localStorage.getItem('physicalAddress') || "",
-        postalAddress: localStorage.getItem('postalAddress') || "",
-        mainContactNumber: localStorage.getItem('mainContactNumber') || "",
-        alternativeContactNumber: localStorage.getItem('alternativeContactNumber') || "",
-        companyEmail: localStorage.getItem('companyEmail') || "",
-        companyWebsite: localStorage.getItem('companyWebsite') || "",
-        bankName: localStorage.getItem('bankName') || "",
-        accountHolderName: localStorage.getItem('accountHolderName') || "",
-        accountNumber: localStorage.getItem('accountNumber') || "",
-        branchCode: localStorage.getItem('branchCode') || "",
-        accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
-        logoUrl: localStorage.getItem('companyLogoUrl') || '',
-        logoWidth: parseFloat(localStorage.getItem('companyLogoWidth') || '100'),
-        logoHeight: parseFloat(localStorage.getItem('companyLogoHeight') || '50'),
-        logoFit: (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain",
+        companyLegalName: companyDetails.companyLegalName || "",
+        companyTradingName: companyDetails.companyTradingName || "",
+        companyRegistrationNumber: companyDetails.companyRegistrationNumber || "",
+        companyTaxNumber: companyDetails.companyTaxNumber || "",
+        vatRegistrationNumber: companyDetails.vatRegistrationNumber || "",
+        industry: companyDetails.industry || "",
+        payeReferenceNumber: companyDetails.payeReferenceNumber || "",
+        uifReferenceNumber: companyDetails.uifReferenceNumber || "",
+        sdlReferenceNumber: companyDetails.sdlReferenceNumber || "",
+        coidaRegistrationNumber: companyDetails.coidaRegistrationNumber || "",
+        physicalAddress: companyDetails.physicalAddress || "",
+        postalAddress: companyDetails.postalAddress || "",
+        mainContactNumber: companyDetails.mainContactNumber || "",
+        alternativeContactNumber: companyDetails.alternativeContactNumber || "",
+        companyEmail: companyDetails.companyEmail || "",
+        companyWebsite: companyDetails.companyWebsite || "",
+        bankName: companyDetails.bankName || "",
+        accountHolderName: companyDetails.accountHolderName || "",
+        accountNumber: companyDetails.accountNumber || "",
+        branchCode: companyDetails.branchCode || "",
+        accountType: companyDetails.accountType || "Cheque",
+        logoUrl: companyDetails.logoUrl || "",
+        logoWidth: companyDetails.logoWidth || 100,
+        logoHeight: companyDetails.logoHeight || 50,
+        logoFit: companyDetails.logoFit || "contain",
       });
-    };
-
-    window.addEventListener('mockDataUpdated', updateFormDefaults);
-    // Call on mount to ensure initial state reflects mock data if already enabled
-    updateFormDefaults(); 
-    return () => {
-      window.removeEventListener('mockDataUpdated', updateFormDefaults);
-    };
-  }, [form]);
-
+    } else if (!isLoading) {
+      // If no company details are found and not loading, reset to empty defaults
+      form.reset({
+        companyLegalName: "", companyTradingName: "", companyRegistrationNumber: "",
+        companyTaxNumber: "", vatRegistrationNumber: "", industry: "",
+        payeReferenceNumber: "", uifReferenceNumber: "", sdlReferenceNumber: "",
+        coidaRegistrationNumber: "", physicalAddress: "", postalAddress: "",
+        mainContactNumber: "", alternativeContactNumber: "", companyEmail: "",
+        companyWebsite: "", bankName: "", accountHolderName: "", accountNumber: "",
+        branchCode: "", accountType: "Cheque", logoUrl: "",
+        logoWidth: 100, logoHeight: 50, logoFit: "contain",
+      });
+    }
+  }, [companyDetails, isLoading, form]);
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -124,15 +132,10 @@ const CompanyDetails: React.FC = () => {
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         form.setValue("logoUrl", dataUrl);
-        localStorage.setItem('companyLogoUrl', dataUrl);
         // Reset to default dimensions and fit when new logo is uploaded
         form.setValue("logoWidth", 100);
-        localStorage.setItem('companyLogoWidth', '100');
         form.setValue("logoHeight", 50);
-        localStorage.setItem('companyLogoHeight', '50');
         form.setValue("logoFit", "contain");
-        localStorage.setItem('companyLogoFit', 'contain');
-        window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
       };
       reader.readAsDataURL(file);
     }
@@ -143,53 +146,38 @@ const CompanyDetails: React.FC = () => {
     form.setValue("logoWidth", 100); // Reset to default size
     form.setValue("logoHeight", 50); // Reset to default size
     form.setValue("logoFit", "contain"); // Reset to default fit
-    localStorage.removeItem('companyLogoUrl');
-    localStorage.removeItem('companyLogoWidth');
-    localStorage.removeItem('companyLogoHeight');
-    localStorage.removeItem('companyLogoFit');
-    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
     showSuccess("Company logo removed successfully!");
   };
 
   const handleLogoWidthChange = (value: number[]) => {
     form.setValue("logoWidth", value[0]);
-    localStorage.setItem('companyLogoWidth', value[0].toString());
-    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
   };
 
   const handleLogoHeightChange = (value: number[]) => {
     form.setValue("logoHeight", value[0]);
-    localStorage.setItem('companyLogoHeight', value[0].toString());
-    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
   };
 
   const handleLogoFitChange = (value: "contain" | "cover" | "fill" | "none" | "scale-down") => {
     form.setValue("logoFit", value);
-    localStorage.setItem('companyLogoFit', value);
-    window.dispatchEvent(new Event('companyDetailsUpdated')); // Notify sidebar
   };
 
-  const onSubmit = (data: CompanyDetailsFormValues) => {
-    console.log("Company Details submitted:", data);
-    // Here you would typically send this data to your backend
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        localStorage.setItem(key, String(value));
-      } else {
-        localStorage.removeItem(key);
-      }
-    });
-
-    // Dispatch a custom event to notify other components (like Sidebar)
-    window.dispatchEvent(new Event('companyDetailsUpdated'));
-
-    showSuccess("Company details saved successfully!");
+  const onSubmit = async (data: CompanyDetailsFormValues) => {
+    await upsertCompanyDetails(data);
   };
 
   const logoUrl = form.watch("logoUrl");
   const logoWidth = form.watch("logoWidth");
   const logoHeight = form.watch("logoHeight");
   const logoFit = form.watch("logoFit");
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading company details...</span>
+      </div>
+    );
+  }
 
   return (
     <Card>

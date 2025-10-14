@@ -23,7 +23,7 @@ interface PayslipGenerationSectionProps {
   setSelectedPayslipId: (id: string) => void;
   getEmployeeName: (employeeId: string) => string;
   payslipDesignSettings: PayslipDesignSettings;
-  companyDetails: MockCompanyDetails;
+  companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
   allEmployees: MockEmployee[];
 }
 
@@ -36,7 +36,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   setSelectedPayslipId,
   getEmployeeName,
   payslipDesignSettings,
-  companyDetails,
+  companyDetails, // Destructure companyDetails
   allEmployees,
 }) => {
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
@@ -58,8 +58,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
 
   const handlePrintOrDownloadIndividual = useCallback(async (action: 'print' | 'download') => {
-    if (!selectedPayslip) {
-      showError(`Please select a payslip to ${action}.`);
+    if (!selectedPayslip || !companyDetails) { // Check companyDetails
+      showError(`Please select a payslip and ensure company details are loaded to ${action}.`);
       return;
     }
 
@@ -89,8 +89,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
 
   const handlePrintOrDownloadAll = useCallback(async (action: 'print' | 'download', mode: "monthly" | "weekly") => {
-    if (!selectedPayPeriodDate) {
-      showError("Please select a pay period date to generate all payslips.");
+    if (!selectedPayPeriodDate || !companyDetails) { // Check companyDetails
+      showError("Please select a pay period date and ensure company details are loaded to generate all payslips.");
       return;
     }
 
@@ -140,6 +140,11 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
 
   const handleGenerateAllCurrentPeriodPayslips = useCallback(async (action: 'print' | 'download') => {
+    if (!companyDetails) { // Check companyDetails
+      showError("Company details are not loaded. Cannot generate all payslips for current period.");
+      return;
+    }
+
     const today = new Date();
     const payslipsForCurrentPeriod: MockPayslip[] = [];
 

@@ -9,7 +9,7 @@ import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 interface ReportContentWrapperProps {
   reportTitle: string;
   reportContent: string; // HTML string for the report body
-  companyDetails: MockCompanyDetails;
+  companyDetails: MockCompanyDetails | null; // Now accepts null
   reportDesignSettings: ReportDesignSettings;
   onReadyForPdf?: () => void; // Callback to signal readiness for PDF generation
   isPdfGeneration?: boolean; // New prop to indicate PDF generation context
@@ -36,7 +36,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     logoWidth: companyLogoWidth, // Use new width
     logoHeight: companyLogoHeight, // Use new height
     logoFit: companyLogoFit, // Use new fit
-  } = companyDetails;
+  } = companyDetails || {}; // Destructure with fallback to empty object
 
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
 

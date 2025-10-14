@@ -37,6 +37,7 @@ import html2pdf from 'html2pdf.js'; // Import html2pdf
 import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
 import { usePdfGenerator } from "@/hooks/use-pdf-generator"; // Import usePdfGenerator
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper"; // Import ReportContentWrapper
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -49,29 +50,26 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Employees: React.FC = () => {
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
+  const { employees, setEmployees, companyDetails } = usePayrollProcessor(); // Get companyDetails
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<MockEmployee | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
-  const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null); // State for company details
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
 
   const dataVisualsFontSize = useDataVisualsFontSize();
   const { generatePdf } = usePdfGenerator(); // Use the hook
 
-  const loadEmployees = () => {
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    if (storedEmployees) {
-      const loadedEmployees: MockEmployee[] = JSON.parse(storedEmployees);
-      setEmployees(loadedEmployees);
-
+  const loadEmployeeDataAndCharts = React.useCallback(() => {
+    // This function now relies on the 'employees' state from usePayrollProcessor
+    // which is updated by the 'mockDataUpdated' event.
+    if (employees.length > 0) {
       // Calculate job title distribution
       const jobTitleMap = new Map<string, number>();
-      loadedEmployees.forEach((emp) => {
+      employees.forEach((emp) => {
         jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
       });
       setJobTitleDistribution(
@@ -80,7 +78,7 @@ const Employees: React.FC = () => {
 
       // Calculate average salary by job title
       const salarySumByJobTitle = new Map<string, { sum: number; count: number }>();
-      loadedEmployees.forEach((emp) => {
+      employees.forEach((emp) => {
         const current = salarySumByJobTitle.get(emp.jobTitle) || { sum: 0, count: 0 };
         salarySumByJobTitle.set(emp.jobTitle, {
           sum: current.sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), // Estimate monthly for hourly
@@ -94,44 +92,12 @@ const Employees: React.FC = () => {
         }))
       );
     } else {
-      setEmployees([]);
       setJobTitleDistribution([]);
       setAverageSalaryByJobTitle([]);
     }
-  };
+  }, [employees]); // Depend on employees from usePayrollProcessor
 
-  const loadCompanyDetailsAndReportSettings = () => {
-    const storedCompanyDetails = localStorage.getItem("companyLegalName")
-      ? {
-          companyLegalName: localStorage.getItem('companyLegalName') || "",
-          companyTradingName: localStorage.getItem('companyTradingName') || "",
-          companyRegistrationNumber: localStorage.getItem('companyRegistrationNumber') || "",
-          companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
-          vatRegistrationNumber: localStorage.getItem('vatRegistrationNumber') || "",
-          industry: localStorage.getItem('industry') || "",
-          payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
-          uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
-          sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
-          coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
-          physicalAddress: localStorage.getItem('physicalAddress') || "",
-          postalAddress: localStorage.getItem('postalAddress') || "",
-          mainContactNumber: localStorage.getItem('mainContactNumber') || "",
-          alternativeContactNumber: localStorage.getItem('alternativeContactNumber') || "",
-          companyEmail: localStorage.getItem('companyEmail') || "",
-          companyWebsite: localStorage.getItem('companyWebsite') || "",
-          bankName: localStorage.getItem('bankName') || "",
-          accountHolderName: localStorage.getItem('accountHolderName') || "",
-          accountNumber: localStorage.getItem('accountNumber') || "",
-          branchCode: localStorage.getItem('branchCode') || "",
-          accountType: (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque",
-          logoUrl: localStorage.getItem('companyLogoUrl') || '',
-          logoWidth: parseFloat(localStorage.getItem('companyLogoWidth') || '100'),
-          logoHeight: parseFloat(localStorage.getItem('companyLogoHeight') || '50'),
-          logoFit: (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain",
-        }
-      : null;
-    setCompanyDetails(storedCompanyDetails as MockCompanyDetails);
-
+  const loadReportSettings = React.useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     if (savedReportDesignSettings) {
       setReportDesignSettings(JSON.parse(savedReportDesignSettings));
@@ -139,20 +105,18 @@ const Employees: React.FC = () => {
       localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
       setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadEmployees();
-    loadCompanyDetailsAndReportSettings();
-    window.addEventListener('mockDataUpdated', loadEmployees);
-    window.addEventListener('companyDetailsUpdated', loadCompanyDetailsAndReportSettings); // Listen for company detail updates
-    window.addEventListener('reportDesignUpdated', loadCompanyDetailsAndReportSettings); // Listen for report design updates
+    loadEmployeeDataAndCharts();
+    loadReportSettings();
+    window.addEventListener('mockDataUpdated', loadEmployeeDataAndCharts); // Listen for mock data changes
+    window.addEventListener('reportDesignUpdated', loadReportSettings); // Listen for report design updates
     return () => {
-      window.removeEventListener('mockDataUpdated', loadEmployees);
-      window.removeEventListener('companyDetailsUpdated', loadCompanyDetailsAndReportSettings);
-      window.removeEventListener('reportDesignUpdated', loadCompanyDetailsAndReportSettings);
+      window.removeEventListener('mockDataUpdated', loadEmployeeDataAndCharts);
+      window.removeEventListener('reportDesignUpdated', loadReportSettings);
     };
-  }, []);
+  }, [loadEmployeeDataAndCharts, loadReportSettings]);
 
   const handleAddEmployeeClick = () => {
     setEditingEmployee(null);
@@ -172,10 +136,10 @@ const Employees: React.FC = () => {
   const confirmDeleteEmployee = () => {
     if (employeeToDelete) {
       const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
-      setEmployees(updatedEmployees);
+      setEmployees(updatedEmployees); // Update state via usePayrollProcessor's setter
       localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
       showSuccess(`Employee ${employeeToDelete.firstName} ${employeeToDelete.lastName} removed.`);
-      loadEmployees(); // Recalculate charts
+      // No need to call loadEmployees() here, as setEmployees will trigger re-render and re-calculation
       setIsDeleteDialogOpen(false);
       setEmployeeToDelete(null);
       window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
@@ -205,9 +169,9 @@ const Employees: React.FC = () => {
       };
       updatedEmployees = [...employees, newEmployee];
     }
-    setEmployees(updatedEmployees);
+    setEmployees(updatedEmployees); // Update state via usePayrollProcessor's setter
     localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
-    loadEmployees(); // Recalculate charts
+    // No need to call loadEmployees() here
     setIsFormOpen(false);
     setEditingEmployee(null);
     window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
@@ -225,8 +189,8 @@ const Employees: React.FC = () => {
         reportContent={generateEmployeeProfileReportContent(employee, companyDetails, reportDesignSettings)}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
-        onReadyForPdf={onReadyForPdf}
         isPdfGeneration={true}
+        onReadyForPdf={onReadyForPdf}
       />
     );
 

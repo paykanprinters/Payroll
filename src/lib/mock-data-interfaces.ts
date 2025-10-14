@@ -1,30 +1,30 @@
 // Interfaces for Mock Data
 export interface MockCompanyDetails {
-  companyLegalName: string;
-  companyTradingName: string;
-  companyRegistrationNumber: string;
-  companyTaxNumber: string;
-  vatRegistrationNumber: string;
-  industry: string;
-  payeReferenceNumber: string;
-  uifReferenceNumber: string;
-  sdlReferenceNumber: string;
-  coidaRegistrationNumber: string;
-  physicalAddress: string;
-  postalAddress: string;
-  mainContactNumber: string;
-  alternativeContactNumber: string;
-  companyEmail: string;
-  companyWebsite: string;
-  bankName: string;
-  accountHolderName: string;
-  accountNumber: string;
-  branchCode: string;
-  accountType: "Cheque" | "Savings" | "Business";
-  logoUrl: string;
-  logoWidth: number; // New field for logo width
-  logoHeight: number; // New field for logo height
-  logoFit: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for object-fit
+  companyLegalName?: string;
+  companyTradingName?: string;
+  companyRegistrationNumber?: string;
+  companyTaxNumber?: string;
+  vatRegistrationNumber?: string;
+  industry?: string;
+  payeReferenceNumber?: string;
+  uifReferenceNumber?: string;
+  sdlReferenceNumber?: string;
+  coidaRegistrationNumber?: string;
+  physicalAddress?: string;
+  postalAddress?: string;
+  mainContactNumber?: string;
+  alternativeContactNumber?: string;
+  companyEmail?: string;
+  companyWebsite?: string;
+  bankName?: string;
+  accountHolderName?: string;
+  accountNumber?: string;
+  branchCode?: string;
+  accountType?: "Cheque" | "Savings" | "Business";
+  logoUrl?: string;
+  logoWidth?: number; // New field for logo width
+  logoHeight?: number; // New field for logo height
+  logoFit?: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for object-fit
 }
 
 export interface MockEmployee {

@@ -7,7 +7,7 @@ import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } 
 interface BulkPayslipsRendererProps {
   payslips: MockPayslip[];
   payslipDesignSettings: PayslipDesignSettings;
-  companyDetails: MockCompanyDetails;
+  companyDetails: MockCompanyDetails | null; // Now accepts null
   employees: MockEmployee[];
   getEmployeeName: (employeeId: string) => string;
   onReadyForPdf?: () => void;
