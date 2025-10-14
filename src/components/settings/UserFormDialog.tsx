@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess } from "@/utils/toast";
+import { Eye, EyeOff, RefreshCcw } from "lucide-react"; // Import icons
 
 // Define the schema for user form validation
 const userSchema = z.object({
@@ -25,6 +26,16 @@ const userSchema = z.object({
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   role: z.enum(["Admin", "Manager", "Staff", "Viewer"], { message: "Role is required" }),
   status: z.enum(["Active", "Inactive"]).default("Active"),
+  password: z.string().min(8, "Password must be at least 8 characters long").optional(), // Password is optional for existing users
+}).superRefine((data, ctx) => {
+  // Password is required for new users
+  if (!data.id && !data.password) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Password is required for new users.",
+      path: ["password"],
+    });
+  }
 });
 
 export type UserFormValues = z.infer<typeof userSchema>;
@@ -44,26 +55,40 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
 }) => {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
-    defaultValues: initialUser || {
+    defaultValues: initialUser ? { ...initialUser, password: "" } : { // Clear password for editing
       name: "",
       email: "",
       role: "Staff",
       status: "Active",
+      password: "",
     },
   });
 
+  const [showPassword, setShowPassword] = React.useState(false);
+
   React.useEffect(() => {
     if (initialUser) {
-      form.reset(initialUser);
+      form.reset({ ...initialUser, password: "" }); // Clear password field when editing
     } else {
       form.reset({
         name: "",
         email: "",
         role: "Staff",
         status: "Active",
+        password: "",
       });
     }
   }, [initialUser, form]);
+
+  const generatePassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
+    let newPassword = "";
+    for (let i = 0; i < 12; i++) { // Generate a 12-character password
+      newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    form.setValue("password", newPassword, { shouldValidate: true });
+    showSuccess("Password generated!");
+  };
 
   const onSubmit = (data: UserFormValues) => {
     onSave(data);
@@ -118,6 +143,30 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
               </SelectContent>
             </Select>
             {form.formState.errors.status && (<p className="text-red-500 text-sm">{form.formState.errors.status.message}</p>)}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="password">Password {initialUser && <span className="text-muted-foreground">(Leave blank to keep current)</span>}</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                {...form.register("password")}
+                className="pr-10" // Add padding for the icon
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            {form.formState.errors.password && (<p className="text-red-500 text-sm mt-1">{form.formState.errors.password.message}</p>)}
+            <Button type="button" variant="outline" size="sm" onClick={generatePassword} className="mt-2 w-full">
+              <RefreshCcw className="mr-2 h-4 w-4" /> Generate Password
+            </Button>
           </div>
           <DialogFooter>
             <Button type="submit">{initialUser ? "Save Changes" : "Add User"}</Button>
