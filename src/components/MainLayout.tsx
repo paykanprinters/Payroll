@@ -7,17 +7,26 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { LogOut, Settings as SettingsIcon, LayoutDashboard, User } from "lucide-react"; // Import User icon
+import { Outlet, useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MainLayoutProps {
   // children: React.ReactNode; // No longer directly takes children, uses Outlet
 }
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const navigate = useNavigate();
 
   // Define grid columns dynamically based on isCollapsed state
   const gridColsClass = isCollapsed
@@ -37,9 +46,39 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           <div className="flex-1">
             {/* Placeholder for potential header content like breadcrumbs or page title */}
           </div>
-          <Button variant="outline" size="sm" onClick={logout}>
-            <LogOut className="mr-2 h-4 w-4" /> Logout
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 flex items-center justify-center space-x-2">
+                <User className="h-4 w-4" />
+                <span className="font-medium">{user?.name || user?.email || "User"}</span>
+                <SettingsIcon className="h-4 w-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user?.name || "User"}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                <span>Dashboard</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/settings/user-control-panel')}>
+                <SettingsIcon className="mr-2 h-4 w-4" />
+                <span>Account Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
           <Outlet />
