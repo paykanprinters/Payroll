@@ -66,6 +66,8 @@ export const useCompanyDetails = () => {
         .limit(1)
         .single();
 
+      console.log("useCompanyDetails: Raw Supabase response - data:", data, "error:", error); // NEW LOG
+
       if (error) {
         console.error("useCompanyDetails: Supabase fetchCompanyDetails error:", error);
         if (error.code === "PGRST116") {
