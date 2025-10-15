@@ -1,5 +1,6 @@
 // Interfaces for Mock Data
 export interface MockCompanyDetails {
+  id?: string; // Added 'id' property to match Supabase schema
   companyLegalName?: string;
   companyTradingName?: string;
   companyRegistrationNumber?: string;
