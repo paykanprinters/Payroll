@@ -20,43 +20,30 @@ import {
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { format, differenceInMonths, differenceInYears } from "date-fns";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Analytics: React.FC = () => {
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [payslips, setPayslips] = useState<MockPayslip[]>([]);
-  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
+  const { employees, payslips, leaveRecords } = usePayrollProcessor(); // Use usePayrollProcessor
 
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [compensationBreakdown, setCompensationBreakdown] = useState<{ name: string; value: number }[]>([]);
   const [deductionCategoryBreakdown, setDeductionCategoryBreakdown] = useState<{ name: string; value: number }[]>([]);
   const [employeeTurnoverTrend, setEmployeeTurnoverTrend] = useState<{ name: string; newHires: number; terminations: number }[]>([]);
   const [leaveTypeDistribution, setLeaveTypeDistribution] = useState<{ name: string; value: number }[]>([]);
-  const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]); // New state
-  const [overtimeCostTrend, setOvertimeCostTrend] = useState<{ name: string; overtime: number }[]>([]); // New state
-  const [employeeTenureDistribution, setEmployeeTenureDistribution] = useState<{ name: string; value: number }[]>([]); // New state
+  const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
+  const [overtimeCostTrend, setOvertimeCostTrend] = useState<{ name: string; overtime: number }[]>([]);
+  const [employeeTenureDistribution, setEmployeeTenureDistribution] = useState<{ name: string; value: number }[]>([]);
 
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
-  const loadAnalyticsData = () => {
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    const loadedEmployees: MockEmployee[] = storedEmployees ? JSON.parse(storedEmployees) : [];
-    setEmployees(loadedEmployees);
-
-    const storedPayslips = localStorage.getItem("mockPayslips");
-    const loadedPayslips: MockPayslip[] = storedPayslips ? JSON.parse(storedPayslips) : [];
-    setPayslips(loadedPayslips);
-
-    const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
-    const loadedLeaveRecords: LeaveEntry[] = storedLeaveRecords ? JSON.parse(storedLeaveRecords) : [];
-    setLeaveRecords(loadedLeaveRecords);
-
+  const loadAnalyticsData = useCallback(() => {
     // --- Monthly Payroll Cost Trend ---
     const monthlyDataMap = new Map<string, { gross: number; net: number }>();
-    loadedPayslips.forEach(p => {
-      const monthYear = p.payPeriod.substring(0, 7); // "YYYY-MM"
+    payslips.forEach(p => {
+      const monthYear = p.payPeriod.substring(0, 7);
       const current = monthlyDataMap.get(monthYear) || { gross: 0, net: 0 };
       monthlyDataMap.set(monthYear, {
         gross: current.gross + p.grossEarnings,
@@ -74,7 +61,7 @@ const Analytics: React.FC = () => {
 
     // --- Compensation Type Breakdown ---
     const compensationMap = new Map<string, number>();
-    loadedPayslips.forEach(p => {
+    payslips.forEach(p => {
       p.earningsBreakdown.forEach(e => {
         compensationMap.set(e.name, (compensationMap.get(e.name) || 0) + e.amount);
       });
@@ -87,7 +74,7 @@ const Analytics: React.FC = () => {
     const statutoryDeductions = ["PAYE", "UIF", "SDL"];
     let totalStatutory = 0;
     let totalOtherDeductions = 0;
-    loadedPayslips.forEach(p => {
+    payslips.forEach(p => {
       p.deductionsBreakdown.forEach(d => {
         if (statutoryDeductions.includes(d.name)) {
           totalStatutory += d.amount;
@@ -99,7 +86,7 @@ const Analytics: React.FC = () => {
     setDeductionCategoryBreakdown([
       { name: "Statutory Deductions", value: totalStatutory },
       { name: "Other Deductions", value: totalOtherDeductions },
-    ].filter(item => item.value > 0)); // Only show if there's a value
+    ].filter(item => item.value > 0));
 
     // --- Employee Turnover Trend (Mocked for simplicity) ---
     const turnoverMap = new Map<string, { newHires: number; terminations: number }>();
@@ -108,14 +95,13 @@ const Analytics: React.FC = () => {
 
     months.forEach(month => turnoverMap.set(month, { newHires: 0, terminations: 0 }));
 
-    loadedEmployees.forEach(emp => {
+    employees.forEach(emp => {
       const hireMonth = format(new Date(emp.startDate), 'MMM yyyy');
       if (turnoverMap.has(hireMonth)) {
         turnoverMap.get(hireMonth)!.newHires++;
       }
-      // Mock terminations: every 5th employee hired before current year, 'terminated' in a random month this year
       if (new Date(emp.startDate).getFullYear() < currentYear && parseInt(emp.id.replace('EMP', '')) % 5 === 0) {
-        const terminationMonthIndex = Math.floor(Math.random() * (new Date().getMonth() + 1)); // Up to current month
+        const terminationMonthIndex = Math.floor(Math.random() * (new Date().getMonth() + 1));
         const terminationMonth = format(new Date(currentYear, terminationMonthIndex, 1), 'MMM yyyy');
         if (turnoverMap.has(terminationMonth)) {
           turnoverMap.get(terminationMonth)!.terminations++;
@@ -131,7 +117,7 @@ const Analytics: React.FC = () => {
 
     // --- Leave Type Distribution ---
     const leaveTypeMap = new Map<string, number>();
-    loadedLeaveRecords.forEach(record => {
+    leaveRecords.forEach(record => {
       leaveTypeMap.set(record.leaveType, (leaveTypeMap.get(record.leaveType) || 0) + record.workingDays);
     });
     setLeaveTypeDistribution(
@@ -145,8 +131,8 @@ const Analytics: React.FC = () => {
       { range: "R40k - R60k", min: 40001, max: 60000, count: 0 },
       { range: "R60k+", min: 60001, max: Infinity, count: 0 },
     ];
-    loadedEmployees.forEach(emp => {
-      const effectiveSalary = emp.salary || (emp.hourlyRate ? emp.hourlyRate * 160 : 0); // Estimate monthly for hourly
+    employees.forEach(emp => {
+      const effectiveSalary = emp.salary || (emp.hourlyRate ? emp.hourlyRate * 160 : 0);
       for (const range of salaryRanges) {
         if (effectiveSalary >= range.min && effectiveSalary <= range.max) {
           range.count++;
@@ -158,7 +144,7 @@ const Analytics: React.FC = () => {
 
     // --- Overtime Cost Trend (New) ---
     const overtimeTrendMap = new Map<string, number>();
-    loadedPayslips.forEach(p => {
+    payslips.forEach(p => {
       const monthYear = p.payPeriod.substring(0, 7);
       const overtimeEntry = p.earningsBreakdown.find(e => e.name === "Overtime");
       if (overtimeEntry) {
@@ -181,7 +167,7 @@ const Analytics: React.FC = () => {
       { name: "5+ Years", minMonths: 60, maxMonths: Infinity, count: 0 },
     ];
     const today = new Date();
-    loadedEmployees.forEach(emp => {
+    employees.forEach(emp => {
       const hireDate = new Date(emp.startDate);
       const monthsSinceHire = differenceInMonths(today, hireDate);
       for (const range of tenureRanges) {
@@ -192,17 +178,22 @@ const Analytics: React.FC = () => {
       }
     });
     setEmployeeTenureDistribution(tenureRanges.map(r => ({ name: r.name, value: r.count })));
-  };
+  }, [employees, payslips, leaveRecords]);
 
   useEffect(() => {
     loadAnalyticsData();
-    window.addEventListener('mockDataUpdated', loadAnalyticsData);
+    window.addEventListener('allMockDataUpdated', loadAnalyticsData); // Listen for allMockDataUpdated
+    window.addEventListener('employeesUpdated', loadAnalyticsData); // Listen for specific employee updates
+    window.addEventListener('payslipsUpdated', loadAnalyticsData); // Listen for specific payslip updates
+    window.addEventListener('leaveRecordsUpdated', loadAnalyticsData); // Listen for specific leave updates
     return () => {
-      window.removeEventListener('mockDataUpdated', loadAnalyticsData);
+      window.removeEventListener('allMockDataUpdated', loadAnalyticsData);
+      window.removeEventListener('employeesUpdated', loadAnalyticsData);
+      window.removeEventListener('payslipsUpdated', loadAnalyticsData);
+      window.removeEventListener('leaveRecordsUpdated', loadAnalyticsData);
     };
-  }, []);
+  }, [loadAnalyticsData]);
 
-  // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
     return `${value} (${percentage}%)`;
@@ -356,7 +347,6 @@ const Analytics: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* New Chart: Employee Salary Distribution */}
         <Card>
           <CardHeader>
             <CardTitle>Employee Salary Distribution</CardTitle>
@@ -378,7 +368,6 @@ const Analytics: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        {/* New Chart: Overtime Cost Trend */}
         <Card>
           <CardHeader>
             <CardTitle>Overtime Cost Trend</CardTitle>
@@ -398,7 +387,6 @@ const Analytics: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* New Chart: Employee Tenure Distribution */}
         <Card>
           <CardHeader>
             <CardTitle>Employee Tenure Distribution</CardTitle>

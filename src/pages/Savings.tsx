@@ -25,7 +25,7 @@ import {
   Cell,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces"; // Updated import
+import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces";
 
 const savingPlanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -95,9 +95,9 @@ const Savings: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    window.addEventListener('mockDataUpdated', loadData);
+    window.addEventListener('allMockDataUpdated', loadData); // Listen to allMockDataUpdated
     return () => {
-      window.removeEventListener('mockDataUpdated', loadData);
+      window.removeEventListener('allMockDataUpdated', loadData);
     };
   }, []);
 
@@ -122,7 +122,7 @@ const Savings: React.FC = () => {
     localStorage.setItem("mockSavingPlans", JSON.stringify(updatedSavingPlans));
     showSuccess("Savings plan added successfully!");
     form.reset();
-    window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components that data has changed
+    window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: updatedSavingPlans })); // Dispatch specific event
   };
 
   // Helper for PieChart legend formatter

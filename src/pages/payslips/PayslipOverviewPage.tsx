@@ -6,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 // Import new modular components
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
-import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard directly
-import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
-import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
-import { showError } from "@/utils/toast"; // Import showError
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
+import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
+import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { showError } from "@/utils/toast";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
@@ -18,9 +18,9 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showEmployeeDetails: true,
   showEarningsBreakdown: true,
   showDeductionsBreakdown: true,
-  showLeaveSummary: true, // Now controlled by a toggle
-  showBankDetails: true, // Now controlled by a toggle
-  showYTD: true, // New setting for YTD calculations
+  showLeaveSummary: true,
+  showBankDetails: true,
+  showYTD: true,
   showHourlyRate: true,
   sectionOrder: ["Earnings", "Deductions"],
   layoutSize: "A4",
@@ -36,16 +36,16 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   includeCompanyLogo: true,
   includeCompanyDetails: true,
   reportContentFontSize: 14,
-  irp5ContentFontSize: 12, // Added irp5ContentFontSize
+  irp5ContentFontSize: 12,
 };
 
 const PayslipOverviewPage: React.FC = () => {
-  const { employees, payslips, companyDetails } = usePayrollProcessor(); // Get companyDetails
+  const { employees, payslips, companyDetails } = usePayrollProcessor();
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
   });
-  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS); // State for report design settings
+  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
 
@@ -53,8 +53,6 @@ const PayslipOverviewPage: React.FC = () => {
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
 
   const loadPayslipsAndEmployees = useCallback(() => {
-    // This function now relies on the 'payslips' and 'employees' states from usePayrollProcessor
-    // which are updated by the 'mockDataUpdated' event.
     if (payslips.length > 0) {
       const totalGross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
       const totalNet = payslips.reduce((sum, p) => sum + p.netPay, 0);
@@ -76,7 +74,7 @@ const PayslipOverviewPage: React.FC = () => {
       setPayrollSummaryData([]);
       setDeductionsBreakdownData([]);
     }
-  }, [payslips, employees]); // Depend on payslips and employees from usePayrollProcessor
+  }, [payslips, employees]);
 
   const loadPayslipDesignSettings = useCallback(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
@@ -108,18 +106,21 @@ const PayslipOverviewPage: React.FC = () => {
       loadReportDesignSettings();
     };
 
-    window.addEventListener('mockDataUpdated', handleMockDataUpdate);
+    window.addEventListener('allMockDataUpdated', handleMockDataUpdate);
+    window.addEventListener('payslipsUpdated', handleMockDataUpdate); // Listen for specific payslip updates
+    window.addEventListener('employeesUpdated', handleMockDataUpdate); // Listen for specific employee updates
     window.addEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
     window.addEventListener('reportDesignUpdated', handleReportDesignUpdate);
 
     return () => {
-      window.removeEventListener('mockDataUpdated', handleMockDataUpdate);
+      window.removeEventListener('allMockDataUpdated', handleMockDataUpdate);
+      window.removeEventListener('payslipsUpdated', handleMockDataUpdate);
+      window.removeEventListener('employeesUpdated', handleMockDataUpdate);
       window.removeEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
       window.removeEventListener('reportDesignUpdated', handleReportDesignUpdate);
     };
   }, [loadPayslipsAndEmployees, loadPayslipDesignSettings, loadReportDesignSettings]);
 
-  // Effect to reset selected payslip if employee changes or payslips update
   useEffect(() => {
     if (selectedEmployeeId) {
       const employeePayslips = payslips.filter(p => p.employeeId === selectedEmployeeId);

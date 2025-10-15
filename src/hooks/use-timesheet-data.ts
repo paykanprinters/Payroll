@@ -64,9 +64,9 @@ export const useTimesheetData = () => {
 
   useEffect(() => {
     loadData();
-    window.addEventListener('mockDataUpdated', loadData);
+    window.addEventListener('allMockDataUpdated', loadData); // Listen to allMockDataUpdated
     return () => {
-      window.removeEventListener('mockDataUpdated', loadData);
+      window.removeEventListener('allMockDataUpdated', loadData);
     };
   }, [loadData]);
 
@@ -180,7 +180,7 @@ export const useTimesheetData = () => {
         }
       }
       localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
-      window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
+      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
       return updatedTimesheets;
     });
     setIsEditing(false);
@@ -245,7 +245,7 @@ export const useTimesheetData = () => {
 
       const finalTimesheets = Array.from(timesheetMap.values());
       localStorage.setItem("mockTimesheets", JSON.stringify(finalTimesheets));
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: finalTimesheets })); // Dispatch specific event
       return finalTimesheets;
     });
   }, [employees, calculateTimesheetMetrics]);
@@ -255,7 +255,7 @@ export const useTimesheetData = () => {
       const updatedTimesheets = prevTimesheets.filter(ts => ts.id !== id);
       localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
       showSuccess("Timesheet deleted successfully!");
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
       return updatedTimesheets;
     });
   }, []);
@@ -279,7 +279,7 @@ export const useTimesheetData = () => {
       });
       localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
       showSuccess(`Timesheet status updated to ${newStatus}!`);
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
       return updatedTimesheets;
     });
   }, []);
@@ -318,6 +318,6 @@ export const useTimesheetData = () => {
     startEditing,
     cancelEditing,
     isLeaveDay,
-    addTimesheetBatch, // Expose the new batch function
+    addTimesheetBatch,
   };
 };

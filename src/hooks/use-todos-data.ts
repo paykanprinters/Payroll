@@ -16,9 +16,9 @@ export const useToDosData = () => {
 
   useEffect(() => {
     loadToDos();
-    window.addEventListener('mockDataUpdated', loadToDos);
+    window.addEventListener('allMockDataUpdated', loadToDos); // Listen to allMockDataUpdated
     return () => {
-      window.removeEventListener('mockDataUpdated', loadToDos);
+      window.removeEventListener('allMockDataUpdated', loadToDos);
     };
   }, [loadToDos]);
 
@@ -29,6 +29,7 @@ export const useToDosData = () => {
       );
       localStorage.setItem("mockToDos", JSON.stringify(updatedToDos));
       setPendingCount(updatedToDos.filter(todo => todo.status === "pending").length);
+      window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: updatedToDos })); // Dispatch specific event
       return updatedToDos;
     });
   }, []);

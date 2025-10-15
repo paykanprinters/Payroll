@@ -63,7 +63,7 @@ const MockData: React.FC = () => {
 
 
     window.dispatchEvent(new Event('companyDetailsUpdated'));
-    window.dispatchEvent(new Event('mockDataUpdated'));
+    window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
     showSuccess("Mock data populated successfully!");
   }, []); // No dependencies needed as it generates fresh data
 
@@ -102,7 +102,7 @@ const MockData: React.FC = () => {
     });
 
     window.dispatchEvent(new Event('companyDetailsUpdated'));
-    window.dispatchEvent(new Event('mockDataUpdated'));
+    window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
     window.dispatchEvent(new Event('payslipDesignUpdated'));
     showSuccess("Mock data cleared successfully!");
   }, []); // No dependencies needed as it clears data

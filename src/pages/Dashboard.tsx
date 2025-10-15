@@ -25,13 +25,13 @@ import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard";
 import { Calendar } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { format } from "date-fns"; // Import format for date formatting
-import ToDoList from "@/components/ToDoList"; // New import
+import { format } from "date-fns";
+import ToDoList from "@/components/ToDoList";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
-  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails } = usePayrollProcessor(); // Get companyDetails
+  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos } = usePayrollProcessor(); // Get toDos
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -66,7 +66,7 @@ const Dashboard: React.FC = () => {
     // Dynamically calculate monthly payroll data from payslips
     const monthlyGrossPayMap = new Map<string, number>();
     payslips.forEach(p => {
-      const monthYear = p.payPeriod.substring(0, 7); // "YYYY-MM"
+      const monthYear = p.payPeriod.substring(0, 7);
       monthlyGrossPayMap.set(monthYear, (monthlyGrossPayMap.get(monthYear) || 0) + p.grossEarnings);
     });
     const sortedMonthlyPayrollData = Array.from(monthlyGrossPayMap.entries())
@@ -139,13 +139,19 @@ const Dashboard: React.FC = () => {
     if (companyDetails) {
       setCompanyLegalName(companyDetails.companyLegalName || "");
     }
-    window.addEventListener('mockDataUpdated', loadDashboardData);
-    window.addEventListener('companyDetailsUpdated', loadDashboardData); // Listen for company detail updates
+    window.addEventListener('allMockDataUpdated', loadDashboardData); // Listen to allMockDataUpdated
+    window.addEventListener('employeesUpdated', loadDashboardData); // Listen to specific employee updates
+    window.addEventListener('payslipsUpdated', loadDashboardData); // Listen to specific payslip updates
+    window.addEventListener('leaveRecordsUpdated', loadDashboardData); // Listen to specific leave updates
+    window.addEventListener('companyDetailsUpdated', loadDashboardData);
     return () => {
-      window.removeEventListener('mockDataUpdated', loadDashboardData);
+      window.removeEventListener('allMockDataUpdated', loadDashboardData);
+      window.removeEventListener('employeesUpdated', loadDashboardData);
+      window.removeEventListener('payslipsUpdated', loadDashboardData);
+      window.removeEventListener('leaveRecordsUpdated', loadDashboardData);
       window.removeEventListener('companyDetailsUpdated', loadDashboardData);
     };
-  }, [loadDashboardData, companyDetails]); // Add companyDetails to dependencies
+  }, [loadDashboardData, companyDetails]);
 
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
@@ -214,7 +220,7 @@ const Dashboard: React.FC = () => {
 
       <UpcomingPayrollCard />
 
-      <ToDoList /> {/* New To-Do List component */}
+      <ToDoList />
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>

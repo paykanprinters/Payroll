@@ -16,27 +16,25 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, isSameYear } from "date-fns";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
   includeCompanyLogo: true,
   includeCompanyDetails: true,
   reportContentFontSize: 14,
-  irp5ContentFontSize: 12, // Default for IRP5
+  irp5ContentFontSize: 12,
 };
 
 const Irp5ExportPage: React.FC = () => {
-  const { employees, payslips, companyDetails } = usePayrollProcessor(); // Get companyDetails
+  const { employees, payslips, companyDetails } = usePayrollProcessor();
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
   const [isIrp5ExportEnabled, setIsIrp5ExportEnabled] = useState<boolean>(() => {
     return localStorage.getItem("enableIrp5Export") === "true";
   });
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
-  const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined); // State for selected IRP year
-
-  const { generatePdf, printPdf } = usePdfGenerator();
+  const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined);
 
   const loadData = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
@@ -46,7 +44,6 @@ const Irp5ExportPage: React.FC = () => {
       const parsedSettings = JSON.parse(savedReportDesignSettings);
       setReportDesignSettings({ ...parsedSettings, irp5ContentFontSize: savedIrp5FontSize });
     } else {
-      // If no settings saved, initialize with defaults and save them
       const initialSettings = { ...DEFAULT_REPORT_DESIGN_SETTINGS, irp5ContentFontSize: savedIrp5FontSize };
       localStorage.setItem("reportDesignSettings", JSON.stringify(initialSettings));
       setReportDesignSettings(initialSettings);
@@ -57,12 +54,16 @@ const Irp5ExportPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    window.addEventListener('mockDataUpdated', loadData);
+    window.addEventListener('allMockDataUpdated', loadData); // Listen for allMockDataUpdated
+    window.addEventListener('employeesUpdated', loadData); // Listen for specific employee updates
+    window.addEventListener('payslipsUpdated', loadData); // Listen for specific payslip updates
     window.addEventListener('companyDetailsUpdated', loadData);
     window.addEventListener('reportDesignUpdated', loadData);
-    window.addEventListener('irp5SettingsUpdated', loadData); // Listen for IRP5 specific settings updates
+    window.addEventListener('irp5SettingsUpdated', loadData);
     return () => {
-      window.removeEventListener('mockDataUpdated', loadData);
+      window.removeEventListener('allMockDataUpdated', loadData);
+      window.removeEventListener('employeesUpdated', loadData);
+      window.removeEventListener('payslipsUpdated', loadData);
       window.removeEventListener('companyDetailsUpdated', loadData);
       window.removeEventListener('reportDesignUpdated', loadData);
       window.removeEventListener('irp5SettingsUpdated', loadData);
@@ -105,7 +106,7 @@ const Irp5ExportPage: React.FC = () => {
     const options = {
       filename: `irp5-export-${selectedEmployee.id}-${year}.pdf`,
       format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
-      documentType: 'report' as const, // Specify document type
+      documentType: 'report' as const,
     };
 
     if (action === 'download') {
@@ -132,7 +133,7 @@ const Irp5ExportPage: React.FC = () => {
               IRP5 export functionality is currently disabled. Please enable it in{" "}
               <a href="/settings/tax-liabilities" className="underline font-semibold">Settings &gt; Tax Liabilities</a>.
             </CardDescription>
-          </CardHeader>
+          </CardDescription>
         </Card>
       )}
 
@@ -145,7 +146,6 @@ const Irp5ExportPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
-            {/* Select Employee */}
             <div className="lg:col-span-2">
               <label htmlFor="employee-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Select Employee
@@ -170,7 +170,6 @@ const Irp5ExportPage: React.FC = () => {
               </Select>
             </div>
 
-            {/* Select IRP Year */}
             <div>
               <label htmlFor="irp-year-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Select IRP Year
@@ -189,7 +188,7 @@ const Irp5ExportPage: React.FC = () => {
                     {selectedIrpYear ? format(selectedIrpYear, "yyyy") : <span>Pick a year</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-2" side="bottom" align="center"> {/* Removed fixed width */}
+                <PopoverContent className="p-2" side="bottom" align="center">
                   <Calendar
                     mode="single"
                     selected={selectedIrpYear}
@@ -203,7 +202,7 @@ const Irp5ExportPage: React.FC = () => {
               </Popover>
             </div>
 
-            <div className="md:col-span-1"> {/* Adjusted span for button alignment */}
+            <div className="md:col-span-1">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="w-full" variant="outline" disabled={isDisabled}>

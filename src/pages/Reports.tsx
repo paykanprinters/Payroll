@@ -14,32 +14,32 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection";
-import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
+import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
   includeCompanyLogo: true,
   includeCompanyDetails: true,
   reportContentFontSize: 14,
-  irp5ContentFontSize: 12, // Added irp5ContentFontSize
+  irp5ContentFontSize: 12,
 };
 
 const Reports: React.FC = () => {
-  const { employees, payslips, leaveRecords, companyDetails } = usePayrollProcessor(); // Get companyDetails
+  const { employees, payslips, leaveRecords, companyDetails } = usePayrollProcessor();
 
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
-  const loadReportData = () => {
+  const loadReportData = useCallback(() => {
     // Aggregate payroll data by month (simplified for mock data)
     const monthlyDataMap = new Map<string, { gross: number; net: number }>();
     payslips.forEach(p => {
-      const month = p.payPeriod.substring(5, 7); // e.g., "07" for July
-      const year = p.payPeriod.substring(0, 4); // e.g., "2024"
+      const month = p.payPeriod.substring(5, 7);
+      const year = p.payPeriod.substring(0, 4);
       const monthYear = `${year}-${month}`;
 
       const current = monthlyDataMap.get(monthYear) || { gross: 0, net: 0 };
@@ -69,19 +69,21 @@ const Reports: React.FC = () => {
       localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
       setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
     }
-  };
+  }, [payslips]); // Depend only on payslips
 
   useEffect(() => {
     loadReportData();
-    window.addEventListener('mockDataUpdated', loadReportData);
-    window.addEventListener('companyDetailsUpdated', loadReportData); // Listen for company detail updates
-    window.addEventListener('reportDesignUpdated', loadReportData); // Listen for report design updates
+    window.addEventListener('allMockDataUpdated', loadReportData); // Listen for allMockDataUpdated
+    window.addEventListener('payslipsUpdated', loadReportData); // Listen for specific payslip updates
+    window.addEventListener('companyDetailsUpdated', loadReportData);
+    window.addEventListener('reportDesignUpdated', loadReportData);
     return () => {
-      window.removeEventListener('mockDataUpdated', loadReportData);
+      window.removeEventListener('allMockDataUpdated', loadReportData);
+      window.removeEventListener('payslipsUpdated', loadReportData);
       window.removeEventListener('companyDetailsUpdated', loadReportData);
       window.removeEventListener('reportDesignUpdated', loadReportData);
     };
-  }, [employees, payslips, leaveRecords, companyDetails]); // Add companyDetails to dependencies
+  }, [loadReportData]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -94,8 +96,8 @@ const Reports: React.FC = () => {
         employees={employees}
         payslips={payslips}
         leaveRecords={leaveRecords}
-        companyDetails={companyDetails} // Pass companyDetails directly
-        reportDesignSettings={reportDesignSettings} // Pass report design settings
+        companyDetails={companyDetails}
+        reportDesignSettings={reportDesignSettings}
       />
 
       <Card>

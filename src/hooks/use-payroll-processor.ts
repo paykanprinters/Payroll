@@ -19,10 +19,11 @@ import {
   LeaveEntry,
   TimesheetEntry,
   MockCompanyDetails,
+  ToDoEntry, // Import ToDoEntry
 } from "@/lib/mock-data-interfaces";
 import { generatePayslipsForPeriod } from "@/lib/mock-data-generators";
 import { showError, showSuccess } from "@/utils/toast";
-import { useCompanyDetails } from "./use-company-details"; // Import the new hook
+import { useCompanyDetails } from "./use-company-details";
 
 export const usePayrollProcessor = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
@@ -31,80 +32,86 @@ export const usePayrollProcessor = () => {
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
   const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
-  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(false); // New state for mock data status
+  const [toDos, setToDos] = useState<ToDoEntry[]>([]); // Add toDos state
+  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(false);
 
-  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails(); // Use the new hook
-
-  // Derived companyDetails state: either from Supabase or localStorage mock
+  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails();
   const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null);
 
-  const loadData = useCallback(() => {
-    const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
-    setIsMockDataEnabled(mockEnabled);
-
-    if (mockEnabled) {
-      setEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
-      setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
-      setLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
-      setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
-      setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
-      setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
-
-      // Load mock company details from localStorage
-      const mockCompanyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-      const mockCompanyTradingName = localStorage.getItem('companyTradingName') || "";
-      const mockCompanyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
-      const mockVatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
-      const mockPhysicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
-      const mockPostalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
-      const mockMainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-      const mockAlternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
-      const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-      const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
-      const mockBankName = localStorage.getItem('bankName') || "";
-      const mockAccountholdername = localStorage.getItem('accountholdername') || ""; // Corrected
-      const mockAccountNumber = localStorage.getItem('accountNumber') || "";
-      const mockBranchCode = localStorage.getItem('branchCode') || "";
-      const mockAccountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
-      const mockLogoUrl = localStorage.getItem('companyLogoUrl') || '';
-      const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
-      const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-      const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
-
-      setCompanyDetails({
-        companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
-        companyTaxNumber: localStorage.getItem('companyTaxNumber') || "",
-        vatRegistrationNumber: mockVatRegistrationNumber, industry: localStorage.getItem('industry') || "",
-        payeReferenceNumber: localStorage.getItem('payeReferenceNumber') || "",
-        uifReferenceNumber: localStorage.getItem('uifReferenceNumber') || "",
-        sdlReferenceNumber: localStorage.getItem('sdlReferenceNumber') || "",
-        coidaRegistrationNumber: localStorage.getItem('coidaRegistrationNumber') || "",
-        physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
-        companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber, // Corrected
-        branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
-      });
-
-    } else {
-      // Clear all mock data if mock data is not enabled
-      setEmployees([]);
-      setPayslips([]);
-      setLoans([]);
-      setSavingPlans([]);
-      setTimesheets([]);
-      // Company details will come from Supabase via useCompanyDetails hook
-      setCompanyDetails(supabaseCompanyDetails);
-    }
-  }, [supabaseCompanyDetails]); // Add supabaseCompanyDetails as a dependency
-
+  // Effect for initial load and when mock data is toggled (full re-parse)
   useEffect(() => {
-    loadData();
-    window.addEventListener("mockDataUpdated", loadData);
-    window.addEventListener("companyDetailsUpdated", refetchCompanyDetails); // Refetch Supabase data if updated
+    const handleAllMockDataUpdate = () => {
+      const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
+      setIsMockDataEnabled(mockEnabled);
+
+      if (mockEnabled) {
+        setEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
+        setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
+        setLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
+        setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
+        setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
+        setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
+        setToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]")); // Load ToDos
+
+        // Load mock company details from localStorage
+        const mockCompanyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
+        const mockCompanyTradingName = localStorage.getItem('companyTradingName') || "";
+        const mockCompanyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
+        const mockCompanyTaxNumber = localStorage.getItem('companyTaxNumber') || "";
+        const mockVatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
+        const mockIndustry = localStorage.getItem('industry') || "";
+        const mockPayeReferenceNumber = localStorage.getItem('payeReferenceNumber') || "";
+        const mockUifReferenceNumber = localStorage.getItem('uifReferenceNumber') || "";
+        const mockSdlReferenceNumber = localStorage.getItem('sdlReferenceNumber') || "";
+        const mockCoidaRegistrationNumber = localStorage.getItem('coidaRegistrationNumber') || "";
+        const mockPhysicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
+        const mockPostalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
+        const mockMainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
+        const mockAlternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
+        const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
+        const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
+        const mockBankName = localStorage.getItem('bankName') || "";
+        const mockAccountholdername = localStorage.getItem('accountholdername') || "";
+        const mockAccountNumber = localStorage.getItem('accountNumber') || "";
+        const mockBranchCode = localStorage.getItem('branchCode') || "";
+        const mockAccountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
+        const mockLogoUrl = localStorage.getItem('companyLogoUrl') || '';
+        const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+        const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+        const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+
+        setCompanyDetails({
+          companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
+          companyTaxNumber: mockCompanyTaxNumber, vatRegistrationNumber: mockVatRegistrationNumber, industry: mockIndustry,
+          payeReferenceNumber: mockPayeReferenceNumber, uifReferenceNumber: mockUifReferenceNumber, sdlReferenceNumber: mockSdlReferenceNumber,
+          coidaRegistrationNumber: mockCoidaRegistrationNumber, physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
+          companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
+          branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
+        });
+
+      } else {
+        // Clear all mock data if mock data is not enabled
+        setEmployees([]);
+        setPayslips([]);
+        setLoans([]);
+        setSavingPlans([]);
+        setLeaveRecords([]);
+        setTimesheets([]);
+        setToDos([]);
+        setCompanyDetails(supabaseCompanyDetails); // Fallback to Supabase details
+      }
+    };
+
+    // Initial load
+    handleAllMockDataUpdate();
+
+    window.addEventListener("allMockDataUpdated", handleAllMockDataUpdate);
+    window.addEventListener("companyDetailsUpdated", refetchCompanyDetails); // Still refetch Supabase details
     return () => {
-      window.removeEventListener("mockDataUpdated", loadData);
+      window.removeEventListener("allMockDataUpdated", handleAllMockDataUpdate);
       window.removeEventListener("companyDetailsUpdated", refetchCompanyDetails);
     };
-  }, [loadData, refetchCompanyDetails]);
+  }, [supabaseCompanyDetails, refetchCompanyDetails]);
 
   // Update companyDetails state when supabaseCompanyDetails changes and mock data is not enabled
   useEffect(() => {
@@ -113,6 +120,48 @@ export const usePayrollProcessor = () => {
     }
   }, [supabaseCompanyDetails, isMockDataEnabled]);
 
+  // Individual listeners for specific data updates
+  useEffect(() => {
+    const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
+      if (isMockDataEnabled) setEmployees(event.detail);
+    };
+    const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => {
+      if (isMockDataEnabled) setPayslips(event.detail);
+    };
+    const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {
+      if (isMockDataEnabled) setLoans(event.detail);
+    };
+    const handleSavingPlansUpdated = (event: CustomEvent<SavingPlan[]>) => {
+      if (isMockDataEnabled) setSavingPlans(event.detail);
+    };
+    const handleLeaveRecordsUpdated = (event: CustomEvent<LeaveEntry[]>) => {
+      if (isMockDataEnabled) setLeaveRecords(event.detail);
+    };
+    const handleTimesheetsUpdated = (event: CustomEvent<TimesheetEntry[]>) => {
+      if (isMockDataEnabled) setTimesheets(event.detail);
+    };
+    const handleToDosUpdated = (event: CustomEvent<ToDoEntry[]>) => {
+      if (isMockDataEnabled) setToDos(event.detail);
+    };
+
+    window.addEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
+    window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
+    window.addEventListener("loansUpdated", handleLoansUpdated as EventListener);
+    window.addEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
+    window.addEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
+    window.addEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
+    window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
+      window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
+      window.removeEventListener("loansUpdated", handleLoansUpdated as EventListener);
+      window.removeEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
+      window.removeEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
+      window.removeEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
+      window.removeEventListener("toDosUpdated", handleToDosUpdated as EventListener);
+    };
+  }, [isMockDataEnabled]);
 
   const runPayrollProcess = useCallback(
     (periodStart: Date, periodEnd: Date) => {
@@ -197,7 +246,11 @@ export const usePayrollProcessor = () => {
       setLoans(currentLoansCopy); // Update loans state
       setSavingPlans(currentSavingPlansCopy);
       setTimesheets(updatedTimesheets);
-      window.dispatchEvent(new Event("mockDataUpdated"));
+      // Dispatch specific events instead of a general 'mockDataUpdated'
+      window.dispatchEvent(new CustomEvent('payslipsUpdated', { detail: updatedAllPayslips }));
+      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: currentLoansCopy }));
+      window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: currentSavingPlansCopy }));
+      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets }));
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
     [employees, payslips, loans, savingPlans, leaveRecords, timesheets]
@@ -245,14 +298,15 @@ export const usePayrollProcessor = () => {
 
   return {
     employees,
-    setEmployees, // Expose setEmployees
+    setEmployees,
     payslips,
     loans,
     savingPlans,
     leaveRecords,
     timesheets,
-    companyDetails, // This will now be the derived company details
-    isMockDataEnabled, // Expose mock data status
+    toDos, // Expose toDos
+    companyDetails,
+    isMockDataEnabled,
     runPayrollProcess,
     calculateSinglePayslipPreview,
   };

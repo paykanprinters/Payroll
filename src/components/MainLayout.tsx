@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react"; // Import User icon
+import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -17,26 +17,35 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useCompanyDetails } from "@/hooks/use-company-details"; // Import the new hook
+import { useCompanyDetails } from "@/hooks/use-company-details";
 
 interface MainLayoutProps {
-  // children: React.ReactNode; // No longer directly takes children, uses Outlet
 }
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoading: isLoadingCompanyDetails } = useCompanyDetails(); // Fetch company details from Supabase
+  const { companyDetails, isLoading: isLoadingCompanyDetails } = useCompanyDetails();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
 
-  // Define grid columns dynamically based on isCollapsed state
+  const [isMockDataEnabled, setIsMockDataEnabled] = React.useState(false); // State for mock data status
+
+  React.useEffect(() => {
+    const handleMockDataStatusUpdate = () => {
+      setIsMockDataEnabled(localStorage.getItem("isMockDataEnabled") === "true");
+    };
+
+    handleMockDataStatusUpdate(); // Initial load
+    window.addEventListener('allMockDataUpdated', handleMockDataStatusUpdate); // Listen for mock data toggle
+    return () => {
+      window.removeEventListener('allMockDataUpdated', handleMockDataStatusUpdate);
+    };
+  }, []);
+
   const gridColsClass = isCollapsed
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"
     : "md:grid-cols-[240px_1fr] lg:grid-cols-[240px_1fr]";
-
-  // Check mock data status from localStorage
-  const isMockDataEnabled = localStorage.getItem("isMockDataEnabled") === "true";
 
   if (isLoadingAuth || isLoadingCompanyDetails) {
     return (
@@ -47,7 +56,6 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
   }
 
   if (!isAuthenticated) {
-    // If not authenticated, don't render the layout, just the content (e.g., Login page)
     return <Outlet />;
   }
 
@@ -57,14 +65,13 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
         <Sidebar
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
-          companyDetails={companyDetails} // Pass Supabase company details
-          isMockDataEnabled={isMockDataEnabled} // Pass mock data status
+          companyDetails={companyDetails}
+          isMockDataEnabled={isMockDataEnabled}
         />
       )}
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
           <div className="flex-1">
-            {/* Placeholder for potential header content like breadcrumbs or page title */}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -112,8 +119,8 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
         <Sidebar
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
-          companyDetails={companyDetails} // Pass Supabase company details
-          isMockDataEnabled={isMockDataEnabled} // Pass mock data status
+          companyDetails={companyDetails}
+          isMockDataEnabled={isMockDataEnabled}
         />
       )}
     </div>

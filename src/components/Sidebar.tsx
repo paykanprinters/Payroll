@@ -24,7 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { useToDosData } from "@/hooks/use-todos-data";
 import { useAuth } from "@/context/AuthContext";
-import { MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
+import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 
 interface NavLinkProps {
   to: string;
@@ -69,8 +69,8 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
-  companyDetails: MockCompanyDetails | null; // Receive company details as prop
-  isMockDataEnabled: boolean; // Receive mock data status as prop
+  companyDetails: MockCompanyDetails | null;
+  isMockDataEnabled: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyDetails, isMockDataEnabled }) => {
@@ -78,10 +78,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
   const { pendingCount } = useToDosData();
   const { isAuthenticated, isLoadingAuth } = useAuth();
 
-  // Determine which company details to display
   const displayCompanyDetails = React.useMemo(() => {
     if (isMockDataEnabled) {
-      // If mock data is enabled, read from localStorage for mock company details
       const mockTradingName = localStorage.getItem('companyTradingName') || "";
       const mockLegalName = localStorage.getItem('companyLegalName') || "";
       const mockLogoUrl = localStorage.getItem('companyLogoUrl');
@@ -97,7 +95,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
         logoFit: mockLogoFit,
       };
     } else if (companyDetails) {
-      // Otherwise, use the Supabase-fetched company details
       return {
         name: companyDetails.companyLegalName || companyDetails.companyTradingName || "Your Company Name",
         logoUrl: companyDetails.logoUrl,
@@ -124,14 +121,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
-  // Extracted header rendering logic
   const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
     <div className={cn(
       "flex items-center border-b px-4 lg:px-6",
       currentIsCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6"
     )}>
       {currentIsCollapsed ? (
-        // When collapsed, only show the toggle button, centered
         <Button
           variant="ghost"
           size="icon"
@@ -141,7 +136,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
           <Menu className="h-5 w-5" />
         </Button>
       ) : (
-        // When expanded, show logo/name and toggle button to the right
         <>
           <Link to="/" className="flex flex-col items-center flex-grow-0">
             {displayCompanyDetails.logoUrl && (
@@ -168,7 +162,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
   );
 
   if (isLoadingAuth || !isAuthenticated) {
-    return null; // Don't render sidebar if auth is loading or not authenticated
+    return null;
   }
 
   if (isMobile) {
@@ -181,7 +175,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
-            {/* For mobile, renderSidebarHeader is always called with isCollapsed=false to show full menu */}
             {renderSidebarHeader(false, setIsCollapsed)}
             <nav className="grid items-start gap-1 p-4">
               {navItems.map((item) => (
@@ -190,7 +183,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
                   to={item.to}
                   icon={item.icon}
                   label={item.label}
-                  isCollapsed={false} // Mobile nav links are never collapsed
+                  isCollapsed={false}
                   badgeCount={item.badgeCount}
                 />
               ))}
@@ -208,7 +201,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
         isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[240px]"
       )}
     >
-      {renderSidebarHeader(isCollapsed, setIsCollapsed)} {/* Desktop uses the actual isCollapsed state */}
+      {renderSidebarHeader(isCollapsed, setIsCollapsed)}
       <nav className="grid items-start gap-1 p-4">
         {navItems.map((item) => (
           <NavLink

@@ -23,9 +23,9 @@ export const useLoansData = () => {
 
   useEffect(() => {
     loadLoans();
-    window.addEventListener('mockDataUpdated', loadLoans);
+    window.addEventListener('allMockDataUpdated', loadLoans); // Listen to allMockDataUpdated
     return () => {
-      window.removeEventListener('mockDataUpdated', loadLoans);
+      window.removeEventListener('allMockDataUpdated', loadLoans);
     };
   }, [loadLoans]);
 
@@ -47,7 +47,7 @@ export const useLoansData = () => {
       };
       const updatedLoans = [...prevLoans, loanToAdd];
       localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
       showSuccess("Loan added successfully!");
       return updatedLoans;
     });
@@ -59,7 +59,7 @@ export const useLoansData = () => {
         loan.id === updatedLoan.id ? updatedLoan : loan
       );
       localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
       showSuccess("Loan updated successfully!");
       return updatedLoans;
     });
@@ -69,7 +69,7 @@ export const useLoansData = () => {
     setLoans(prevLoans => {
       const updatedLoans = prevLoans.filter(loan => loan.id !== loanId);
       localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
       showSuccess("Loan deleted successfully!");
       return updatedLoans;
     });
@@ -95,7 +95,7 @@ export const useLoansData = () => {
         return loan;
       });
       localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
       showSuccess(`Loan deduction ${currentStatus ? 'resumed' : 'paused'} successfully!`);
       return updatedLoans;
     });
@@ -122,7 +122,7 @@ export const useLoansData = () => {
         return loan;
       });
       localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new Event('mockDataUpdated'));
+      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
       showSuccess(`Manual payment of R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })} applied!`);
       return updatedLoans;
     });

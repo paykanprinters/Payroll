@@ -8,7 +8,7 @@ import { CheckCircle, AlertTriangle, Info, ArrowRight, ListTodo } from "lucide-r
 import { useToDosData } from "@/hooks/use-todos-data";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { ToDoEntry } from "@/lib/mock-data-interfaces"; // Import ToDoEntry
+import { ToDoEntry } from "@/lib/mock-data-interfaces";
 
 const ToDosPage: React.FC = () => {
   const { toDos, markToDoAsDone } = useToDosData();

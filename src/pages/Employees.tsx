@@ -17,7 +17,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { PlusCircle, Edit, Trash2, Download } from "lucide-react"; // Import Download icon
+import { PlusCircle, Edit, Trash2, Download } from "lucide-react";
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import {
@@ -31,13 +31,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Updated import
-import { generateEmployeeProfileReportContent } from "@/lib/report-generators"; // Import new report generator
-import html2pdf from 'html2pdf.js'; // Import html2pdf
-import { ReportDesignSettings } from "@/lib/report-design-interfaces"; // Import ReportDesignSettings
-import { usePdfGenerator } from "@/hooks/use-pdf-generator"; // Import usePdfGenerator
-import ReportContentWrapper from "@/components/reports/ReportContentWrapper"; // Import ReportContentWrapper
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
+import html2pdf from 'html2pdf.js';
+import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { usePdfGenerator } from "@/hooks/use-pdf-generator";
+import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -50,7 +50,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Employees: React.FC = () => {
-  const { employees, setEmployees, companyDetails } = usePayrollProcessor(); // Get companyDetails
+  const { employees, setEmployees, companyDetails } = usePayrollProcessor();
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -61,13 +61,10 @@ const Employees: React.FC = () => {
 
 
   const dataVisualsFontSize = useDataVisualsFontSize();
-  const { generatePdf } = usePdfGenerator(); // Use the hook
+  const { generatePdf } = usePdfGenerator();
 
   const loadEmployeeDataAndCharts = React.useCallback(() => {
-    // This function now relies on the 'employees' state from usePayrollProcessor
-    // which is updated by the 'mockDataUpdated' event.
     if (employees.length > 0) {
-      // Calculate job title distribution
       const jobTitleMap = new Map<string, number>();
       employees.forEach((emp) => {
         jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
@@ -76,12 +73,11 @@ const Employees: React.FC = () => {
         Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
       );
 
-      // Calculate average salary by job title
       const salarySumByJobTitle = new Map<string, { sum: number; count: number }>();
       employees.forEach((emp) => {
         const current = salarySumByJobTitle.get(emp.jobTitle) || { sum: 0, count: 0 };
         salarySumByJobTitle.set(emp.jobTitle, {
-          sum: current.sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), // Estimate monthly for hourly
+          sum: current.sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0),
           count: current.count + 1,
         });
       });
@@ -95,7 +91,7 @@ const Employees: React.FC = () => {
       setJobTitleDistribution([]);
       setAverageSalaryByJobTitle([]);
     }
-  }, [employees]); // Depend on employees from usePayrollProcessor
+  }, [employees]);
 
   const loadReportSettings = React.useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
@@ -110,10 +106,12 @@ const Employees: React.FC = () => {
   useEffect(() => {
     loadEmployeeDataAndCharts();
     loadReportSettings();
-    window.addEventListener('mockDataUpdated', loadEmployeeDataAndCharts); // Listen for mock data changes
-    window.addEventListener('reportDesignUpdated', loadReportSettings); // Listen for report design updates
+    window.addEventListener('allMockDataUpdated', loadEmployeeDataAndCharts); // Listen for allMockDataUpdated
+    window.addEventListener('employeesUpdated', loadEmployeeDataAndCharts); // Listen for specific employee updates
+    window.addEventListener('reportDesignUpdated', loadReportSettings);
     return () => {
-      window.removeEventListener('mockDataUpdated', loadEmployeeDataAndCharts);
+      window.removeEventListener('allMockDataUpdated', loadEmployeeDataAndCharts);
+      window.removeEventListener('employeesUpdated', loadEmployeeDataAndCharts);
       window.removeEventListener('reportDesignUpdated', loadReportSettings);
     };
   }, [loadEmployeeDataAndCharts, loadReportSettings]);
@@ -136,31 +134,27 @@ const Employees: React.FC = () => {
   const confirmDeleteEmployee = () => {
     if (employeeToDelete) {
       const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
-      setEmployees(updatedEmployees); // Update state via usePayrollProcessor's setter
+      setEmployees(updatedEmployees);
       localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
       showSuccess(`Employee ${employeeToDelete.firstName} ${employeeToDelete.lastName} removed.`);
-      // No need to call loadEmployees() here, as setEmployees will trigger re-render and re-calculation
+      window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees })); // Dispatch specific event
       setIsDeleteDialogOpen(false);
       setEmployeeToDelete(null);
-      window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
     }
   };
 
   const handleSaveEmployee = (employeeData: EmployeeFormValues) => {
     let updatedEmployees: MockEmployee[];
     if (employeeData.id) {
-      // Update existing employee
       updatedEmployees = employees.map(emp =>
         emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
       );
     } else {
-      // Add new employee
       const newId = `EMP${String(employees.length + 1).padStart(3, '0')}`;
       const newEmployee: MockEmployee = {
         ...employeeData,
         id: newId,
-        standardDailyHours: employeeData.standardDailyHours || 8, // Ensure standardDailyHours is set
-        // Ensure all required fields are present, even if optional in form but required in MockEmployee
+        standardDailyHours: employeeData.standardDailyHours || 8,
         firstName: employeeData.firstName,
         lastName: employeeData.lastName,
         email: employeeData.email,
@@ -169,12 +163,11 @@ const Employees: React.FC = () => {
       };
       updatedEmployees = [...employees, newEmployee];
     }
-    setEmployees(updatedEmployees); // Update state via usePayrollProcessor's setter
+    setEmployees(updatedEmployees);
     localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
-    // No need to call loadEmployees() here
+    window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees })); // Dispatch specific event
     setIsFormOpen(false);
     setEditingEmployee(null);
-    window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
   };
 
   const handleDownloadProfile = async (employee: MockEmployee) => {
@@ -197,13 +190,12 @@ const Employees: React.FC = () => {
     const options = {
       filename: `employee-profile-${employee.firstName}-${employee.lastName}.pdf`,
       format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
-      documentType: 'report' as const, // Specify document type
+      documentType: 'report' as const,
     };
 
     await generatePdf(renderComponent, options);
   };
 
-  // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
     return `${value} (${percentage}%)`;
@@ -237,11 +229,11 @@ const Employees: React.FC = () => {
                   data={jobTitleDistribution}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60} // Added for Doughnut
+                  innerRadius={60}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  labelLine={false} // Ensure no lines to labels
+                  labelLine={false}
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {jobTitleDistribution.map((entry, index) => (
@@ -286,7 +278,7 @@ const Employees: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Personal ID</TableHead> {/* New column header */}
+                    <TableHead>Personal ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Job Title</TableHead>
                     <TableHead>Department</TableHead>
@@ -301,7 +293,7 @@ const Employees: React.FC = () => {
                   {employees.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell className="font-medium">{employee.id}</TableCell>
-                      <TableCell>{employee.personalId || "N/A"}</TableCell> {/* Display Personal ID */}
+                      <TableCell>{employee.personalId || "N/A"}</TableCell>
                       <TableCell>{employee.firstName} {employee.lastName}</TableCell>
                       <TableCell>{employee.jobTitle}</TableCell>
                       <TableCell>{employee.department || "N/A"}</TableCell>

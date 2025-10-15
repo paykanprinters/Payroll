@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { format, addDays, subDays, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import the new hook
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import CalculatePaycheckDialog from "./CalculatePaycheckDialog"; // Import the new dialog
-import { PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import PayslipDesignSettings
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { useNavigate } from "react-router-dom";
+import CalculatePaycheckDialog from "./CalculatePaycheckDialog";
+import { PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
@@ -18,9 +18,9 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showEmployeeDetails: true,
   showEarningsBreakdown: true,
   showDeductionsBreakdown: true,
-  showLeaveSummary: true, // Now controlled by a toggle
-  showBankDetails: true, // Now controlled by a toggle
-  showYTD: true, // New setting for YTD calculations
+  showLeaveSummary: true,
+  showBankDetails: true,
+  showYTD: true,
   showHourlyRate: true,
   sectionOrder: ["Earnings", "Deductions"],
   layoutSize: "A4",
@@ -33,7 +33,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
 
 const UpcomingPayrollCard: React.FC = () => {
   const navigate = useNavigate();
-  const { runPayrollProcess, companyDetails } = usePayrollProcessor(); // Use the payroll processor hook
+  const { runPayrollProcess, companyDetails } = usePayrollProcessor();
 
   const [currentCheckDate, setCurrentCheckDate] = useState<Date>(new Date());
   const [payPeriodStart, setPayPeriodStart] = useState<Date>(new Date());
@@ -45,22 +45,17 @@ const UpcomingPayrollCard: React.FC = () => {
   });
 
   useEffect(() => {
-    // Initialize dates for a weekly payroll cycle (mock data)
-    // For simplicity, let's assume payroll runs every Friday, and pay period is previous 2 weeks
     const today = new Date();
     let checkDate = today;
 
-    // Find the next Friday for the check date
-    while (checkDate.getDay() !== 5) { // 5 is Friday
+    while (checkDate.getDay() !== 5) {
       checkDate = addDays(checkDate, 1);
     }
     setCurrentCheckDate(checkDate);
 
-    // Pay period ends on the check date
     const periodEnd = checkDate;
     setPayPeriodEnd(periodEnd);
 
-    // Pay period starts 7 days before the end date for weekly
     const periodStart = subDays(periodEnd, 6);
     setPayPeriodStart(periodStart);
 
@@ -92,7 +87,6 @@ const UpcomingPayrollCard: React.FC = () => {
 
   const handleRunPayroll = () => {
     runPayrollProcess(payPeriodStart, payPeriodEnd);
-    // After running payroll, advance to the next period
     const nextCheckDate = addDays(currentCheckDate, 7);
     setCurrentCheckDate(nextCheckDate);
     setPayPeriodEnd(nextCheckDate);
@@ -101,7 +95,7 @@ const UpcomingPayrollCard: React.FC = () => {
 
   const handleNewOffCyclePayroll = () => {
     showSuccess("Starting new off-cycle payroll. Redirecting to Payslips page.");
-    navigate("/payslips/overview"); // Navigate to the Payslips overview page
+    navigate("/payslips/overview");
   };
 
   const handleCalculatePaycheck = () => {
@@ -125,7 +119,6 @@ const UpcomingPayrollCard: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Payroll Details Section */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold">Weekly</h3>
@@ -158,7 +151,6 @@ const UpcomingPayrollCard: React.FC = () => {
             </Button>
           </div>
 
-          {/* Payroll Actions Section */}
           <div className="lg:col-span-1 space-y-4 border-t lg:border-t-0 lg:border-l pt-6 lg:pt-0 lg:pl-6 border-gray-200 dark:border-gray-700">
             <h4 className="text-lg font-semibold">Payroll actions</h4>
             <Button variant="outline" onClick={handleNewOffCyclePayroll} className="w-full">

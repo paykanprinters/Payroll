@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, eachDayOfInterval, isWeekend } from "date-fns";
 import { calculateWorkingDays } from "@/lib/utils";
-import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
+import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
 
 export const useLeaveData = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
@@ -67,9 +67,9 @@ export const useLeaveData = () => {
 
   useEffect(() => {
     loadData();
-    window.addEventListener('mockDataUpdated', loadData);
+    window.addEventListener('allMockDataUpdated', loadData); // Listen to allMockDataUpdated
     return () => {
-      window.removeEventListener('mockDataUpdated', loadData);
+      window.removeEventListener('allMockDataUpdated', loadData);
     };
   }, [loadData]);
 
@@ -77,9 +77,9 @@ export const useLeaveData = () => {
     setLeaveRecords(prevRecords => {
       const updatedRecords = [...prevRecords, newRecord];
       localStorage.setItem("mockLeaveRecords", JSON.stringify(updatedRecords));
+      window.dispatchEvent(new CustomEvent('leaveRecordsUpdated', { detail: updatedRecords })); // Dispatch specific event
       return updatedRecords;
     });
-    window.dispatchEvent(new Event('mockDataUpdated')); // Notify other components
   }, []);
 
   return {

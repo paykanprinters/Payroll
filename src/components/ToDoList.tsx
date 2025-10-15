@@ -8,7 +8,7 @@ import { CheckCircle, AlertTriangle, Info, ArrowRight } from "lucide-react";
 import { useToDosData } from "@/hooks/use-todos-data";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { ToDoEntry } from "@/lib/mock-data-interfaces"; // Added missing import
+import { ToDoEntry } from "@/lib/mock-data-interfaces";
 
 const ToDoList: React.FC = () => {
   const { toDos, markToDoAsDone } = useToDosData();
@@ -59,7 +59,7 @@ const ToDoList: React.FC = () => {
       <CardContent>
         {pendingToDos.length > 0 ? (
           <div className="space-y-4">
-            {pendingToDos.slice(0, 5).map((todo) => ( // Display top 5 to-dos
+            {pendingToDos.slice(0, 5).map((todo) => (
               <div key={todo.id} className="flex items-start justify-between p-3 border rounded-md bg-muted/50">
                 <div className="flex items-center gap-3 flex-1">
                   {getLevelIcon(todo.level)}
