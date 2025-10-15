@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client"; // Corrected import path
+import { supabase } from "@/integrations/supabase/client";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 
@@ -55,7 +55,7 @@ export const useCompanyDetails = () => {
         companyWebsite: details.companyWebsite,
         bankName: details.bankName,
         accountholdername: details.accountholdername, // CRITICAL: Ensure this is lowercase
-        accountNumber: details.accountNumber,
+        accountnumber: details.accountNumber, // CRITICAL: Ensure this is lowercase
         branchCode: details.branchCode,
         accountType: details.accountType,
         logoUrl: details.logoUrl,
