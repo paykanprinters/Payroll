@@ -69,8 +69,8 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
-  companyDetails: MockCompanyDetails | null;
-  isMockDataEnabled: boolean;
+  companyDetails: MockCompanyDetails | null; // This prop is the source of truth
+  isMockDataEnabled: boolean; // Keep this prop for other potential mock data indicators if needed
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyDetails, isMockDataEnabled }) => {
@@ -78,33 +78,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
   const { pendingCount } = useToDosData();
   const { isAuthenticated, isLoadingAuth } = useAuth();
 
+  // Always use the companyDetails prop for display
   const displayCompanyDetails = React.useMemo(() => {
-    if (isMockDataEnabled) {
-      const mockTradingName = localStorage.getItem('companyTradingName') || "";
-      const mockLegalName = localStorage.getItem('companyLegalName') || "";
-      const mockLogoUrl = localStorage.getItem('companyLogoUrl');
-      const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
-      const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-      const mockLogoFit = (localStorage.getItem('companyLogoFit') as MockCompanyDetails['logoFit']) || "contain";
-
-      return {
-        name: mockLegalName || mockTradingName || "Your Company Name",
-        logoUrl: mockLogoUrl,
-        logoWidth: isNaN(mockLogoWidth) ? 100 : mockLogoWidth,
-        logoHeight: isNaN(mockLogoHeight) ? 50 : mockLogoHeight,
-        logoFit: mockLogoFit,
-      };
-    } else if (companyDetails) {
-      return {
-        name: companyDetails.companyLegalName || companyDetails.companyTradingName || "Your Company Name",
-        logoUrl: companyDetails.logoUrl,
-        logoWidth: companyDetails.logoWidth || 100,
-        logoHeight: companyDetails.logoHeight || 50,
-        logoFit: companyDetails.logoFit || "contain",
-      };
-    }
-    return { name: "Your Company Name", logoUrl: null, logoWidth: 100, height: 50, logoFit: "contain" };
-  }, [companyDetails, isMockDataEnabled]);
+    return {
+      name: companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
+      logoUrl: companyDetails?.logoUrl,
+      logoWidth: companyDetails?.logoWidth || 100,
+      logoHeight: companyDetails?.logoHeight || 50,
+      logoFit: companyDetails?.logoFit || "contain",
+    };
+  }, [companyDetails]);
 
 
   const navItems = [
