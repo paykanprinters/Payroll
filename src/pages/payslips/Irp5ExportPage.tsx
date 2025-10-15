@@ -36,6 +36,8 @@ const Irp5ExportPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined);
 
+  const { generatePdf, printPdf } = usePdfGenerator(); // Destructure here
+
   const loadData = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     const savedIrp5FontSize = parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize.toString());
