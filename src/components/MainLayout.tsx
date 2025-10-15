@@ -17,31 +17,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useCompanyDetails } from "@/hooks/use-company-details";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoading: isLoadingCompanyDetails } = useCompanyDetails();
+  const { companyDetails, isLoading: isLoadingCompanyDetails, isMockDataEnabled } = usePayrollProcessor(); // Use usePayrollProcessor
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
 
-  const [isMockDataEnabled, setIsMockDataEnabled] = React.useState(false); // State for mock data status
-
-  React.useEffect(() => {
-    const handleMockDataStatusUpdate = () => {
-      setIsMockDataEnabled(localStorage.getItem("isMockDataEnabled") === "true");
-    };
-
-    handleMockDataStatusUpdate(); // Initial load
-    window.addEventListener('allMockDataUpdated', handleMockDataStatusUpdate); // Listen for mock data toggle
-    return () => {
-      window.removeEventListener('allMockDataUpdated', handleMockDataStatusUpdate);
-    };
-  }, []);
+  // Removed the local isMockDataEnabled state and its useEffect,
+  // as it's now directly sourced from usePayrollProcessor.
 
   const gridColsClass = isCollapsed
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"

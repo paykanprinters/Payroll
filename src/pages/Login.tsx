@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react"; // For loading spinner
-import { useCompanyDetails } from "@/hooks/use-company-details"; // Import the new hook
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 
 const loginSchema = z.object({
@@ -23,7 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login: React.FC = () => {
   const { login, isAuthenticated, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoading: isLoadingCompanyDetails } = useCompanyDetails(); // Use the new hook
+  const { companyDetails, isLoading: isLoadingCompanyDetails } = usePayrollProcessor(); // Use usePayrollProcessor
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false); // Separate state for form submission
 
