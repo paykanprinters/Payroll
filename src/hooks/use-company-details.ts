@@ -163,9 +163,10 @@ export const useCompanyDetails = () => {
 
   useEffect(() => {
     fetchCompanyDetails();
-    window.addEventListener("companyDetailsUpdated", fetchCompanyDetails);
+    // Removed: window.addEventListener("companyDetailsUpdated", fetchCompanyDetails);
+    // Rely on internal state updates and other components listening to the event.
     return () => {
-      window.removeEventListener("companyDetailsUpdated", fetchCompanyDetails);
+      // Removed: window.removeEventListener("companyDetailsUpdated", fetchCompanyDetails);
     };
   }, [fetchCompanyDetails]);
 
