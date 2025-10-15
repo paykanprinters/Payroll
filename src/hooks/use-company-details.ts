@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client"; // Corrected import path
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 
