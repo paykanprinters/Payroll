@@ -53,7 +53,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
         className="flex items-center w-full"
       >
         <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-        <span className={cn("flex-1 whitespace-nowrap", isCollapsed && "hidden")}>
+        <span className="flex-1 whitespace-nowrap", isCollapsed && "hidden")}>
           {label}
         </span>
         {badgeCount !== undefined && badgeCount > 0 && !isCollapsed && (
