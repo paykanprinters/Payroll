@@ -136,7 +136,7 @@ const CompanyDetails: React.FC = () => {
         branchCode: "", accountType: "Cheque", logoUrl: "",
         logoWidth: 100, logoHeight: 50, logoFit: "contain",
       });
-      console.log("CompanyDetails.tsx: Form reset with empty defaults.");
+      console.log("CompanyDetails.tsx: Form reset with empty defaults for initial setup.");
     }
   }, [companyDetails, isLoading, formMethods]);
 
@@ -169,6 +169,14 @@ const CompanyDetails: React.FC = () => {
             <h3 className="font-semibold text-lg mb-2">Access Denied</h3>
             <p className="text-sm">
               You do not have the necessary permissions to edit company details. Only users with the 'Admin' role can make changes here.
+            </p>
+          </div>
+        )}
+        {canEdit && !companyDetails && !isLoading && (
+          <div className="mb-6 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
+            <h3 className="font-semibold text-lg mb-2">Initial Company Setup Required</h3>
+            <p className="text-sm">
+              No company details found. Please fill out the form below and click "Save Company Details" to set up your company's information.
             </p>
           </div>
         )}
