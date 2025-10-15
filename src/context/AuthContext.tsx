@@ -26,10 +26,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // New loading state
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Initial state is true, as we're loading auth
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Set loading to true at the very beginning of the effect
+    setIsLoadingAuth(true);
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state change event:", event, "session:", session); // Debugging log
       try {
@@ -77,52 +80,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Check initial session on mount
-    const checkInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (session) {
-          // Session exists, fetch profile
-          const { data: profile, error: profileError } = await supabase
-            .from('users')
-            .select('id, email, name, role')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Error fetching initial user profile:', profileError);
-            setUser(null);
-            setIsAuthenticated(false);
-            showError('Failed to load user profile. Please try logging in again.');
-            setIsLoadingAuth(false); // Set loading to false before navigating
-            navigate('/login', { replace: true });
-          } else if (profile) {
-            setUser({
-              id: profile.id,
-              email: profile.email,
-              role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
-              name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
-            });
-            setIsAuthenticated(true);
-            setIsLoadingAuth(false); // Set loading to false after successful auth
-          }
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-          setIsLoadingAuth(false); // Set loading to false before navigating
-          navigate('/login', { replace: true }); // Navigate to login if no initial session
-        }
-      } catch (err) {
-        console.error("Error during initial session check:", err);
-        setUser(null);
-        setIsAuthenticated(false);
-        showError('An unexpected error occurred during authentication.');
-        setIsLoadingAuth(false); // Ensure loading is false even on unexpected errors
-        navigate('/login', { replace: true }); // Navigate to login on unexpected errors
-      }
-    };
-
-    checkInitialSession();
+    // No need for a separate checkInitialSession function call here.
+    // The onAuthStateChange listener with 'INITIAL_SESSION' event handles the initial state.
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -130,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [navigate]);
 
   const login = async (email: string, password: string) => {
-    setIsLoadingAuth(true);
+    // Do NOT set isLoadingAuth here. Rely on onAuthStateChange.
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -138,53 +97,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (error) {
       showError(error.message);
-      setIsLoadingAuth(false);
+      // If login fails, onAuthStateChange won't fire a SIGNED_IN event,
+      // so isLoadingAuth will remain false (from the initial effect).
       throw error;
     }
 
     if (data.user) {
-      // Fetch user role from public.users table
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('id, email, name, role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Error fetching user profile after login:', profileError);
-        showError('Login successful, but failed to load user profile. Please contact support.');
-        await supabase.auth.signOut(); // Log out if profile fetch fails
-        setIsLoadingAuth(false);
-        throw profileError;
-      } else if (profile) {
-        setUser({
-          id: profile.id,
-          email: profile.email,
-          role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
-          name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
-        });
-        setIsAuthenticated(true);
-        showSuccess('Login successful! Redirecting...');
-        setIsLoadingAuth(false); // Set loading to false after successful login and profile fetch
-        navigate('/dashboard', { replace: true });
-      }
+      // onAuthStateChange will handle setting user, isAuthenticated, and navigating.
+      showSuccess('Login successful! Redirecting...');
     }
-    // Removed redundant setIsLoadingAuth(false) here, as it's handled inside if/else
   };
 
   const logout = async () => {
-    setIsLoadingAuth(true); // Indicate loading while signing out
+    // Do NOT set isLoadingAuth here. Rely on onAuthStateChange.
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       showError(error.message);
-      setIsLoadingAuth(false); // If sign out itself fails, stop loading
       throw error;
     }
     showSuccess('Logged out successfully.');
     // The onAuthStateChange listener will now handle setting isAuthenticated/user to null
     // and navigating to /login when it receives the 'SIGNED_OUT' event.
-    // No need to call navigate('/login') or set state here directly.
   };
 
   return (
