@@ -171,12 +171,12 @@ export const usePayrollProcessor = () => {
     handleAllMockDataUpdate();
 
     window.addEventListener("allMockDataUpdated", handleAllMockDataUpdate);
-    window.addEventListener("companyDetailsUpdated", refetchCompanyDetails);
+    // Removed: window.addEventListener("companyDetailsUpdated", refetchCompanyDetails); // <--- REMOVED THIS LINE
     return () => {
       window.removeEventListener("allMockDataUpdated", handleAllMockDataUpdate);
-      window.removeEventListener("companyDetailsUpdated", refetchCompanyDetails);
+      // Removed: window.removeEventListener("companyDetailsUpdated", refetchCompanyDetails); // <--- REMOVED THIS LINE
     };
-  }, [refetchCompanyDetails]);
+  }, []); // refetchCompanyDetails is no longer a dependency here, as it's not called.
 
   // Fetch tax tables from Supabase only when mock data is NOT enabled
   const fetchLiveTaxTables = useCallback(async (year: number) => {
