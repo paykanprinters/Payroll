@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError } from "@/utils/toast";
-import { useCompanyDetails } from "@/hooks/use-company-details"; // Import the new hook
-import { Loader2 } from "lucide-react"; // Import Loader2
+import { useCompanyDetails } from "@/hooks/use-company-details";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext"; // Import useAuth
 
 // Define the schema for form validation
 const companyDetailsSchema = z.object({
@@ -34,20 +35,21 @@ const companyDetailsSchema = z.object({
   companyEmail: z.string().email("Invalid email address").optional().or(z.literal('')),
   companyWebsite: z.string().url("Invalid URL").optional().or(z.literal('')),
   bankName: z.string().optional(),
-  accountholdername: z.string().optional(), // Corrected to match Supabase schema
+  accountholdername: z.string().optional(),
   accountNumber: z.string().optional(),
   branchCode: z.string().optional(),
   accountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
   logoUrl: z.string().optional(),
-  logoWidth: z.number().min(20).max(200).default(100), // New field for logo width
-  logoHeight: z.number().min(20).max(100).default(50), // New field for logo height
-  logoFit: z.enum(["contain", "cover", "fill", "none", "scale-down"]).default("contain"), // New field for object-fit
+  logoWidth: z.number().min(20).max(200).default(100),
+  logoHeight: z.number().min(20).max(100).default(50),
+  logoFit: z.enum(["contain", "cover", "fill", "none", "scale-down"]).default("contain"),
 });
 
 type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
 
 const CompanyDetails: React.FC = () => {
-  const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails(); // Use the new hook
+  const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails();
+  const { user, isLoadingAuth } = useAuth(); // Get current user from AuthContext
 
   const form = useForm<CompanyDetailsFormValues>({
     resolver: zodResolver(companyDetailsSchema),
@@ -69,7 +71,7 @@ const CompanyDetails: React.FC = () => {
       companyEmail: "",
       companyWebsite: "",
       bankName: "",
-      accountholdername: "", // Corrected to match Supabase schema
+      accountholdername: "",
       accountNumber: "",
       branchCode: "",
       accountType: "Cheque",
@@ -101,7 +103,7 @@ const CompanyDetails: React.FC = () => {
         companyEmail: companyDetails.companyEmail || "",
         companyWebsite: companyDetails.companyWebsite || "",
         bankName: companyDetails.bankName || "",
-        accountholdername: companyDetails.accountholdername || "", // Corrected to match Supabase schema
+        accountholdername: companyDetails.accountholdername || "",
         accountNumber: companyDetails.accountNumber || "",
         branchCode: companyDetails.branchCode || "",
         accountType: companyDetails.accountType || "Cheque",
@@ -118,7 +120,7 @@ const CompanyDetails: React.FC = () => {
         payeReferenceNumber: "", uifReferenceNumber: "", sdlReferenceNumber: "",
         coidaRegistrationNumber: "", physicalAddress: "", postalAddress: "",
         mainContactNumber: "", alternativeContactNumber: "", companyEmail: "",
-        companyWebsite: "", bankName: "", accountholdername: "", accountNumber: "", // Corrected
+        companyWebsite: "", bankName: "", accountholdername: "", accountNumber: "",
         branchCode: "", accountType: "Cheque", logoUrl: "",
         logoWidth: 100, logoHeight: 50, logoFit: "contain",
       });
@@ -170,7 +172,9 @@ const CompanyDetails: React.FC = () => {
   const logoHeight = form.watch("logoHeight");
   const logoFit = form.watch("logoFit");
 
-  if (isLoading) {
+  const canEdit = user?.role === 'Admin';
+
+  if (isLoading || isLoadingAuth) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -188,6 +192,14 @@ const CompanyDetails: React.FC = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {!canEdit && (
+          <div className="mb-6 p-4 border rounded-lg bg-red-50 text-red-800">
+            <h3 className="font-semibold text-lg mb-2">Access Denied</h3>
+            <p className="text-sm">
+              You do not have the necessary permissions to edit company details. Only users with the 'Admin' role can make changes here.
+            </p>
+          </div>
+        )}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           {/* Legal & Trade Information */}
           <div className="space-y-4">
@@ -198,6 +210,7 @@ const CompanyDetails: React.FC = () => {
                 id="companyLegalName"
                 {...form.register("companyLegalName")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -206,6 +219,7 @@ const CompanyDetails: React.FC = () => {
                 id="companyTradingName"
                 {...form.register("companyTradingName")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -214,6 +228,7 @@ const CompanyDetails: React.FC = () => {
                 id="companyRegistrationNumber"
                 {...form.register("companyRegistrationNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -222,6 +237,7 @@ const CompanyDetails: React.FC = () => {
                 id="companyTaxNumber"
                 {...form.register("companyTaxNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -230,6 +246,7 @@ const CompanyDetails: React.FC = () => {
                 id="vatRegistrationNumber"
                 {...form.register("vatRegistrationNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -238,6 +255,7 @@ const CompanyDetails: React.FC = () => {
                 id="industry"
                 {...form.register("industry")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
           </div>
@@ -252,6 +270,7 @@ const CompanyDetails: React.FC = () => {
                 id="payeReferenceNumber"
                 {...form.register("payeReferenceNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -260,6 +279,7 @@ const CompanyDetails: React.FC = () => {
                 id="uifReferenceNumber"
                 {...form.register("uifReferenceNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -268,6 +288,7 @@ const CompanyDetails: React.FC = () => {
                 id="sdlReferenceNumber"
                 {...form.register("sdlReferenceNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -276,6 +297,7 @@ const CompanyDetails: React.FC = () => {
                 id="coidaRegistrationNumber"
                 {...form.register("coidaRegistrationNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
           </div>
@@ -289,6 +311,7 @@ const CompanyDetails: React.FC = () => {
                 id="physicalAddress"
                 {...form.register("physicalAddress")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -297,6 +320,7 @@ const CompanyDetails: React.FC = () => {
                 id="postalAddress"
                 {...form.register("postalAddress")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -305,6 +329,7 @@ const CompanyDetails: React.FC = () => {
                 id="mainContactNumber"
                 {...form.register("mainContactNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -313,6 +338,7 @@ const CompanyDetails: React.FC = () => {
                 id="alternativeContactNumber"
                 {...form.register("alternativeContactNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -322,6 +348,7 @@ const CompanyDetails: React.FC = () => {
                 type="email"
                 {...form.register("companyEmail")}
                 className="mt-1"
+                disabled={!canEdit}
               />
               {form.formState.errors.companyEmail && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyEmail.message}</p>
@@ -334,6 +361,7 @@ const CompanyDetails: React.FC = () => {
                 type="url"
                 {...form.register("companyWebsite")}
                 className="mt-1"
+                disabled={!canEdit}
               />
               {form.formState.errors.companyWebsite && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.companyWebsite.message}</p>
@@ -351,14 +379,16 @@ const CompanyDetails: React.FC = () => {
                 id="bankName"
                 {...form.register("bankName")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
               <Label htmlFor="accountholdername">Account Holder Name</Label>
               <Input
-                id="accountholdername" // Corrected to match Supabase schema
-                {...form.register("accountholdername")} // Corrected to match Supabase schema
+                id="accountholdername"
+                {...form.register("accountholdername")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -367,6 +397,7 @@ const CompanyDetails: React.FC = () => {
                 id="accountNumber"
                 {...form.register("accountNumber")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -375,11 +406,12 @@ const CompanyDetails: React.FC = () => {
                 id="branchCode"
                 {...form.register("branchCode")}
                 className="mt-1"
+                disabled={!canEdit}
               />
             </div>
             <div>
               <Label htmlFor="accountType">Account Type</Label>
-              <Select onValueChange={(value) => form.setValue("accountType", value as "Cheque" | "Savings" | "Business")} value={form.watch("accountType")}>
+              <Select onValueChange={(value) => form.setValue("accountType", value as "Cheque" | "Savings" | "Business")} value={form.watch("accountType")} disabled={!canEdit}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select account type" />
                 </SelectTrigger>
@@ -403,9 +435,10 @@ const CompanyDetails: React.FC = () => {
                 accept="image/*"
                 onChange={handleLogoUpload}
                 className="mt-1 flex-1"
+                disabled={!canEdit}
               />
               {logoUrl && (
-                <Button type="button" variant="outline" onClick={handleRemoveLogo} className="mt-1">
+                <Button type="button" variant="outline" onClick={handleRemoveLogo} className="mt-1" disabled={!canEdit}>
                   Remove Logo
                 </Button>
               )}
@@ -431,6 +464,7 @@ const CompanyDetails: React.FC = () => {
                         value={[logoWidth]}
                         onValueChange={handleLogoWidthChange}
                         className="mt-2"
+                        disabled={!canEdit}
                       />
                     </div>
                     <div>
@@ -443,11 +477,12 @@ const CompanyDetails: React.FC = () => {
                         value={[logoHeight]}
                         onValueChange={handleLogoHeightChange}
                         className="mt-2"
+                        disabled={!canEdit}
                       />
                     </div>
                     <div>
                       <Label htmlFor="logoFit">Object Fit</Label>
-                      <Select onValueChange={handleLogoFitChange} value={logoFit}>
+                      <Select onValueChange={handleLogoFitChange} value={logoFit} disabled={!canEdit}>
                         <SelectTrigger id="logoFit" className="mt-1">
                           <SelectValue placeholder="Select fit" />
                         </SelectTrigger>
@@ -466,7 +501,7 @@ const CompanyDetails: React.FC = () => {
             )}
           </div>
 
-          <Button type="submit">Save Company Details</Button>
+          <Button type="submit" disabled={!canEdit}>Save Company Details</Button>
         </form>
       </CardContent>
     </Card>
