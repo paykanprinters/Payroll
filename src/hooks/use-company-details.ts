@@ -93,9 +93,8 @@ export const useCompanyDetails = () => {
 
       const { data, error } = await supabase
         .from("company_details")
-        .upsert(cleanedPayload) // Use the cleaned and explicitly mapped payload
-        .select()
-        .single();
+        .upsert(cleanedPayload, { onConflict: 'id' }) // Added onConflict for robustness, removed .single()
+        .select();
 
       if (error) {
         console.error("Supabase upsertCompanyDetails error:", error); // Added log
@@ -103,7 +102,8 @@ export const useCompanyDetails = () => {
         setError(error);
       } else {
         console.log("Supabase upsertCompanyDetails success. Data:", data); // Added log
-        setCompanyDetails(data);
+        // If data is an array, take the first element for setCompanyDetails
+        setCompanyDetails(data && data.length > 0 ? data[0] : null);
         showSuccess("Company details saved successfully!");
         window.dispatchEvent(new Event("companyDetailsUpdated")); // Notify other components
       }
