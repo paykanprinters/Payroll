@@ -5,6 +5,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 
+// Helper function to convert snake_case object keys to camelCase
+const snakeToCamel = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(v => snakeToCamel(v));
+  } else if (obj !== null && typeof obj === 'object') {
+    return Object.keys(obj).reduce((acc, key) => {
+      const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+      acc[camelKey] = snakeToCamel(obj[key]);
+      return acc;
+    }, {} as any);
+  }
+  return obj;
+};
+
 export const useCompanyDetails = () => {
   const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -14,7 +28,7 @@ export const useCompanyDetails = () => {
     setIsLoading(true);
     setError(null);
     try {
-      console.log("Attempting to fetch company details..."); // Added log
+      console.log("Attempting to fetch company details...");
       const { data, error } = await supabase
         .from("company_details")
         .select("*")
@@ -22,12 +36,11 @@ export const useCompanyDetails = () => {
         .single();
 
       if (error) {
-        console.error("Supabase fetchCompanyDetails error:", error); // Added log
-        // PGRST116 is returned when .single() finds 0 rows. This is expected for initial setup.
+        console.error("Supabase fetchCompanyDetails error:", error);
         if (error.code === "PGRST116") {
           console.info("No company details found in database (expected for initial setup). Setting companyDetails to null.");
           setCompanyDetails(null);
-          setError(null); // Clear error for this expected scenario
+          setError(null);
         } else {
           console.error("Error fetching company details:", error);
           setError(error);
@@ -35,8 +48,9 @@ export const useCompanyDetails = () => {
           showError(`Failed to load company details: ${error.message}`);
         }
       } else {
-        console.log("Supabase fetchCompanyDetails success. Data:", data); // Added log
-        setCompanyDetails(data);
+        const camelCaseData = snakeToCamel(data); // Convert to camelCase
+        console.log("Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
+        setCompanyDetails(camelCaseData);
       }
     } catch (err: any) {
       console.error("Unhandled error in fetchCompanyDetails:", err);
@@ -89,28 +103,28 @@ export const useCompanyDetails = () => {
         Object.entries(payload).filter(([, value]) => value !== undefined)
       );
 
-      console.log("Attempting to upsert company details with payload:", cleanedPayload); // Added log
+      console.log("Attempting to upsert company details with payload:", cleanedPayload);
 
       const { data, error } = await supabase
         .from("company_details")
-        .upsert(cleanedPayload, { onConflict: 'id' }) // Added onConflict for robustness, removed .single()
+        .upsert(cleanedPayload, { onConflict: 'id' })
         .select();
 
       if (error) {
-        console.error("Supabase upsertCompanyDetails error:", error); // Added log
+        console.error("Supabase upsertCompanyDetails error:", error);
         showError(`Failed to save company details: ${error.message}`);
         setError(error);
       } else {
-        console.log("Supabase upsertCompanyDetails success. Data:", data); // Added log
-        // If data is an array, take the first element for setCompanyDetails
-        setCompanyDetails(data && data.length > 0 ? data[0] : null);
+        const camelCaseData = snakeToCamel(data && data.length > 0 ? data[0] : null); // Convert to camelCase
+        console.log("Supabase upsertCompanyDetails success. Data (camelCase):", camelCaseData);
+        setCompanyDetails(camelCaseData);
         showSuccess("Company details saved successfully!");
-        window.dispatchEvent(new Event("companyDetailsUpdated")); // Notify other components
+        window.dispatchEvent(new Event("companyDetailsUpdated"));
       }
       setIsLoading(false);
       return { data, error };
     },
-    [] // No dependencies needed as all details are passed in
+    []
   );
 
   useEffect(() => {
