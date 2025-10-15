@@ -45,6 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           setIsAuthenticated(false);
           showError('Failed to load user profile. Please try logging in again.');
+          setIsLoadingAuth(false); // Set loading to false before navigating
           navigate('/login', { replace: true }); // Redirect on profile fetch error
         } else if (profile) {
           setUser({
@@ -54,52 +55,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
           });
           setIsAuthenticated(true);
+          setIsLoadingAuth(false); // Set loading to false after successful auth
         }
       } else {
         // This block handles SIGNED_OUT, INITIAL_SESSION (if no session), etc.
         setUser(null);
         setIsAuthenticated(false);
+        setIsLoadingAuth(false); // Set loading to false before navigating
         // Only navigate to login if the event is explicitly SIGNED_OUT
         // or if it's an initial session check and there's no session.
         if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
           navigate('/login', { replace: true });
         }
       }
-      setIsLoadingAuth(false); // Auth state determined after processing event
+      // Removed redundant setIsLoadingAuth(false) here, as it's handled inside if/else
     });
 
     // Check initial session on mount
     const checkInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (session) {
-        // Session exists, fetch profile
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('id, email, name, role')
-          .eq('id', session.user.id)
-          .single();
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session) {
+          // Session exists, fetch profile
+          const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('id, email, name, role')
+            .eq('id', session.user.id)
+            .single();
 
-        if (profileError) {
-          console.error('Error fetching initial user profile:', profileError);
+          if (profileError) {
+            console.error('Error fetching initial user profile:', profileError);
+            setUser(null);
+            setIsAuthenticated(false);
+            showError('Failed to load user profile. Please try logging in again.');
+            setIsLoadingAuth(false); // Set loading to false before navigating
+            navigate('/login', { replace: true });
+          } else if (profile) {
+            setUser({
+              id: profile.id,
+              email: profile.email,
+              role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+              name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
+            });
+            setIsAuthenticated(true);
+            setIsLoadingAuth(false); // Set loading to false after successful auth
+          }
+        } else {
           setUser(null);
           setIsAuthenticated(false);
-          showError('Failed to load user profile. Please try logging in again.');
-          navigate('/login', { replace: true });
-        } else if (profile) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
-            name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
-          });
-          setIsAuthenticated(true);
+          setIsLoadingAuth(false); // Set loading to false before navigating
+          navigate('/login', { replace: true }); // Navigate to login if no initial session
         }
-      } else {
+      } catch (err) {
+        console.error("Error during initial session check:", err);
         setUser(null);
         setIsAuthenticated(false);
-        navigate('/login', { replace: true }); // Navigate to login if no initial session
+        showError('An unexpected error occurred during authentication.');
+        setIsLoadingAuth(false); // Ensure loading is false even on unexpected errors
+        navigate('/login', { replace: true }); // Navigate to login on unexpected errors
       }
-      setIsLoadingAuth(false);
     };
 
     checkInitialSession();
@@ -145,10 +159,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         setIsAuthenticated(true);
         showSuccess('Login successful! Redirecting...');
+        setIsLoadingAuth(false); // Set loading to false after successful login and profile fetch
         navigate('/dashboard', { replace: true });
       }
     }
-    setIsLoadingAuth(false);
+    // Removed redundant setIsLoadingAuth(false) here, as it's handled inside if/else
   };
 
   const logout = async () => {
