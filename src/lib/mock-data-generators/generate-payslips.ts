@@ -1,5 +1,6 @@
 import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO, isWithinInterval } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
+import { TaxTables } from "@/hooks/use-payroll-processor"; // Import TaxTables interface
 
 // Helper to calculate working days (excluding weekends) - kept here as it's specific to payslip generation logic
 const calculateWorkingDays = (start: Date, end: Date): number => {
@@ -14,6 +15,27 @@ const calculateWorkingDays = (start: Date, end: Date): number => {
 };
 
 /**
+ * Calculates PAYE for a given taxable income based on provided tax brackets.
+ * @param taxableIncome The employee's taxable income for the period.
+ * @param payeBrackets Array of PAYE tax brackets.
+ * @returns The calculated PAYE amount.
+ */
+const calculatePAYE = (taxableIncome: number, payeBrackets: TaxTables['payeBrackets']): number => {
+  // Annualize income for PAYE calculation (assuming monthly income * 12)
+  const annualIncome = taxableIncome * 12;
+  let annualPAYE = 0;
+
+  for (const bracket of payeBrackets) {
+    if (annualIncome > bracket.min_income && (bracket.max_income === null || annualIncome <= bracket.max_income)) {
+      annualPAYE = (annualIncome - bracket.min_income) * bracket.rate + bracket.deduction;
+      break;
+    }
+  }
+  // De-annualize PAYE to get monthly amount
+  return annualPAYE / 12;
+};
+
+/**
  * Generates payslips for a specific pay period for all employees.
  * Also updates loan and saving plan balances based on deductions.
  *
@@ -24,6 +46,7 @@ const calculateWorkingDays = (start: Date, end: Date): number => {
  * @param timesheets All mock timesheet entries.
  * @param payPeriodStart The start date of the target pay period (Date object).
  * @param payPeriodEnd The end date of the target pay period (Date object).
+ * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates).
  * @returns An array of generated MockPayslips for the period.
  */
 export const generatePayslipsForPeriod = (
@@ -34,11 +57,15 @@ export const generatePayslipsForPeriod = (
   timesheets: TimesheetEntry[],
   payPeriodStart: Date,
   payPeriodEnd: Date,
+  taxTables: TaxTables // New parameter for tax tables
 ): MockPayslip[] => {
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
   const monthString = format(payPeriodStart, "yyyy-MM");
   const payDateString = format(payPeriodEnd, "dd/MM/yyyy"); // Pay date is the end of the period
+
+  const applyPAYEFlag = localStorage.getItem('applyPAYE') === 'true';
+  const applySDLFlag = localStorage.getItem('applySDL') === 'true';
 
   employees.forEach(emp => {
     let basicSalary = 0;
@@ -113,27 +140,41 @@ export const generatePayslipsForPeriod = (
     let totalDeductions = 0;
     const deductionsBreakdown: { name: string; amount: number }[] = [];
 
-    // Statutory Deductions (simplified)
-    const payeRate = 0.15; // Simplified PAYE rate
-    const uifCap = 177.12; // Simplified UIF cap
-    const sdlRate = 0.01; // Simplified SDL rate
-    const providentFundRate = 0.075; // Simplified Provident Fund rate
+    // Statutory Deductions (using fetched tax tables)
+    const { payeBrackets, uifSdlRates } = taxTables;
 
-    const paye = grossEarnings * payeRate;
-    const uif = Math.min(grossEarnings * 0.01, uifCap);
-    const sdl = grossEarnings * sdlRate;
-    const providentFund = grossEarnings * providentFundRate;
-
-    if (localStorage.getItem('applyPAYE') === 'true') {
+    if (payeBrackets.length > 0 && applyPAYEFlag) {
+      const paye = calculatePAYE(grossEarnings, payeBrackets);
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
     }
-    deductionsBreakdown.push({ name: "UIF", amount: uif });
-    totalDeductions += uif;
-    if (localStorage.getItem('applySDL') === 'true') {
-      deductionsBreakdown.push({ name: "SDL", amount: sdl });
-      totalDeductions += sdl;
+
+    if (uifSdlRates) {
+      const uif = Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap);
+      deductionsBreakdown.push({ name: "UIF", amount: uif });
+      totalDeductions += uif;
+
+      if (applySDLFlag) {
+        const sdl = grossEarnings * uifSdlRates.sdl_rate;
+        deductionsBreakdown.push({ name: "SDL", amount: sdl });
+        totalDeductions += sdl;
+      }
+    } else {
+      // Fallback if UIF/SDL rates not loaded
+      console.warn("UIF/SDL rates not loaded, using mock values for payslip generation.");
+      const uif = Math.min(grossEarnings * 0.01, 177.12);
+      deductionsBreakdown.push({ name: "UIF", amount: uif });
+      totalDeductions += uif;
+      if (applySDLFlag) {
+        const sdl = grossEarnings * 0.01;
+        deductionsBreakdown.push({ name: "SDL", amount: sdl });
+        totalDeductions += sdl;
+      }
     }
+
+    // Mock Provident Fund (still hardcoded for now)
+    const providentFundRate = 0.075;
+    const providentFund = grossEarnings * providentFundRate;
     deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
     totalDeductions += providentFund;
 
@@ -308,6 +349,7 @@ export const generatePayslipsForPeriod = (
  * @param initialSavingPlans Initial mock saving plans.
  * @param leaveRecords All mock leave records.
  * @param timesheets All mock timesheet entries.
+ * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates).
  * @returns An array of all generated MockPayslips.
  */
 export const generateMockPayslips = (
@@ -315,7 +357,8 @@ export const generateMockPayslips = (
   initialLoans: Loan[],
   initialSavingPlans: SavingPlan[],
   leaveRecords: LeaveEntry[],
-  timesheets: TimesheetEntry[]
+  timesheets: TimesheetEntry[],
+  taxTables: TaxTables // New parameter for tax tables
 ): MockPayslip[] => {
   const allPayslips: MockPayslip[] = [];
   const currentYear = new Date().getFullYear();
@@ -343,7 +386,8 @@ export const generateMockPayslips = (
         leaveRecords,
         timesheets,
         payPeriodStart,
-        payPeriodEnd
+        payPeriodEnd,
+        taxTables // Pass tax tables
       );
 
       if (monthlyPayslips.length > 0) {

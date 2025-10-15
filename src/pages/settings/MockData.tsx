@@ -23,9 +23,11 @@ import {
   LeaveEntry,
   TimesheetEntry,
 } from "@/lib/mock-data";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor to get taxTables
 
 
 const MockData: React.FC = () => {
+  const { taxTables } = usePayrollProcessor(); // Get taxTables from usePayrollProcessor
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
     // Initialize from localStorage on first render
     return localStorage.getItem("isMockDataEnabled") === "true";
@@ -33,13 +35,18 @@ const MockData: React.FC = () => {
 
   // Wrap these functions in useCallback to ensure they are stable
   const applyMockData = useCallback(() => {
+    if (!taxTables) {
+      showError("Tax tables not loaded. Cannot generate mock payslips accurately. Please fetch tax tables first.");
+      return;
+    }
+
     const mockCompany = generateMockCompanyDetails();
     const mockEmployees: MockEmployee[] = generateMockEmployees();
     const mockLoans: Loan[] = generateMockLoans(); // Generate new loan structure
     const mockSavingPlans: SavingPlan[] = generateMockSavingPlans();
     const mockLeaveRecords: LeaveEntry[] = generateMockLeaveRecords();
     const mockTimesheets: TimesheetEntry[] = generateMockTimesheets(mockEmployees);
-    const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets);
+    const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets, taxTables); // Pass taxTables
     const mockToDos = generateMockToDos(mockEmployees, mockPayslips, mockLeaveRecords, mockLoans, mockSavingPlans, mockTimesheets);
 
     // Store mock company details in localStorage (DO NOT touch Supabase here)
@@ -65,7 +72,7 @@ const MockData: React.FC = () => {
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
     showSuccess("Mock data populated successfully!");
-  }, []); // No dependencies needed as it generates fresh data
+  }, [taxTables]); // Dependency on taxTables
 
   const clearMockData = useCallback(() => {
     const mockCompanyKeys: (keyof MockCompanyDetails)[] = [

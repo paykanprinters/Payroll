@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider"; // Import Slider
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { useAuth } from '@/context/AuthContext'; // Import useAuth
 
 const DEFAULT_IRP5_FONT_SIZE = 12; // Default font size for IRP5 content
 const MIN_IRP5_FONT_SIZE = 10;
@@ -29,6 +31,7 @@ const taxLiabilitiesSchema = z.object({
 type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
 
 const TaxLiabilities: React.FC = () => {
+  const { user } = useAuth(); // Get current user for permissions
   const currentYear = new Date().getFullYear();
   const taxYears = [
     (currentYear - 2).toString(),
@@ -78,25 +81,42 @@ const TaxLiabilities: React.FC = () => {
       return;
     }
 
+    if (user?.role !== 'Admin') {
+      showError("Only Admin users can fetch and apply tax tables.");
+      return;
+    }
+
     const toastId = showLoading(`Fetching tax tables for ${selectedTaxYear} from SARS...`) as string;
     console.log(`Attempting to fetch tax tables for year: ${selectedTaxYear}`);
 
-    // Simulate API call to SARS
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-sars-tax-tables', {
+        body: JSON.stringify({ taxYear: parseInt(selectedTaxYear) }),
+      });
 
-    // Simulate success or failure
-    const isSuccess = Math.random() > 0.3; // 70% chance of success
-
-    dismissToast(toastId);
-    if (isSuccess) {
-      showSuccess(`Tax tables for ${selectedTaxYear} fetched and applied successfully!`);
-      console.log(`Tax tables for ${selectedTaxYear} would now update employee pay structures.`);
-    } else {
-      showError(`Failed to fetch tax tables for ${selectedTaxYear}. Please check SARS connectivity or try again.`);
+      if (error) {
+        console.error('Error invoking fetch-sars-tax-tables Edge Function:', error);
+        showError(`Failed to fetch tax tables: ${error.message}`);
+      } else {
+        console.log('Fetch tax tables Edge Function response:', data);
+        showSuccess(`Tax tables for ${selectedTaxYear} fetched and applied successfully!`);
+        // Dispatch an event to notify other components (like payroll processor) that tax tables might have changed
+        window.dispatchEvent(new Event('taxTablesUpdated'));
+      }
+    } catch (error: any) {
+      console.error('Error calling fetch-sars-tax-tables Edge Function:', error);
+      showError(`An unexpected error occurred: ${error.message}`);
+    } finally {
+      dismissToast(toastId);
     }
   };
 
   const onSubmitDeductions = async (data: TaxLiabilitiesFormValues) => {
+    if (user?.role !== 'Admin') {
+      showError("Only Admin users can save authorised deductions settings.");
+      return;
+    }
+
     const toastId = showLoading("Saving authorised deductions settings...") as string;
     console.log("Saving authorised deductions:", { applyPAYE: data.applyPAYE, applySDL: data.applySDL });
 
@@ -111,6 +131,10 @@ const TaxLiabilities: React.FC = () => {
   };
 
   const handleIrp5ToggleChange = (checked: boolean) => {
+    if (user?.role !== 'Admin') {
+      showError("Only Admin users can change IRP5 export settings.");
+      return;
+    }
     form.setValue("enableIrp5Export", checked);
     localStorage.setItem('enableIrp5Export', checked.toString());
     window.dispatchEvent(new Event('irp5SettingsUpdated')); // Dispatch event
@@ -118,11 +142,17 @@ const TaxLiabilities: React.FC = () => {
   };
 
   const handleIrp5FontSizeChange = (value: number[]) => {
+    if (user?.role !== 'Admin') {
+      showError("Only Admin users can change IRP5 font size settings.");
+      return;
+    }
     form.setValue("irp5ContentFontSize", value[0]);
     localStorage.setItem('irp5ContentFontSize', value[0].toString());
     window.dispatchEvent(new Event('irp5SettingsUpdated')); // Dispatch event
     showSuccess(`IRP5 content font size set to ${value[0]}px.`);
   };
+
+  const canManageTaxSettings = user?.role === 'Admin';
 
   return (
     <div className="space-y-6">
@@ -140,6 +170,7 @@ const TaxLiabilities: React.FC = () => {
               <Select
                 onValueChange={(value) => form.setValue("taxYear", value)}
                 defaultValue={form.getValues("taxYear")}
+                disabled={!canManageTaxSettings}
               >
                 <SelectTrigger id="taxYear" className="mt-1 w-[180px]">
                   <SelectValue placeholder="Select a year" />
@@ -156,7 +187,7 @@ const TaxLiabilities: React.FC = () => {
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.taxYear.message}</p>
               )}
             </div>
-            <Button onClick={handleFetchTaxTables} disabled={!selectedTaxYear}>
+            <Button onClick={handleFetchTaxTables} disabled={!selectedTaxYear || !canManageTaxSettings}>
               Fetch & Apply Tax Tables
             </Button>
           </div>
@@ -183,6 +214,7 @@ const TaxLiabilities: React.FC = () => {
                 id="applyPAYE"
                 checked={form.watch("applyPAYE")}
                 onCheckedChange={(checked) => form.setValue("applyPAYE", checked as boolean)}
+                disabled={!canManageTaxSettings}
               />
               <Label htmlFor="applyPAYE">
                 Apply PAYE (Pay As You Earn)
@@ -193,12 +225,13 @@ const TaxLiabilities: React.FC = () => {
                 id="applySDL"
                 checked={form.watch("applySDL")}
                 onCheckedChange={(checked) => form.setValue("applySDL", checked as boolean)}
+                disabled={!canManageTaxSettings}
               />
               <Label htmlFor="applySDL">
                 Apply SDL (Skills Development Levy)
               </Label>
             </div>
-            <Button type="submit">Save Deductions Settings</Button>
+            <Button type="submit" disabled={!canManageTaxSettings}>Save Deductions Settings</Button>
           </form>
           <div className="mt-8 p-4 border rounded-lg bg-blue-50 text-blue-800">
             <h3 className="font-semibold text-lg mb-2">Important Note:</h3>
@@ -224,6 +257,7 @@ const TaxLiabilities: React.FC = () => {
               id="enableIrp5Export"
               checked={form.watch("enableIrp5Export")}
               onCheckedChange={handleIrp5ToggleChange}
+              disabled={!canManageTaxSettings}
             />
           </div>
           <div>
@@ -236,6 +270,7 @@ const TaxLiabilities: React.FC = () => {
               value={[irp5ContentFontSize]}
               onValueChange={handleIrp5FontSizeChange}
               className="mt-2"
+              disabled={!canManageTaxSettings}
             />
           </div>
           <div className="mt-8 p-4 border rounded-lg bg-purple-50 text-purple-800">

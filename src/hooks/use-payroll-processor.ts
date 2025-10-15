@@ -24,6 +24,26 @@ import {
 import { generatePayslipsForPeriod } from "@/lib/mock-data-generators";
 import { showError, showSuccess } from "@/utils/toast";
 import { useCompanyDetails } from "./use-company-details";
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+
+// Define interfaces for fetched tax data
+interface TaxBracketPAYE {
+  min_income: number;
+  max_income: number | null;
+  rate: number;
+  deduction: number;
+}
+
+interface TaxRatesUIFSDL {
+  uif_rate: number;
+  uif_cap: number;
+  sdl_rate: number;
+}
+
+export interface TaxTables {
+  payeBrackets: TaxBracketPAYE[];
+  uifSdlRates: TaxRatesUIFSDL | null;
+}
 
 export const usePayrollProcessor = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
@@ -34,6 +54,8 @@ export const usePayrollProcessor = () => {
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
   const [toDos, setToDos] = useState<ToDoEntry[]>([]); // Add toDos state
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(false);
+  const [taxTables, setTaxTables] = useState<TaxTables | null>(null); // New state for tax tables
+  const [isLoadingTaxTables, setIsLoadingTaxTables] = useState<boolean>(false); // Loading state for tax tables
 
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails();
 
@@ -136,6 +158,58 @@ export const usePayrollProcessor = () => {
     };
   }, [refetchCompanyDetails]); // Removed supabaseCompanyDetails from dependencies here, as companyDetails is now derived.
 
+  // Fetch tax tables based on the current year or a selected year
+  const fetchTaxTables = useCallback(async (year: number) => {
+    setIsLoadingTaxTables(true);
+    try {
+      const { data: payeData, error: payeError } = await supabase
+        .from('tax_brackets_paye')
+        .select('*')
+        .eq('tax_year', year)
+        .order('min_income', { ascending: true });
+
+      const { data: uifSdlData, error: uifSdlError } = await supabase
+        .from('tax_rates_uif_sdl')
+        .select('*')
+        .eq('tax_year', year)
+        .single();
+
+      if (payeError || uifSdlError) {
+        console.error("Error fetching tax tables:", payeError || uifSdlError);
+        setTaxTables(null);
+        showError("Failed to load tax tables for payroll calculations.");
+      } else {
+        setTaxTables({
+          payeBrackets: payeData || [],
+          uifSdlRates: uifSdlData || null,
+        });
+        console.log(`Tax tables for ${year} loaded successfully.`);
+      }
+    } catch (err) {
+      console.error("Unhandled error fetching tax tables:", err);
+      showError("An unexpected error occurred while loading tax tables.");
+      setTaxTables(null);
+    } finally {
+      setIsLoadingTaxTables(false);
+    }
+  }, []);
+
+  // Effect to load tax tables on mount and when taxTablesUpdated event is dispatched
+  useEffect(() => {
+    const currentTaxYear = new Date().getFullYear(); // Or determine based on fiscal year
+    fetchTaxTables(currentTaxYear);
+
+    const handleTaxTablesUpdate = () => {
+      fetchTaxTables(currentTaxYear); // Re-fetch if the event is triggered
+    };
+
+    window.addEventListener('taxTablesUpdated', handleTaxTablesUpdate);
+    return () => {
+      window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
+    };
+  }, [fetchTaxTables]);
+
+
   // Individual listeners for specific data updates
   useEffect(() => {
     const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
@@ -206,6 +280,10 @@ export const usePayrollProcessor = () => {
         showError("No employees found to run payroll.");
         return;
       }
+      if (!taxTables) {
+        showError("Tax tables not loaded. Cannot run payroll.");
+        return;
+      }
 
       // Deep copy current mutable states for processing
       const currentLoansCopy: Loan[] = JSON.parse(JSON.stringify(loans));
@@ -220,7 +298,8 @@ export const usePayrollProcessor = () => {
         leaveRecords,
         currentTimesheetsCopy,
         periodStart,
-        periodEnd
+        periodEnd,
+        taxTables // Pass tax tables
       );
 
       if (newPayslips.length === 0) {
@@ -290,7 +369,7 @@ export const usePayrollProcessor = () => {
       window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets }));
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -298,6 +377,10 @@ export const usePayrollProcessor = () => {
       const employee = employees.find((emp) => emp.id === employeeId);
       if (!employee) {
         showError("Employee not found for payslip preview.");
+        return null;
+      }
+      if (!taxTables) {
+        showError("Tax tables not loaded. Cannot generate payslip preview.");
         return null;
       }
 
@@ -313,7 +396,8 @@ export const usePayrollProcessor = () => {
         leaveRecords,
         currentTimesheetsCopy,
         periodStart,
-        periodEnd
+        periodEnd,
+        taxTables // Pass tax tables
       );
 
       if (previewPayslips.length > 0) {
@@ -330,7 +414,7 @@ export const usePayrollProcessor = () => {
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables]
   );
 
   return {
@@ -345,6 +429,8 @@ export const usePayrollProcessor = () => {
     companyDetails, // Now derived
     isLoadingCompanyDetails, // Still expose loading state from useCompanyDetails
     isMockDataEnabled, // Expose isMockDataEnabled
+    taxTables, // Expose taxTables
+    isLoadingTaxTables, // Expose loading state for tax tables
     runPayrollProcess,
     calculateSinglePayslipPreview,
   };
