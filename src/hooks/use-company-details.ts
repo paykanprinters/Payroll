@@ -21,19 +21,27 @@ export const useCompanyDetails = () => {
         .single();
 
       if (error) {
-        console.error("Error fetching company details:", error);
-        setError(error);
-        setCompanyDetails(null); // Ensure companyDetails is null on error
+        // PGRST116 is returned when .single() finds 0 rows. This is expected for initial setup.
+        if (error.code === "PGRST116") {
+          console.info("No company details found in database (expected for initial setup).");
+          setCompanyDetails(null);
+          setError(null); // Clear error for this expected scenario
+        } else {
+          console.error("Error fetching company details:", error);
+          setError(error);
+          setCompanyDetails(null);
+          showError(`Failed to load company details: ${error.message}`);
+        }
       } else {
         setCompanyDetails(data);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Unhandled error in fetchCompanyDetails:", err);
       setError(err);
       setCompanyDetails(null);
       showError('An unexpected error occurred while loading company details.');
     } finally {
-      setIsLoading(false); // Ensure loading is always false
+      setIsLoading(false);
     }
   }, []);
 
