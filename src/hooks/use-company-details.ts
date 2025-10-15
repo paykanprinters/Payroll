@@ -5,14 +5,45 @@ import { supabase } from "@/integrations/supabase/client";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 
-// Helper function to convert snake_case object keys to camelCase
-const snakeToCamel = (obj: any): any => {
+// Define a mapping for Supabase column names to camelCase property names
+const columnToPropertyMap: { [key: string]: keyof MockCompanyDetails | 'updatedAt' } = {
+  id: 'id',
+  companylegalname: 'companyLegalName',
+  companytradingname: 'companyTradingName',
+  companyregistrationnumber: 'companyRegistrationNumber',
+  companytaxnumber: 'companyTaxNumber',
+  vatregistrationnumber: 'vatRegistrationNumber',
+  industry: 'industry',
+  payereferencenumber: 'payeReferenceNumber',
+  uifreferencenumber: 'uifReferenceNumber',
+  sdlreferencenumber: 'sdlReferenceNumber',
+  coidaregistrationnumber: 'coidaRegistrationNumber',
+  physicaladdress: 'physicalAddress',
+  postaladdress: 'postalAddress',
+  maincontactnumber: 'mainContactNumber',
+  alternativecontactnumber: 'alternativeContactNumber',
+  companyemail: 'companyEmail',
+  companywebsite: 'companyWebsite',
+  bankname: 'bankName',
+  accountholdername: 'accountholdername', // Matches interface directly
+  accountnumber: 'accountNumber',
+  branchcode: 'branchCode',
+  accounttype: 'accountType',
+  logourl: 'logoUrl',
+  logowidth: 'logoWidth',
+  logoheight: 'logoHeight',
+  logofit: 'logoFit',
+  updated_at: 'updatedAt', // Handles the underscore case
+};
+
+// Modified conversion function to use the explicit map
+const convertKeysToCamelCase = (obj: any): any => {
   if (Array.isArray(obj)) {
-    return obj.map(v => snakeToCamel(v));
+    return obj.map(v => convertKeysToCamelCase(v));
   } else if (obj !== null && typeof obj === 'object') {
     return Object.keys(obj).reduce((acc, key) => {
-      const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-      acc[camelKey] = snakeToCamel(obj[key]);
+      const newKey = columnToPropertyMap[key] || key; // Use mapping, fallback to original key if not found
+      acc[newKey] = convertKeysToCamelCase(obj[key]);
       return acc;
     }, {} as any);
   }
@@ -48,7 +79,7 @@ export const useCompanyDetails = () => {
           showError(`Failed to load company details: ${error.message}`);
         }
       } else {
-        const camelCaseData = snakeToCamel(data); // Convert to camelCase
+        const camelCaseData = convertKeysToCamelCase(data); // Use the new conversion function
         console.log("Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
         setCompanyDetails(camelCaseData);
       }
@@ -115,7 +146,7 @@ export const useCompanyDetails = () => {
         showError(`Failed to save company details: ${error.message}`);
         setError(error);
       } else {
-        const camelCaseData = snakeToCamel(data && data.length > 0 ? data[0] : null); // Convert to camelCase
+        const camelCaseData = convertKeysToCamelCase(data && data.length > 0 ? data[0] : null); // Convert to camelCase
         console.log("Supabase upsertCompanyDetails success. Data (camelCase):", camelCaseData);
         setCompanyDetails(camelCaseData);
         showSuccess("Company details saved successfully!");
