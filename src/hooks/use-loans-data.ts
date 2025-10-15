@@ -22,12 +22,16 @@ export const useLoansData = () => {
   }, []);
 
   useEffect(() => {
+    // Load data once on mount
     loadLoans();
-    window.addEventListener('allMockDataUpdated', loadLoans); // Listen to allMockDataUpdated
+    // Removed: window.addEventListener('allMockDataUpdated', loadLoans);
+    // This hook should not re-fetch its entire state based on a general update event
+    // that its own actions might trigger. It manages its own state.
+    // The usePayrollProcessor hook will listen to 'loansUpdated' and update its central state.
     return () => {
-      window.removeEventListener('allMockDataUpdated', loadLoans);
+      // Removed: window.removeEventListener('allMockDataUpdated', loadLoans);
     };
-  }, [loadLoans]);
+  }, [loadLoans]); // Dependency on loadLoans to ensure it's stable
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
