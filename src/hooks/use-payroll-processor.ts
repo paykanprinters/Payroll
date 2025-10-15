@@ -45,6 +45,24 @@ export interface TaxTables {
   uifSdlRates: TaxRatesUIFSDL | null;
 }
 
+// Define mock tax tables for when mock data is enabled
+const mockTaxTables: TaxTables = {
+  payeBrackets: [
+    { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
+    { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
+    { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
+    { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
+    { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
+    { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
+    { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
+  ],
+  uifSdlRates: {
+    uif_rate: 0.01,
+    uif_cap: 177.12, // Monthly cap
+    sdl_rate: 0.01,
+  },
+};
+
 export const usePayrollProcessor = () => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
@@ -77,7 +95,7 @@ export const usePayrollProcessor = () => {
     const mockMainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
     const mockAlternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
     const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-    const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.yourcompany.co.za";
+    const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.acmecorp.co.za";
     const mockBankName = localStorage.getItem('bankName') || "";
     const mockAccountholdername = localStorage.getItem('accountholdername') || "";
     const mockAccountNumber = localStorage.getItem('accountNumber') || "";
@@ -133,7 +151,8 @@ export const usePayrollProcessor = () => {
         setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
         setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
         setToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]"));
-        console.log("usePayrollProcessor: Mock data loaded from localStorage.");
+        setTaxTables(mockTaxTables); // Set mock tax tables when mock data is enabled
+        console.log("usePayrollProcessor: Mock data loaded from localStorage, mock tax tables applied.");
       } else {
         // Clear all mock data if mock data is not enabled
         setEmployees([]);
@@ -143,6 +162,7 @@ export const usePayrollProcessor = () => {
         setLeaveRecords([]);
         setTimesheets([]);
         setToDos([]);
+        setTaxTables(null); // Clear mock tax tables
         console.log("usePayrollProcessor: Mock data cleared.");
       }
     };
@@ -156,10 +176,12 @@ export const usePayrollProcessor = () => {
       window.removeEventListener("allMockDataUpdated", handleAllMockDataUpdate);
       window.removeEventListener("companyDetailsUpdated", refetchCompanyDetails);
     };
-  }, [refetchCompanyDetails]); // Removed supabaseCompanyDetails from dependencies here, as companyDetails is now derived.
+  }, [refetchCompanyDetails]);
 
-  // Fetch tax tables based on the current year or a selected year
-  const fetchTaxTables = useCallback(async (year: number) => {
+  // Fetch tax tables from Supabase only when mock data is NOT enabled
+  const fetchLiveTaxTables = useCallback(async (year: number) => {
+    if (isMockDataEnabled) return; // Do not fetch live tax tables if mock data is enabled
+
     setIsLoadingTaxTables(true);
     try {
       const { data: payeData, error: payeError } = await supabase
@@ -175,39 +197,45 @@ export const usePayrollProcessor = () => {
         .single();
 
       if (payeError || uifSdlError) {
-        console.error("Error fetching tax tables:", payeError || uifSdlError);
+        console.error("Error fetching live tax tables:", payeError || uifSdlError);
         setTaxTables(null);
-        showError("Failed to load tax tables for payroll calculations.");
+        showError("Failed to load live tax tables for payroll calculations.");
       } else {
         setTaxTables({
           payeBrackets: payeData || [],
           uifSdlRates: uifSdlData || null,
         });
-        console.log(`Tax tables for ${year} loaded successfully.`);
+        console.log(`Live tax tables for ${year} loaded successfully.`);
       }
     } catch (err) {
-      console.error("Unhandled error fetching tax tables:", err);
-      showError("An unexpected error occurred while loading tax tables.");
+      console.error("Unhandled error fetching live tax tables:", err);
+      showError("An unexpected error occurred while loading live tax tables.");
       setTaxTables(null);
     } finally {
       setIsLoadingTaxTables(false);
     }
-  }, []);
+  }, [isMockDataEnabled]); // Dependency on isMockDataEnabled
 
   // Effect to load tax tables on mount and when taxTablesUpdated event is dispatched
   useEffect(() => {
-    const currentTaxYear = new Date().getFullYear(); // Or determine based on fiscal year
-    fetchTaxTables(currentTaxYear);
+    if (!isMockDataEnabled) { // Only fetch live tax tables if mock data is not enabled
+      const currentTaxYear = new Date().getFullYear(); // Or determine based on fiscal year
+      fetchLiveTaxTables(currentTaxYear);
 
-    const handleTaxTablesUpdate = () => {
-      fetchTaxTables(currentTaxYear); // Re-fetch if the event is triggered
-    };
+      const handleTaxTablesUpdate = () => {
+        fetchLiveTaxTables(currentTaxYear); // Re-fetch if the event is triggered
+      };
 
-    window.addEventListener('taxTablesUpdated', handleTaxTablesUpdate);
-    return () => {
-      window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
-    };
-  }, [fetchTaxTables]);
+      window.addEventListener('taxTablesUpdated', handleTaxTablesUpdate);
+      return () => {
+        window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
+      };
+    } else {
+      // If mock data is enabled, ensure live tax tables are not set
+      setTaxTables(mockTaxTables);
+      setIsLoadingTaxTables(false);
+    }
+  }, [isMockDataEnabled, fetchLiveTaxTables]);
 
 
   // Individual listeners for specific data updates

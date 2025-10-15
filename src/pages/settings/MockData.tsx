@@ -23,7 +23,7 @@ import {
   LeaveEntry,
   TimesheetEntry,
 } from "@/lib/mock-data";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor to get taxTables
+import { usePayrollProcessor, TaxTables } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor and TaxTables
 
 
 const MockData: React.FC = () => {
@@ -33,12 +33,31 @@ const MockData: React.FC = () => {
     return localStorage.getItem("isMockDataEnabled") === "true";
   });
 
+  // Define mock tax tables directly in MockData.tsx for strict isolation
+  const internalMockTaxTables: TaxTables = {
+    payeBrackets: [
+      { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
+      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
+      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
+      { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
+      { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
+      { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
+      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
+    ],
+    uifSdlRates: {
+      uif_rate: 0.01,
+      uif_cap: 177.12, // Monthly cap
+      sdl_rate: 0.01,
+    },
+  };
+
   // Wrap these functions in useCallback to ensure they are stable
   const applyMockData = useCallback(() => {
-    if (!taxTables) {
-      showError("Tax tables not loaded. Cannot generate mock payslips accurately. Please fetch tax tables first.");
-      return;
-    }
+    // No need to check taxTables here, as we'll use internalMockTaxTables for mock payslips
+    // if (!taxTables) {
+    //   showError("Tax tables not loaded. Cannot generate mock payslips accurately. Please fetch tax tables first.");
+    //   return;
+    // }
 
     const mockCompany = generateMockCompanyDetails();
     const mockEmployees: MockEmployee[] = generateMockEmployees();
@@ -46,7 +65,8 @@ const MockData: React.FC = () => {
     const mockSavingPlans: SavingPlan[] = generateMockSavingPlans();
     const mockLeaveRecords: LeaveEntry[] = generateMockLeaveRecords();
     const mockTimesheets: TimesheetEntry[] = generateMockTimesheets(mockEmployees);
-    const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets, taxTables); // Pass taxTables
+    // Pass internalMockTaxTables for mock payslip generation
+    const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets, internalMockTaxTables);
     const mockToDos = generateMockToDos(mockEmployees, mockPayslips, mockLeaveRecords, mockLoans, mockSavingPlans, mockTimesheets);
 
     // Store mock company details in localStorage (DO NOT touch Supabase here)
@@ -72,7 +92,7 @@ const MockData: React.FC = () => {
     window.dispatchEvent(new Event('companyDetailsUpdated'));
     window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
     showSuccess("Mock data populated successfully!");
-  }, [taxTables]); // Dependency on taxTables
+  }, [internalMockTaxTables]); // Dependency on internalMockTaxTables
 
   const clearMockData = useCallback(() => {
     const mockCompanyKeys: (keyof MockCompanyDetails)[] = [
