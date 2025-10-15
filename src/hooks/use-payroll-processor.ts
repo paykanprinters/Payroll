@@ -66,21 +66,32 @@ export const usePayrollProcessor = () => {
     const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
     const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
 
-    return {
-      companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
-      companyTaxNumber: mockCompanyTaxNumber, vatRegistrationNumber: mockVatRegistrationNumber, industry: mockIndustry,
-      payeReferenceNumber: mockPayeReferenceNumber, uifReferenceNumber: mockUifReferenceNumber, sdlReferenceNumber: mockSdlReferenceNumber,
-      coidaRegistrationNumber: mockCoidaRegistrationNumber, physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
-      companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
-      branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
-    };
+    console.log("usePayrollProcessor: getMockCompanyDetailsFromLocalStorage - isMockDataEnabled:", isMockDataEnabled);
+    if (isMockDataEnabled) {
+      const mockDetails = {
+        companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
+        companyTaxNumber: mockCompanyTaxNumber, vatRegistrationNumber: mockVatRegistrationNumber, industry: mockIndustry,
+        payeReferenceNumber: mockPayeReferenceNumber, uifReferenceNumber: mockUifReferenceNumber, sdlReferenceNumber: mockSdlReferenceNumber,
+        coidaRegistrationNumber: mockCoidaRegistrationNumber, physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
+        companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
+        branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
+      };
+      console.log("usePayrollProcessor: Returning mock company details:", mockDetails);
+      return mockDetails;
+    }
+    console.log("usePayrollProcessor: Mock data not enabled, returning null for mock details.");
+    return null;
   }, [isMockDataEnabled]); // Dependency on isMockDataEnabled
 
   // Derived state for companyDetails: always reflects the correct source
   const companyDetails = useMemo(() => {
+    console.log("usePayrollProcessor: Recalculating derived companyDetails. isMockDataEnabled:", isMockDataEnabled, "supabaseCompanyDetails:", supabaseCompanyDetails);
     if (isMockDataEnabled) {
-      return getMockCompanyDetailsFromLocalStorage();
+      const mockDetails = getMockCompanyDetailsFromLocalStorage();
+      console.log("usePayrollProcessor: Derived companyDetails (mock):", mockDetails);
+      return mockDetails;
     }
+    console.log("usePayrollProcessor: Derived companyDetails (Supabase):", supabaseCompanyDetails);
     return supabaseCompanyDetails;
   }, [isMockDataEnabled, supabaseCompanyDetails, getMockCompanyDetailsFromLocalStorage]);
 
@@ -90,6 +101,7 @@ export const usePayrollProcessor = () => {
     const handleAllMockDataUpdate = () => {
       const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
       setIsMockDataEnabled(mockEnabled);
+      console.log("usePayrollProcessor: handleAllMockDataUpdate triggered. mockEnabled:", mockEnabled);
 
       if (mockEnabled) {
         setEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
@@ -99,6 +111,7 @@ export const usePayrollProcessor = () => {
         setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
         setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
         setToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]"));
+        console.log("usePayrollProcessor: Mock data loaded from localStorage.");
       } else {
         // Clear all mock data if mock data is not enabled
         setEmployees([]);
@@ -108,6 +121,7 @@ export const usePayrollProcessor = () => {
         setLeaveRecords([]);
         setTimesheets([]);
         setToDos([]);
+        console.log("usePayrollProcessor: Mock data cleared.");
       }
     };
 
@@ -125,25 +139,46 @@ export const usePayrollProcessor = () => {
   // Individual listeners for specific data updates
   useEffect(() => {
     const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
-      if (isMockDataEnabled) setEmployees(event.detail);
+      if (isMockDataEnabled) {
+        setEmployees(event.detail);
+        console.log("usePayrollProcessor: employeesUpdated event received (mock data).");
+      }
     };
     const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => {
-      if (isMockDataEnabled) setPayslips(event.detail);
+      if (isMockDataEnabled) {
+        setPayslips(event.detail);
+        console.log("usePayrollProcessor: payslipsUpdated event received (mock data).");
+      }
     };
     const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {
-      if (isMockDataEnabled) setLoans(event.detail);
+      if (isMockDataEnabled) {
+        setLoans(event.detail);
+        console.log("usePayrollProcessor: loansUpdated event received (mock data).");
+      }
     };
     const handleSavingPlansUpdated = (event: CustomEvent<SavingPlan[]>) => {
-      if (isMockDataEnabled) setSavingPlans(event.detail);
+      if (isMockDataEnabled) {
+        setSavingPlans(event.detail);
+        console.log("usePayrollProcessor: savingPlansUpdated event received (mock data).");
+      }
     };
     const handleLeaveRecordsUpdated = (event: CustomEvent<LeaveEntry[]>) => {
-      if (isMockDataEnabled) setLeaveRecords(event.detail);
+      if (isMockDataEnabled) {
+        setLeaveRecords(event.detail);
+        console.log("usePayrollProcessor: leaveRecordsUpdated event received (mock data).");
+      }
     };
     const handleTimesheetsUpdated = (event: CustomEvent<TimesheetEntry[]>) => {
-      if (isMockDataEnabled) setTimesheets(event.detail);
+      if (isMockDataEnabled) {
+        setTimesheets(event.detail);
+        console.log("usePayrollProcessor: timesheetsUpdated event received (mock data).");
+      }
     };
     const handleToDosUpdated = (event: CustomEvent<ToDoEntry[]>) => {
-      if (isMockDataEnabled) setToDos(event.detail);
+      if (isMockDataEnabled) {
+        setToDos(event.detail);
+        console.log("usePayrollProcessor: toDosUpdated event received (mock data).");
+      }
     };
 
     window.addEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);

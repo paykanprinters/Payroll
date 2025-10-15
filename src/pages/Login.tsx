@@ -23,7 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login: React.FC = () => {
   const { login, isAuthenticated, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoading: isLoadingCompanyDetails } = usePayrollProcessor(); // Use usePayrollProcessor
+  const { companyDetails, isLoading: isLoadingCompanyDetails, isMockDataEnabled } = usePayrollProcessor(); // Use usePayrollProcessor
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false); // Separate state for form submission
 
@@ -40,6 +40,12 @@ const Login: React.FC = () => {
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
+
+  useEffect(() => {
+    console.log("Login.tsx: companyDetails received:", companyDetails);
+    console.log("Login.tsx: isLoadingCompanyDetails:", isLoadingCompanyDetails);
+    console.log("Login.tsx: isMockDataEnabled:", isMockDataEnabled);
+  }, [companyDetails, isLoadingCompanyDetails, isMockDataEnabled]);
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);

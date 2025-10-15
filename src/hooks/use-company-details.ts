@@ -59,7 +59,7 @@ export const useCompanyDetails = () => {
     setIsLoading(true);
     setError(null);
     try {
-      console.log("Attempting to fetch company details...");
+      console.log("useCompanyDetails: Attempting to fetch company details from Supabase...");
       const { data, error } = await supabase
         .from("company_details")
         .select("*")
@@ -67,29 +67,30 @@ export const useCompanyDetails = () => {
         .single();
 
       if (error) {
-        console.error("Supabase fetchCompanyDetails error:", error);
+        console.error("useCompanyDetails: Supabase fetchCompanyDetails error:", error);
         if (error.code === "PGRST116") {
-          console.info("No company details found in database (expected for initial setup). Setting companyDetails to null.");
+          console.info("useCompanyDetails: No company details found in database (expected for initial setup). Setting companyDetails to null.");
           setCompanyDetails(null);
           setError(null);
         } else {
-          console.error("Error fetching company details:", error);
+          console.error("useCompanyDetails: Error fetching company details:", error);
           setError(error);
           setCompanyDetails(null);
           showError(`Failed to load company details: ${error.message}`);
         }
       } else {
         const camelCaseData = convertKeysToCamelCase(data); // Use the new conversion function
-        console.log("Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
+        console.log("useCompanyDetails: Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
         setCompanyDetails(camelCaseData);
       }
     } catch (err: any) {
-      console.error("Unhandled error in fetchCompanyDetails:", err);
+      console.error("useCompanyDetails: Unhandled error in fetchCompanyDetails:", err);
       setError(err);
       setCompanyDetails(null);
       showError('An unexpected error occurred while loading company details.');
     } finally {
       setIsLoading(false);
+      console.log("useCompanyDetails: Finished fetching. isLoading:", false, "companyDetails:", companyDetails);
     }
   }, []);
 
@@ -134,7 +135,7 @@ export const useCompanyDetails = () => {
         Object.entries(payload).filter(([, value]) => value !== undefined)
       );
 
-      console.log("Attempting to upsert company details with payload:", cleanedPayload);
+      console.log("useCompanyDetails: Attempting to upsert company details with payload:", cleanedPayload);
 
       const { data, error } = await supabase
         .from("company_details")
@@ -142,12 +143,12 @@ export const useCompanyDetails = () => {
         .select();
 
       if (error) {
-        console.error("Supabase upsertCompanyDetails error:", error);
+        console.error("useCompanyDetails: Supabase upsertCompanyDetails error:", error);
         showError(`Failed to save company details: ${error.message}`);
         setError(error);
       } else {
         const camelCaseData = convertKeysToCamelCase(data && data.length > 0 ? data[0] : null); // Convert to camelCase
-        console.log("Supabase upsertCompanyDetails success. Data (camelCase):", camelCaseData);
+        console.log("useCompanyDetails: Supabase upsertCompanyDetails success. Data (camelCase):", camelCaseData);
         setCompanyDetails(camelCaseData);
         showSuccess("Company details saved successfully!");
         window.dispatchEvent(new Event("companyDetailsUpdated"));
