@@ -10,6 +10,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useCompanyDetails } from "@/hooks/use-company-details";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext"; // Import useAuth
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor to get isMockDataEnabled
 
 // Import new modular components
 import LegalTradeInfoForm from "@/components/settings/company-details/LegalTradeInfoForm";
@@ -52,6 +53,7 @@ type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
 const CompanyDetails: React.FC = () => {
   const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails();
   const { user, isLoadingAuth } = useAuth(); // Get current user from AuthContext
+  const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
 
   const formMethods = useForm<CompanyDetailsFormValues>({
     resolver: zodResolver(companyDetailsSchema),
@@ -176,7 +178,7 @@ const CompanyDetails: React.FC = () => {
             <StatutoryInfoForm canEdit={canEdit} />
             <ContactDetailsForm canEdit={canEdit} />
             <BankingInfoForm canEdit={canEdit} />
-            <CompanyLogoUpload canEdit={canEdit} />
+            <CompanyLogoUpload canEdit={canEdit} isMockDataEnabled={isMockDataEnabled} />
 
             <Button type="submit" disabled={!canEdit}>Save Company Details</Button>
           </form>

@@ -8,42 +8,137 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { showSuccess } from "@/utils/toast";
+import { showSuccess, showError } from "@/utils/toast";
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 interface CompanyLogoUploadProps {
   canEdit: boolean;
+  isMockDataEnabled: boolean; // New prop
 }
 
-const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit }) => {
+const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDataEnabled }) => {
   const { setValue, watch } = useFormContext();
   const logoUrl = watch("logoUrl");
   const logoWidth = watch("logoWidth");
   const logoHeight = watch("logoHeight");
   const logoFit = watch("logoFit");
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const SUPABASE_STORAGE_BUCKET = "company-logos";
+  const SUPABASE_STORAGE_PATH = "company_logo.png";
+  const SUPABASE_PUBLIC_URL_PREFIX = `${supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(SUPABASE_STORAGE_PATH).data.publicUrl.split('?')[0]}`;
+
+  const uploadFileToSupabaseStorage = async (file: File): Promise<string | null> => {
+    if (!file) return null;
+
+    try {
+      // Delete existing file first if it's a Supabase URL
+      if (logoUrl && logoUrl.startsWith(SUPABASE_PUBLIC_URL_PREFIX)) {
+        const { error: deleteError } = await supabase.storage
+          .from(SUPABASE_STORAGE_BUCKET)
+          .remove([SUPABASE_STORAGE_PATH]);
+
+        if (deleteError && deleteError.message !== "The resource was not found") { // Ignore 'not found' error
+          console.error("Error deleting old logo from Supabase Storage:", deleteError);
+          showError("Failed to delete old logo from storage.");
+          return null;
+        }
+      }
+
+      const { data, error } = await supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .upload(SUPABASE_STORAGE_PATH, file, {
+          cacheControl: '3600',
+          upsert: true, // Overwrite if exists
+          contentType: file.type,
+        });
+
+      if (error) {
+        console.error("Error uploading logo to Supabase Storage:", error);
+        showError(`Failed to upload logo: ${error.message}`);
+        return null;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .getPublicUrl(SUPABASE_STORAGE_PATH);
+
+      return publicUrlData.publicUrl;
+
+    } catch (err: any) {
+      console.error("Unexpected error during Supabase logo upload:", err);
+      showError(`An unexpected error occurred during logo upload: ${err.message}`);
+      return null;
+    }
+  };
+
+  const deleteFileFromSupabaseStorage = async () => {
+    if (!logoUrl || !logoUrl.startsWith(SUPABASE_PUBLIC_URL_PREFIX)) return; // Only delete Supabase URLs
+
+    try {
+      const { error } = await supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .remove([SUPABASE_STORAGE_PATH]);
+
+      if (error && error.message !== "The resource was not found") {
+        console.error("Error deleting logo from Supabase Storage:", error);
+        showError("Failed to delete logo from storage.");
+      } else {
+        showSuccess("Logo removed from storage.");
+      }
+    } catch (err: any) {
+      console.error("Unexpected error during Supabase logo deletion:", err);
+      showError(`An unexpected error occurred during logo deletion: ${err.message}`);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    if (isMockDataEnabled) {
+      // Handle mock data locally
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         setValue("logoUrl", dataUrl);
-        // Reset to default dimensions and fit when new logo is uploaded
         setValue("logoWidth", 100);
         setValue("logoHeight", 50);
         setValue("logoFit", "contain");
-        showSuccess("Company logo uploaded successfully!");
+        showSuccess("Mock company logo uploaded successfully!");
       };
       reader.readAsDataURL(file);
+    } else {
+      // Handle live data with Supabase Storage
+      const publicUrl = await uploadFileToSupabaseStorage(file);
+      if (publicUrl) {
+        setValue("logoUrl", publicUrl);
+        setValue("logoWidth", 100);
+        setValue("logoHeight", 50);
+        setValue("logoFit", "contain");
+        showSuccess("Company logo uploaded successfully to Supabase Storage!");
+      } else {
+        showError("Failed to upload company logo.");
+      }
     }
   };
 
-  const handleRemoveLogo = () => {
-    setValue("logoUrl", "");
-    setValue("logoWidth", 100); // Reset to default size
-    setValue("logoHeight", 50); // Reset to default size
-    setValue("logoFit", "contain"); // Reset to default fit
-    showSuccess("Company logo removed successfully!");
+  const handleRemoveLogo = async () => {
+    if (isMockDataEnabled) {
+      // Handle mock data locally
+      setValue("logoUrl", "");
+      setValue("logoWidth", 100);
+      setValue("logoHeight", 50);
+      setValue("logoFit", "contain");
+      showSuccess("Mock company logo removed successfully!");
+    } else {
+      // Handle live data with Supabase Storage
+      await deleteFileFromSupabaseStorage();
+      setValue("logoUrl", "");
+      setValue("logoWidth", 100);
+      setValue("logoHeight", 50);
+      setValue("logoFit", "contain");
+    }
   };
 
   const handleLogoWidthChange = (value: number[]) => {

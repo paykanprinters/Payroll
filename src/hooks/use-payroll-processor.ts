@@ -306,7 +306,7 @@ export const usePayrollProcessor = () => {
     timesheets,
     toDos, // Expose toDos
     companyDetails,
-    isMockDataEnabled,
+    isMockDataEnabled, // Expose isMockDataEnabled
     runPayrollProcess,
     calculateSinglePayslipPreview,
   };
