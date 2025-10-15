@@ -35,33 +35,33 @@ export const useCompanyDetails = () => {
       setError(null);
 
       // Explicitly map the incoming details to ensure correct casing for Supabase
-      // This prevents any accidental camelCase from being sent.
+      // All column names in Supabase schema are lowercase.
       const payload = {
-        companyLegalName: details.companyLegalName,
-        companyTradingName: details.companyTradingName,
-        companyRegistrationNumber: details.companyRegistrationNumber,
-        companyTaxNumber: details.companyTaxNumber,
-        vatRegistrationNumber: details.vatRegistrationNumber,
+        companylegalname: details.companyLegalName,
+        companytradingname: details.companyTradingName,
+        companyregistrationnumber: details.companyRegistrationNumber,
+        companytaxnumber: details.companyTaxNumber,
+        vatregistrationnumber: details.vatRegistrationNumber,
         industry: details.industry,
-        payeReferenceNumber: details.payeReferenceNumber,
-        uifReferenceNumber: details.uifReferenceNumber,
-        sdlReferenceNumber: details.sdlReferenceNumber,
-        coidaRegistrationNumber: details.coidaRegistrationNumber,
-        physicalAddress: details.physicalAddress,
-        postalAddress: details.postalAddress,
-        mainContactNumber: details.mainContactNumber,
-        alternativeContactNumber: details.alternativeContactNumber,
-        companyEmail: details.companyEmail,
-        companyWebsite: details.companyWebsite,
-        bankName: details.bankName,
-        accountholdername: details.accountholdername, // CRITICAL: Ensure this is lowercase
-        accountnumber: details.accountNumber, // CRITICAL: Ensure this is lowercase
-        branchCode: details.branchCode,
-        accounttype: details.accountType, // CRITICAL: Ensure this is lowercase
-        logoUrl: details.logoUrl,
-        logoWidth: details.logoWidth,
-        logoHeight: details.logoHeight,
-        logoFit: details.logoFit,
+        payereferencenumber: details.payeReferenceNumber,
+        uifreferencenumber: details.uifReferenceNumber,
+        sdlreferencenumber: details.sdlReferenceNumber,
+        coidaregistrationnumber: details.coidaRegistrationNumber,
+        physicaladdress: details.physicalAddress,
+        postaladdress: details.postalAddress,
+        maincontactnumber: details.mainContactNumber,
+        alternativecontactnumber: details.alternativeContactNumber, // Corrected casing
+        companyemail: details.companyEmail,
+        companywebsite: details.companyWebsite,
+        bankname: details.bankName,
+        accountholdername: details.accountholdername,
+        accountnumber: details.accountNumber,
+        branchcode: details.branchCode,
+        accounttype: details.accountType,
+        logourl: details.logoUrl,
+        logowidth: details.logoWidth,
+        logoheight: details.logoHeight,
+        logofit: details.logoFit,
       };
 
       // Filter out undefined values from the payload to avoid issues with Supabase upsert
