@@ -13,20 +13,28 @@ export const useCompanyDetails = () => {
   const fetchCompanyDetails = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from("company_details")
-      .select("*")
-      .limit(1)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("company_details")
+        .select("*")
+        .limit(1)
+        .single();
 
-    if (error) {
-      console.error("Error fetching company details:", error);
-      setError(error);
-      setCompanyDetails(null); // Ensure companyDetails is null on error
-    } else {
-      setCompanyDetails(data);
+      if (error) {
+        console.error("Error fetching company details:", error);
+        setError(error);
+        setCompanyDetails(null); // Ensure companyDetails is null on error
+      } else {
+        setCompanyDetails(data);
+      }
+    } catch (err) {
+      console.error("Unhandled error in fetchCompanyDetails:", err);
+      setError(err);
+      setCompanyDetails(null);
+      showError('An unexpected error occurred while loading company details.');
+    } finally {
+      setIsLoading(false); // Ensure loading is always false
     }
-    setIsLoading(false);
   }, []);
 
   const upsertCompanyDetails = useCallback(

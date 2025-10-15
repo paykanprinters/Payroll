@@ -32,43 +32,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state change event:", event, "session:", session); // Debugging log
-      if (session) {
-        // Fetch user role from public.users table
-        const { data: profile, error } = await supabase
-          .from('users')
-          .select('id, email, name, role')
-          .eq('id', session.user.id)
-          .single();
+      try {
+        if (session) {
+          // Fetch user role from public.users table
+          const { data: profile, error } = await supabase
+            .from('users')
+            .select('id, email, name, role')
+            .eq('id', session.user.id)
+            .single();
 
-        if (error) {
-          console.error('Error fetching user profile:', error);
+          if (error) {
+            console.error('Error fetching user profile:', error);
+            setUser(null);
+            setIsAuthenticated(false);
+            showError('Failed to load user profile. Please try logging in again.');
+            navigate('/login', { replace: true }); // Redirect on profile fetch error
+          } else if (profile) {
+            setUser({
+              id: profile.id,
+              email: profile.email,
+              role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+              name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
+            });
+            setIsAuthenticated(true);
+          }
+        } else {
+          // This block handles SIGNED_OUT, INITIAL_SESSION (if no session), etc.
           setUser(null);
           setIsAuthenticated(false);
-          showError('Failed to load user profile. Please try logging in again.');
-          setIsLoadingAuth(false); // Set loading to false before navigating
-          navigate('/login', { replace: true }); // Redirect on profile fetch error
-        } else if (profile) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
-            name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
-          });
-          setIsAuthenticated(true);
-          setIsLoadingAuth(false); // Set loading to false after successful auth
+          // Only navigate to login if the event is explicitly SIGNED_OUT
+          // or if it's an initial session check and there's no session.
+          if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+            navigate('/login', { replace: true });
+          }
         }
-      } else {
-        // This block handles SIGNED_OUT, INITIAL_SESSION (if no session), etc.
+      } catch (err) {
+        console.error("Unhandled error in onAuthStateChange listener:", err);
+        showError('An unexpected error occurred during authentication state change.');
         setUser(null);
         setIsAuthenticated(false);
-        setIsLoadingAuth(false); // Set loading to false before navigating
-        // Only navigate to login if the event is explicitly SIGNED_OUT
-        // or if it's an initial session check and there's no session.
-        if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-          navigate('/login', { replace: true });
-        }
+        navigate('/login', { replace: true });
+      } finally {
+        setIsLoadingAuth(false); // Ensure loading is always false after processing auth state change
       }
-      // Removed redundant setIsLoadingAuth(false) here, as it's handled inside if/else
     });
 
     // Check initial session on mount
