@@ -14,6 +14,7 @@ export const useCompanyDetails = () => {
     setIsLoading(true);
     setError(null);
     try {
+      console.log("Attempting to fetch company details..."); // Added log
       const { data, error } = await supabase
         .from("company_details")
         .select("*")
@@ -21,9 +22,10 @@ export const useCompanyDetails = () => {
         .single();
 
       if (error) {
+        console.error("Supabase fetchCompanyDetails error:", error); // Added log
         // PGRST116 is returned when .single() finds 0 rows. This is expected for initial setup.
         if (error.code === "PGRST116") {
-          console.info("No company details found in database (expected for initial setup).");
+          console.info("No company details found in database (expected for initial setup). Setting companyDetails to null.");
           setCompanyDetails(null);
           setError(null); // Clear error for this expected scenario
         } else {
@@ -33,6 +35,7 @@ export const useCompanyDetails = () => {
           showError(`Failed to load company details: ${error.message}`);
         }
       } else {
+        console.log("Supabase fetchCompanyDetails success. Data:", data); // Added log
         setCompanyDetails(data);
       }
     } catch (err: any) {
@@ -86,6 +89,8 @@ export const useCompanyDetails = () => {
         Object.entries(payload).filter(([, value]) => value !== undefined)
       );
 
+      console.log("Attempting to upsert company details with payload:", cleanedPayload); // Added log
+
       const { data, error } = await supabase
         .from("company_details")
         .upsert(cleanedPayload) // Use the cleaned and explicitly mapped payload
@@ -93,10 +98,11 @@ export const useCompanyDetails = () => {
         .single();
 
       if (error) {
-        console.error("Error upserting company details:", error);
+        console.error("Supabase upsertCompanyDetails error:", error); // Added log
         showError(`Failed to save company details: ${error.message}`);
         setError(error);
       } else {
+        console.log("Supabase upsertCompanyDetails success. Data:", data); // Added log
         setCompanyDetails(data);
         showSuccess("Company details saved successfully!");
         window.dispatchEvent(new Event("companyDetailsUpdated")); // Notify other components
