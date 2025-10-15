@@ -35,7 +35,7 @@ export const useCompanyDetails = () => {
       setError(null);
 
       // Explicitly map the incoming details to ensure correct casing for Supabase
-      // This prevents any accidental camelCase 'accountHolderName' from being sent.
+      // This prevents any accidental camelCase from being sent.
       const payload = {
         companyLegalName: details.companyLegalName,
         companyTradingName: details.companyTradingName,
@@ -57,7 +57,7 @@ export const useCompanyDetails = () => {
         accountholdername: details.accountholdername, // CRITICAL: Ensure this is lowercase
         accountnumber: details.accountNumber, // CRITICAL: Ensure this is lowercase
         branchCode: details.branchCode,
-        accountType: details.accountType,
+        accounttype: details.accountType, // CRITICAL: Ensure this is lowercase
         logoUrl: details.logoUrl,
         logoWidth: details.logoWidth,
         logoHeight: details.logoHeight,
