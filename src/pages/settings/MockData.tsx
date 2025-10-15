@@ -107,19 +107,22 @@ const MockData: React.FC = () => {
     showSuccess("Mock data cleared successfully!");
   }, []); // No dependencies needed as it clears data
 
+  // This useEffect is now only for initial setup, not for reacting to toggle changes
   useEffect(() => {
-    // This effect runs on mount and whenever isMockDataEnabled, applyMockData, or clearMockData changes.
-    // Since applyMockData and clearMockData are wrapped in useCallback with empty dependency arrays,
-    // they are stable and won't cause this effect to re-run unnecessarily unless isMockDataEnabled changes.
-    if (isMockDataEnabled) {
+    const initialMockDataStatus = localStorage.getItem("isMockDataEnabled") === "true";
+    setIsMockDataEnabled(initialMockDataStatus);
+    // No need to call applyMockData/clearMockData here, as handleToggleChange will handle it on user interaction.
+    // This prevents a potential loop on initial render if other components also trigger updates.
+  }, []);
+
+
+  const handleToggleChange = (checked: boolean) => {
+    setIsMockDataEnabled(checked);
+    if (checked) {
       applyMockData();
     } else {
       clearMockData();
     }
-  }, [isMockDataEnabled, applyMockData, clearMockData]); // Corrected dependencies
-
-  const handleToggleChange = (checked: boolean) => {
-    setIsMockDataEnabled(checked);
   };
 
   return (
