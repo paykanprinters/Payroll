@@ -133,7 +133,7 @@ const Irp5ExportPage: React.FC = () => {
               IRP5 export functionality is currently disabled. Please enable it in{" "}
               <a href="/settings/tax-liabilities" className="underline font-semibold">Settings &gt; Tax Liabilities</a>.
             </CardDescription>
-          </CardDescription>
+          </CardHeader>
         </Card>
       )}
 
