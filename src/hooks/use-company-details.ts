@@ -37,6 +37,7 @@ export const useCompanyDetails = () => {
       // Explicitly map the incoming details to ensure correct casing for Supabase
       // All column names in Supabase schema are lowercase.
       const payload = {
+        id: '00000000-0000-0000-0000-000000000000', // Always include the fixed ID for upsert
         companylegalname: details.companyLegalName,
         companytradingname: details.companyTradingName,
         companyregistrationnumber: details.companyRegistrationNumber,
@@ -50,7 +51,7 @@ export const useCompanyDetails = () => {
         physicaladdress: details.physicalAddress,
         postaladdress: details.postalAddress,
         maincontactnumber: details.mainContactNumber,
-        alternativecontactnumber: details.alternativeContactNumber, // Corrected casing
+        alternativecontactnumber: details.alternativeContactNumber,
         companyemail: details.companyEmail,
         companywebsite: details.companyWebsite,
         bankname: details.bankName,
