@@ -1,15 +1,16 @@
 import { MockEmployee } from "../mock-data-interfaces";
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 export const generateMockEmployees = (): MockEmployee[] => [
   {
-    id: "EMP001",
-    personalId: "BIO1001", // New: Personal ID for clock-in system
+    id: uuidv4(), // Generate UUID
+    personalId: "BIO1001",
     firstName: "John",
     lastName: "Doe",
     email: "john.doe@acmecorp.co.za",
     jobTitle: "Software Engineer",
     salary: 45000,
-    hourlyRate: undefined, // Salaried
+    hourlyRate: undefined,
     startDate: "2022-01-15",
     idNumber: "9001015000087",
     phoneNumber: "0821234567",
@@ -41,17 +42,17 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "15 Tech Street, Unit 10, Johannesburg, 2001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
-    standardDailyHours: 8, // Added
+    standardDailyHours: 8,
   },
   {
-    id: "EMP002",
-    personalId: "BIO1002", // New: Personal ID for clock-in system
+    id: uuidv4(), // Generate UUID
+    personalId: "BIO1002",
     firstName: "Jane",
     lastName: "Smith",
     email: "jane.smith@acmecorp.co.za",
     jobTitle: "HR Manager",
     salary: 38000,
-    hourlyRate: undefined, // Salaried
+    hourlyRate: undefined,
     startDate: "2021-03-01",
     idNumber: "8505055000088",
     phoneNumber: "0712345678",
@@ -82,17 +83,17 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "22 Oak Avenue, Cape Town, 8001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
-    standardDailyHours: 8, // Added
+    standardDailyHours: 8,
   },
   {
-    id: "EMP003",
-    personalId: "BIO1003", // New: Personal ID for clock-in system
+    id: uuidv4(), // Generate UUID
+    personalId: "BIO1003",
     firstName: "Peter",
     lastName: "Jones",
     email: "peter.jones@acmecorp.co.za",
     jobTitle: "Accountant",
     salary: 32000,
-    hourlyRate: undefined, // Salaried
+    hourlyRate: undefined,
     startDate: "2023-07-20",
     idNumber: "9203035000089",
     phoneNumber: "0601112233",
@@ -123,16 +124,16 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "789 Finance Street, Durban, 4001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
-    standardDailyHours: 8, // Added
+    standardDailyHours: 8,
   },
   {
-    id: "EMP004",
-    personalId: "BIO1004", // New: Personal ID for clock-in system
+    id: uuidv4(), // Generate UUID
+    personalId: "BIO1004",
     firstName: "Sarah",
     lastName: "Brown",
     email: "sarah.brown@acmecorp.co.za",
     jobTitle: "Marketing Specialist",
-    salary: undefined, // Hourly
+    salary: undefined,
     hourlyRate: 150,
     startDate: "2022-11-10",
     idNumber: "9507075000090",
@@ -163,18 +164,18 @@ export const generateMockEmployees = (): MockEmployee[] => [
     molId: "MOL-SB-004",
     permanentAddress: "321 Creative Lane, Pretoria, 0001",
     paymentMode: "Bank Transfer",
-    payFrequency: "Weekly", // Changed to Weekly
-    standardDailyHours: 8, // Added
+    payFrequency: "Weekly",
+    standardDailyHours: 8,
   },
   {
-    id: "EMP005",
-    personalId: "BIO1005", // New: Personal ID for clock-in system
+    id: uuidv4(), // Generate UUID
+    personalId: "BIO1005",
     firstName: "David",
     lastName: "Green",
     email: "david.green@acmecorp.co.za",
     jobTitle: "Operations Manager",
     salary: 40000,
-    hourlyRate: undefined, // Salaried
+    hourlyRate: undefined,
     startDate: "2021-05-01",
     idNumber: "8802025000091",
     phoneNumber: "0798889900",
@@ -205,16 +206,16 @@ export const generateMockEmployees = (): MockEmployee[] => [
     permanentAddress: "65 Industrial Park, Port Elizabeth, 6001",
     paymentMode: "Bank Transfer",
     payFrequency: "Monthly",
-    standardDailyHours: 8, // Added
+    standardDailyHours: 8,
   },
   {
-    id: "EMP006",
-    personalId: "BIO1006", // New: Personal ID for clock-in system
+    id: uuidv4(), // Generate UUID
+    personalId: "BIO1006",
     firstName: "Emily",
     lastName: "White",
     email: "emily.white@acmecorp.co.za",
     jobTitle: "Customer Support",
-    salary: undefined, // Hourly
+    salary: undefined,
     hourlyRate: 120,
     startDate: "2023-02-28",
     idNumber: "9810105000092",
@@ -245,11 +246,11 @@ export const generateMockEmployees = (): MockEmployee[] => [
     molId: "MOL-EW-006",
     permanentAddress: "101 Help Desk Road, Bloemfontein, 9301",
     paymentMode: "Bank Transfer",
-    payFrequency: "Bi-Weekly", // Changed to Bi-Weekly
-    standardDailyHours: 8, // Added
+    payFrequency: "Bi-Weekly",
+    standardDailyHours: 8,
   },
   {
-    id: "EMP007",
+    id: uuidv4(), // Generate UUID
     personalId: "BIO1007",
     firstName: "Chris",
     lastName: "Taylor",
@@ -286,11 +287,11 @@ export const generateMockEmployees = (): MockEmployee[] => [
     molId: "MOL-CT-007",
     permanentAddress: "50 Storage Lane, Johannesburg, 2000",
     paymentMode: "Bank Transfer",
-    payFrequency: "Weekly", // New: Weekly paid hourly employee
+    payFrequency: "Weekly",
     standardDailyHours: 8,
   },
   {
-    id: "EMP008",
+    id: uuidv4(), // Generate UUID
     personalId: "BIO1008",
     firstName: "Anna",
     lastName: "Miller",
@@ -327,7 +328,7 @@ export const generateMockEmployees = (): MockEmployee[] => [
     molId: "MOL-AM-008",
     permanentAddress: "12 Admin Street, Cape Town, 8001",
     paymentMode: "Bank Transfer",
-    payFrequency: "Weekly", // New: Weekly paid hourly employee
-    standardDailyHours: 6, // Part-time hours
+    payFrequency: "Weekly",
+    standardDailyHours: 6,
   },
 ];

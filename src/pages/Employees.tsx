@@ -17,7 +17,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { PlusCircle, Edit, Trash2, Download } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Download, Loader2 } from "lucide-react"; // Added Loader2
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import {
@@ -50,7 +50,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Employees: React.FC = () => {
-  const { employees, setEmployees, companyDetails } = usePayrollProcessor();
+  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees, isMockDataEnabled } = usePayrollProcessor();
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -106,12 +106,11 @@ const Employees: React.FC = () => {
   useEffect(() => {
     loadEmployeeDataAndCharts();
     loadReportSettings();
-    window.addEventListener('allMockDataUpdated', loadEmployeeDataAndCharts); // Listen for allMockDataUpdated
-    window.addEventListener('employeesUpdated', loadEmployeeDataAndCharts); // Listen for specific employee updates
+    // Listen for employeesUpdated event from usePayrollProcessor
+    window.addEventListener('employeesUpdated', loadEmployeeDataAndCharts as EventListener);
     window.addEventListener('reportDesignUpdated', loadReportSettings);
     return () => {
-      window.removeEventListener('allMockDataUpdated', loadEmployeeDataAndCharts);
-      window.removeEventListener('employeesUpdated', loadEmployeeDataAndCharts);
+      window.removeEventListener('employeesUpdated', loadEmployeeDataAndCharts as EventListener);
       window.removeEventListener('reportDesignUpdated', loadReportSettings);
     };
   }, [loadEmployeeDataAndCharts, loadReportSettings]);
@@ -131,41 +130,16 @@ const Employees: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteEmployee = () => {
+  const confirmDeleteEmployee = async () => {
     if (employeeToDelete) {
-      const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
-      setEmployees(updatedEmployees);
-      localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
-      showSuccess(`Employee ${employeeToDelete.firstName} ${employeeToDelete.lastName} removed.`);
-      window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees })); // Dispatch specific event
+      await deleteEmployee(employeeToDelete.id, `${employeeToDelete.firstName} ${employeeToDelete.lastName}`);
       setIsDeleteDialogOpen(false);
       setEmployeeToDelete(null);
     }
   };
 
-  const handleSaveEmployee = (employeeData: EmployeeFormValues) => {
-    let updatedEmployees: MockEmployee[];
-    if (employeeData.id) {
-      updatedEmployees = employees.map(emp =>
-        emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
-      );
-    } else {
-      const newId = `EMP${String(employees.length + 1).padStart(3, '0')}`;
-      const newEmployee: MockEmployee = {
-        ...employeeData,
-        id: newId,
-        standardDailyHours: employeeData.standardDailyHours || 8,
-        firstName: employeeData.firstName,
-        lastName: employeeData.lastName,
-        email: employeeData.email,
-        jobTitle: employeeData.jobTitle,
-        startDate: employeeData.startDate,
-      };
-      updatedEmployees = [...employees, newEmployee];
-    }
-    setEmployees(updatedEmployees);
-    localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
-    window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees })); // Dispatch specific event
+  const handleSaveEmployee = async (employeeData: EmployeeFormValues) => {
+    await addOrUpdateEmployee(employeeData);
     setIsFormOpen(false);
     setEditingEmployee(null);
   };
@@ -202,6 +176,15 @@ const Employees: React.FC = () => {
   };
 
   const totalJobTitles = jobTitleDistribution.reduce((sum, entry) => sum + entry.value, 0);
+
+  if (isLoadingEmployees) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading employees...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -322,7 +305,7 @@ const Employees: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No employee data available. Please add employees using the button above or enable mock data in settings.
+              No employee data available. Please add employees using the button above or {isMockDataEnabled ? "ensure mock data is enabled in settings." : "add employees to the database."}
             </div>
           )}
         </CardContent>

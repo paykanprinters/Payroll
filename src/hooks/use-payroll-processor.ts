@@ -25,6 +25,7 @@ import { generatePayslipsForPeriod } from "@/lib/mock-data-generators";
 import { showError, showSuccess } from "@/utils/toast";
 import { useCompanyDetails } from "./use-company-details";
 import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
 
 // Define interfaces for fetched tax data
 interface TaxBracketPAYE {
@@ -63,8 +64,35 @@ const mockTaxTables: TaxTables = {
   },
 };
 
+// Helper to convert snake_case to camelCase for Supabase data
+const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+      newObj[camelKey] = obj[key];
+    }
+  }
+  return newObj as MockEmployee;
+};
+
+// Helper to convert camelCase to snake_case for Supabase inserts/updates
+const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+      newObj[snakeKey] = (obj as any)[key];
+    }
+  }
+  return newObj;
+};
+
 export const usePayrollProcessor = () => {
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
+  const [mockEmployees, setMockEmployees] = useState<MockEmployee[]>([]);
+  const [liveEmployees, setLiveEmployees] = useState<MockEmployee[]>([]); // New state for live employees
+  const [isLoadingLiveEmployees, setIsLoadingLiveEmployees] = useState<boolean>(true); // Loading state for live employees
+
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
@@ -135,6 +163,147 @@ export const usePayrollProcessor = () => {
     return supabaseCompanyDetails;
   }, [isMockDataEnabled, supabaseCompanyDetails, getMockCompanyDetailsFromLocalStorage]);
 
+  // Derived state for employees: switches between mock and live
+  const employees = useMemo(() => {
+    return isMockDataEnabled ? mockEmployees : liveEmployees;
+  }, [isMockDataEnabled, mockEmployees, liveEmployees]);
+
+  // --- Live Employee Data Management (Supabase) ---
+  const fetchLiveEmployees = useCallback(async () => {
+    if (isMockDataEnabled) return; // Do not fetch live employees if mock data is enabled
+
+    setIsLoadingLiveEmployees(true);
+    try {
+      console.log("usePayrollProcessor: Fetching live employees from Supabase...");
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .order('first_name', { ascending: true });
+
+      if (error) {
+        console.error("usePayrollProcessor: Error fetching live employees:", error);
+        showError("Failed to load live employee data.");
+        setLiveEmployees([]);
+      } else {
+        const camelCaseData = data.map(convertEmployeeKeysToCamelCase);
+        console.log("usePayrollProcessor: Live employees fetched:", camelCaseData);
+        setLiveEmployees(camelCaseData);
+      }
+    } catch (err) {
+      console.error("usePayrollProcessor: Unhandled error fetching live employees:", err);
+      showError("An unexpected error occurred while loading live employee data.");
+      setLiveEmployees([]);
+    } finally {
+      setIsLoadingLiveEmployees(false);
+    }
+  }, [isMockDataEnabled]);
+
+  const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    setIsLoadingLiveEmployees(true);
+    try {
+      const snakeCasePayload = convertEmployeeKeysToSnakeCase(employeeData);
+      console.log("usePayrollProcessor: Upserting live employee with payload:", snakeCasePayload);
+
+      const { data, error } = await supabase
+        .from('employees')
+        .upsert(snakeCasePayload, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("usePayrollProcessor: Error upserting live employee:", error);
+        showError(`Failed to save employee: ${error.message}`);
+      } else {
+        const camelCaseData = convertEmployeeKeysToCamelCase(data);
+        setLiveEmployees(prev => {
+          const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
+          if (existingIndex !== -1) {
+            return prev.map((emp, idx) => idx === existingIndex ? camelCaseData : emp);
+          } else {
+            return [...prev, camelCaseData];
+          }
+        });
+        showSuccess("Employee saved successfully!");
+      }
+    } catch (err) {
+      console.error("usePayrollProcessor: Unhandled error upserting live employee:", err);
+      showError("An unexpected error occurred while saving employee data.");
+    } finally {
+      setIsLoadingLiveEmployees(false);
+    }
+  }, []);
+
+  const deleteLiveEmployee = useCallback(async (employeeId: string) => {
+    setIsLoadingLiveEmployees(true);
+    try {
+      console.log("usePayrollProcessor: Deleting live employee with ID:", employeeId);
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', employeeId);
+
+      if (error) {
+        console.error("usePayrollProcessor: Error deleting live employee:", error);
+        showError(`Failed to delete employee: ${error.message}`);
+      } else {
+        setLiveEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+        showSuccess("Employee deleted successfully!");
+      }
+    } catch (err) {
+      console.error("usePayrollProcessor: Unhandled error deleting live employee:", err);
+      showError("An unexpected error occurred while deleting employee data.");
+    } finally {
+      setIsLoadingLiveEmployees(false);
+    }
+  }, []);
+
+  // --- Unified Employee Management Functions ---
+  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    if (isMockDataEnabled) {
+      setMockEmployees(prevEmployees => {
+        let updatedEmployees: MockEmployee[];
+        if (employeeData.id) {
+          updatedEmployees = prevEmployees.map(emp =>
+            emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
+          );
+        } else {
+          const newId = `EMP${String(prevEmployees.length + 1).padStart(3, '0')}`;
+          const newEmployee: MockEmployee = {
+            ...employeeData,
+            id: newId,
+            standardDailyHours: employeeData.standardDailyHours || 8,
+            firstName: employeeData.firstName,
+            lastName: employeeData.lastName,
+            email: employeeData.email,
+            jobTitle: employeeData.jobTitle,
+            startDate: employeeData.startDate,
+          };
+          updatedEmployees = [...prevEmployees, newEmployee];
+        }
+        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
+        showSuccess(employeeData.id ? "Mock employee updated successfully!" : "Mock employee added successfully!");
+        return updatedEmployees;
+      });
+    } else {
+      await upsertLiveEmployee(employeeData);
+    }
+  }, [isMockDataEnabled, upsertLiveEmployee]);
+
+  const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
+    if (isMockDataEnabled) {
+      setMockEmployees(prevEmployees => {
+        const updatedEmployees = prevEmployees.filter(emp => emp.id !== employeeId);
+        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
+        showSuccess(`Mock employee ${employeeName} removed.`);
+        return updatedEmployees;
+      });
+    } else {
+      await deleteLiveEmployee(employeeId);
+    }
+  }, [isMockDataEnabled, deleteLiveEmployee]);
+
 
   // Effect for initial load and when mock data is toggled (full re-parse)
   useEffect(() => {
@@ -144,7 +313,7 @@ export const usePayrollProcessor = () => {
       console.log("usePayrollProcessor: handleAllMockDataUpdate triggered. mockEnabled:", mockEnabled);
 
       if (mockEnabled) {
-        setEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
+        setMockEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
         setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
         setLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
         setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
@@ -155,7 +324,7 @@ export const usePayrollProcessor = () => {
         console.log("usePayrollProcessor: Mock data loaded from localStorage, mock tax tables applied.");
       } else {
         // Clear all mock data if mock data is not enabled
-        setEmployees([]);
+        setMockEmployees([]);
         setPayslips([]);
         setLoans([]);
         setSavingPlans([]);
@@ -171,12 +340,10 @@ export const usePayrollProcessor = () => {
     handleAllMockDataUpdate();
 
     window.addEventListener("allMockDataUpdated", handleAllMockDataUpdate);
-    // Removed: window.addEventListener("companyDetailsUpdated", refetchCompanyDetails); // <--- REMOVED THIS LINE
     return () => {
       window.removeEventListener("allMockDataUpdated", handleAllMockDataUpdate);
-      // Removed: window.removeEventListener("companyDetailsUpdated", refetchCompanyDetails); // <--- REMOVED THIS LINE
     };
-  }, []); // refetchCompanyDetails is no longer a dependency here, as it's not called.
+  }, []);
 
   // Fetch tax tables from Supabase only when mock data is NOT enabled
   const fetchLiveTaxTables = useCallback(async (year: number) => {
@@ -231,18 +398,25 @@ export const usePayrollProcessor = () => {
         window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
       };
     } else {
-      // If mock data is enabled, ensure live tax tables are not set
+      // If mock data is enabled, ensure mock tax tables are set
       setTaxTables(mockTaxTables);
       setIsLoadingTaxTables(false);
     }
   }, [isMockDataEnabled, fetchLiveTaxTables]);
+
+  // Effect to fetch live employees when mock data is disabled or on initial load
+  useEffect(() => {
+    if (!isMockDataEnabled) {
+      fetchLiveEmployees();
+    }
+  }, [isMockDataEnabled, fetchLiveEmployees]);
 
 
   // Individual listeners for specific data updates
   useEffect(() => {
     const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
       if (isMockDataEnabled) {
-        setEmployees(event.detail);
+        setMockEmployees(event.detail);
         console.log("usePayrollProcessor: employeesUpdated event received (mock data).");
       }
     };
@@ -447,7 +621,8 @@ export const usePayrollProcessor = () => {
 
   return {
     employees,
-    setEmployees,
+    addOrUpdateEmployee, // Expose new unified function
+    deleteEmployee, // Expose new unified function
     payslips,
     loans,
     savingPlans,
@@ -459,6 +634,7 @@ export const usePayrollProcessor = () => {
     isMockDataEnabled, // Expose isMockDataEnabled
     taxTables, // Expose taxTables
     isLoadingTaxTables, // Expose loading state for tax tables
+    isLoadingEmployees: isMockDataEnabled ? false : isLoadingLiveEmployees, // Unified loading state for employees
     runPayrollProcess,
     calculateSinglePayslipPreview,
   };
