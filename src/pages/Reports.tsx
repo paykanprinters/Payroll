@@ -34,7 +34,7 @@ const Reports: React.FC = () => {
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
-  const loadReportData = useCallback(() => {
+  const loadReportData = React.useCallback(() => {
     // Aggregate payroll data by month (simplified for mock data)
     const monthlyDataMap = new Map<string, { gross: number; net: number }>();
     payslips.forEach(p => {

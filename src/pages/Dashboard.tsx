@@ -27,11 +27,13 @@ import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format } from "date-fns";
 import ToDoList from "@/components/ToDoList";
+import { useToDosData } from "@/hooks/use-todos-data"; // Import useToDosData
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
-  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos } = usePayrollProcessor(); // Get toDos
+  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos: initialToDos } = usePayrollProcessor(); // Get toDos
+  const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled); // Use useToDosData
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);

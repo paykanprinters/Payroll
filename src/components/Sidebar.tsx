@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToDosData } from "@/hooks/use-todos-data";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 interface NavLinkProps {
   to: string;
@@ -71,11 +72,11 @@ interface SidebarProps {
   setIsCollapsed: (collapsed: boolean) => void;
   companyDetails: MockCompanyDetails | null; // This prop is the source of truth
   isMockDataEnabled: boolean; // Keep this prop for other potential mock data indicators if needed
+  pendingToDosCount: number; // New prop for pending to-dos
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyDetails, isMockDataEnabled }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyDetails, isMockDataEnabled, pendingToDosCount }) => {
   const isMobile = useIsMobile();
-  const { pendingCount } = useToDosData();
   const { isAuthenticated, isLoadingAuth } = useAuth();
 
   // Always use the companyDetails prop for display
@@ -92,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingCount },
+    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/timesheet", icon: Clock, label: "Timesheet" },
     { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },

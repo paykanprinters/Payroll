@@ -26,6 +26,8 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { useSavingPlansData } from "@/hooks/use-saving-plans-data"; // Import useSavingPlansData
 
 const savingPlanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -40,8 +42,9 @@ type SavingPlanFormValues = z.infer<typeof savingPlanSchema>;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const Savings: React.FC = () => {
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
+  const { employees, savingPlans: initialSavingPlans, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialSavingPlans, isMockDataEnabled from usePayrollProcessor
+  const { savingPlans, getEmployeeName, addSavingPlan } = useSavingPlansData(initialSavingPlans, employees, isMockDataEnabled); // Pass initialSavingPlans, employees, isMockDataEnabled to useSavingPlansData
+
   const [totalSavingsData, setTotalSavingsData] = useState<{ name: string; amount: number }[]>([]);
   const [savingsByFrequencyData, setSavingsByFrequencyData] = useState<{ name: string; value: number }[]>([]);
 
@@ -58,28 +61,17 @@ const Savings: React.FC = () => {
     },
   });
 
-  const loadData = () => {
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    if (storedEmployees) {
-      setEmployees(JSON.parse(storedEmployees));
-    } else {
-      setEmployees([]);
-    }
-
-    const storedSavingPlans = localStorage.getItem("mockSavingPlans");
-    if (storedSavingPlans) {
-      const loadedSavingPlans: SavingPlan[] = JSON.parse(storedSavingPlans);
-      setSavingPlans(loadedSavingPlans);
-
+  useEffect(() => {
+    if (savingPlans.length > 0) {
       // Calculate total savings for BarChart
-      const totalAmount = loadedSavingPlans.reduce((sum, plan) => sum + plan.amount, 0);
+      const totalAmount = savingPlans.reduce((sum, plan) => sum + plan.amount, 0);
       setTotalSavingsData([
         { name: "Total Active Savings", amount: totalAmount },
       ]);
 
       // Calculate savings by frequency for PieChart
       const frequencyMap = new Map<string, number>();
-      loadedSavingPlans.forEach(plan => {
+      savingPlans.forEach(plan => {
         frequencyMap.set(plan.frequency, (frequencyMap.get(plan.frequency) || 0) + 1);
       });
       setSavingsByFrequencyData(
@@ -87,42 +79,14 @@ const Savings: React.FC = () => {
       );
 
     } else {
-      setSavingPlans([]);
       setTotalSavingsData([]);
       setSavingsByFrequencyData([]);
     }
-  };
-
-  useEffect(() => {
-    loadData();
-    window.addEventListener('allMockDataUpdated', loadData); // Listen to allMockDataUpdated
-    return () => {
-      window.removeEventListener('allMockDataUpdated', loadData);
-    };
-  }, []);
-
-  const getEmployeeName = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
-  };
+  }, [savingPlans]);
 
   const onSubmit = (data: SavingPlanFormValues) => {
-    const newSavingPlan: SavingPlan = {
-      id: `SAV-${Date.now()}`,
-      employeeId: data.employeeId,
-      amount: data.amount,
-      frequency: data.frequency,
-      startDate: data.startDate,
-      endDate: data.endDate || undefined,
-      status: "active",
-    };
-
-    const updatedSavingPlans = [...savingPlans, newSavingPlan];
-    setSavingPlans(updatedSavingPlans);
-    localStorage.setItem("mockSavingPlans", JSON.stringify(updatedSavingPlans));
-    showSuccess("Savings plan added successfully!");
+    addSavingPlan(data);
     form.reset();
-    window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: updatedSavingPlans })); // Dispatch specific event
   };
 
   // Helper for PieChart legend formatter

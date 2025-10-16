@@ -2,141 +2,69 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  format,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  isWithinInterval,
-  parseISO,
-  isSameDay,
-} from "date-fns";
-import {
-  MockEmployee,
   MockPayslip,
   Loan,
   SavingPlan,
   LeaveEntry,
   TimesheetEntry,
   MockCompanyDetails,
-  ToDoEntry, // Import ToDoEntry
+  ToDoEntry,
 } from "@/lib/mock-data-interfaces";
-import { generatePayslipsForPeriod } from "@/lib/mock-data-generators";
-import { showError, showSuccess } from "@/utils/toast";
 import { useCompanyDetails } from "./use-company-details";
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
-import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
+import { useEmployeesData } from "./use-employees-data"; // New import
+import { useTaxTables } from "./use-tax-tables"; // New import
+import { usePayrollProcessingLogic } from "./use-payroll-processing-logic"; // New import
 
-// Define interfaces for fetched tax data
-interface TaxBracketPAYE {
-  min_income: number;
-  max_income: number | null;
-  rate: number;
-  deduction: number;
-}
-
-interface TaxRatesUIFSDL {
-  uif_rate: number;
-  uif_cap: number;
-  sdl_rate: number;
-}
-
-export interface TaxTables {
-  payeBrackets: TaxBracketPAYE[];
-  uifSdlRates: TaxRatesUIFSDL | null;
-}
-
-// Define mock tax tables for when mock data is enabled
-const mockTaxTables: TaxTables = {
-  payeBrackets: [
-    { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
-    { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
-    { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
-    { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
-    { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
-    { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
-    { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
-  ],
-  uifSdlRates: {
-    uif_rate: 0.01,
-    uif_cap: 177.12, // Monthly cap
-    sdl_rate: 0.01,
-  },
-};
-
-// Helper to convert snake_case to camelCase for Supabase data
-const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as MockEmployee;
-};
-
-// Helper to convert camelCase to snake_case for Supabase inserts/updates
-const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+// Re-export TaxTables interface from use-tax-tables
+export type { TaxTables } from "./use-tax-tables";
 
 export const usePayrollProcessor = () => {
-  const [mockEmployees, setMockEmployees] = useState<MockEmployee[]>([]);
-  const [liveEmployees, setLiveEmployees] = useState<MockEmployee[]>([]); // New state for live employees
-  const [isLoadingLiveEmployees, setIsLoadingLiveEmployees] = useState<boolean>(true); // Loading state for live employees
+  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(false);
 
+  // Orchestrate other data hooks
+  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails();
+  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData(isMockDataEnabled);
+  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables(isMockDataEnabled);
+
+  // Local states for mock data that are not yet migrated to dedicated hooks
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
   const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
-  const [toDos, setToDos] = useState<ToDoEntry[]>([]); // Add toDos state
-  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(false);
-  const [taxTables, setTaxTables] = useState<TaxTables | null>(null); // New state for tax tables
-  const [isLoadingTaxTables, setIsLoadingTaxTables] = useState<boolean>(false); // Loading state for tax tables
+  const [toDos, setToDos] = useState<ToDoEntry[]>([]);
 
-  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails();
-
-  // Load mock data from localStorage for company details
-  const getMockCompanyDetailsFromLocalStorage = useCallback((): MockCompanyDetails | null => {
-    if (!isMockDataEnabled) return null; // Only return mock details if enabled
-    const mockCompanyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-    const mockCompanyTradingName = localStorage.getItem('companyTradingName') || "";
-    const mockCompanyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
-    const mockCompanyTaxNumber = localStorage.getItem('companyTaxNumber') || "";
-    const mockVatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
-    const mockIndustry = localStorage.getItem('industry') || "";
-    const mockPayeReferenceNumber = localStorage.getItem('payeReferenceNumber') || "";
-    const mockUifReferenceNumber = localStorage.getItem('uifReferenceNumber') || "";
-    const mockSdlReferenceNumber = localStorage.getItem('sdlReferenceNumber') || "";
-    const mockCoidaRegistrationNumber = localStorage.getItem('coidaRegistrationNumber') || "";
-    const mockPhysicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
-    const mockPostalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
-    const mockMainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-    const mockAlternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
-    const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-    const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.acmecorp.co.za";
-    const mockBankName = localStorage.getItem('bankName') || "";
-    const mockAccountholdername = localStorage.getItem('accountholdername') || "";
-    const mockAccountNumber = localStorage.getItem('accountNumber') || "";
-    const mockBranchCode = localStorage.getItem('branchCode') || "";
-    const mockAccountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
-    const mockLogoUrl = localStorage.getItem('companyLogoUrl') || '';
-    const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
-    const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-    const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
-
-    console.log("usePayrollProcessor: getMockCompanyDetailsFromLocalStorage - isMockDataEnabled:", isMockDataEnabled);
+  // Derived state for companyDetails: always reflects the correct source
+  const companyDetails = useMemo(() => {
     if (isMockDataEnabled) {
-      const mockDetails = {
+      // For mock data, reconstruct company details from localStorage
+      const mockCompanyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
+      const mockCompanyTradingName = localStorage.getItem('companyTradingName') || "";
+      const mockCompanyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
+      const mockCompanyTaxNumber = localStorage.getItem('companyTaxNumber') || "";
+      const mockVatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
+      const mockIndustry = localStorage.getItem('industry') || "";
+      const mockPayeReferenceNumber = localStorage.getItem('payeReferenceNumber') || "";
+      const mockUifReferenceNumber = localStorage.getItem('uifReferenceNumber') || "";
+      const mockSdlReferenceNumber = localStorage.getItem('sdlReferenceNumber') || "";
+      const mockCoidaRegistrationNumber = localStorage.getItem('coidaRegistrationNumber') || "";
+      const mockPhysicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
+      const mockPostalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
+      const mockMainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
+      const mockAlternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
+      const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
+      const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.acmecorp.co.za";
+      const mockBankName = localStorage.getItem('bankName') || "";
+      const mockAccountholdername = localStorage.getItem('accountholdername') || "";
+      const mockAccountNumber = localStorage.getItem('accountNumber') || "";
+      const mockBranchCode = localStorage.getItem('branchCode') || "";
+      const mockAccountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
+      const mockLogoUrl = localStorage.getItem('companyLogoUrl') || '';
+      const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+      const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+      const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+
+      return {
         companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
         companyTaxNumber: mockCompanyTaxNumber, vatRegistrationNumber: mockVatRegistrationNumber, industry: mockIndustry,
         payeReferenceNumber: mockPayeReferenceNumber, uifReferenceNumber: mockUifReferenceNumber, sdlReferenceNumber: mockSdlReferenceNumber,
@@ -144,320 +72,84 @@ export const usePayrollProcessor = () => {
         companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
         branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
       };
-      console.log("usePayrollProcessor: Returning mock company details:", mockDetails);
-      return mockDetails;
     }
-    console.log("usePayrollProcessor: Mock data not enabled, returning null for mock details.");
-    return null;
-  }, [isMockDataEnabled]); // Dependency on isMockDataEnabled
-
-  // Derived state for companyDetails: always reflects the correct source
-  const companyDetails = useMemo(() => {
-    console.log("usePayrollProcessor: Recalculating derived companyDetails. isMockDataEnabled:", isMockDataEnabled, "supabaseCompanyDetails:", supabaseCompanyDetails);
-    if (isMockDataEnabled) {
-      const mockDetails = getMockCompanyDetailsFromLocalStorage();
-      console.log("usePayrollProcessor: Derived companyDetails (mock):", mockDetails);
-      return mockDetails;
-    }
-    console.log("usePayrollProcessor: Derived companyDetails (Supabase):", supabaseCompanyDetails);
     return supabaseCompanyDetails;
-  }, [isMockDataEnabled, supabaseCompanyDetails, getMockCompanyDetailsFromLocalStorage]);
+  }, [isMockDataEnabled, supabaseCompanyDetails]);
 
-  // Derived state for employees: switches between mock and live
-  const employees = useMemo(() => {
-    return isMockDataEnabled ? mockEmployees : liveEmployees;
-  }, [isMockDataEnabled, mockEmployees, liveEmployees]);
-
-  // --- Live Employee Data Management (Supabase) ---
-  const fetchLiveEmployees = useCallback(async () => {
-    if (isMockDataEnabled) return; // Do not fetch live employees if mock data is enabled
-
-    setIsLoadingLiveEmployees(true);
-    try {
-      console.log("usePayrollProcessor: Fetching live employees from Supabase...");
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('first_name', { ascending: true });
-
-      if (error) {
-        console.error("usePayrollProcessor: Error fetching live employees:", error);
-        showError("Failed to load live employee data.");
-        setLiveEmployees([]);
-      } else {
-        const camelCaseData = data.map(convertEmployeeKeysToCamelCase);
-        console.log("usePayrollProcessor: Live employees fetched:", camelCaseData);
-        setLiveEmployees(camelCaseData);
-      }
-    } catch (err) {
-      console.error("usePayrollProcessor: Unhandled error fetching live employees:", err);
-      showError("An unexpected error occurred while loading live employee data.");
-      setLiveEmployees([]);
-    } finally {
-      setIsLoadingLiveEmployees(false);
-    }
-  }, [isMockDataEnabled]);
-
-  const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
-    setIsLoadingLiveEmployees(true);
-    try {
-      const snakeCasePayload = convertEmployeeKeysToSnakeCase(employeeData);
-      console.log("usePayrollProcessor: Upserting live employee with payload:", snakeCasePayload);
-
-      const { data, error } = await supabase
-        .from('employees')
-        .upsert(snakeCasePayload, { onConflict: 'id' })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("usePayrollProcessor: Error upserting live employee:", error);
-        showError(`Failed to save employee: ${error.message}`);
-      } else {
-        const camelCaseData = convertEmployeeKeysToCamelCase(data);
-        setLiveEmployees(prev => {
-          const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
-          if (existingIndex !== -1) {
-            return prev.map((emp, idx) => idx === existingIndex ? camelCaseData : emp);
-          } else {
-            return [...prev, camelCaseData];
-          }
-        });
-        showSuccess("Employee saved successfully!");
-      }
-    } catch (err) {
-      console.error("usePayrollProcessor: Unhandled error upserting live employee:", err);
-      showError("An unexpected error occurred while saving employee data.");
-    } finally {
-      setIsLoadingLiveEmployees(false);
-    }
-  }, []);
-
-  const deleteLiveEmployee = useCallback(async (employeeId: string) => {
-    setIsLoadingLiveEmployees(true);
-    try {
-      console.log("usePayrollProcessor: Deleting live employee with ID:", employeeId);
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', employeeId);
-
-      if (error) {
-        console.error("usePayrollProcessor: Error deleting live employee:", error);
-        showError(`Failed to delete employee: ${error.message}`);
-      } else {
-        setLiveEmployees(prev => prev.filter(emp => emp.id !== employeeId));
-        showSuccess("Employee deleted successfully!");
-      }
-    } catch (err) {
-      console.error("usePayrollProcessor: Unhandled error deleting live employee:", err);
-      showError("An unexpected error occurred while deleting employee data.");
-    } finally {
-      setIsLoadingLiveEmployees(false);
-    }
-  }, []);
-
-  // --- Unified Employee Management Functions ---
-  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
-    if (isMockDataEnabled) {
-      setMockEmployees(prevEmployees => {
-        let updatedEmployees: MockEmployee[];
-        if (employeeData.id) {
-          updatedEmployees = prevEmployees.map(emp =>
-            emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
-          );
-        } else {
-          const newId = `EMP${String(prevEmployees.length + 1).padStart(3, '0')}`;
-          const newEmployee: MockEmployee = {
-            ...employeeData,
-            id: newId,
-            standardDailyHours: employeeData.standardDailyHours || 8,
-            firstName: employeeData.firstName,
-            lastName: employeeData.lastName,
-            email: employeeData.email,
-            jobTitle: employeeData.jobTitle,
-            startDate: employeeData.startDate,
-          };
-          updatedEmployees = [...prevEmployees, newEmployee];
-        }
-        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
-        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
-        showSuccess(employeeData.id ? "Mock employee updated successfully!" : "Mock employee added successfully!");
-        return updatedEmployees;
-      });
-    } else {
-      await upsertLiveEmployee(employeeData);
-    }
-  }, [isMockDataEnabled, upsertLiveEmployee]);
-
-  const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
-    if (isMockDataEnabled) {
-      setMockEmployees(prevEmployees => {
-        const updatedEmployees = prevEmployees.filter(emp => emp.id !== employeeId);
-        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
-        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
-        showSuccess(`Mock employee ${employeeName} removed.`);
-        return updatedEmployees;
-      });
-    } else {
-      await deleteLiveEmployee(employeeId);
-    }
-  }, [isMockDataEnabled, deleteLiveEmployee]);
-
+  // Payroll processing logic
+  const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
+    employees,
+    payslips,
+    loans,
+    savingPlans,
+    leaveRecords,
+    timesheets,
+    taxTables,
+    setPayslips,
+    setLoans,
+    setSavingPlans,
+    setTimesheets,
+  );
 
   // Effect for initial load and when mock data is toggled (full re-parse)
   useEffect(() => {
-    const handleAllMockDataUpdate = () => {
+    const handleMockDataToggle = () => {
       const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
       setIsMockDataEnabled(mockEnabled);
-      console.log("usePayrollProcessor: handleAllMockDataUpdate triggered. mockEnabled:", mockEnabled);
+      console.log("usePayrollProcessor: handleMockDataToggle triggered. mockEnabled:", mockEnabled);
 
       if (mockEnabled) {
-        setMockEmployees(JSON.parse(localStorage.getItem("mockEmployees") || "[]"));
+        // Load all mock data from localStorage
         setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
         setLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
         setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
         setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
         setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
         setToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]"));
-        setTaxTables(mockTaxTables); // Set mock tax tables when mock data is enabled
-        console.log("usePayrollProcessor: Mock data loaded from localStorage, mock tax tables applied.");
+        console.log("usePayrollProcessor: All mock data loaded from localStorage.");
       } else {
-        // Clear all mock data if mock data is not enabled
-        setMockEmployees([]);
+        // Clear all mock data states
         setPayslips([]);
         setLoans([]);
         setSavingPlans([]);
         setLeaveRecords([]);
         setTimesheets([]);
         setToDos([]);
-        setTaxTables(null); // Clear mock tax tables
-        console.log("usePayrollProcessor: Mock data cleared.");
+        console.log("usePayrollProcessor: All mock data states cleared.");
       }
     };
 
     // Initial load
-    handleAllMockDataUpdate();
+    handleMockDataToggle();
 
-    window.addEventListener("allMockDataUpdated", handleAllMockDataUpdate);
+    // Listen for general mock data update event
+    window.addEventListener("allMockDataUpdated", handleMockDataToggle);
     return () => {
-      window.removeEventListener("allMockDataUpdated", handleAllMockDataUpdate);
+      window.removeEventListener("allMockDataUpdated", handleMockDataToggle);
     };
   }, []);
 
-  // Fetch tax tables from Supabase only when mock data is NOT enabled
-  const fetchLiveTaxTables = useCallback(async (year: number) => {
-    if (isMockDataEnabled) return; // Do not fetch live tax tables if mock data is enabled
-
-    setIsLoadingTaxTables(true);
-    try {
-      const { data: payeData, error: payeError } = await supabase
-        .from('tax_brackets_paye')
-        .select('*')
-        .eq('tax_year', year)
-        .order('min_income', { ascending: true });
-
-      const { data: uifSdlData, error: uifSdlError } = await supabase
-        .from('tax_rates_uif_sdl')
-        .select('*')
-        .eq('tax_year', year)
-        .single();
-
-      if (payeError || uifSdlError) {
-        console.error("Error fetching live tax tables:", payeError || uifSdlError);
-        setTaxTables(null);
-        showError("Failed to load live tax tables for payroll calculations.");
-      } else {
-        setTaxTables({
-          payeBrackets: payeData || [],
-          uifSdlRates: uifSdlData || null,
-        });
-        console.log(`Live tax tables for ${year} loaded successfully.`);
-      }
-    } catch (err) {
-      console.error("Unhandled error fetching live tax tables:", err);
-      showError("An unexpected error occurred while loading live tax tables.");
-      setTaxTables(null);
-    } finally {
-      setIsLoadingTaxTables(false);
-    }
-  }, [isMockDataEnabled]); // Dependency on isMockDataEnabled
-
-  // Effect to load tax tables on mount and when taxTablesUpdated event is dispatched
+  // Individual listeners for specific data updates (only for mock data)
   useEffect(() => {
-    if (!isMockDataEnabled) { // Only fetch live tax tables if mock data is not enabled
-      const currentTaxYear = new Date().getFullYear(); // Or determine based on fiscal year
-      fetchLiveTaxTables(currentTaxYear);
-
-      const handleTaxTablesUpdate = () => {
-        fetchLiveTaxTables(currentTaxYear); // Re-fetch if the event is triggered
-      };
-
-      window.addEventListener('taxTablesUpdated', handleTaxTablesUpdate);
-      return () => {
-        window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
-      };
-    } else {
-      // If mock data is enabled, ensure mock tax tables are set
-      setTaxTables(mockTaxTables);
-      setIsLoadingTaxTables(false);
-    }
-  }, [isMockDataEnabled, fetchLiveTaxTables]);
-
-  // Effect to fetch live employees when mock data is disabled or on initial load
-  useEffect(() => {
-    if (!isMockDataEnabled) {
-      fetchLiveEmployees();
-    }
-  }, [isMockDataEnabled, fetchLiveEmployees]);
-
-
-  // Individual listeners for specific data updates
-  useEffect(() => {
-    const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
-      if (isMockDataEnabled) {
-        setMockEmployees(event.detail);
-        console.log("usePayrollProcessor: employeesUpdated event received (mock data).");
-      }
-    };
     const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => {
-      if (isMockDataEnabled) {
-        setPayslips(event.detail);
-        console.log("usePayrollProcessor: payslipsUpdated event received (mock data).");
-      }
+      if (isMockDataEnabled) setPayslips(event.detail);
     };
     const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {
-      if (isMockDataEnabled) {
-        setLoans(event.detail);
-        console.log("usePayrollProcessor: loansUpdated event received (mock data).");
-      }
+      if (isMockDataEnabled) setLoans(event.detail);
     };
     const handleSavingPlansUpdated = (event: CustomEvent<SavingPlan[]>) => {
-      if (isMockDataEnabled) {
-        setSavingPlans(event.detail);
-        console.log("usePayrollProcessor: savingPlansUpdated event received (mock data).");
-      }
+      if (isMockDataEnabled) setSavingPlans(event.detail);
     };
     const handleLeaveRecordsUpdated = (event: CustomEvent<LeaveEntry[]>) => {
-      if (isMockDataEnabled) {
-        setLeaveRecords(event.detail);
-        console.log("usePayrollProcessor: leaveRecordsUpdated event received (mock data).");
-      }
+      if (isMockDataEnabled) setLeaveRecords(event.detail);
     };
     const handleTimesheetsUpdated = (event: CustomEvent<TimesheetEntry[]>) => {
-      if (isMockDataEnabled) {
-        setTimesheets(event.detail);
-        console.log("usePayrollProcessor: timesheetsUpdated event received (mock data).");
-      }
+      if (isMockDataEnabled) setTimesheets(event.detail);
     };
     const handleToDosUpdated = (event: CustomEvent<ToDoEntry[]>) => {
-      if (isMockDataEnabled) {
-        setToDos(event.detail);
-        console.log("usePayrollProcessor: toDosUpdated event received (mock data).");
-      }
+      if (isMockDataEnabled) setToDos(event.detail);
     };
 
-    window.addEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
     window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
     window.addEventListener("loansUpdated", handleLoansUpdated as EventListener);
     window.addEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
@@ -466,7 +158,6 @@ export const usePayrollProcessor = () => {
     window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
 
     return () => {
-      window.removeEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
       window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
       window.removeEventListener("loansUpdated", handleLoansUpdated as EventListener);
       window.removeEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
@@ -474,167 +165,24 @@ export const usePayrollProcessor = () => {
       window.removeEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
       window.removeEventListener("toDosUpdated", handleToDosUpdated as EventListener);
     };
-  }, [isMockDataEnabled]); // Dependencies for individual listeners
-
-  const runPayrollProcess = useCallback(
-    (periodStart: Date, periodEnd: Date) => {
-      if (!employees.length) {
-        showError("No employees found to run payroll.");
-        return;
-      }
-      if (!taxTables) {
-        showError("Tax tables not loaded. Cannot run payroll.");
-        return;
-      }
-
-      // Deep copy current mutable states for processing
-      const currentLoansCopy: Loan[] = JSON.parse(JSON.stringify(loans));
-      const currentSavingPlansCopy: SavingPlan[] = JSON.parse(JSON.stringify(savingPlans));
-      const currentTimesheetsCopy: TimesheetEntry[] = JSON.parse(JSON.stringify(timesheets));
-
-      // 1. Generate payslips for the period
-      const newPayslips = generatePayslipsForPeriod(
-        employees,
-        currentLoansCopy, // Pass mutable copy
-        currentSavingPlansCopy, // Pass mutable copy
-        leaveRecords,
-        currentTimesheetsCopy,
-        periodStart,
-        periodEnd,
-        taxTables // Pass tax tables
-      );
-
-      if (newPayslips.length === 0) {
-        showError("No payslips generated for this period. Check employee data and timesheets.");
-        return;
-      }
-
-      // 2. Update YTD for new payslips and merge with existing
-      const updatedAllPayslips = [...payslips];
-      newPayslips.forEach(newPayslip => {
-        const employeePayslips = updatedAllPayslips.filter(p => p.employeeId === newPayslip.employeeId);
-        const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
-
-        newPayslip.ytdGrossEarnings = (lastPayslipForEmployee?.ytdGrossEarnings || 0) + newPayslip.grossEarnings;
-        newPayslip.ytdTotalDeductions = (lastPayslipForEmployee?.ytdTotalDeductions || 0) + newPayslip.totalDeductions;
-
-        // Remove any existing payslip for the same employee and period before adding the new one
-        const existingPayslipIndex = updatedAllPayslips.findIndex(p =>
-          p.employeeId === newPayslip.employeeId &&
-          p.payPeriod === newPayslip.payPeriod
-        );
-        if (existingPayslipIndex !== -1) {
-          updatedAllPayslips[existingPayslipIndex] = newPayslip;
-        } else {
-          updatedAllPayslips.push(newPayslip);
-        }
-      });
-
-      // 3. Lock timesheets for the processed period
-      const updatedTimesheets = currentTimesheetsCopy.map((ts) => {
-        const tsDate = parseISO(ts.date);
-        if (
-          ts.employeeId &&
-          ts.status !== "Locked" && // Only lock if not already locked
-          isWithinInterval(tsDate, { start: periodStart, end: periodEnd })
-        ) {
-          const auditEntry = {
-            action: "Status changed to Locked (Payroll Run)",
-            timestamp: new Date().toISOString(),
-            user: "System (Payroll)",
-            captureMethod: "System" as const,
-          };
-          return {
-            ...ts,
-            status: "Locked" as const,
-            auditLog: [...(ts.auditLog || []), auditEntry],
-          };
-        }
-        return ts;
-      });
-
-      // 4. Save all updated data to localStorage
-      localStorage.setItem("mockPayslips", JSON.stringify(updatedAllPayslips));
-      localStorage.setItem("mockLoans", JSON.stringify(currentLoansCopy)); // Save updated loans
-      localStorage.setItem("mockSavingPlans", JSON.stringify(currentSavingPlansCopy));
-      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
-
-      // 5. Update state and notify components
-      setPayslips(updatedAllPayslips);
-      setLoans(currentLoansCopy); // Update loans state
-      setSavingPlans(currentSavingPlansCopy);
-      setTimesheets(updatedTimesheets);
-      // Dispatch specific events instead of a general 'mockDataUpdated'
-      window.dispatchEvent(new CustomEvent('payslipsUpdated', { detail: updatedAllPayslips }));
-      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: currentLoansCopy }));
-      window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: currentSavingPlansCopy }));
-      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets }));
-      showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
-    },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables]
-  );
-
-  const calculateSinglePayslipPreview = useCallback(
-    (employeeId: string, periodStart: Date, periodEnd: Date): MockPayslip | null => {
-      const employee = employees.find((emp) => emp.id === employeeId);
-      if (!employee) {
-        showError("Employee not found for payslip preview.");
-        return null;
-      }
-      if (!taxTables) {
-        showError("Tax tables not loaded. Cannot generate payslip preview.");
-        return null;
-      }
-
-      // Deep copy current mutable states for preview (don't modify actual data)
-      const currentLoansCopy: Loan[] = JSON.parse(JSON.stringify(loans));
-      const currentSavingPlansCopy: SavingPlan[] = JSON.parse(JSON.stringify(savingPlans));
-      const currentTimesheetsCopy: TimesheetEntry[] = JSON.parse(JSON.stringify(timesheets));
-
-      const previewPayslips = generatePayslipsForPeriod(
-        [employee], // Only generate for the selected employee
-        currentLoansCopy,
-        currentSavingPlansCopy,
-        leaveRecords,
-        currentTimesheetsCopy,
-        periodStart,
-        periodEnd,
-        taxTables // Pass tax tables
-      );
-
-      if (previewPayslips.length > 0) {
-        const previewPayslip = previewPayslips[0];
-
-        // Calculate YTD for the preview based on existing payslips
-        const employeePayslips = payslips.filter(p => p.employeeId === employeeId);
-        const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
-
-        previewPayslip.ytdGrossEarnings = (lastPayslipForEmployee?.ytdGrossEarnings || 0) + previewPayslip.grossEarnings;
-        previewPayslip.ytdTotalDeductions = (lastPayslipForEmployee?.ytdTotalDeductions || 0) + previewPayslip.totalDeductions;
-
-        return previewPayslip;
-      }
-      return null;
-    },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables]
-  );
+  }, [isMockDataEnabled]);
 
   return {
     employees,
-    addOrUpdateEmployee, // Expose new unified function
-    deleteEmployee, // Expose new unified function
+    addOrUpdateEmployee,
+    deleteEmployee,
     payslips,
     loans,
     savingPlans,
     leaveRecords,
     timesheets,
-    toDos, // Expose toDos
-    companyDetails, // Now derived
-    isLoadingCompanyDetails, // Still expose loading state from useCompanyDetails
-    isMockDataEnabled, // Expose isMockDataEnabled
-    taxTables, // Expose taxTables
-    isLoadingTaxTables, // Expose loading state for tax tables
-    isLoadingEmployees: isMockDataEnabled ? false : isLoadingLiveEmployees, // Unified loading state for employees
+    toDos,
+    companyDetails,
+    isLoadingCompanyDetails,
+    isMockDataEnabled,
+    taxTables,
+    isLoadingTaxTables,
+    isLoadingEmployees,
     runPayrollProcess,
     calculateSinglePayslipPreview,
   };

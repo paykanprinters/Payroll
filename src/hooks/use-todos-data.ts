@@ -3,41 +3,32 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
 
-export const useToDosData = () => {
-  const [toDos, setToDos] = useState<ToDoEntry[]>([]);
+export const useToDosData = (initialToDos: ToDoEntry[], isMockDataEnabled: boolean) => {
+  const [toDos, setToDos] = useState<ToDoEntry[]>(initialToDos);
   const [pendingCount, setPendingCount] = useState<number>(0);
 
-  const loadToDos = useCallback(() => {
-    const storedToDos = localStorage.getItem("mockToDos");
-    const loadedToDos: ToDoEntry[] = storedToDos ? JSON.parse(storedToDos) : [];
-    setToDos(loadedToDos);
-    setPendingCount(loadedToDos.filter(todo => todo.status === "pending").length);
-  }, []);
-
   useEffect(() => {
-    loadToDos();
-    window.addEventListener('allMockDataUpdated', loadToDos); // Listen to allMockDataUpdated
-    return () => {
-      window.removeEventListener('allMockDataUpdated', loadToDos);
-    };
-  }, [loadToDos]);
+    setToDos(initialToDos);
+    setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
+  }, [initialToDos]);
 
   const markToDoAsDone = useCallback((id: string) => {
     setToDos(prevToDos => {
       const updatedToDos = prevToDos.map(todo =>
         todo.id === id ? { ...todo, status: "done" as const } : todo
       );
-      localStorage.setItem("mockToDos", JSON.stringify(updatedToDos));
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockToDos", JSON.stringify(updatedToDos));
+        window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: updatedToDos })); // Dispatch specific event
+      }
       setPendingCount(updatedToDos.filter(todo => todo.status === "pending").length);
-      window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: updatedToDos })); // Dispatch specific event
       return updatedToDos;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   return {
     toDos,
     pendingCount,
     markToDoAsDone,
-    loadToDos, // Expose for explicit refresh if needed
   };
 };

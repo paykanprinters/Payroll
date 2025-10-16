@@ -18,13 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { useToDosData } from "@/hooks/use-todos-data"; // Import useToDosData
 
 interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoading: isLoadingCompanyDetails, isMockDataEnabled } = usePayrollProcessor(); // Use usePayrollProcessor
+  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, toDos: initialToDos } = usePayrollProcessor(); // Use usePayrollProcessor
+  const { pendingCount } = useToDosData(initialToDos, isMockDataEnabled); // Use useToDosData to get pendingCount
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
@@ -56,6 +58,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           setIsCollapsed={setIsCollapsed}
           companyDetails={companyDetails}
           isMockDataEnabled={isMockDataEnabled}
+          pendingToDosCount={pendingCount} // Pass pendingToDosCount to Sidebar
         />
       )}
       <div className="flex flex-col">
@@ -110,6 +113,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           setIsCollapsed={setIsCollapsed}
           companyDetails={companyDetails}
           isMockDataEnabled={isMockDataEnabled}
+          pendingToDosCount={pendingCount} // Pass pendingToDosCount to Sidebar
         />
       )}
     </div>

@@ -21,11 +21,13 @@ import { useLoansData } from "@/hooks/use-loans-data"; // Import the new hook
 import LoanForm from "@/components/loans/LoanForm"; // Import the new form component
 import LoanCard from "@/components/loans/LoanCard"; // Import the new card component
 import { Loan } from "@/lib/mock-data-interfaces"; // Import Loan interface
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const LoansAndAdvancements: React.FC = () => {
-  const { loans, employees, addLoan, getEmployeeName } = useLoansData(); // Use the new hook
+  const { employees, loans: initialLoans, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialLoans, isMockDataEnabled from usePayrollProcessor
+  const { loans, addLoan, getEmployeeName, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData(initialLoans, employees, isMockDataEnabled); // Pass initialLoans, employees, isMockDataEnabled to useLoansData
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   const [loanSummaryData, setLoanSummaryData] = useState<{ name: string; totalLoan: number; remaining: number }[]>([]);

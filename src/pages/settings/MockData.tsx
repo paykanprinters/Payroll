@@ -90,6 +90,13 @@ const MockData: React.FC = () => {
 
 
     window.dispatchEvent(new Event('companyDetailsUpdated'));
+    window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: mockEmployees }));
+    window.dispatchEvent(new CustomEvent('payslipsUpdated', { detail: mockPayslips }));
+    window.dispatchEvent(new CustomEvent('loansUpdated', { detail: mockLoans }));
+    window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: mockSavingPlans }));
+    window.dispatchEvent(new CustomEvent('leaveRecordsUpdated', { detail: mockLeaveRecords }));
+    window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: mockTimesheets }));
+    window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: mockToDos }));
     window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
     showSuccess("Mock data populated successfully!");
   }, [internalMockTaxTables]); // Dependency on internalMockTaxTables
@@ -129,6 +136,13 @@ const MockData: React.FC = () => {
     });
 
     window.dispatchEvent(new Event('companyDetailsUpdated'));
+    window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: [] }));
+    window.dispatchEvent(new Event('payslipsUpdated'));
+    window.dispatchEvent(new Event('loansUpdated'));
+    window.dispatchEvent(new Event('savingPlansUpdated'));
+    window.dispatchEvent(new Event('leaveRecordsUpdated'));
+    window.dispatchEvent(new Event('timesheetsUpdated'));
+    window.dispatchEvent(new Event('toDosUpdated'));
     window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
     window.dispatchEvent(new Event('payslipDesignUpdated'));
     showSuccess("Mock data cleared successfully!");

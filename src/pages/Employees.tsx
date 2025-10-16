@@ -50,7 +50,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Employees: React.FC = () => {
-  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees, isMockDataEnabled } = usePayrollProcessor();
+  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees } = usePayrollProcessor();
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -305,7 +305,7 @@ const Employees: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No employee data available. Please add employees using the button above or {isMockDataEnabled ? "ensure mock data is enabled in settings." : "add employees to the database."}
+              No employee data available. Please add employees using the button above or {isLoadingEmployees ? "loading..." : "add employees to the database."}
             </div>
           )}
         </CardContent>

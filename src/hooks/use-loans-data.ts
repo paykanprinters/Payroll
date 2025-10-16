@@ -5,33 +5,12 @@ import { Loan, LoanDeductionHistoryEntry, MockEmployee } from "@/lib/mock-data-i
 import { showSuccess, showError } from "@/utils/toast";
 import { format } from "date-fns";
 
-export const useLoansData = () => {
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
-
-  const loadLoans = useCallback(() => {
-    const storedLoans = localStorage.getItem("mockLoans");
-    const loadedLoans = storedLoans ? JSON.parse(storedLoans) : [];
-    setLoans(loadedLoans);
-    console.log("useLoansData: Loaded loans:", loadedLoans); // Added log
-
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    const loadedEmployees = storedEmployees ? JSON.parse(storedEmployees) : [];
-    setEmployees(loadedEmployees);
-    console.log("useLoansData: Loaded employees:", loadedEmployees); // Added log
-  }, []);
+export const useLoansData = (initialLoans: Loan[], employees: MockEmployee[], isMockDataEnabled: boolean) => {
+  const [loans, setLoans] = useState<Loan[]>(initialLoans);
 
   useEffect(() => {
-    // Load data once on mount
-    loadLoans();
-    // Removed: window.addEventListener('allMockDataUpdated', loadLoans);
-    // This hook should not re-fetch its entire state based on a general update event
-    // that its own actions might trigger. It manages its own state.
-    // The usePayrollProcessor hook will listen to 'loansUpdated' and update its central state.
-    return () => {
-      // Removed: window.removeEventListener('allMockDataUpdated', loadLoans);
-    };
-  }, [loadLoans]); // Dependency on loadLoans to ensure it's stable
+    setLoans(initialLoans);
+  }, [initialLoans]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
@@ -50,34 +29,40 @@ export const useLoansData = () => {
         deductionHistory: [],
       };
       const updatedLoans = [...prevLoans, loanToAdd];
-      localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
+        window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      }
       showSuccess("Loan added successfully!");
       return updatedLoans;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   const updateLoan = useCallback((updatedLoan: Loan) => {
     setLoans(prevLoans => {
       const updatedLoans = prevLoans.map(loan =>
         loan.id === updatedLoan.id ? updatedLoan : loan
       );
-      localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
+        window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      }
       showSuccess("Loan updated successfully!");
       return updatedLoans;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   const deleteLoan = useCallback((loanId: string) => {
     setLoans(prevLoans => {
       const updatedLoans = prevLoans.filter(loan => loan.id !== loanId);
-      localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
+        window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      }
       showSuccess("Loan deleted successfully!");
       return updatedLoans;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   const togglePauseDeduction = useCallback((loanId: string, currentStatus: boolean) => {
     setLoans(prevLoans => {
@@ -98,12 +83,14 @@ export const useLoansData = () => {
         }
         return loan;
       });
-      localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
+        window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      }
       showSuccess(`Loan deduction ${currentStatus ? 'resumed' : 'paused'} successfully!`);
       return updatedLoans;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   const applyManualPayment = useCallback((loanId: string, amount: number, notes?: string) => {
     setLoans(prevLoans => {
@@ -125,22 +112,22 @@ export const useLoansData = () => {
         }
         return loan;
       });
-      localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
-      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
+        window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans })); // Dispatch specific event
+      }
       showSuccess(`Manual payment of R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })} applied!`);
       return updatedLoans;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   return {
     loans,
-    employees,
     getEmployeeName,
     addLoan,
     updateLoan,
     deleteLoan,
     togglePauseDeduction,
     applyManualPayment,
-    loadLoans,
   };
 };

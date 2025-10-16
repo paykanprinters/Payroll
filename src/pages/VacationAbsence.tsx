@@ -8,16 +8,18 @@ import AbsenceCalendar from "@/components/vacation-absence/AbsenceCalendar";
 import LeaveAnalytics from "@/components/vacation-absence/LeaveAnalytics";
 import LeaveRecordsTable from "@/components/vacation-absence/LeaveRecordsTable";
 import { LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const VacationAbsence: React.FC = () => {
+  const { employees, leaveRecords: initialLeaveRecords, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialLeaveRecords, isMockDataEnabled from usePayrollProcessor
+
   const {
-    employees,
     leaveRecords,
     leaveTypeDistribution,
     monthlyLeaveData,
     getEmployeeName,
     addLeaveRecord,
-  } = useLeaveData();
+  } = useLeaveData(initialLeaveRecords, employees, isMockDataEnabled); // Pass initialLeaveRecords, employees, isMockDataEnabled to useLeaveData
 
   const handleAddLeave = (newLeaveData: Omit<LeaveEntry, 'id'>) => {
     const newRecordWithId = { ...newLeaveData, id: `LEAVE-${Date.now()}` };

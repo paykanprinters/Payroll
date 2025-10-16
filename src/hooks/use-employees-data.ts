@@ -1,0 +1,202 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { showError, showSuccess } from "@/utils/toast";
+import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+
+// Helper to convert snake_case to camelCase for Supabase data
+const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+      newObj[camelKey] = obj[key];
+    }
+  }
+  return newObj as MockEmployee;
+};
+
+// Helper to convert camelCase to snake_case for Supabase inserts/updates
+const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+      newObj[snakeKey] = (obj as any)[key];
+    }
+  }
+  return newObj;
+};
+
+export const useEmployeesData = (isMockDataEnabled: boolean) => {
+  const [employees, setEmployees] = useState<MockEmployee[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // --- Live Employee Data Management (Supabase) ---
+  const fetchLiveEmployees = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      console.log("useEmployeesData: Fetching live employees from Supabase...");
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .order('first_name', { ascending: true });
+
+      if (error) {
+        console.error("useEmployeesData: Error fetching live employees:", error);
+        showError("Failed to load live employee data.");
+        setEmployees([]);
+      } else {
+        const camelCaseData = data.map(convertEmployeeKeysToCamelCase);
+        console.log("useEmployeesData: Live employees fetched:", camelCaseData);
+        setEmployees(camelCaseData);
+      }
+    } catch (err) {
+      console.error("useEmployeesData: Unhandled error fetching live employees:", err);
+      showError("An unexpected error occurred while loading live employee data.");
+      setEmployees([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    setIsLoading(true);
+    try {
+      const snakeCasePayload = convertEmployeeKeysToSnakeCase(employeeData);
+      console.log("useEmployeesData: Upserting live employee with payload:", snakeCasePayload);
+
+      const { data, error } = await supabase
+        .from('employees')
+        .upsert(snakeCasePayload, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("useEmployeesData: Error upserting live employee:", error);
+        showError(`Failed to save employee: ${error.message}`);
+      } else {
+        const camelCaseData = convertEmployeeKeysToCamelCase(data);
+        setEmployees(prev => {
+          const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
+          if (existingIndex !== -1) {
+            return prev.map((emp, idx) => idx === existingIndex ? camelCaseData : emp);
+          } else {
+            return [...prev, camelCaseData];
+          }
+        });
+        showSuccess("Employee saved successfully!");
+      }
+    } catch (err) {
+      console.error("useEmployeesData: Unhandled error upserting live employee:", err);
+      showError("An unexpected error occurred while saving employee data.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const deleteLiveEmployee = useCallback(async (employeeId: string) => {
+    setIsLoading(true);
+    try {
+      console.log("useEmployeesData: Deleting live employee with ID:", employeeId);
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', employeeId);
+
+      if (error) {
+        console.error("useEmployeesData: Error deleting live employee:", error);
+        showError(`Failed to delete employee: ${error.message}`);
+      } else {
+        setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+        showSuccess("Employee deleted successfully!");
+      }
+    } catch (err) {
+      console.error("useEmployeesData: Unhandled error deleting live employee:", err);
+      showError("An unexpected error occurred while deleting employee data.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // --- Unified Employee Management Functions ---
+  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    if (isMockDataEnabled) {
+      setEmployees(prevEmployees => {
+        let updatedEmployees: MockEmployee[];
+        if (employeeData.id) {
+          updatedEmployees = prevEmployees.map(emp =>
+            emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
+          );
+        } else {
+          const newId = uuidv4(); // Generate UUID for mock employee
+          const newEmployee: MockEmployee = {
+            ...employeeData,
+            id: newId,
+            standardDailyHours: employeeData.standardDailyHours || 8,
+            firstName: employeeData.firstName,
+            lastName: employeeData.lastName,
+            email: employeeData.email,
+            jobTitle: employeeData.jobTitle,
+            startDate: employeeData.startDate,
+          };
+          updatedEmployees = [...prevEmployees, newEmployee];
+        }
+        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
+        showSuccess(employeeData.id ? "Mock employee updated successfully!" : "Mock employee added successfully!");
+        return updatedEmployees;
+      });
+    } else {
+      await upsertLiveEmployee(employeeData);
+    }
+  }, [isMockDataEnabled, upsertLiveEmployee]);
+
+  const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
+    if (isMockDataEnabled) {
+      setEmployees(prevEmployees => {
+        const updatedEmployees = prevEmployees.filter(emp => emp.id !== employeeId);
+        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
+        showSuccess(`Mock employee ${employeeName} removed.`);
+        return updatedEmployees;
+      });
+    } else {
+      await deleteLiveEmployee(employeeId);
+    }
+  }, [isMockDataEnabled, deleteLiveEmployee]);
+
+  // Effect to load data based on mockDataEnabled status
+  useEffect(() => {
+    if (isMockDataEnabled) {
+      const storedMockEmployees = localStorage.getItem("mockEmployees");
+      setEmployees(storedMockEmployees ? JSON.parse(storedMockEmployees) : []);
+      setIsLoading(false);
+    } else {
+      fetchLiveEmployees();
+    }
+  }, [isMockDataEnabled, fetchLiveEmployees]);
+
+  // Listen for specific update events to re-fetch/update state
+  useEffect(() => {
+    const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
+      if (isMockDataEnabled) {
+        setEmployees(event.detail);
+      }
+    };
+    window.addEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
+    return () => {
+      window.removeEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
+    };
+  }, [isMockDataEnabled]);
+
+  return {
+    employees,
+    isLoadingEmployees: isLoading,
+    addOrUpdateEmployee,
+    deleteEmployee,
+  };
+};

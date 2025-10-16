@@ -42,33 +42,14 @@ export interface ImportableTimesheetEntry {
   timeOut: string;
 }
 
-export const useTimesheetData = () => {
-  const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
-  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
+export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees: MockEmployee[], leaveRecords: LeaveEntry[], isMockDataEnabled: boolean) => {
+  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>(initialTimesheets);
   const [isEditing, setIsEditing] = useState(false);
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetEntry | null>(null);
 
-  const loadData = useCallback(() => {
-    const storedEmployees = localStorage.getItem("mockEmployees");
-    setEmployees(storedEmployees ? JSON.parse(storedEmployees) : []);
-
-    const storedTimesheets = localStorage.getItem("mockTimesheets");
-    const loadedTimesheets = storedTimesheets ? JSON.parse(storedTimesheets) : [];
-    setTimesheets(loadedTimesheets);
-    console.log(`useTimesheetData: Loaded ${loadedTimesheets.length} timesheet entries.`); // Added console log
-
-    const storedLeaveRecords = localStorage.getItem("mockLeaveRecords");
-    setLeaveRecords(storedLeaveRecords ? JSON.parse(storedLeaveRecords) : []);
-  }, []);
-
   useEffect(() => {
-    loadData();
-    window.addEventListener('allMockDataUpdated', loadData); // Listen to allMockDataUpdated
-    return () => {
-      window.removeEventListener('allMockDataUpdated', loadData);
-    };
-  }, [loadData]);
+    setTimesheets(initialTimesheets);
+  }, [initialTimesheets]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
@@ -179,13 +160,15 @@ export const useTimesheetData = () => {
           showSuccess("Timesheet added successfully!");
         }
       }
-      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
-      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+        window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
+      }
       return updatedTimesheets;
     });
     setIsEditing(false);
     setEditingTimesheet(null);
-  }, [employees, isEditing, editingTimesheet, calculateTimesheetMetrics]);
+  }, [employees, isEditing, editingTimesheet, calculateTimesheetMetrics, isMockDataEnabled]);
 
   const addTimesheetBatch = useCallback((newEntries: ImportableTimesheetEntry[]) => {
     if (newEntries.length === 0) {
@@ -244,21 +227,25 @@ export const useTimesheetData = () => {
       });
 
       const finalTimesheets = Array.from(timesheetMap.values());
-      localStorage.setItem("mockTimesheets", JSON.stringify(finalTimesheets));
-      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: finalTimesheets })); // Dispatch specific event
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockTimesheets", JSON.stringify(finalTimesheets));
+        window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: finalTimesheets })); // Dispatch specific event
+      }
       return finalTimesheets;
     });
-  }, [employees, calculateTimesheetMetrics]);
+  }, [employees, calculateTimesheetMetrics, isMockDataEnabled]);
 
   const deleteTimesheet = useCallback((id: string) => {
     setTimesheets(prevTimesheets => {
       const updatedTimesheets = prevTimesheets.filter(ts => ts.id !== id);
-      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+        window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
+      }
       showSuccess("Timesheet deleted successfully!");
-      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
       return updatedTimesheets;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   const updateTimesheetStatus = useCallback((id: string, newStatus: TimesheetEntry["status"]) => {
     setTimesheets(prevTimesheets => {
@@ -277,12 +264,14 @@ export const useTimesheetData = () => {
         }
         return ts;
       });
-      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+      if (isMockDataEnabled) {
+        localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
+        window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
+      }
       showSuccess(`Timesheet status updated to ${newStatus}!`);
-      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets })); // Dispatch specific event
       return updatedTimesheets;
     });
-  }, []);
+  }, [isMockDataEnabled]);
 
   const startEditing = useCallback((timesheet: TimesheetEntry) => {
     setIsEditing(true);
@@ -305,9 +294,7 @@ export const useTimesheetData = () => {
   }, [leaveRecords]);
 
   return {
-    employees,
     timesheets,
-    leaveRecords,
     isEditing,
     editingTimesheet,
     getEmployeeName,

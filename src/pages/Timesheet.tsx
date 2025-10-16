@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button"; // Import Button
 import { UploadCloud } from "lucide-react"; // Import UploadCloud icon
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog"; // Import new dialog
 import { ImportableTimesheetEntry, TimesheetFormValues } from "@/hooks/use-timesheet-data"; // Import the new type and TimesheetFormValues
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const Timesheet: React.FC = () => {
+  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets } = usePayrollProcessor(); // Get employees, leaveRecords, isMockDataEnabled, and initialTimesheets from usePayrollProcessor
+
   const {
-    employees,
     timesheets,
     isEditing,
     editingTimesheet,
@@ -24,7 +26,7 @@ const Timesheet: React.FC = () => {
     cancelEditing,
     isLeaveDay,
     addTimesheetBatch, // Get the new batch function
-  } = useTimesheetData();
+  } = useTimesheetData(initialTimesheets, employees, leaveRecords, isMockDataEnabled); // Pass initialTimesheets, employees, leaveRecords, and isMockDataEnabled to useTimesheetData
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
 
