@@ -195,7 +195,14 @@ const LoansAndAdvancements: React.FC = () => {
           {loans.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {loans.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).map((loan) => (
-                <LoanCard key={loan.id} loan={loan} />
+                <LoanCard
+                  key={loan.id}
+                  loan={loan}
+                  getEmployeeName={getEmployeeName}
+                  togglePauseDeduction={togglePauseDeduction}
+                  applyManualPayment={applyManualPayment}
+                  deleteLoan={deleteLoan}
+                />
               ))}
             </div>
           ) : (

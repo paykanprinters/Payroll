@@ -32,8 +32,8 @@ import { useSavingPlansData } from "@/hooks/use-saving-plans-data"; // Import us
 const savingPlanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
   amount: z.preprocess(
-    (val) => (val === "" || isNaN(Number(val))) ? undefined : val, // Convert empty string OR NaN to undefined
-    z.number().min(1, "Savings amount must be positive") // Validate as a number, ensure positive
+    (val) => (val === "" || isNaN(Number(val))) ? undefined : Number(val), // Convert empty string OR NaN to undefined
+    z.number().min(1, "Savings amount must be positive") // Now, it's a required number
   ),
   frequency: z.enum(["monthly", "weekly"], { message: "Deduction frequency is required" }),
   startDate: z.string().min(1, "Start date is required"),

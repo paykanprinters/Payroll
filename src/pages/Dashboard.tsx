@@ -222,7 +222,7 @@ const Dashboard: React.FC = () => {
 
       <UpcomingPayrollCard />
 
-      <ToDoList />
+      <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
