@@ -46,7 +46,10 @@ const employeeSchema = z.object({
       .min(1, "Hourly rate must be a positive number") // Validate as a number, ensure positive
       .optional() // The field itself is optional
   ),
-  startDate: z.string().min(1, "Start Date is required"),
+  startDate: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().min(1, "Start Date is required")
+  ),
   
   // Existing optional fields
   idNumber: z.string().optional(),
@@ -68,11 +71,17 @@ const employeeSchema = z.object({
   bankAccountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
 
   // New fields from screenshot
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().optional()
+  ),
   gender: z.enum(["Male", "Female", "Other"]).optional(),
   department: z.string().optional(),
   workLocation: z.string().optional(),
-  dateOfConfirmation: z.string().optional(),
+  dateOfConfirmation: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().optional()
+  ),
   originCountry: z.string().optional(),
   employmentType: z.enum(["Permanent", "Contract", "Temporary"]).optional(),
   portalAccess: z.boolean().default(false).optional(),
