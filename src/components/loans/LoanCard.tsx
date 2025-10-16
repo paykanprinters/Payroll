@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { History, PauseCircle, PlayCircle, DollarSign, XCircle } from "lucide-react";
 import { Loan, LoanDeductionHistoryEntry } from "@/lib/mock-data-interfaces";
-import { useLoansData } from "@/hooks/use-loans-data";
 import { format } from "date-fns";
 import {
   AlertDialog,
@@ -27,10 +26,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface LoanCardProps {
   loan: Loan;
+  getEmployeeName: (employeeId: string) => string;
+  togglePauseDeduction: (loanId: string, currentStatus: boolean) => void;
+  applyManualPayment: (loanId: string, amount: number, notes?: string) => void;
+  deleteLoan: (loanId: string) => void;
 }
 
-const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
-  const { getEmployeeName, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData();
+const LoanCard: React.FC<LoanCardProps> = ({ loan, getEmployeeName, togglePauseDeduction, applyManualPayment, deleteLoan }) => {
   const [manualPaymentAmount, setManualPaymentAmount] = useState<string>("");
   const [manualPaymentNotes, setManualPaymentNotes] = useState<string>("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);

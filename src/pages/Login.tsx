@@ -23,7 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login: React.FC = () => {
   const { login, isAuthenticated, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoading: isLoadingCompanyDetails, isMockDataEnabled } = usePayrollProcessor(); // Use usePayrollProcessor
+  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled } = usePayrollProcessor(); // Use usePayrollProcessor
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false); // Separate state for form submission
 

@@ -9,9 +9,11 @@ import { useToDosData } from "@/hooks/use-todos-data";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const ToDosPage: React.FC = () => {
-  const { toDos, markToDoAsDone } = useToDosData();
+  const { toDos: initialToDos, isMockDataEnabled } = usePayrollProcessor(); // Get from payroll processor
+  const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled);
 
   const pendingToDos = toDos.filter(todo => todo.status === "pending");
   const completedToDos = toDos.filter(todo => todo.status === "done");

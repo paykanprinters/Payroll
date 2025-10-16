@@ -5,13 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, Info, ArrowRight } from "lucide-react";
-import { useToDosData } from "@/hooks/use-todos-data";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
 
-const ToDoList: React.FC = () => {
-  const { toDos, markToDoAsDone } = useToDosData();
+interface ToDoListProps {
+  toDos: ToDoEntry[];
+  pendingCount: number;
+  markToDoAsDone: (id: string) => void;
+}
+
+const ToDoList: React.FC<ToDoListProps> = ({ toDos, pendingCount, markToDoAsDone }) => {
 
   const pendingToDos = toDos.filter(todo => todo.status === "pending");
 
