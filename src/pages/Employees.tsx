@@ -260,7 +260,7 @@ const Employees: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
+                    <TableHead>Employee ID</TableHead> {/* Changed from ID to Employee ID */}
                     <TableHead>Personal ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Job Title</TableHead>
@@ -275,7 +275,7 @@ const Employees: React.FC = () => {
                 <TableBody>
                   {employees.map((employee) => (
                     <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.id}</TableCell>
+                      <TableCell className="font-medium">{employee.customEmployeeId}</TableCell> {/* Display customEmployeeId */}
                       <TableCell>{employee.personalId || "N/A"}</TableCell>
                       <TableCell>{employee.firstName} {employee.lastName}</TableCell>
                       <TableCell>{employee.jobTitle}</TableCell>

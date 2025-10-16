@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { History, PauseCircle, PlayCircle, DollarSign, XCircle } from "lucide-react";
-import { Loan, LoanDeductionHistoryEntry } from "@/lib/mock-data-interfaces";
+import { Loan } from "@/lib/mock-data-interfaces";
 import { format } from "date-fns";
 import {
   AlertDialog,
@@ -27,12 +27,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface LoanCardProps {
   loan: Loan;
   getEmployeeName: (employeeId: string) => string;
+  getEmployeeCustomId: (employeeId: string) => string; // New prop
   togglePauseDeduction: (loanId: string, currentStatus: boolean) => void;
   applyManualPayment: (loanId: string, amount: number, notes?: string) => void;
   deleteLoan: (loanId: string) => void;
 }
 
-const LoanCard: React.FC<LoanCardProps> = ({ loan, getEmployeeName, togglePauseDeduction, applyManualPayment, deleteLoan }) => {
+const LoanCard: React.FC<LoanCardProps> = ({ loan, getEmployeeName, getEmployeeCustomId, togglePauseDeduction, applyManualPayment, deleteLoan }) => {
   const [manualPaymentAmount, setManualPaymentAmount] = useState<string>("");
   const [manualPaymentNotes, setManualPaymentNotes] = useState<string>("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -90,7 +91,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, getEmployeeName, togglePauseD
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-lg font-semibold">{getEmployeeName(loan.employeeId)}</CardTitle>
+          <CardTitle className="text-lg font-semibold">{getEmployeeName(loan.employeeId)} ({getEmployeeCustomId(loan.employeeId)})</CardTitle>
           {getStatusBadge(loan.status)}
           {loan.paused && <Badge variant="destructive" className="bg-yellow-500 text-yellow-900">Paused</Badge>}
         </div>

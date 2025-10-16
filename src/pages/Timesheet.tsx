@@ -81,7 +81,7 @@ const Timesheet: React.FC = () => {
 
       <TimesheetTable
         timesheets={timesheets}
-        getEmployeeName={getEmployeeName}
+        employees={employees} {/* Pass employees to TimesheetTable */}
         onEdit={startEditing}
         onDelete={deleteTimesheet}
         onStatusChange={updateTimesheetStatus}

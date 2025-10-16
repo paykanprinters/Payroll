@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clock as ClockIcon, CheckCircle, XCircle, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces"; // Import MockEmployee
 import {
   Pagination,
   PaginationContent,
@@ -19,7 +19,7 @@ import {
 
 interface TimesheetTableProps {
   timesheets: TimesheetEntry[];
-  getEmployeeName: (employeeId: string) => string;
+  employees: MockEmployee[]; // Pass employees to resolve customEmployeeId
   onEdit: (timesheet: TimesheetEntry) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, newStatus: TimesheetEntry["status"]) => void;
@@ -30,13 +30,19 @@ const ITEMS_PER_PAGE = 10; // Number of items to show per page
 
 const TimesheetTable: React.FC<TimesheetTableProps> = ({
   timesheets,
-  getEmployeeName,
+  employees, // Use employees prop
   onEdit,
   onDelete,
   onStatusChange,
   onEmployeeClick, // Use new prop
 }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
+
+  // Helper to get employee name or custom ID
+  const getEmployeeDisplayId = (employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? employee.customEmployeeId : "Unknown";
+  };
 
   // Sort timesheets by date (most recent first)
   const sortedTimesheets = React.useMemo(() => {
@@ -73,7 +79,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
+                  <TableHead>Employee ID</TableHead> {/* Changed to Employee ID */}
                   <TableHead>Date</TableHead>
                   <TableHead>Time In</TableHead>
                   <TableHead>Time Out</TableHead>
@@ -91,7 +97,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       className="font-medium cursor-pointer hover:underline text-blue-600"
                       onClick={() => onEmployeeClick(entry.employeeId, entry.date)}
                     >
-                      {getEmployeeName(entry.employeeId)}
+                      {getEmployeeDisplayId(entry.employeeId)} {/* Display customEmployeeId */}
                     </TableCell>
                     <TableCell>{entry.date}</TableCell>
                     <TableCell>{entry.timeIn || "N/A"}</TableCell>

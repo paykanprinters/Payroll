@@ -121,6 +121,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
 }) => {
   const employee = employees.find(emp => emp.id === employeeId);
   const employeeName = getEmployeeName(employeeId);
+  const employeeCustomId = employee?.customEmployeeId || "N/A"; // Get custom ID
 
   const currentWeekStart = useMemo(() => {
     return startOfWeek(parse(initialDateInWeek, "yyyy-MM-dd", new Date()), { weekStartsOn: 1 }); // Week starts on Monday
@@ -195,7 +196,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Weekly Timesheet for {employeeName}</DialogTitle>
+          <DialogTitle>Weekly Timesheet for {employeeName} ({employeeCustomId})</DialogTitle> {/* Display custom ID */}
           <DialogDescription>
             Edit clock times for the week of {format(currentWeekStart, "PPP")}.
           </DialogDescription>

@@ -37,7 +37,7 @@ const EmployeePayslipSelector: React.FC<EmployeePayslipSelectorProps> = ({
             {employees.length > 0 ? (
               employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.firstName} {emp.lastName} ({emp.id})
+                  {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
                 </SelectItem>
               ))
             ) : (

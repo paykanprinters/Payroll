@@ -27,7 +27,7 @@ import { usePayrollProcessor, TaxTables } from "@/hooks/use-payroll-processor"; 
 
 
 const MockData: React.FC = () => {
-  const { taxTables } = usePayrollProcessor(); // Get taxTables from usePayrollProcessor
+  const { taxTables, companyDetails } = usePayrollProcessor(); // Get taxTables and companyDetails from usePayrollProcessor
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
     // Initialize from localStorage on first render
     return localStorage.getItem("isMockDataEnabled") === "true";
@@ -60,7 +60,8 @@ const MockData: React.FC = () => {
     // }
 
     const mockCompany = generateMockCompanyDetails();
-    const mockEmployees: MockEmployee[] = generateMockEmployees();
+    const companyNameForId = mockCompany.companyLegalName || mockCompany.companyTradingName || "Acme Corp";
+    const mockEmployees: MockEmployee[] = generateMockEmployees(companyNameForId); // Pass company name
     const mockLoans: Loan[] = generateMockLoans(); // Generate new loan structure
     const mockSavingPlans: SavingPlan[] = generateMockSavingPlans();
     const mockLeaveRecords: LeaveEntry[] = generateMockLeaveRecords();

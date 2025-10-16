@@ -74,3 +74,11 @@ export const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined, 
   return isPdfGeneration ? classes : classes.split(' ').map(cls => `print:${cls}`).join(' ');
 };
 */
+
+// Helper to generate custom employee ID
+export const generateCustomEmployeeId = (companyName: string, currentMaxNumber: number): string => {
+  const prefix = companyName.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || "CMP";
+  const nextNumber = currentMaxNumber + 1;
+  const paddedNumber = String(nextNumber).padStart(3, '0');
+  return `${prefix}${paddedNumber}`;
+};

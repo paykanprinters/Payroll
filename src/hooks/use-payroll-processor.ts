@@ -23,16 +23,7 @@ export const usePayrollProcessor = () => {
 
   // Orchestrate other data hooks
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails();
-  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData(isMockDataEnabled);
   const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables(isMockDataEnabled);
-
-  // Local states for mock data that are not yet migrated to dedicated hooks
-  const [payslips, setPayslips] = useState<MockPayslip[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
-  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
-  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
-  const [toDos, setToDos] = useState<ToDoEntry[]>([]);
 
   // Derived state for companyDetails: always reflects the correct source
   const companyDetails = useMemo(() => {
@@ -75,6 +66,18 @@ export const usePayrollProcessor = () => {
     }
     return supabaseCompanyDetails;
   }, [isMockDataEnabled, supabaseCompanyDetails]);
+
+  // Determine company name for employee ID generation
+  const companyNameForEmployeeId = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
+  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData(isMockDataEnabled, companyNameForEmployeeId); // Pass companyNameForEmployeeId
+
+  // Local states for mock data that are not yet migrated to dedicated hooks
+  const [payslips, setPayslips] = useState<MockPayslip[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
+  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
+  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
+  const [toDos, setToDos] = useState<ToDoEntry[]>([]);
 
   // Payroll processing logic
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(

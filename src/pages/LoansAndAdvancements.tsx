@@ -27,7 +27,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"
 
 const LoansAndAdvancements: React.FC = () => {
   const { employees, loans: initialLoans, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialLoans, isMockDataEnabled from usePayrollProcessor
-  const { loans, addLoan, getEmployeeName, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData(initialLoans, employees, isMockDataEnabled); // Pass initialLoans, employees, isMockDataEnabled to useLoansData
+  const { loans, addLoan, getEmployeeName, getEmployeeCustomId, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData(initialLoans, employees, isMockDataEnabled); // Pass initialLoans, employees, isMockDataEnabled to useLoansData
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   const [loanSummaryData, setLoanSummaryData] = useState<{ name: string; totalLoan: number; remaining: number }[]>([]);
@@ -158,7 +158,7 @@ const LoansAndAdvancements: React.FC = () => {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  labelLine={false}
+                  labelLine={false} // Ensure no lines to labels
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {loansByTypeData.map((entry, index) => (
@@ -199,6 +199,7 @@ const LoansAndAdvancements: React.FC = () => {
                   key={loan.id}
                   loan={loan}
                   getEmployeeName={getEmployeeName}
+                  getEmployeeCustomId={getEmployeeCustomId} // Pass new prop
                   togglePauseDeduction={togglePauseDeduction}
                   applyManualPayment={applyManualPayment}
                   deleteLoan={deleteLoan}

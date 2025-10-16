@@ -8,9 +8,10 @@ import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces"; // Update
 interface LeaveRecordsTableProps {
   leaveRecords: LeaveEntry[];
   getEmployeeName: (employeeId: string) => string;
+  getEmployeeCustomId: (employeeId: string) => string; // New prop
 }
 
-const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, getEmployeeName }) => {
+const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, getEmployeeName, getEmployeeCustomId }) => {
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -22,7 +23,8 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, get
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
+                  <TableHead>Employee ID</TableHead> {/* Changed to Employee ID */}
+                  <TableHead>Employee Name</TableHead>
                   <TableHead>Leave Type</TableHead>
                   <TableHead>Start Date</TableHead>
                   <TableHead>End Date</TableHead>
@@ -35,6 +37,7 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, get
               <TableBody>
                 {leaveRecords.map((record) => (
                   <TableRow key={record.id}>
+                    <TableCell>{getEmployeeCustomId(record.employeeId)}</TableCell> {/* Display customEmployeeId */}
                     <TableCell>{getEmployeeName(record.employeeId)}</TableCell>
                     <TableCell>{record.leaveType}</TableCell>
                     <TableCell>{record.startDate}</TableCell>

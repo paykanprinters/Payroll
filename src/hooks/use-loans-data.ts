@@ -17,6 +17,11 @@ export const useLoansData = (initialLoans: Loan[], employees: MockEmployee[], is
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
   }, [employees]);
 
+  const getEmployeeCustomId = useCallback((employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? employee.customEmployeeId : "N/A";
+  }, [employees]);
+
   const addLoan = useCallback((newLoan: Omit<Loan, 'id' | 'status' | 'remainingBalance' | 'deductionHistory' | 'paused'> & { loanAmount: number; repaymentAmount: number }) => {
     setLoans(prevLoans => {
       const loanId = `LOAN-${Date.now()}`;
@@ -124,6 +129,7 @@ export const useLoansData = (initialLoans: Loan[], employees: MockEmployee[], is
   return {
     loans,
     getEmployeeName,
+    getEmployeeCustomId, // Expose new helper
     addLoan,
     updateLoan,
     deleteLoan,

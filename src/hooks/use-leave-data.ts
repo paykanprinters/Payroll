@@ -61,6 +61,11 @@ export const useLeaveData = (initialLeaveRecords: LeaveEntry[], employees: MockE
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
   }, [employees]);
 
+  const getEmployeeCustomId = useCallback((employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? employee.customEmployeeId : "N/A";
+  }, [employees]);
+
   const addLeaveRecord = useCallback((newRecord: LeaveEntry) => {
     setLeaveRecords(prevRecords => {
       const updatedRecords = [...prevRecords, newRecord];
@@ -77,6 +82,7 @@ export const useLeaveData = (initialLeaveRecords: LeaveEntry[], employees: MockE
     leaveTypeDistribution,
     monthlyLeaveData,
     getEmployeeName,
+    getEmployeeCustomId, // Expose new helper
     addLeaveRecord,
   };
 };

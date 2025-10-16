@@ -31,7 +31,8 @@ import PaymentInfoForm from "./forms/PaymentInfoForm";
 
 // Define the schema for employee form validation
 const employeeSchema = z.object({
-  id: z.string().optional(), // ID is optional for new employees
+  id: z.string().optional(), // Internal UUID, optional for new employees
+  customEmployeeId: z.string().optional(), // New field, will be auto-generated for new employees
   personalId: z.string().optional(), // New field for external clock-in system ID
   firstName: z.string().min(1, "First Name is required"),
   lastName: z.string().min(1, "Last Name is required"),
@@ -216,7 +217,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   const onSubmit = (data: EmployeeFormValues) => {
     onSave(data);
     onClose();
-    showSuccess(initialEmployee ? "Employee updated successfully!" : "Employee added successfully!");
+    // Success toast is now handled by useEmployeesData
   };
 
   return (

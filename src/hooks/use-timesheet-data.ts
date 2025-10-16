@@ -56,6 +56,11 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
   }, [employees]);
 
+  const getEmployeeCustomId = useCallback((employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? employee.customEmployeeId : "N/A";
+  }, [employees]);
+
   const calculateTimesheetMetrics = useCallback((data: TimesheetFormValues | ImportableTimesheetEntry, employee?: MockEmployee) => {
     const standardDailyHours = employee?.standardDailyHours || 8; // Default to 8 hours
 
@@ -298,6 +303,7 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     isEditing,
     editingTimesheet,
     getEmployeeName,
+    getEmployeeCustomId, // Expose new helper
     calculateTimesheetMetrics,
     addOrUpdateTimesheet,
     deleteTimesheet,

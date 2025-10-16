@@ -29,7 +29,8 @@ export interface MockCompanyDetails {
 }
 
 export interface MockEmployee {
-  id: string;
+  id: string; // Internal UUID, hidden from UI
+  customEmployeeId: string; // New field for human-readable ID
   personalId?: string; // New field for external clock-in system ID
   firstName: string;
   lastName: string;

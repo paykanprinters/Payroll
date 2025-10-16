@@ -25,8 +25,8 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, toDos: initialToDos } = usePayrollProcessor(); // Use usePayrollProcessor
-  const { pendingCount } = useToDosData(initialToDos, isMockDataEnabled); // Use useToDosData to get pendingCount
+  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, toDos: initialToDos, employees } = usePayrollProcessor(); // Use usePayrollProcessor
+  const { pendingCount } = useToDosData(initialToDos, isMockDataEnabled, employees); // Pass employees to useToDosData
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();

@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
 
 // Helper to convert snake_case to camelCase for Supabase data
 const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
@@ -31,7 +32,7 @@ const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
   return newObj;
 };
 
-export const useEmployeesData = (isMockDataEnabled: boolean) => {
+export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string) => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -64,9 +65,25 @@ export const useEmployeesData = (isMockDataEnabled: boolean) => {
   }, []);
 
   const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    const toastId = showLoading(employeeData.id ? "Updating employee..." : "Adding new employee...") as string;
     setIsLoading(true);
     try {
-      const snakeCasePayload = convertEmployeeKeysToSnakeCase(employeeData);
+      let customEmployeeIdToUse = employeeData.customEmployeeId;
+
+      if (!employeeData.id) { // If adding a new employee
+        // Generate customEmployeeId for new live employees
+        const currentMaxNumber = employees.reduce((max, emp) => {
+          const match = emp.customEmployeeId?.match(/\d+$/);
+          return match ? Math.max(max, parseInt(match[0])) : max;
+        }, 0);
+        customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+      }
+
+      const payloadWithCustomId = {
+        ...employeeData,
+        customEmployeeId: customEmployeeIdToUse,
+      };
+      const snakeCasePayload = convertEmployeeKeysToSnakeCase(payloadWithCustomId);
       console.log("useEmployeesData: Upserting live employee with payload:", snakeCasePayload);
 
       const { data, error } = await supabase
@@ -94,11 +111,13 @@ export const useEmployeesData = (isMockDataEnabled: boolean) => {
       console.error("useEmployeesData: Unhandled error upserting live employee:", err);
       showError("An unexpected error occurred while saving employee data.");
     } finally {
+      dismissToast(toastId);
       setIsLoading(false);
     }
-  }, []);
+  }, [employees, companyName]); // Added employees and companyName to dependencies
 
   const deleteLiveEmployee = useCallback(async (employeeId: string) => {
+    const toastId = showLoading("Deleting employee...") as string;
     setIsLoading(true);
     try {
       console.log("useEmployeesData: Deleting live employee with ID:", employeeId);
@@ -118,6 +137,7 @@ export const useEmployeesData = (isMockDataEnabled: boolean) => {
       console.error("useEmployeesData: Unhandled error deleting live employee:", err);
       showError("An unexpected error occurred while deleting employee data.");
     } finally {
+      dismissToast(toastId);
       setIsLoading(false);
     }
   }, []);
@@ -131,11 +151,19 @@ export const useEmployeesData = (isMockDataEnabled: boolean) => {
           updatedEmployees = prevEmployees.map(emp =>
             emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
           );
+          showSuccess("Mock employee updated successfully!");
         } else {
-          const newId = uuidv4(); // Generate UUID for mock employee
+          const newId = uuidv4(); // Generate UUID for internal ID
+          const currentMaxNumber = prevEmployees.reduce((max, emp) => {
+            const match = emp.customEmployeeId?.match(/\d+$/);
+            return match ? Math.max(max, parseInt(match[0])) : max;
+          }, 0);
+          const newCustomEmployeeId = generateCustomEmployeeId(companyName, currentMaxNumber);
+
           const newEmployee: MockEmployee = {
             ...employeeData,
             id: newId,
+            customEmployeeId: newCustomEmployeeId,
             standardDailyHours: employeeData.standardDailyHours || 8,
             firstName: employeeData.firstName,
             lastName: employeeData.lastName,
@@ -144,16 +172,16 @@ export const useEmployeesData = (isMockDataEnabled: boolean) => {
             startDate: employeeData.startDate,
           };
           updatedEmployees = [...prevEmployees, newEmployee];
+          showSuccess("Mock employee added successfully!");
         }
         localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
         window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
-        showSuccess(employeeData.id ? "Mock employee updated successfully!" : "Mock employee added successfully!");
         return updatedEmployees;
       });
     } else {
       await upsertLiveEmployee(employeeData);
     }
-  }, [isMockDataEnabled, upsertLiveEmployee]);
+  }, [isMockDataEnabled, upsertLiveEmployee, companyName]); // Added companyName to dependencies
 
   const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
     if (isMockDataEnabled) {

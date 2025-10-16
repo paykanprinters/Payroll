@@ -18,6 +18,7 @@ const VacationAbsence: React.FC = () => {
     leaveTypeDistribution,
     monthlyLeaveData,
     getEmployeeName,
+    getEmployeeCustomId, // Get new helper
     addLeaveRecord,
   } = useLeaveData(initialLeaveRecords, employees, isMockDataEnabled); // Pass initialLeaveRecords, employees, isMockDataEnabled to useLeaveData
 
@@ -54,7 +55,7 @@ const VacationAbsence: React.FC = () => {
         <AbsenceCalendar leaveRecords={leaveRecords} />
       </div>
 
-      <LeaveRecordsTable leaveRecords={leaveRecords} getEmployeeName={getEmployeeName} />
+      <LeaveRecordsTable leaveRecords={leaveRecords} getEmployeeName={getEmployeeName} getEmployeeCustomId={getEmployeeCustomId} />
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Important Note on Leave Management:</h3>

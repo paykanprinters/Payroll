@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { ToDoEntry } from "@/lib/mock-data-interfaces";
+import { ToDoEntry, MockEmployee } from "@/lib/mock-data-interfaces"; // Import MockEmployee
 
-export const useToDosData = (initialToDos: ToDoEntry[], isMockDataEnabled: boolean) => {
+export const useToDosData = (initialToDos: ToDoEntry[], isMockDataEnabled: boolean, employees: MockEmployee[]) => {
   const [toDos, setToDos] = useState<ToDoEntry[]>(initialToDos);
   const [pendingCount, setPendingCount] = useState<number>(0);
 
@@ -11,6 +11,11 @@ export const useToDosData = (initialToDos: ToDoEntry[], isMockDataEnabled: boole
     setToDos(initialToDos);
     setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
   }, [initialToDos]);
+
+  const getEmployeeCustomId = useCallback((employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? employee.customEmployeeId : "N/A";
+  }, [employees]);
 
   const markToDoAsDone = useCallback((id: string) => {
     setToDos(prevToDos => {
@@ -30,5 +35,6 @@ export const useToDosData = (initialToDos: ToDoEntry[], isMockDataEnabled: boole
     toDos,
     pendingCount,
     markToDoAsDone,
+    getEmployeeCustomId, // Expose new helper
   };
 };

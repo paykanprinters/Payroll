@@ -276,7 +276,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         <div style={isPdfGeneration ? { display: 'flex', justifyContent: 'space-between', marginBottom: `${baseFontSizePx * 1.5}px` } : {}} className="grid grid-cols-2 gap-4 mb-4">
           <div style={isPdfGeneration ? { flex: '1', marginRight: `${baseFontSizePx * 0.5}px` } : {}} className="space-y-1">
             {renderParagraph("Employee Name", getEmployeeName(payslip.employeeId))}
-            {renderParagraph("Employee No", employee.id)}
+            {renderParagraph("Employee No", employee.customEmployeeId)} {/* Display customEmployeeId */}
             {renderParagraph("ID No", employee.idNumber)}
             {renderParagraph("Job Title", employee.jobTitle)}
             {payslipDesignSettings.showHourlyRate && employee.hourlyRate !== undefined && (

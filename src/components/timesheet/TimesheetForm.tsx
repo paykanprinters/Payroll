@@ -139,9 +139,8 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
     });
   };
 
-  const selectedEmployeeId = form.watch("employeeId");
-  const selectedDate = form.watch("date");
-  const isCurrentDayLeave = selectedEmployeeId && selectedDate ? isLeaveDay(selectedEmployeeId, selectedDate) : false;
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -159,7 +158,7 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
             {employees.length > 0 ? (
               employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.firstName} {emp.lastName} ({emp.id})
+                  {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
                 </SelectItem>
               ))
             ) : (

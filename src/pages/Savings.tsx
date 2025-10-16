@@ -46,7 +46,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"
 
 const Savings: React.FC = () => {
   const { employees, savingPlans: initialSavingPlans, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialSavingPlans, isMockDataEnabled from usePayrollProcessor
-  const { savingPlans, getEmployeeName, addSavingPlan } = useSavingPlansData(initialSavingPlans, employees, isMockDataEnabled); // Pass initialSavingPlans, employees, isMockDataEnabled to useSavingPlansData
+  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan } = useSavingPlansData(initialSavingPlans, employees, isMockDataEnabled); // Pass initialSavingPlans, employees, isMockDataEnabled to useSavingPlansData
 
   const [totalSavingsData, setTotalSavingsData] = useState<{ name: string; amount: number }[]>([]);
   const [savingsByFrequencyData, setSavingsByFrequencyData] = useState<{ name: string; value: number }[]>([]);
@@ -180,7 +180,7 @@ const Savings: React.FC = () => {
                   {employees.length > 0 ? (
                     employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName} ({emp.id})
+                        {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
                       </SelectItem>
                     ))
                   ) : (
@@ -268,7 +268,8 @@ const Savings: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
+                  <TableHead>Employee ID</TableHead> {/* Changed to Employee ID */}
+                  <TableHead>Employee Name</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Frequency</TableHead>
                   <TableHead>Start Date</TableHead>
@@ -279,6 +280,7 @@ const Savings: React.FC = () => {
               <TableBody>
                 {savingPlans.map((plan) => (
                   <TableRow key={plan.id}>
+                    <TableCell>{getEmployeeCustomId(plan.employeeId)}</TableCell> {/* Display customEmployeeId */}
                     <TableCell>{getEmployeeName(plan.employeeId)}</TableCell>
                     <TableCell>R {plan.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</TableCell>
                     <TableCell>{plan.frequency}</TableCell>

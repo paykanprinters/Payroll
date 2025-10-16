@@ -16,6 +16,11 @@ export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: 
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
   }, [employees]);
 
+  const getEmployeeCustomId = useCallback((employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? employee.customEmployeeId : "N/A";
+  }, [employees]);
+
   const addSavingPlan = useCallback((newPlan: Omit<SavingPlan, 'id' | 'status'>) => {
     setSavingPlans(prevPlans => {
       const planId = `SAV-${Date.now()}`;
@@ -39,6 +44,7 @@ export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: 
   return {
     savingPlans,
     getEmployeeName,
+    getEmployeeCustomId, // Expose new helper
     addSavingPlan,
   };
 };
