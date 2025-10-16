@@ -17,11 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { format, startOfWeek, eachDayOfInterval, isSameDay, parse, isAfter, isBefore } from "date-fns";
+import { format, startOfWeek, eachDayOfInterval, isSameDay, parse, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/hooks/use-timesheet-data"; // Re-use the form values type
 import { showSuccess, showError } from "@/utils/toast";
+import { Badge } from "@/components/ui/badge"; // Import Badge
 
 interface WeeklyTimesheetEditorDialogProps {
   isOpen: boolean;
@@ -73,7 +74,7 @@ const dailyTimesheetSchema = z.object({
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Tea End cannot be before Tea Start.", path: ["teaEnd"] });
       }
       // Check if tea break is within work hours (if work hours are defined)
-      if (data.timeIn && data.timeOut && timeInDate && timeOutDate) {
+      if (data.timeIn && data.timeOut) { // Check if timeIn/timeOut are defined before parsing
         const timeInDate = parse(data.timeIn, 'HH:mm', new Date());
         const timeOutDate = parse(data.timeOut, 'HH:mm', new Date());
         if (isBefore(teaStartDate, timeInDate) || isAfter(teaEndDate, timeOutDate)) {
@@ -94,7 +95,7 @@ const dailyTimesheetSchema = z.object({
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Lunch End cannot be before Lunch Start.", path: ["lunchEnd"] });
       }
       // Check if lunch break is within work hours (if work hours are defined)
-      if (data.timeIn && data.timeOut && timeInDate && timeOutDate) {
+      if (data.timeIn && data.timeOut) { // Check if timeIn/timeOut are defined before parsing
         const timeInDate = parse(data.timeIn, 'HH:mm', new Date());
         const timeOutDate = parse(data.timeOut, 'HH:mm', new Date());
         if (isBefore(lunchStartDate, timeInDate) || isAfter(lunchEndDate, timeOutDate)) {
@@ -128,7 +129,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
   const weekDays = useMemo(() => {
     return eachDayOfInterval({
       start: currentWeekStart,
-      end: format(addDays(currentWeekStart, 6), "yyyy-MM-dd"), // End of the week
+      end: addDays(currentWeekStart, 6), // Corrected: use addDays here
     }).map(date => format(date, "yyyy-MM-dd"));
   }, [currentWeekStart]);
 
