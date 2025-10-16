@@ -6,8 +6,9 @@ import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button"; // Import Button
-import { UploadCloud } from "lucide-react"; // Import UploadCloud icon
+import { UploadCloud, CalendarDays } from "lucide-react"; // Import UploadCloud and CalendarDays icons
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog"; // Import new dialog
+import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog"; // Import new weekly editor dialog
 import { ImportableTimesheetEntry, TimesheetFormValues } from "@/hooks/use-timesheet-data"; // Import the new type and TimesheetFormValues
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
@@ -29,10 +30,20 @@ const Timesheet: React.FC = () => {
   } = useTimesheetData(initialTimesheets, employees, leaveRecords, isMockDataEnabled); // Pass initialTimesheets, employees, leaveRecords, and isMockDataEnabled to useTimesheetData
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
+  const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = React.useState(false);
+  const [selectedEmployeeIdForWeeklyEditor, setSelectedEmployeeIdForWeeklyEditor] = React.useState<string>("");
+  const [selectedDateForWeeklyEditor, setSelectedDateForWeeklyEditor] = React.useState<string>("");
+
 
   // The handleImportTimesheets function will now just directly call addTimesheetBatch
   const handleImportTimesheets = (importedEntries: ImportableTimesheetEntry[]) => { // Use the new type
     addTimesheetBatch(importedEntries);
+  };
+
+  const handleEmployeeClick = (employeeId: string, date: string) => {
+    setSelectedEmployeeIdForWeeklyEditor(employeeId);
+    setSelectedDateForWeeklyEditor(date);
+    setIsWeeklyEditorOpen(true);
   };
 
   return (
@@ -74,6 +85,7 @@ const Timesheet: React.FC = () => {
         onEdit={startEditing}
         onDelete={deleteTimesheet}
         onStatusChange={updateTimesheetStatus}
+        onEmployeeClick={handleEmployeeClick} // Pass the new handler
       />
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
@@ -92,6 +104,20 @@ const Timesheet: React.FC = () => {
         onImport={handleImportTimesheets} // Pass the updated handler
         employees={employees}
       />
+
+      {isWeeklyEditorOpen && (
+        <WeeklyTimesheetEditorDialog
+          isOpen={isWeeklyEditorOpen}
+          onClose={() => setIsWeeklyEditorOpen(false)}
+          employeeId={selectedEmployeeIdForWeeklyEditor}
+          initialDateInWeek={selectedDateForWeeklyEditor}
+          allTimesheets={timesheets}
+          onSaveTimesheet={addOrUpdateTimesheet}
+          getEmployeeName={getEmployeeName}
+          isLeaveDay={isLeaveDay}
+          employees={employees}
+        />
+      )}
     </div>
   );
 };

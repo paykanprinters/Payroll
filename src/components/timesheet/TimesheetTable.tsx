@@ -23,6 +23,7 @@ interface TimesheetTableProps {
   onEdit: (timesheet: TimesheetEntry) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, newStatus: TimesheetEntry["status"]) => void;
+  onEmployeeClick: (employeeId: string, date: string) => void; // New prop for employee click
 }
 
 const ITEMS_PER_PAGE = 10; // Number of items to show per page
@@ -33,6 +34,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
   onEdit,
   onDelete,
   onStatusChange,
+  onEmployeeClick, // Use new prop
 }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
 
@@ -85,7 +87,12 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
               <TableBody>
                 {paginatedTimesheets.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell>{getEmployeeName(entry.employeeId)}</TableCell>
+                    <TableCell
+                      className="font-medium cursor-pointer hover:underline text-blue-600"
+                      onClick={() => onEmployeeClick(entry.employeeId, entry.date)}
+                    >
+                      {getEmployeeName(entry.employeeId)}
+                    </TableCell>
                     <TableCell>{entry.date}</TableCell>
                     <TableCell>{entry.timeIn || "N/A"}</TableCell>
                     <TableCell>{entry.timeOut || "N/A"}</TableCell>
