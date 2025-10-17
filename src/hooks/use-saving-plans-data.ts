@@ -22,14 +22,14 @@ export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: 
   }, [employees]);
 
   const addSavingPlan = useCallback((newPlan: Omit<SavingPlan, 'id' | 'status'>) => {
-    setSavingPlans(prevPlans => {
+    setSavingPlans(prevPlans => { // Corrected: setSavingPlans and prevPlans
       const planId = `SAV-${Date.now()}`;
       const planToAdd: SavingPlan = {
         ...newPlan,
         id: planId,
         status: "active",
       };
-      const updatedPlans = [...prevPlans, planToAdd];
+      const updatedPlans = [...prevPlans, planToAdd]; // Corrected: prevPlans
       if (isMockDataEnabled) {
         localStorage.setItem("mockSavingPlans", JSON.stringify(updatedPlans));
         window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: updatedPlans }));

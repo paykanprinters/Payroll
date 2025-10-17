@@ -88,7 +88,15 @@ const Savings: React.FC = () => {
   }, [savingPlans]);
 
   const onSubmit = (data: SavingPlanFormValues) => {
-    addSavingPlan(data);
+    // Explicitly construct the object to ensure type compatibility
+    const planToSave: Omit<SavingPlan, 'id' | 'status'> = {
+      employeeId: data.employeeId,
+      amount: data.amount,
+      frequency: data.frequency,
+      startDate: data.startDate,
+      endDate: data.endDate,
+    };
+    addSavingPlan(planToSave);
     form.reset();
   };
 
