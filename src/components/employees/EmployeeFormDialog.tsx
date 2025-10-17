@@ -223,25 +223,27 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"> {/* Added overflow-hidden */}
         <DialogHeader>
           <DialogTitle>{initialEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
           <DialogDescription>
             {initialEmployee ? "Make changes to employee details here." : "Fill in the details for the new employee."}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow pr-4">
-          <FormProvider {...formMethods}>
-            <form onSubmit={formMethods.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-              <BasicInfoForm />
-              <PersonalDetailsForm />
-              <PaymentInfoForm />
-            </form>
-          </FormProvider>
-        </ScrollArea>
-        <DialogFooter className="pt-4">
-          <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
-        </DialogFooter>
+        <FormProvider {...formMethods}>
+          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
+            <ScrollArea className="flex-grow pr-4">
+              <div className="grid gap-4 py-4">
+                <BasicInfoForm />
+                <PersonalDetailsForm />
+                <PaymentInfoForm />
+              </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4">
+              <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
+            </DialogFooter>
+          </form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );
