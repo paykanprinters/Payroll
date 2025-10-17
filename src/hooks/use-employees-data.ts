@@ -77,6 +77,12 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
           return match ? Math.max(max, parseInt(match[0])) : max;
         }, 0);
         customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+      } else if (!employeeData.customEmployeeId) { // If updating an existing employee and customEmployeeId is missing
+        const currentMaxNumber = employees.reduce((max, emp) => {
+          const match = emp.customEmployeeId?.match(/\d+$/);
+          return match ? Math.max(max, parseInt(match[0])) : max;
+        }, 0);
+        customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
       }
 
       const payloadWithCustomId = {
