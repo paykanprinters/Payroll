@@ -9,8 +9,13 @@ export const useLoansData = (initialLoans: Loan[], employees: MockEmployee[], is
   const [loans, setLoans] = useState<Loan[]>(initialLoans);
 
   useEffect(() => {
-    setLoans(initialLoans);
-  }, [initialLoans]);
+    if (isMockDataEnabled) {
+      setLoans(initialLoans);
+    } else {
+      // If mock data is not enabled, assume no live data yet
+      setLoans([]);
+    }
+  }, [initialLoans, isMockDataEnabled]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);

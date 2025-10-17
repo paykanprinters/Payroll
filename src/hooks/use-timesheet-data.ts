@@ -48,8 +48,13 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetEntry | null>(null);
 
   useEffect(() => {
-    setTimesheets(initialTimesheets);
-  }, [initialTimesheets]);
+    if (isMockDataEnabled) {
+      setTimesheets(initialTimesheets);
+    } else {
+      // If mock data is not enabled, assume no live data yet
+      setTimesheets([]);
+    }
+  }, [initialTimesheets, isMockDataEnabled]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
