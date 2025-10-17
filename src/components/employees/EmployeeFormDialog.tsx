@@ -232,14 +232,14 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         </DialogHeader>
         <FormProvider {...formMethods}>
           <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
-            <ScrollArea className="flex-grow min-h-0 pr-4"> {/* Added min-h-0 here */}
-              <div className="grid gap-4 py-4">
+            <ScrollArea className="flex-grow h-full min-h-0"> {/* Added h-full, removed pr-4 */}
+              <div className="grid gap-4 py-4 px-4"> {/* Added px-4 here */}
                 <BasicInfoForm />
                 <PersonalDetailsForm />
                 <PaymentInfoForm />
               </div>
             </ScrollArea>
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 px-4"> {/* Added px-4 here for consistency */}
               <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
             </DialogFooter>
           </form>
