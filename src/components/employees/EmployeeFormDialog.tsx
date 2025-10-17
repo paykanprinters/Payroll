@@ -188,9 +188,22 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   React.useEffect(() => {
     if (initialEmployee) {
+      let customEmployeeIdToUse = initialEmployee.customEmployeeId || "";
+
+      if (!customEmployeeIdToUse) {
+        // If existing employee is missing customEmployeeId, generate one
+        const currentMaxNumber = allEmployees.reduce((max, emp) => {
+          // Exclude the current employee from max number calculation if their ID is present
+          if (emp.id === initialEmployee.id) return max;
+          const match = emp.customEmployeeId?.match(/\d+$/);
+          return match ? Math.max(max, parseInt(match[0])) : max;
+        }, 0);
+        customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+      }
+
       formMethods.reset({
         ...initialEmployee,
-        customEmployeeId: initialEmployee.customEmployeeId || "", // Ensure it's a string
+        customEmployeeId: customEmployeeIdToUse, // Set the generated or existing ID
         originCountry: initialEmployee.originCountry || "", // Ensure it's a string
         employmentType: initialEmployee.employmentType || undefined, // Ensure it's a string
         gender: initialEmployee.gender || undefined, // Ensure it's a string
