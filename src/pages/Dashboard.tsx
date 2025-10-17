@@ -37,7 +37,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"
 const Dashboard: React.FC = () => {
   const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos: initialToDos, addOrUpdateEmployee } = usePayrollProcessor();
   const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee);
-  const { visibleWidgets, isLoadingSettings } = useDashboardSettings(); // Use the new hook
+  const { visibleWidgets, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled }); // Pass isMockDataEnabled here
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -186,7 +186,7 @@ const Dashboard: React.FC = () => {
           {companyLegalName && <span className="text-muted-foreground mr-2">{companyLegalName}</span>}
           Payroll Dashboard
         </h1>
-        <DashboardVisibilityDropdown />
+        <DashboardVisibilityDropdown isMockDataEnabled={isMockDataEnabled} />
       </div>
       
       {visibleWidgets.summaryCards && (

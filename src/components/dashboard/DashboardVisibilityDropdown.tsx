@@ -16,7 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 
 interface DashboardVisibilityDropdownProps {
-  // No props needed as it uses the hook directly
+  isMockDataEnabled: boolean; // New prop
 }
 
 const widgetLabels: Record<keyof DashboardWidgetVisibility, string> = {
@@ -33,8 +33,8 @@ const widgetLabels: Record<keyof DashboardWidgetVisibility, string> = {
   quickActionsCard: "Quick Actions Card",
 };
 
-const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = () => {
-  const { visibleWidgets, toggleWidgetVisibility, resetToDefaults, isLoadingSettings } = useDashboardSettings();
+const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = ({ isMockDataEnabled }) => {
+  const { visibleWidgets, toggleWidgetVisibility, resetToDefaults, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled });
   const { user } = useAuth();
 
   if (isLoadingSettings || !visibleWidgets) {
