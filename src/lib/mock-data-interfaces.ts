@@ -72,6 +72,7 @@ export interface MockEmployee {
   paymentMode?: "Bank Transfer" | "Cash" | "Cheque";
   payFrequency?: "Monthly" | "Weekly" | "Bi-Weekly"; // New field
   standardDailyHours?: number; // Added for timesheet calculations
+  ignoredIncompleteFields?: string[]; // New field to store intentionally blank fields
 }
 
 export interface LoanDeductionHistoryEntry {
@@ -183,4 +184,6 @@ export interface ToDoEntry {
   actionUrl?: string; // Optional link to resolve the to-do
   status: "pending" | "done";
   assignedTo?: string; // Mock user role/ID
+  employeeId?: string; // New: Link to specific employee
+  relatedField?: string; // New: Link to specific field (e.g., 'personalId')
 }

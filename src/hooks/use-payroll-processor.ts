@@ -14,6 +14,7 @@ import { useCompanyDetails } from "./use-company-details";
 import { useEmployeesData } from "./use-employees-data"; // New import
 import { useTaxTables } from "./use-tax-tables"; // New import
 import { usePayrollProcessingLogic } from "./use-payroll-processing-logic"; // New import
+import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -77,7 +78,7 @@ export const usePayrollProcessor = () => {
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
   const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
-  const [toDos, setToDos] = useState<ToDoEntry[]>([]);
+  const [toDos, setToDos] = useState<ToDoEntry[]>([]); // State for To-Dos
 
   // Payroll processing logic
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
@@ -108,7 +109,7 @@ export const usePayrollProcessor = () => {
         setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
         setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
         setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
-        setToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]"));
+        setToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]")); // Load To-Dos
         console.log("usePayrollProcessor: All mock data loaded from localStorage.");
       } else {
         // Clear all mock data states
@@ -117,7 +118,7 @@ export const usePayrollProcessor = () => {
         setSavingPlans([]);
         setLeaveRecords([]);
         setTimesheets([]);
-        setToDos([]);
+        setToDos([]); // Clear To-Dos
         console.log("usePayrollProcessor: All mock data states cleared.");
       }
     };
@@ -150,7 +151,7 @@ export const usePayrollProcessor = () => {
       if (isMockDataEnabled) setTimesheets(event.detail);
     };
     const handleToDosUpdated = (event: CustomEvent<ToDoEntry[]>) => {
-      if (isMockDataEnabled) setToDos(event.detail);
+      if (isMockDataEnabled) setToDos(event.detail); // Update To-Dos state
     };
 
     window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
@@ -172,14 +173,14 @@ export const usePayrollProcessor = () => {
 
   return {
     employees,
-    addOrUpdateEmployee,
+    addOrUpdateEmployee, // Expose addOrUpdateEmployee
     deleteEmployee,
     payslips,
     loans,
     savingPlans,
     leaveRecords,
     timesheets,
-    toDos,
+    toDos, // Expose toDos
     companyDetails,
     isLoadingCompanyDetails,
     isMockDataEnabled,

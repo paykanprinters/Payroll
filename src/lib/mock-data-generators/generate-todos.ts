@@ -14,9 +14,44 @@ export const generateMockToDos = (
   const currentMonth = format(today, 'yyyy-MM');
   const lastMonth = format(subMonths(today, 1), 'yyyy-MM');
 
+  // Fields to check for incompleteness and generate To-Dos
+  const fieldsToFlag: { key: keyof MockEmployee; label: string; level: ToDoEntry['level'] }[] = [
+    { key: "personalId", label: "Personal ID (Clock-in)", level: "critical" },
+    { key: "idNumber", label: "National ID Number", level: "critical" },
+    { key: "phoneNumber", label: "Mobile Number", level: "warning" },
+    { key: "taxReferenceNumber", label: "Tax Reference Number", level: "critical" },
+    { key: "ibanNumber", label: "Bank Account Number", level: "critical" },
+    // Add more fields here as needed
+  ];
+
   // --- Employees To-Dos ---
+  employees.forEach(emp => {
+    fieldsToFlag.forEach(field => {
+      const fieldValue = emp[field.key];
+      const isIgnored = emp.ignoredIncompleteFields?.includes(field.key as string);
+
+      if (!fieldValue && !isIgnored) {
+        toDos.push({
+          id: `TODO-EMP-${emp.id}-${field.key}`,
+          message: `Employee ${emp.firstName} ${emp.lastName} is missing ${field.label}.`,
+          level: field.level,
+          module: "Employees",
+          actionUrl: "/employees",
+          status: "pending",
+          assignedTo: "HR",
+          employeeId: emp.id,
+          relatedField: field.key as string,
+        });
+      }
+    });
+  });
+
   const employeesMissingTax = employees.filter(emp => !emp.taxReferenceNumber);
   if (employeesMissingTax.length > 0) {
+    // This specific To-Do is now covered by the generic field flagging above,
+    // but keeping it here for now if there are other specific tax-related checks.
+    // For now, I'll comment it out to avoid duplicates if 'taxReferenceNumber' is in fieldsToFlag.
+    /*
     toDos.push({
       id: `TODO-EMP-001`,
       message: `${employeesMissingTax.length} new hires missing tax numbers.`,
@@ -26,10 +61,13 @@ export const generateMockToDos = (
       status: "pending",
       assignedTo: "Admin",
     });
+    */
   }
 
   const employeesMissingPersonalId = employees.filter(emp => !emp.personalId);
   if (employeesMissingPersonalId.length > 0) {
+    // This specific To-Do is now covered by the generic field flagging above.
+    /*
     toDos.push({
       id: `TODO-EMP-002`,
       message: `${employeesMissingPersonalId.length} employees missing Personal ID for clock-in system.`,
@@ -39,6 +77,7 @@ export const generateMockToDos = (
       status: "pending",
       assignedTo: "Admin",
     });
+    */
   }
 
   // --- Timesheet To-Dos ---

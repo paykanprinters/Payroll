@@ -12,7 +12,7 @@ import { ToDoEntry } from "@/lib/mock-data-interfaces";
 interface ToDoListProps {
   toDos: ToDoEntry[];
   pendingCount: number;
-  markToDoAsDone: (id: string) => void;
+  markToDoAsDone: (id: string) => Promise<void>; // Updated prop type
 }
 
 const ToDoList: React.FC<ToDoListProps> = ({ toDos, pendingCount, markToDoAsDone }) => {
@@ -72,6 +72,9 @@ const ToDoList: React.FC<ToDoListProps> = ({ toDos, pendingCount, markToDoAsDone
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                       {getLevelBadge(todo.level)}
                       <span>Module: {todo.module}</span>
+                      {todo.relatedField && (
+                        <span className="ml-2">Field: {todo.relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      )}
                     </div>
                   </div>
                 </div>

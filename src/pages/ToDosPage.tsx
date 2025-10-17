@@ -12,8 +12,8 @@ import { ToDoEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const ToDosPage: React.FC = () => {
-  const { toDos: initialToDos, isMockDataEnabled, employees } = usePayrollProcessor(); // Get from payroll processor
-  const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees);
+  const { toDos: initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee } = usePayrollProcessor(); // Get from payroll processor
+  const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee);
 
   const pendingToDos = toDos.filter(todo => todo.status === "pending");
   const completedToDos = toDos.filter(todo => todo.status === "done");
@@ -79,6 +79,9 @@ const ToDosPage: React.FC = () => {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                         {getLevelBadge(todo.level)}
                         <span>Module: {todo.module}</span>
+                        {todo.relatedField && (
+                          <span className="ml-2">Field: {todo.relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -132,6 +135,9 @@ const ToDosPage: React.FC = () => {
                       <p className="font-medium text-sm line-through">{todo.message}</p>
                       <div className="flex items-center gap-2 text-xs mt-1">
                         <span>Module: {todo.module}</span>
+                        {todo.relatedField && (
+                          <span className="ml-2">Field: {todo.relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        )}
                       </div>
                     </div>
                   </div>
