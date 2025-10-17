@@ -245,7 +245,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] h-full flex flex-col">
         <DialogHeader className="px-4 pt-4">
           <DialogTitle>{initialEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
           <DialogDescription>
@@ -253,8 +253,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...formMethods}>
-          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden">
-            <ScrollArea className="flex-grow h-full px-4 min-h-0">
+          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden h-full">
+            <ScrollArea className="flex-grow px-4 min-h-0">
               <div className="grid gap-4 py-4">
                 <BasicInfoForm />
                 <PersonalDetailsForm />
