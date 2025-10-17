@@ -253,8 +253,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...formMethods}>
-          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
-            <ScrollArea className="flex-grow px-4 min-h-0 max-h-full"> {/* Added max-h-full */}
+          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden">
+            <ScrollArea className="h-full px-4">
               <div className="grid gap-4 py-4">
                 <BasicInfoForm />
                 <PersonalDetailsForm />
