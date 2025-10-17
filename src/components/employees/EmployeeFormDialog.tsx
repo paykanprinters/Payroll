@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 
 import BasicInfoForm from "./forms/BasicInfoForm";
 import PersonalDetailsForm from "./forms/PersonalDetailsForm";
@@ -253,13 +254,13 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         </DialogHeader>
         <FormProvider {...formMethods}>
           <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
-            <div className="flex-grow overflow-y-auto px-4 min-h-0"> {/* Removed style={{ height: 0 }} */}
+            <ScrollArea className="flex-grow px-4 min-h-0"> {/* Replaced div with ScrollArea */}
               <div className="grid gap-4 py-4">
                 <BasicInfoForm />
                 <PersonalDetailsForm />
                 <PaymentInfoForm />
               </div>
-            </div>
+            </ScrollArea>
             <DialogFooter className="pt-4 px-4">
               <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
             </DialogFooter>
