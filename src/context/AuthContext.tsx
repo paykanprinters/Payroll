@@ -30,14 +30,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set loading to true at the very beginning of the effect
-    setIsLoadingAuth(true);
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    let isMounted = true; // Flag to prevent state updates on unmounted component
+    
+    const handleAuthStateChange = async (event: string, session: any | null) => {
       console.log("Auth state change event:", event, "session:", session); // Debugging log
+      if (!isMounted) return; // Prevent state updates if component unmounted
+
       try {
         if (session) {
-          // Fetch user role from public.users table
           const { data: profile, error } = await supabase
             .from('users')
             .select('id, email, name, role')
@@ -46,50 +46,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (error) {
             console.error('Error fetching user profile:', error);
-            setUser(null);
-            setIsAuthenticated(false);
-            showError('Failed to load user profile. Please try logging in again.');
-            navigate('/login', { replace: true }); // Redirect on profile fetch error
+            if (isMounted) {
+              setUser(null);
+              setIsAuthenticated(false);
+              showError('Failed to load user profile. Please try logging in again.');
+              navigate('/login', { replace: true });
+            }
           } else if (profile) {
-            setUser({
-              id: profile.id,
-              email: profile.email,
-              role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
-              name: profile.name ?? profile.email, // Ensure name is always a string, fallback to email
-            });
-            setIsAuthenticated(true);
+            if (isMounted) {
+              setUser({
+                id: profile.id,
+                email: profile.email,
+                role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+                name: profile.name ?? profile.email,
+              });
+              setIsAuthenticated(true);
+            }
           }
         } else {
-          // This block handles SIGNED_OUT, INITIAL_SESSION (if no session), etc.
-          setUser(null);
-          setIsAuthenticated(false);
-          // Only navigate to login if the event is explicitly SIGNED_OUT
-          // or if it's an initial session check and there's no session.
-          if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-            navigate('/login', { replace: true });
+          if (isMounted) {
+            setUser(null);
+            setIsAuthenticated(false);
+            if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+              navigate('/login', { replace: true });
+            }
           }
         }
       } catch (err) {
         console.error("Unhandled error in onAuthStateChange listener:", err);
-        showError('An unexpected error occurred during authentication state change.');
-        setUser(null);
-        setIsAuthenticated(false);
-        navigate('/login', { replace: true });
+        if (isMounted) {
+          showError('An unexpected error occurred during authentication state change.');
+          setUser(null);
+          setIsAuthenticated(false);
+          navigate('/login', { replace: true });
+        }
       } finally {
-        setIsLoadingAuth(false); // Ensure loading is always false after processing auth state change
+        if (isMounted) {
+          console.log("AuthContext: Setting isLoadingAuth to false in finally block for event:", event);
+          setIsLoadingAuth(false);
+        }
       }
-    });
+    };
 
-    // No need for a separate checkInitialSession function call here.
-    // The onAuthStateChange listener with 'INITIAL_SESSION' event handles the initial state.
+    const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => {
+      isMounted = false; // Cleanup: component is unmounted
       authListener.subscription.unsubscribe();
     };
   }, [navigate]);
 
   const login = async (email: string, password: string) => {
-    // Do NOT set isLoadingAuth here. Rely on onAuthStateChange.
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -97,19 +104,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (error) {
       showError(error.message);
-      // If login fails, onAuthStateChange won't fire a SIGNED_IN event,
-      // so isLoadingAuth will remain false (from the initial effect).
       throw error;
     }
 
     if (data.user) {
-      // onAuthStateChange will handle setting user, isAuthenticated, and navigating.
       showSuccess('Login successful! Redirecting...');
     }
   };
 
   const logout = async () => {
-    // Do NOT set isLoadingAuth here. Rely on onAuthStateChange.
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -117,8 +120,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw error;
     }
     showSuccess('Logged out successfully.');
-    // The onAuthStateChange listener will now handle setting isAuthenticated/user to null
-    // and navigating to /login when it receives the 'SIGNED_OUT' event.
   };
 
   return (

@@ -36,10 +36,11 @@ const Login: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log("Login.tsx: isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
     if (isAuthenticated && user) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, isLoadingAuth]); // Added isLoadingAuth to dependencies
 
   useEffect(() => {
     console.log("Login.tsx: companyDetails received:", companyDetails);
@@ -66,6 +67,7 @@ const Login: React.FC = () => {
 
   // Show a full-page loader if authentication state or company details are still being determined
   if (isLoadingAuth || isLoadingCompanyDetails) {
+    console.log("Login.tsx: Showing full-page loader. isLoadingAuth:", isLoadingAuth, "isLoadingCompanyDetails:", isLoadingCompanyDetails); // NEW LOG
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

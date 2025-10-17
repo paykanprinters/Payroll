@@ -91,6 +91,7 @@ export const useCompanyDetails = () => {
       setCompanyDetails(null);
       showError('An unexpected error occurred while loading company details.');
     } finally {
+      console.log("useCompanyDetails: Setting isLoading to false in finally block."); // NEW LOG
       setIsLoading(false);
       console.log("useCompanyDetails: Finished fetching. isLoading:", false, "companyDetails:", companyDetails);
     }
