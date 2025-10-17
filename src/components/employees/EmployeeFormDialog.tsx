@@ -238,17 +238,17 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...formMethods}> {/* Wrap the form with FormProvider */}
-          <ScrollArea className="grid gap-4 py-4 flex-grow pr-4">
-            <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-6 flex flex-col flex-grow">
+            <ScrollArea className="grid gap-4 py-4 flex-grow pr-4">
               <BasicInfoForm />
               <PersonalDetailsForm />
               <PaymentInfoForm />
-            </form>
-          </ScrollArea>
+            </ScrollArea>
+            <DialogFooter>
+              <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
+            </DialogFooter>
+          </form>
         </FormProvider>
-        <DialogFooter>
-          <Button type="submit" onClick={formMethods.handleSubmit(onSubmit)}>{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
