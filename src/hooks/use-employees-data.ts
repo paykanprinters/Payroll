@@ -71,18 +71,26 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
       let customEmployeeIdToUse = employeeData.customEmployeeId;
 
       if (!employeeData.id) { // If adding a new employee
-        // Generate customEmployeeId for new live employees
         const currentMaxNumber = employees.reduce((max, emp) => {
           const match = emp.customEmployeeId?.match(/\d+$/);
           return match ? Math.max(max, parseInt(match[0])) : max;
         }, 0);
         customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
-      } else if (!employeeData.customEmployeeId) { // If updating an existing employee and customEmployeeId is missing
-        const currentMaxNumber = employees.reduce((max, emp) => {
-          const match = emp.customEmployeeId?.match(/\d+$/);
-          return match ? Math.max(max, parseInt(match[0])) : max;
-        }, 0);
-        customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+      } else { // If updating an existing employee
+        // If customEmployeeId is not provided in the form data (e.g., readOnly field was empty or not registered),
+        // retrieve the existing one from the current state.
+        if (!customEmployeeIdToUse) {
+          const existingEmployee = employees.find(emp => emp.id === employeeData.id);
+          customEmployeeIdToUse = existingEmployee?.customEmployeeId;
+        }
+        // If it's still undefined (e.g., existing employee never had one), generate one.
+        if (!customEmployeeIdToUse) {
+             const currentMaxNumber = employees.reduce((max, emp) => {
+                const match = emp.customEmployeeId?.match(/\d+$/);
+                return match ? Math.max(max, parseInt(match[0])) : max;
+            }, 0);
+            customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+        }
       }
 
       const payloadWithCustomId = {
@@ -102,7 +110,7 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
         console.error("useEmployeesData: Error upserting live employee:", error);
         showError(`Failed to save employee: ${error.message}`);
       } else {
-        const camelCaseData = convertEmployeeKeysToCamelCase(data);
+        const camelCaseData = convertKeysToCamelCase(data);
         setEmployees(prev => {
           const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
           if (existingIndex !== -1) {
@@ -154,11 +162,13 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
       setEmployees(prevEmployees => {
         let updatedEmployees: MockEmployee[];
         if (employeeData.id) {
+          // For mock data, if ID exists, update the employee
           updatedEmployees = prevEmployees.map(emp =>
             emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
           );
           showSuccess("Mock employee updated successfully!");
         } else {
+          // For new mock employee, generate ID
           const newId = uuidv4(); // Generate UUID for internal ID
           const currentMaxNumber = prevEmployees.reduce((max, emp) => {
             const match = emp.customEmployeeId?.match(/\d+$/);

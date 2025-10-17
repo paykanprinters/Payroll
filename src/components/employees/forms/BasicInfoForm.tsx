@@ -20,7 +20,7 @@ const BasicInfoForm: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="space-y-1">
             <Label htmlFor="customEmployeeId">Employee ID</Label>
-            <Input id="customEmployeeId" {...register("customEmployeeId")} readOnly disabled />
+            <Input id="customEmployeeId" {...register("customEmployeeId")} readOnly /> {/* Changed disabled to readOnly */}
             <p className="text-xs text-muted-foreground mt-1">
               This is the unique, company-specific employee identifier.
             </p>
