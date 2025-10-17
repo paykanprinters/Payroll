@@ -27,13 +27,16 @@ import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format } from "date-fns";
 import ToDoList from "@/components/ToDoList";
-import { useToDosData } from "@/hooks/use-todos-data"; // Import useToDosData
+import { useToDosData } from "@/hooks/use-todos-data";
+import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown"; // New import
+import { useDashboardSettings } from "@/hooks/use-dashboard-settings"; // New import
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
-  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos: initialToDos, addOrUpdateEmployee } = usePayrollProcessor(); // Get toDos and addOrUpdateEmployee
-  const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Use useToDosData
+  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos: initialToDos, addOrUpdateEmployee } = usePayrollProcessor();
+  const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee);
+  const { visibleWidgets, isLoadingSettings } = useDashboardSettings(); // Use the new hook
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -141,10 +144,10 @@ const Dashboard: React.FC = () => {
     if (companyDetails) {
       setCompanyLegalName(companyDetails.companyLegalName || "");
     }
-    window.addEventListener('allMockDataUpdated', loadDashboardData); // Listen to allMockDataUpdated
-    window.addEventListener('employeesUpdated', loadDashboardData); // Listen to specific employee updates
-    window.addEventListener('payslipsUpdated', loadDashboardData); // Listen to specific payslip updates
-    window.addEventListener('leaveRecordsUpdated', loadDashboardData); // Listen to specific leave updates
+    window.addEventListener('allMockDataUpdated', loadDashboardData);
+    window.addEventListener('employeesUpdated', loadDashboardData);
+    window.addEventListener('payslipsUpdated', loadDashboardData);
+    window.addEventListener('leaveRecordsUpdated', loadDashboardData);
     window.addEventListener('companyDetailsUpdated', loadDashboardData);
     return () => {
       window.removeEventListener('allMockDataUpdated', loadDashboardData);
@@ -163,250 +166,280 @@ const Dashboard: React.FC = () => {
   const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
   const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
 
+  if (isLoadingSettings || !visibleWidgets) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">
-        {companyLegalName && <span className="text-muted-foreground mr-2">{companyLegalName}</span>}
-        Payroll Dashboard
-      </h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{employeeCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {isMockDataEnabled ? "+20.1% from last month (mock)" : (employeeCount > 0 ? "+20.1% from last month" : "No employees")}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Payroll</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R {upcomingPayrollAmount.toLocaleString('en-ZA')}</div>
-            <p className="text-xs text-muted-foreground">
-              {isMockDataEnabled ? "Due: 25th of the month (mock)" : "Due: 25th of the month"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Payslips</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{recentPayslipCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {isMockDataEnabled ? "Generated this month (mock)" : "Generated this month"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Compliance Status</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Good</div>
-            <p className="text-xs text-muted-foreground">
-              {isMockDataEnabled ? "All regulations met (mock)" : "All regulations met"}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">
+          {companyLegalName && <span className="text-muted-foreground mr-2">{companyLegalName}</span>}
+          Payroll Dashboard
+        </h1>
+        <DashboardVisibilityDropdown />
       </div>
+      
+      {visibleWidgets.summaryCards && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{employeeCount}</div>
+              <p className="text-xs text-muted-foreground">
+                {isMockDataEnabled ? "+20.1% from last month (mock)" : (employeeCount > 0 ? "+20.1% from last month" : "No employees")}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Upcoming Payroll</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">R {upcomingPayrollAmount.toLocaleString('en-ZA')}</div>
+              <p className="text-xs text-muted-foreground">
+                {isMockDataEnabled ? "Due: 25th of the month (mock)" : "Due: 25th of the month"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Recent Payslips</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{recentPayslipCount}</div>
+              <p className="text-xs text-muted-foreground">
+                {isMockDataEnabled ? "Generated this month (mock)" : "Generated this month"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Compliance Status</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Good</div>
+              <p className="text-xs text-muted-foreground">
+                {isMockDataEnabled ? "All regulations met (mock)" : "All regulations met"}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-      <UpcomingPayrollCard />
+      {visibleWidgets.upcomingPayrollCard && <UpcomingPayrollCard />}
 
-      <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />
+      {visibleWidgets.toDoListCard && <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />}
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Payroll Overview</CardTitle>
-            <CardDescription>Total gross payroll amount per month.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyPayrollData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {visibleWidgets.monthlyPayrollOverviewChart && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Payroll Overview</CardTitle>
+              <CardDescription>Total gross payroll amount per month.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyPayrollData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                  <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Date</CardTitle>
-            <CardDescription>A quick view of the current date.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="rounded-md border"
-              fixedWeeks
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee Distribution by Job Title</CardTitle>
-            <CardDescription>Breakdown of employees across different roles.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={employeeJobTitleData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  labelLine={false}
-                  style={{ fontSize: dataVisualsFontSize }}
-                >
-                  {employeeJobTitleData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {visibleWidgets.currentDateCalendar && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Current Date</CardTitle>
+              <CardDescription>A quick view of the current date.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="rounded-md border"
+                fixedWeeks
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Deductions Breakdown</CardTitle>
-            <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={totalDeductionsBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  labelLine={false}
-                  style={{ fontSize: dataVisualsFontSize }}
-                >
-                  {totalDeductionsBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Average Net Pay Trend</CardTitle>
-            <CardDescription>Average net pay per employee over recent months.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={averageNetPayTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                <Line type="monotone" dataKey="avgNetPay" stroke="#82ca9d" name="Average Net Pay" activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {visibleWidgets.employeeJobTitleDistributionChart && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee Distribution by Job Title</CardTitle>
+              <CardDescription>Breakdown of employees across different roles.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={employeeJobTitleData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    labelLine={false}
+                    style={{ fontSize: dataVisualsFontSize }}
+                  >
+                    {employeeJobTitleData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee Salary Distribution</CardTitle>
-            <CardDescription>Number of employees within different salary ranges.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={employeeSalaryDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
-                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {visibleWidgets.totalDeductionsBreakdownChart && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Total Deductions Breakdown</CardTitle>
+              <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={totalDeductionsBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    labelLine={false}
+                    style={{ fontSize: dataVisualsFontSize }}
+                  >
+                    {totalDeductionsBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Leave Days Taken</CardTitle>
-            <CardDescription>Total working days taken as leave per month.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={leaveDaysTakenTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
-                <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                <Bar dataKey="days" fill="#00C49F" name="Working Days Taken" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {visibleWidgets.averageNetPayTrendChart && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Average Net Pay Trend</CardTitle>
+              <CardDescription>Average net pay per employee over recent months.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={averageNetPayTrend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                  <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
+                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Line type="monotone" dataKey="avgNetPay" stroke="#82ca9d" name="Average Net Pay" activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        {visibleWidgets.employeeSalaryDistributionChart && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee Salary Distribution</CardTitle>
+              <CardDescription>Number of employees within different salary ranges.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={employeeSalaryDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
+                  <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
+                  <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {visibleWidgets.monthlyLeaveDaysTakenChart && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Leave Days Taken</CardTitle>
+              <CardDescription>Total working days taken as leave per month.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={leaveDaysTakenTrend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
+                  <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
+                  <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
+                  <Bar dataKey="days" fill="#00C49F" name="Working Days Taken" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
 
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div className="flex items-center space-x-2">
-            <Button asChild className="w-full">
-              <Link to="/employees">Add New Employee</Link>
-            </Button>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button asChild className="w-full">
-              <Link to="/payslips/overview">Generate Payslips</Link>
-            </Button>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button asChild className="w-full">
-              <Link to="/reports">View Reports</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {visibleWidgets.quickActionsCard && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex items-center space-x-2">
+              <Button asChild className="w-full">
+                <Link to="/employees">Add New Employee</Link>
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button asChild className="w-full">
+                <Link to="/payslips/overview">Generate Payslips</Link>
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button asChild className="w-full">
+                <Link to="/reports">View Reports</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-8 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
         <h3 className="font-semibold text-lg mb-2">Important Note on South African Regulations:</h3>
