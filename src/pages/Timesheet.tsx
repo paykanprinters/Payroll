@@ -5,15 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
-import { Button } from "@/components/ui/button"; // Import Button
-import { UploadCloud, CalendarDays } from "lucide-react"; // Import UploadCloud and CalendarDays icons
-import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog"; // Import new dialog
-import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog"; // Import new weekly editor dialog
-import { ImportableTimesheetEntry, TimesheetFormValues } from "@/hooks/use-timesheet-data"; // Import the new type and TimesheetFormValues
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { Button } from "@/components/ui/button";
+import { UploadCloud, CalendarDays } from "lucide-react";
+import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
+import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
+import { ImportableTimesheetEntry, TimesheetFormValues } from "@/hooks/use-timesheet-data";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const Timesheet: React.FC = () => {
-  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets } = usePayrollProcessor(); // Get employees, leaveRecords, isMockDataEnabled, and initialTimesheets from usePayrollProcessor
+  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets } = usePayrollProcessor();
 
   const {
     timesheets,
@@ -26,17 +26,15 @@ const Timesheet: React.FC = () => {
     startEditing,
     cancelEditing,
     isLeaveDay,
-    addTimesheetBatch, // Get the new batch function
-  } = useTimesheetData(initialTimesheets, employees, leaveRecords, isMockDataEnabled); // Pass initialTimesheets, employees, leaveRecords, and isMockDataEnabled to useTimesheetData
+    addTimesheetBatch,
+  } = useTimesheetData(initialTimesheets, employees, leaveRecords, isMockDataEnabled);
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
   const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = React.useState(false);
   const [selectedEmployeeIdForWeeklyEditor, setSelectedEmployeeIdForWeeklyEditor] = React.useState<string>("");
   const [selectedDateForWeeklyEditor, setSelectedDateForWeeklyEditor] = React.useState<string>("");
 
-
-  // The handleImportTimesheets function will now just directly call addTimesheetBatch
-  const handleImportTimesheets = (importedEntries: ImportableTimesheetEntry[]) => { // Use the new type
+  const handleImportTimesheets = (importedEntries: ImportableTimesheetEntry[]) => {
     addTimesheetBatch(importedEntries);
   };
 
@@ -57,7 +55,6 @@ const Timesheet: React.FC = () => {
         <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
           <UploadCloud className="mr-2 h-4 w-4" /> Import Clock Times
         </Button>
-        {/* Existing Add/Edit button can go here if needed, or remain in the form card */}
       </div>
 
       <Card>
@@ -81,11 +78,11 @@ const Timesheet: React.FC = () => {
 
       <TimesheetTable
         timesheets={timesheets}
-        employees={employees} {/* Pass employees to TimesheetTable */}
+        employees={employees}
         onEdit={startEditing}
         onDelete={deleteTimesheet}
         onStatusChange={updateTimesheetStatus}
-        onEmployeeClick={handleEmployeeClick} // Pass the new handler
+        onEmployeeClick={handleEmployeeClick}
       />
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
@@ -101,7 +98,7 @@ const Timesheet: React.FC = () => {
       <ImportTimesheetDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportTimesheets} // Pass the updated handler
+        onImport={handleImportTimesheets}
         employees={employees}
       />
 
