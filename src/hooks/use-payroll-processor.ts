@@ -15,6 +15,8 @@ import { useEmployeesData } from "./use-employees-data"; // New import
 import { useTaxTables } from "./use-tax-tables"; // New import
 import { usePayrollProcessingLogic } from "./use-payroll-processing-logic"; // New import
 import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { showError, showSuccess } from "@/utils/toast";
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -95,6 +97,30 @@ export const usePayrollProcessor = () => {
     setTimesheets,
   );
 
+  // Function to trigger the generate-todos Edge Function
+  const triggerGenerateToDos = useCallback(async () => {
+    if (isMockDataEnabled) return; // Only for live data
+
+    try {
+      console.log("usePayrollProcessor: Triggering generate-todos Edge Function...");
+      const { data, error } = await supabase.functions.invoke('generate-todos');
+
+      if (error) {
+        console.error('Error invoking generate-todos Edge Function:', error);
+        showError(`Failed to generate To-Dos: ${error.message}`);
+      } else {
+        console.log('Generate To-Dos Edge Function response:', data);
+        // After generating, trigger a refetch of To-Dos in useToDosData
+        window.dispatchEvent(new Event('refetchToDos'));
+        showSuccess("To-Dos refreshed successfully!");
+      }
+    } catch (error: any) {
+      console.error('usePayrollProcessor: Unhandled error triggering generate-todos Edge Function:', error);
+      showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
+    }
+  }, [isMockDataEnabled]);
+
+
   // Effect for initial load and when mock data is toggled (full re-parse)
   useEffect(() => {
     const handleMockDataToggle = () => {
@@ -120,6 +146,8 @@ export const usePayrollProcessor = () => {
         setTimesheets([]);
         setToDos([]); // Clear To-Dos
         console.log("usePayrollProcessor: All mock data states cleared.");
+        // For live data, trigger initial To-Do generation
+        triggerGenerateToDos();
       }
     };
 
@@ -131,7 +159,7 @@ export const usePayrollProcessor = () => {
     return () => {
       window.removeEventListener("allMockDataUpdated", handleMockDataToggle);
     };
-  }, []);
+  }, [triggerGenerateToDos]);
 
   // Individual listeners for specific data updates (only for mock data)
   useEffect(() => {
@@ -189,5 +217,6 @@ export const usePayrollProcessor = () => {
     isLoadingEmployees,
     runPayrollProcess,
     calculateSinglePayslipPreview,
+    triggerGenerateToDos, // Expose function to manually trigger To-Do generation
   };
 };

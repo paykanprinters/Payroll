@@ -186,4 +186,6 @@ export interface ToDoEntry {
   assignedTo?: string; // Mock user role/ID
   employeeId?: string; // New: Link to specific employee
   relatedField?: string; // New: Link to specific field (e.g., 'personalId')
+  createdAt?: string; // Added for Supabase
+  updatedAt?: string; // Added for Supabase
 }

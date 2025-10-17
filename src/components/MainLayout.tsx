@@ -25,7 +25,7 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, toDos: initialToDos, employees, addOrUpdateEmployee } = usePayrollProcessor(); // Use usePayrollProcessor
+  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, toDos: initialToDos, employees, addOrUpdateEmployee, triggerGenerateToDos } = usePayrollProcessor(); // Use usePayrollProcessor
   const { pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Pass employees and addOrUpdateEmployee to useToDosData
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
