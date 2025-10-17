@@ -254,7 +254,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         </DialogHeader>
         <FormProvider {...formMethods}>
           <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden">
-            <ScrollArea className="h-full px-4">
+            <ScrollArea className="flex-grow h-full px-4 min-h-0">
               <div className="grid gap-4 py-4">
                 <BasicInfoForm />
                 <PersonalDetailsForm />
