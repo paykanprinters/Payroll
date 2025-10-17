@@ -18,7 +18,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
-// import { ScrollArea } from "@/components/ui/scroll-area"; // Removed ScrollArea import
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -160,7 +159,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       department: "",
       workLocation: "",
       dateOfConfirmation: "",
-      originCountry: "",
+      originCountry: undefined,
       employmentType: undefined,
       portalAccess: false,
       permanentAddress: "",
@@ -205,7 +204,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         department: "",
         workLocation: "",
         dateOfConfirmation: "",
-        originCountry: "",
+        originCountry: undefined,
         employmentType: undefined,
         portalAccess: false,
         permanentAddress: "",
@@ -223,27 +222,27 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col"> {/* Removed overflow-hidden */}
+        <DialogHeader className="px-4 pt-4"> {/* Added px-4 pt-4 for consistent spacing */}
           <DialogTitle>{initialEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
           <DialogDescription>
             {initialEmployee ? "Make changes to employee details here." : "Fill in the details for the new employee."}
           </DialogDescription>
         </DialogHeader>
-        <FormProvider {...formMethods}>
-          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
-            <div className="flex-grow overflow-y-auto px-4"> {/* Replaced ScrollArea with native scrolling */}
-              <div className="grid gap-4 py-4">
+        <div className="flex-grow overflow-y-auto"> {/* New scrollable wrapper */}
+          <FormProvider {...formMethods}>
+            <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col min-h-full"> {/* min-h-full to ensure form takes up space */}
+              <div className="grid gap-4 py-4 px-4"> {/* Content padding */}
                 <BasicInfoForm />
                 <PersonalDetailsForm />
                 <PaymentInfoForm />
               </div>
-            </div>
-            <DialogFooter className="pt-4 px-4">
-              <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
-            </DialogFooter>
-          </form>
-        </FormProvider>
+            </form>
+          </FormProvider>
+        </div>
+        <DialogFooter className="pt-4 px-4 pb-4"> {/* Added px-4 pb-4 for consistent spacing */}
+          <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
