@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Search, Loader2 } from "lucide-react"; // Added Loader2
+import { PlusCircle, Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,7 +22,7 @@ import {
 import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import { useAuth } from '@/context/AuthContext';
 
 interface UserData {
   id: string;
@@ -30,10 +30,8 @@ interface UserData {
   email: string;
   role: "Admin" | "Manager" | "Staff" | "Viewer";
   status: "Active" | "Inactive";
-  // password is not stored directly here, handled by Supabase Auth
 }
 
-// Mock user data from previous local storage implementation
 const initialMockUsersForSeeding = [
   { id: "1", name: "Admin User", email: "admin@example.com", role: "Admin", status: "Active", password: "password" },
   { id: "2", name: "Manager Smith", email: "manager@example.com", role: "Manager", status: "Active", password: "password" },
@@ -54,7 +52,7 @@ const UserControlPanel: React.FC = () => {
   const [isUserDeleteDialogOpen, setIsUserDeleteDialogOpen] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState<UserData | null>(null);
 
-  const { user: currentUser, isAuthenticated } = useAuth(); // Get current authenticated user
+  const { user: currentUser, isAuthenticated } = useAuth();
 
   const fetchUsers = React.useCallback(async () => {
     setIsLoading(true);
@@ -73,7 +71,6 @@ const UserControlPanel: React.FC = () => {
   const seedInitialUsers = React.useCallback(async () => {
     setIsSeeding(true);
     try {
-      // Call the Edge Function to seed users
       const response = await supabase.functions.invoke('seed-users', {
         body: JSON.stringify({ users: initialMockUsersForSeeding }),
       });
@@ -84,7 +81,7 @@ const UserControlPanel: React.FC = () => {
       } else {
         console.log('Seed users Edge Function response:', response.data);
         showSuccess('Initial users seeded successfully!');
-        fetchUsers(); // Refresh user list after seeding
+        fetchUsers();
       }
     } catch (error) {
       console.error('Error invoking seed-users Edge Function:', error);
@@ -100,11 +97,9 @@ const UserControlPanel: React.FC = () => {
     }
   }, [isAuthenticated, fetchUsers]);
 
-  // Check if users table is empty and trigger seeding
   React.useEffect(() => {
     const checkAndSeed = async () => {
       if (isAuthenticated && !isLoading && users.length === 0 && !isSeeding) {
-        // Only seed if there are no users and we're not already seeding
         const { count, error } = await supabase.from('users').select('id', { count: 'exact' });
         if (error) {
           console.error('Error checking user count for seeding:', error);
@@ -146,7 +141,6 @@ const UserControlPanel: React.FC = () => {
     if (!userToDelete) return;
 
     setIsLoading(true);
-    // 1. Delete user profile from public.users
     const { error: profileError } = await supabase
       .from('users')
       .delete()
@@ -159,18 +153,8 @@ const UserControlPanel: React.FC = () => {
       return;
     }
 
-    // 2. Delete user from Supabase Auth (requires service role key, typically done via Edge Function)
-    // For simplicity, we'll assume an admin context or a backend function handles auth.admin.deleteUser
-    // Here, we'll simulate it or rely on CASCADE DELETE from public.users to auth.users if configured.
-    // NOTE: CASCADE DELETE from public.users to auth.users is NOT standard and not recommended.
-    // A separate admin API call or Edge Function is needed to delete from auth.users.
-    // For this mock, we'll just delete from public.users and assume auth.users is handled.
-    // In a real app, you'd call an Edge Function here:
-    // const { data, error: authDeleteError } = await supabase.functions.invoke('delete-auth-user', { body: { userId: userToDelete.id } });
-    // if (authDeleteError) { /* handle error */ }
-
     showSuccess(`User ${userToDelete.name} deleted successfully!`);
-    fetchUsers(); // Refresh list
+    fetchUsers();
     setIsUserDeleteDialogOpen(false);
     setUserToDelete(null);
   };
@@ -178,7 +162,6 @@ const UserControlPanel: React.FC = () => {
   const handleSaveUser = async (userData: UserFormValues) => {
     setIsLoading(true);
     if (userData.id) {
-      // Update existing user
       const { error } = await supabase
         .from('users')
         .update({ name: userData.name, email: userData.email, role: userData.role, status: userData.status })
@@ -192,7 +175,6 @@ const UserControlPanel: React.FC = () => {
         fetchUsers();
       }
 
-      // Update user_metadata in auth.users via Edge Function
       const { data: metadataUpdate, error: metadataError } = await supabase.functions.invoke('update-user-metadata', {
         body: JSON.stringify({
           userId: userData.id,
@@ -207,9 +189,7 @@ const UserControlPanel: React.FC = () => {
         console.log("User metadata updated:", metadataUpdate);
       }
 
-      // If password is provided, update it (requires admin context or separate flow)
       if (userData.password) {
-        // This would typically be an Edge Function call for security and admin privileges
         const { data, error: passwordUpdateError } = await supabase.functions.invoke('update-user-password', {
           body: JSON.stringify({ userId: userData.id, newPassword: userData.password }),
         });
@@ -222,10 +202,9 @@ const UserControlPanel: React.FC = () => {
       }
 
     } else {
-      // Add new user (Sign up in Auth, then insert profile)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
-        password: userData.password!, // Password is required for new users
+        password: userData.password!,
         options: {
           data: {
             name: userData.name,
@@ -252,7 +231,6 @@ const UserControlPanel: React.FC = () => {
         if (profileError) {
           console.error("Error inserting new user profile:", profileError);
           showError("Failed to add user profile after signup.");
-          // Consider deleting the auth.user if profile creation fails
         } else {
           showSuccess(`User ${userData.name} added successfully!`);
           fetchUsers();
@@ -264,7 +242,6 @@ const UserControlPanel: React.FC = () => {
     setIsLoading(false);
   };
 
-  // Only allow Admin to manage users
   const canManageUsers = currentUser?.role === 'Admin';
 
   if (isLoading) {
@@ -344,19 +321,12 @@ const UserControlPanel: React.FC = () => {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
+                <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableRow key={user.id}><TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{user.role}</Badge>

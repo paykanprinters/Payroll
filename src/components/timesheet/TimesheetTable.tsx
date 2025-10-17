@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clock as ClockIcon, CheckCircle, XCircle, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces"; // Import MockEmployee
+import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import {
   Pagination,
   PaginationContent,
@@ -19,32 +19,30 @@ import {
 
 interface TimesheetTableProps {
   timesheets: TimesheetEntry[];
-  employees: MockEmployee[]; // Pass employees to resolve customEmployeeId
+  employees: MockEmployee[];
   onEdit: (timesheet: TimesheetEntry) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, newStatus: TimesheetEntry["status"]) => void;
-  onEmployeeClick: (employeeId: string, date: string) => void; // New prop for employee click
+  onEmployeeClick: (employeeId: string, date: string) => void;
 }
 
-const ITEMS_PER_PAGE = 10; // Number of items to show per page
+const ITEMS_PER_PAGE = 10;
 
 const TimesheetTable: React.FC<TimesheetTableProps> = ({
   timesheets,
-  employees, // Use employees prop
+  employees,
   onEdit,
   onDelete,
   onStatusChange,
-  onEmployeeClick, // Use new prop
+  onEmployeeClick,
 }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
 
-  // Helper to get employee name or custom ID
   const getEmployeeDisplayId = (employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
     return employee ? employee.customEmployeeId : "Unknown";
   };
 
-  // Sort timesheets by date (most recent first)
   const sortedTimesheets = React.useMemo(() => {
     return [...timesheets].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [timesheets]);
@@ -62,7 +60,6 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
     setCurrentPage(prev => Math.min(totalPages, prev + 1));
   };
 
-  // Reset to first page if timesheets change (e.g., after import/delete)
   React.useEffect(() => {
     setCurrentPage(1);
   }, [timesheets]);
@@ -78,17 +75,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Employee ID</TableHead> {/* Changed to Employee ID */}
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time In</TableHead>
-                  <TableHead>Time Out</TableHead>
-                  <TableHead>Work Hours</TableHead>
-                  <TableHead>Overtime</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Flags</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
+                <TableRow><TableHead>Employee ID</TableHead><TableHead>Date</TableHead><TableHead>Time In</TableHead><TableHead>Time Out</TableHead><TableHead>Work Hours</TableHead><TableHead>Overtime</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Flags</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedTimesheets.map((entry) => (
@@ -97,7 +84,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       className="font-medium cursor-pointer hover:underline text-blue-600"
                       onClick={() => onEmployeeClick(entry.employeeId, entry.date)}
                     >
-                      {getEmployeeDisplayId(entry.employeeId)} {/* Display customEmployeeId */}
+                      {getEmployeeDisplayId(entry.employeeId)}
                     </TableCell>
                     <TableCell>{entry.date}</TableCell>
                     <TableCell>{entry.timeIn || "N/A"}</TableCell>

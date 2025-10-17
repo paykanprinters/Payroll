@@ -26,14 +26,14 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
-import { useSavingPlansData } from "@/hooks/use-saving-plans-data"; // Import useSavingPlansData
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { useSavingPlansData } from "@/hooks/use-saving-plans-data";
 
 const savingPlanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
   amount: z.preprocess(
-    (val) => (val === "" || isNaN(Number(val))) ? 0 : Number(val), // Return 0 instead of undefined
-    z.number().min(1, "Savings amount must be positive") // Now, it's a required number
+    (val) => (val === "" || isNaN(Number(val))) ? 0 : Number(val),
+    z.number().min(1, "Savings amount must be positive")
   ),
   frequency: z.enum(["monthly", "weekly"], { message: "Deduction frequency is required" }),
   startDate: z.string().min(1, "Start date is required"),
@@ -45,8 +45,8 @@ type SavingPlanFormValues = z.infer<typeof savingPlanSchema>;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const Savings: React.FC = () => {
-  const { employees, savingPlans: initialSavingPlans, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialSavingPlans, isMockDataEnabled from usePayrollProcessor
-  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan } = useSavingPlansData(initialSavingPlans, employees, isMockDataEnabled); // Pass initialSavingPlans, employees, isMockDataEnabled to useSavingPlansData
+  const { employees, savingPlans: initialSavingPlans, isMockDataEnabled } = usePayrollProcessor();
+  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan } = useSavingPlansData(initialSavingPlans, employees, isMockDataEnabled);
 
   const [totalSavingsData, setTotalSavingsData] = useState<{ name: string; amount: number }[]>([]);
   const [savingsByFrequencyData, setSavingsByFrequencyData] = useState<{ name: string; value: number }[]>([]);
@@ -57,22 +57,20 @@ const Savings: React.FC = () => {
     resolver: zodResolver(savingPlanSchema),
     defaultValues: {
       employeeId: "",
-      amount: 0, // Change default to 0 to match preprocess
+      amount: 0,
       frequency: "monthly",
-      startDate: new Date().toISOString().split('T')[0], // Default to current date
+      startDate: new Date().toISOString().split('T')[0],
       endDate: "",
     },
   });
 
   useEffect(() => {
     if (savingPlans.length > 0) {
-      // Calculate total savings for BarChart
       const totalAmount = savingPlans.reduce((sum, plan) => sum + plan.amount, 0);
       setTotalSavingsData([
         { name: "Total Active Savings", amount: totalAmount },
       ]);
 
-      // Calculate savings by frequency for PieChart
       const frequencyMap = new Map<string, number>();
       savingPlans.forEach(plan => {
         frequencyMap.set(plan.frequency, (frequencyMap.get(plan.frequency) || 0) + 1);
@@ -88,7 +86,6 @@ const Savings: React.FC = () => {
   }, [savingPlans]);
 
   const onSubmit = (data: SavingPlanFormValues) => {
-    // Explicitly construct the object to ensure type compatibility
     const planToSave: Omit<SavingPlan, 'id' | 'status'> = {
       employeeId: data.employeeId,
       amount: data.amount,
@@ -100,7 +97,6 @@ const Savings: React.FC = () => {
     form.reset();
   };
 
-  // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
     return `${value} (${percentage}%)`;
@@ -147,11 +143,11 @@ const Savings: React.FC = () => {
                   data={savingsByFrequencyData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60} // Added for Doughnut
+                  innerRadius={60}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  labelLine={false} // Ensure no lines to labels
+                  labelLine={false}
                   style={{ fontSize: dataVisualsFontSize }}
                 >
                   {savingsByFrequencyData.map((entry, index) => (
@@ -275,20 +271,11 @@ const Savings: React.FC = () => {
           {savingPlans.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Employee ID</TableHead> {/* Changed to Employee ID */}
-                  <TableHead>Employee Name</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Frequency</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
+                <TableRow><TableHead>Employee ID</TableHead><TableHead>Employee Name</TableHead><TableHead>Amount</TableHead><TableHead>Frequency</TableHead><TableHead>Start Date</TableHead><TableHead>End Date</TableHead><TableHead>Status</TableHead></TableRow>
               </TableHeader>
               <TableBody>
                 {savingPlans.map((plan) => (
-                  <TableRow key={plan.id}>
-                    <TableCell>{getEmployeeCustomId(plan.employeeId)}</TableCell> {/* Display customEmployeeId */}
+                  <TableRow key={plan.id}><TableCell>{getEmployeeCustomId(plan.employeeId)}</TableCell>
                     <TableCell>{getEmployeeName(plan.employeeId)}</TableCell>
                     <TableCell>R {plan.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</TableCell>
                     <TableCell>{plan.frequency}</TableCell>

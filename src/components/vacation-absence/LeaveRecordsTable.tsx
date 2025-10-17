@@ -3,12 +3,12 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
+import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
 
 interface LeaveRecordsTableProps {
   leaveRecords: LeaveEntry[];
   getEmployeeName: (employeeId: string) => string;
-  getEmployeeCustomId: (employeeId: string) => string; // New prop
+  getEmployeeCustomId: (employeeId: string) => string;
 }
 
 const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, getEmployeeName, getEmployeeCustomId }) => {
@@ -22,22 +22,11 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, get
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Employee ID</TableHead> {/* Changed to Employee ID */}
-                  <TableHead>Employee Name</TableHead>
-                  <TableHead>Leave Type</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Total Days</TableHead>
-                  <TableHead>Working Days</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Document</TableHead>
-                </TableRow>
+                <TableRow><TableHead>Employee ID</TableHead><TableHead>Employee Name</TableHead><TableHead>Leave Type</TableHead><TableHead>Start Date</TableHead><TableHead>End Date</TableHead><TableHead>Total Days</TableHead><TableHead>Working Days</TableHead><TableHead>Reason</TableHead><TableHead>Document</TableHead></TableRow>
               </TableHeader>
               <TableBody>
                 {leaveRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell>{getEmployeeCustomId(record.employeeId)}</TableCell> {/* Display customEmployeeId */}
+                  <TableRow key={record.id}><TableCell>{getEmployeeCustomId(record.employeeId)}</TableCell>
                     <TableCell>{getEmployeeName(record.employeeId)}</TableCell>
                     <TableCell>{record.leaveType}</TableCell>
                     <TableCell>{record.startDate}</TableCell>

@@ -17,7 +17,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { PlusCircle, Edit, Trash2, Download, Loader2 } from "lucide-react"; // Added Loader2
+import { PlusCircle, Edit, Trash2, Download, Loader2 } from "lucide-react";
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import {
@@ -259,23 +259,11 @@ const Employees: React.FC = () => {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee ID</TableHead> {/* Changed from ID to Employee ID */}
-                    <TableHead>Personal ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Job Title</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Mobile</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead className="text-right">Salary/Rate</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
-                  </TableRow>
+                  <TableRow><TableHead>Employee ID</TableHead><TableHead>Personal ID</TableHead><TableHead>Name</TableHead><TableHead>Job Title</TableHead><TableHead>Department</TableHead><TableHead>Email</TableHead><TableHead>Mobile</TableHead><TableHead>Start Date</TableHead><TableHead className="text-right">Salary/Rate</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {employees.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.customEmployeeId}</TableCell> {/* Display customEmployeeId */}
+                    <TableRow key={employee.id}><TableCell className="font-medium">{employee.customEmployeeId}</TableCell>
                       <TableCell>{employee.personalId || "N/A"}</TableCell>
                       <TableCell>{employee.firstName} {employee.lastName}</TableCell>
                       <TableCell>{employee.jobTitle}</TableCell>

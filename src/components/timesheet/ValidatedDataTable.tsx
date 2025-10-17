@@ -23,21 +23,11 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({ validatedData, 
       <ScrollArea className="border rounded-md flex-grow">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Status</TableHead>
-              <TableHead>Personal ID (from CSV)</TableHead>
-              <TableHead>Employee Name (Resolved)</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Time In</TableHead>
-              <TableHead>Tea Break</TableHead>
-              <TableHead>Lunch Break</TableHead>
-              <TableHead>Time Out</TableHead>
-            </TableRow>
+            <TableRow><TableHead>Status</TableHead><TableHead>Personal ID (from CSV)</TableHead><TableHead>Employee Name (Resolved)</TableHead><TableHead>Date</TableHead><TableHead>Time In</TableHead><TableHead>Tea Break</TableHead><TableHead>Lunch Break</TableHead><TableHead>Time Out</TableHead></TableRow>
           </TableHeader>
           <TableBody>
             {validatedData.map((row, index) => (
-              <TableRow key={index} className={!row._isValid ? "bg-red-50/50" : ""}>
-                <TableCell className="text-center">
+              <TableRow key={index} className={!row._isValid ? "bg-red-50/50" : ""}><TableCell className="text-center">
                   {row._isValid ? (
                     <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
                   ) : (
