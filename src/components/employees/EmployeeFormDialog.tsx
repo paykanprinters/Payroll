@@ -253,7 +253,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         </DialogHeader>
         <FormProvider {...formMethods}>
           <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
-            <div className="flex-grow overflow-y-auto px-4 min-h-0"> {/* Added min-h-0 here */}
+            <div className="flex-grow overflow-y-auto px-4 min-h-0" style={{ height: 0 }}> {/* Added style={{ height: 0 }} */}
               <div className="grid gap-4 py-4">
                 <BasicInfoForm />
                 <PersonalDetailsForm />
