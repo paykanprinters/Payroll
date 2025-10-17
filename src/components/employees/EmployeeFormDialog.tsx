@@ -99,6 +99,7 @@ const employeeSchema = z.object({
   paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
   payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(),
   standardDailyHours: z.number().min(1).max(24).optional(),
+  ignoredIncompleteFields: z.array(z.string()).optional(), // Added this line
 }).superRefine((data, ctx) => {
   if (!data.salary && !data.hourlyRate) {
     ctx.addIssue({
@@ -145,6 +146,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       bankAccountType: initialEmployee.bankAccountType || "Cheque", // Ensure it's a string
       portalAccess: initialEmployee.portalAccess ?? false, // Ensure boolean
       standardDailyHours: initialEmployee.standardDailyHours ?? 8, // Ensure number
+      ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [], // Ensure array
     } : {
       firstName: "",
       lastName: "",
@@ -183,6 +185,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       paymentMode: "Bank Transfer",
       payFrequency: undefined,
       standardDailyHours: 8,
+      customEmployeeId: "", // Will be generated in useEffect
+      ignoredIncompleteFields: [], // Initialize as empty array
     },
   });
 
@@ -212,6 +216,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         bankAccountType: initialEmployee.bankAccountType || "Cheque", // Ensure it's a string
         portalAccess: initialEmployee.portalAccess ?? false, // Ensure boolean
         standardDailyHours: initialEmployee.standardDailyHours ?? 8, // Ensure number
+        ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [], // Ensure array
       });
     } else {
       // For new employees, generate customEmployeeId
@@ -260,6 +265,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         payFrequency: undefined,
         standardDailyHours: 8,
         customEmployeeId: newCustomEmployeeId, // Set the generated ID here
+        ignoredIncompleteFields: [], // Initialize as empty array
       });
     }
   }, [initialEmployee, formMethods, allEmployees, companyName]);
