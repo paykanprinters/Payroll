@@ -128,6 +128,13 @@ export const useDashboardSettings = () => {
     });
   }, []);
 
+  const resetToDefaults = useCallback(() => {
+    const defaults = getRoleBasedDefaults();
+    setVisibleWidgets(defaults);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(defaults)); // Explicitly save defaults
+    console.log("useDashboardSettings: Resetting to defaults:", defaults);
+  }, [getRoleBasedDefaults]);
+
   return {
     visibleWidgets,
     toggleWidgetVisibility,
