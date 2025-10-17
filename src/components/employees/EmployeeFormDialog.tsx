@@ -128,7 +128,18 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 }) => {
   const formMethods = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: initialEmployee || {
+    defaultValues: initialEmployee ? {
+      ...initialEmployee,
+      customEmployeeId: initialEmployee.customEmployeeId || "", // Ensure it's a string
+      originCountry: initialEmployee.originCountry || "", // Ensure it's a string
+      employmentType: initialEmployee.employmentType || undefined, // Ensure it's a string
+      gender: initialEmployee.gender || undefined, // Ensure it's a string
+      payFrequency: initialEmployee.payFrequency || undefined, // Ensure it's a string
+      paymentMode: initialEmployee.paymentMode || "Bank Transfer", // Ensure it's a string
+      bankAccountType: initialEmployee.bankAccountType || "Cheque", // Ensure it's a string
+      portalAccess: initialEmployee.portalAccess ?? false, // Ensure boolean
+      standardDailyHours: initialEmployee.standardDailyHours ?? 8, // Ensure number
+    } : {
       firstName: "",
       lastName: "",
       email: "",
@@ -171,7 +182,18 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   React.useEffect(() => {
     if (initialEmployee) {
-      formMethods.reset(initialEmployee);
+      formMethods.reset({
+        ...initialEmployee,
+        customEmployeeId: initialEmployee.customEmployeeId || "", // Ensure it's a string
+        originCountry: initialEmployee.originCountry || "", // Ensure it's a string
+        employmentType: initialEmployee.employmentType || undefined, // Ensure it's a string
+        gender: initialEmployee.gender || undefined, // Ensure it's a string
+        payFrequency: initialEmployee.payFrequency || undefined, // Ensure it's a string
+        paymentMode: initialEmployee.paymentMode || "Bank Transfer", // Ensure it's a string
+        bankAccountType: initialEmployee.bankAccountType || "Cheque", // Ensure it's a string
+        portalAccess: initialEmployee.portalAccess ?? false, // Ensure boolean
+        standardDailyHours: initialEmployee.standardDailyHours ?? 8, // Ensure number
+      });
     } else {
       formMethods.reset({
         firstName: "",

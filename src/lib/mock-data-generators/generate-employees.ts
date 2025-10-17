@@ -7,9 +7,10 @@ export const generateMockEmployees = (companyName: string = "Acme Corp"): MockEm
 
   const createEmployee = (base: Omit<MockEmployee, 'id' | 'customEmployeeId'>): MockEmployee => {
     employeeCounter++;
+    const customEmployeeId = generateCustomEmployeeId(companyName, employeeCounter - 1); // Generate here
     return {
       id: uuidv4(),
-      customEmployeeId: generateCustomEmployeeId(companyName, employeeCounter - 1),
+      customEmployeeId: customEmployeeId, // Explicitly assign
       ...base,
     };
   };

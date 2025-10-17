@@ -77,13 +77,13 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
         }, 0);
         customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
       } else { // If updating an existing employee
-        // If customEmployeeId is not provided in the form data (e.g., readOnly field was empty or not registered),
-        // retrieve the existing one from the current state.
+        // Prioritize customEmployeeId from form data if present
         if (!customEmployeeIdToUse) {
+          // If not from form, try to get from existing employee in state
           const existingEmployee = employees.find(emp => emp.id === employeeData.id);
           customEmployeeIdToUse = existingEmployee?.customEmployeeId;
         }
-        // If it's still undefined (e.g., existing employee never had one), generate one.
+        // If still no customEmployeeId, generate a new one (e.g., for legacy data)
         if (!customEmployeeIdToUse) {
              const currentMaxNumber = employees.reduce((max, emp) => {
                 const match = emp.customEmployeeId?.match(/\d+$/);
@@ -163,8 +163,24 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
         let updatedEmployees: MockEmployee[];
         if (employeeData.id) {
           // For mock data, if ID exists, update the employee
+          const existingEmployee = prevEmployees.find(emp => emp.id === employeeData.id);
+          let customEmployeeIdToUse = employeeData.customEmployeeId;
+
+          // If form didn't provide customEmployeeId, try to use existing one
+          if (!customEmployeeIdToUse && existingEmployee) {
+            customEmployeeIdToUse = existingEmployee.customEmployeeId;
+          }
+          // If still no customEmployeeId, generate one (e.g., for legacy mock data)
+          if (!customEmployeeIdToUse) {
+            const currentMaxNumber = prevEmployees.reduce((max, emp) => {
+              const match = emp.customEmployeeId?.match(/\d+$/);
+              return match ? Math.max(max, parseInt(match[0])) : max;
+            }, 0);
+            customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+          }
+
           updatedEmployees = prevEmployees.map(emp =>
-            emp.id === employeeData.id ? { ...emp, ...employeeData } : emp
+            emp.id === employeeData.id ? { ...emp, ...employeeData, customEmployeeId: customEmployeeIdToUse } : emp
           );
           showSuccess("Mock employee updated successfully!");
         } else {
