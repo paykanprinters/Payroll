@@ -23,6 +23,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
+import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 import BasicInfoForm from "./forms/BasicInfoForm";
 import PersonalDetailsForm from "./forms/PersonalDetailsForm";
@@ -127,6 +129,9 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   onSave,
   initialEmployee,
 }) => {
+  const { employees: allEmployees, companyDetails } = usePayrollProcessor(); // Get all employees and company details
+  const companyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
+
   const formMethods = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
     defaultValues: initialEmployee ? {
@@ -196,6 +201,13 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         standardDailyHours: initialEmployee.standardDailyHours ?? 8, // Ensure number
       });
     } else {
+      // For new employees, generate customEmployeeId
+      const currentMaxNumber = allEmployees.reduce((max, emp) => {
+        const match = emp.customEmployeeId?.match(/\d+$/);
+        return match ? Math.max(max, parseInt(match[0])) : max;
+      }, 0);
+      const newCustomEmployeeId = generateCustomEmployeeId(companyName, currentMaxNumber);
+
       formMethods.reset({
         firstName: "",
         lastName: "",
@@ -234,9 +246,10 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         paymentMode: "Bank Transfer",
         payFrequency: undefined,
         standardDailyHours: 8,
+        customEmployeeId: newCustomEmployeeId, // Set the generated ID here
       });
     }
-  }, [initialEmployee, formMethods]);
+  }, [initialEmployee, formMethods, allEmployees, companyName]);
 
   const onSubmit = (data: EmployeeFormValues) => {
     onSave(data);
