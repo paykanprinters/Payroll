@@ -30,6 +30,7 @@ import ToDoList from "@/components/ToDoList";
 import { useToDosData } from "@/hooks/use-todos-data";
 import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown"; // New import
 import { useDashboardSettings } from "@/hooks/use-dashboard-settings"; // New import
+import { Loader2 } from "lucide-react"; // Import Loader2
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
