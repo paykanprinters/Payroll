@@ -95,12 +95,15 @@ export const useDashboardSettings = () => {
       try {
         const parsedSettings: DashboardWidgetVisibility = JSON.parse(savedSettings);
         // Merge with defaults to ensure all new widgets are included
-        setVisibleWidgets({ ...defaults, ...parsedSettings });
+        const mergedSettings = { ...defaults, ...parsedSettings };
+        console.log("useDashboardSettings: Loaded from localStorage (merged):", mergedSettings);
+        setVisibleWidgets(mergedSettings);
       } catch (e) {
-        console.error("Failed to parse dashboard settings from localStorage, using defaults.", e);
+        console.error("useDashboardSettings: Failed to parse dashboard settings from localStorage, using defaults.", e);
         setVisibleWidgets(defaults);
       }
     } else {
+      console.log("useDashboardSettings: No settings in localStorage, using defaults:", defaults);
       setVisibleWidgets(defaults);
     }
   }, [isLoadingAuth, user, getRoleBasedDefaults]);
@@ -108,6 +111,7 @@ export const useDashboardSettings = () => {
   // Save settings to localStorage whenever they change
   useEffect(() => {
     if (visibleWidgets) {
+      console.log("useDashboardSettings: Saving to localStorage:", visibleWidgets);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(visibleWidgets));
     }
   }, [visibleWidgets]);
@@ -115,17 +119,14 @@ export const useDashboardSettings = () => {
   const toggleWidgetVisibility = useCallback((widgetKey: keyof DashboardWidgetVisibility) => {
     setVisibleWidgets(prev => {
       if (!prev) return null;
-      return {
+      const newState = {
         ...prev,
         [widgetKey]: !prev[widgetKey],
       };
+      console.log("useDashboardSettings: Toggling widget. New state for", widgetKey, ":", newState[widgetKey], "Full new state:", newState);
+      return newState;
     });
   }, []);
-
-  const resetToDefaults = useCallback(() => {
-    const defaults = getRoleBasedDefaults();
-    setVisibleWidgets(defaults);
-  }, [getRoleBasedDefaults]);
 
   return {
     visibleWidgets,

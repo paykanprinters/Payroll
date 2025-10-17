@@ -167,6 +167,10 @@ const Dashboard: React.FC = () => {
   const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
   const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
 
+  // Add console logs here
+  console.log("Dashboard.tsx render: visibleWidgets:", visibleWidgets);
+  console.log("Dashboard.tsx render: visibleWidgets.toDoListCard:", visibleWidgets?.toDoListCard);
+
   if (isLoadingSettings || !visibleWidgets) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
