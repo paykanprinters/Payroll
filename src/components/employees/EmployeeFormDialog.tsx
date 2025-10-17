@@ -18,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// import { ScrollArea } from "@/components/ui/scroll-area"; // Removed ScrollArea import
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -232,14 +232,14 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         </DialogHeader>
         <FormProvider {...formMethods}>
           <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
-            <ScrollArea className="flex-grow h-full min-h-0"> {/* Added h-full, removed pr-4 */}
-              <div className="grid gap-4 py-4 px-4"> {/* Added px-4 here */}
+            <div className="flex-grow overflow-y-auto px-4"> {/* Replaced ScrollArea with native scrolling */}
+              <div className="grid gap-4 py-4">
                 <BasicInfoForm />
                 <PersonalDetailsForm />
                 <PaymentInfoForm />
               </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4 px-4"> {/* Added px-4 here for consistency */}
+            </div>
+            <DialogFooter className="pt-4 px-4">
               <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
             </DialogFooter>
           </form>
