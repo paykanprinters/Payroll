@@ -110,7 +110,7 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
         console.error("useEmployeesData: Error upserting live employee:", error);
         showError(`Failed to save employee: ${error.message}`);
       } else {
-        const camelCaseData = convertKeysToCamelCase(data);
+        const camelCaseData = convertEmployeeKeysToCamelCase(data);
         setEmployees(prev => {
           const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
           if (existingIndex !== -1) {
