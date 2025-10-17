@@ -21,22 +21,21 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the service role key for admin operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify if the current user making the request is an Admin
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('generate-todos: Unauthorized - Missing Authorization header');
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
     const token = authHeader.replace('Bearer ', '');
     const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
 
     if (userError || !requestingUser) {
-      console.error('Error getting requesting user:', userError);
+      console.error('generate-todos: Unauthorized - Error getting requesting user:', userError?.message || 'User not found');
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
 
@@ -47,24 +46,25 @@ serve(async (req) => {
       .single();
 
     if (profileError || requestingUserProfile?.role !== 'Admin') {
-      console.error('User is not an Admin or profile not found:', profileError);
+      console.error('generate-todos: Forbidden - User is not an Admin or profile not found:', profileError?.message || 'Role not Admin');
       return new Response('Forbidden: Only Admins can generate To-Dos.', { status: 403, headers: corsHeaders });
     }
 
-    // Fetch all employees
+    console.log('generate-todos: User is Admin, proceeding to fetch employees.');
+
     const { data: employees, error: employeesError } = await supabaseAdmin
       .from('employees')
       .select('id, first_name, last_name, personal_id, id_number, phone_number, tax_reference_number, iban_number, ignored_incomplete_fields');
 
     if (employeesError) {
-      console.error('Error fetching employees:', employeesError);
+      console.error('generate-todos: Error fetching employees:', employeesError);
       return new Response(JSON.stringify({ error: 'Failed to fetch employees for To-Do generation.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
+    console.log(`generate-todos: Fetched ${employees.length} employees.`);
 
-    // Fetch existing pending To-Dos related to employee fields
     const { data: existingToDos, error: todosError } = await supabaseAdmin
       .from('todos')
       .select('id, employee_id, related_field, status')
@@ -73,16 +73,17 @@ serve(async (req) => {
       .not('related_field', 'is', null);
 
     if (todosError) {
-      console.error('Error fetching existing To-Dos:', todosError);
+      console.error('generate-todos: Error fetching existing To-Dos:', todosError);
       return new Response(JSON.stringify({ error: 'Failed to fetch existing To-Dos.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
+    console.log(`generate-todos: Fetched ${existingToDos.length} existing pending To-Dos.`);
 
     const newToDosToInsert = [];
-    const toDosToUpdateToDone = []; // For To-Dos that are now complete
-    const existingToDoMap = new Map<string, string>(); // Key: employee_id-related_field, Value: todo_id
+    const toDosToUpdateToDone = [];
+    const existingToDoMap = new Map<string, string>();
 
     existingToDos.forEach(todo => {
       if (todo.employee_id && todo.related_field) {
@@ -93,12 +94,13 @@ serve(async (req) => {
     for (const employee of employees) {
       for (const field of fieldsToFlag) {
         const fieldValue = employee[field.key];
-        const isIgnored = employee.ignored_incomplete_fields?.includes(field.key);
+        // Ensure ignored_incomplete_fields is an array before calling .includes()
+        const ignoredFields = Array.isArray(employee.ignored_incomplete_fields) ? employee.ignored_incomplete_fields : [];
+        const isIgnored = ignoredFields.includes(field.key);
         const todoKey = `${employee.id}-${field.key}`;
         const existingToDoId = existingToDoMap.get(todoKey);
 
         if (!fieldValue && !isIgnored) {
-          // Field is incomplete and not ignored, create or keep pending To-Do
           if (!existingToDoId) {
             newToDosToInsert.push({
               message: `Employee ${employee.first_name} ${employee.last_name} is missing ${field.label}.`,
@@ -111,25 +113,26 @@ serve(async (req) => {
               related_field: field.key,
             });
           }
-          // If it exists, it's already pending, so no action needed (it stays pending)
         } else if ((fieldValue || isIgnored) && existingToDoId) {
-          // Field is now complete or ignored, but a pending To-Do exists. Mark it as done.
           toDosToUpdateToDone.push(existingToDoId);
         }
       }
     }
 
-    // Perform database operations
+    console.log(`generate-todos: New To-Dos to insert: ${newToDosToInsert.length}`);
+    console.log(`generate-todos: To-Dos to update to done: ${toDosToUpdateToDone.length}`);
+
     let insertCount = 0;
     if (newToDosToInsert.length > 0) {
       const { count, error } = await supabaseAdmin
         .from('todos')
-        .insert(newToDosToInsert, { onConflict: 'employee_id, related_field' }) // Prevent duplicates
+        .insert(newToDosToInsert, { onConflict: 'employee_id, related_field' })
         .select('id', { count: 'exact' });
       if (error) {
-        console.error('Error inserting new To-Dos:', error);
+        console.error('generate-todos: Error inserting new To-Dos:', error);
       } else {
         insertCount = count;
+        console.log(`generate-todos: Inserted ${insertCount} new To-Dos.`);
       }
     }
 
@@ -141,9 +144,10 @@ serve(async (req) => {
         .in('id', toDosToUpdateToDone)
         .select('id', { count: 'exact' });
       if (error) {
-        console.error('Error updating To-Dos to done:', error);
+        console.error('generate-todos: Error updating To-Dos to done:', error);
       } else {
         updateCount = count;
+        console.log(`generate-todos: Updated ${updateCount} To-Dos to 'done'.`);
       }
     }
 
@@ -157,7 +161,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Unhandled error in generate-todos Edge Function:', error);
+    console.error('generate-todos: Unhandled error in Edge Function:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
