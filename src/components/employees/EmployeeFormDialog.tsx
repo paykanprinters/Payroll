@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useForm, FormProvider } from "react-hook-form"; // Import FormProvider
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -20,71 +20,65 @@ import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Import Card components
-import { Switch } from "@/components/ui/switch"; // Import Switch for Portal Access
-import { MockEmployee } from "@/lib/mock-data-interfaces"; // Updated import
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { MockEmployee } from "@/lib/mock-data-interfaces";
 
-// Import new modular components
 import BasicInfoForm from "./forms/BasicInfoForm";
 import PersonalDetailsForm from "./forms/PersonalDetailsForm";
 import PaymentInfoForm from "./forms/PaymentInfoForm";
 
-// Define the schema for employee form validation
 const employeeSchema = z.object({
-  id: z.string().optional(), // Internal UUID, optional for new employees
-  customEmployeeId: z.string().optional(), // New field, will be auto-generated for new employees
-  personalId: z.string().optional(), // New field for external clock-in system ID
+  id: z.string().optional(),
+  customEmployeeId: z.string().optional(),
+  personalId: z.string().optional(),
   firstName: z.string().min(1, "First Name is required"),
   lastName: z.string().min(1, "Last Name is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   jobTitle: z.string().min(1, "Job Title is required"),
-  // Updated salary field to use z.preprocess for handling empty strings and then z.number
   salary: z.preprocess(
     (val) => {
-      if (val === null || val === "") return undefined; // Explicitly handle null and empty string
+      if (val === null || val === "") return undefined;
       const num = Number(val);
       return isNaN(num) ? undefined : num;
     },
     z.number()
-      .min(1, "Salary must be a positive number") // Validate as a number, ensure positive
-      .optional() // The field itself is optional
+      .min(1, "Salary must be a positive number")
+      .optional()
   ),
-  // Updated hourlyRate field to use z.preprocess for handling empty strings and then z.number
   hourlyRate: z.preprocess(
     (val) => {
-      if (val === null || val === "") return undefined; // Explicitly handle null and empty string
+      if (val === null || val === "") return undefined;
       const num = Number(val);
       return isNaN(num) ? undefined : num;
     },
     z.number()
-      .min(1, "Hourly rate must be a positive number") // Validate as a number, ensure positive
-      .optional() // The field itself is optional
+      .min(1, "Hourly rate must be a positive number")
+      .optional()
   ),
   startDate: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.string().min(1, "Start Date is required")
   ),
   
-  // Existing optional fields
   idNumber: z.string().optional(),
   phoneNumber: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactNumber: z.string().optional(),
-  emergencyContactAddress: z.string().optional(), // New field
+  emergencyContactAddress: z.string().optional(),
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
   postalCode: z.string().optional(),
   taxReferenceNumber: z.string().optional(),
-  uifNumber: z.string().optional(), // New field
+  uifNumber: z.string().optional(),
   bankName: z.string().optional(),
   bankAccountHolder: z.string().optional(),
-  ibanNumber: z.string().optional(), // Renamed
-  routingSwiftCode: z.string().optional(), // Renamed
+  ibanNumber: z.string().optional(),
+  routingSwiftCode: z.string().optional(),
   bankAccountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
 
-  // New fields from screenshot
   dateOfBirth: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.string().optional()
@@ -101,8 +95,8 @@ const employeeSchema = z.object({
   portalAccess: z.boolean().default(false).optional(),
   permanentAddress: z.string().optional(),
   paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
-  payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(), // New field
-  standardDailyHours: z.number().min(1).max(24).optional(), // New field for timesheet
+  payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(),
+  standardDailyHours: z.number().min(1).max(24).optional(),
 }).superRefine((data, ctx) => {
   if (!data.salary && !data.hourlyRate) {
     ctx.addIssue({
@@ -124,7 +118,7 @@ interface EmployeeFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (employee: EmployeeFormValues) => void;
-  initialEmployee?: MockEmployee | null; // Use MockEmployee interface
+  initialEmployee?: MockEmployee | null;
 }
 
 const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
@@ -133,29 +127,29 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   onSave,
   initialEmployee,
 }) => {
-  const formMethods = useForm<EmployeeFormValues>({ // Renamed to formMethods
+  const formMethods = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
     defaultValues: initialEmployee || {
       firstName: "",
       lastName: "",
       email: "",
       jobTitle: "",
-      salary: undefined, // Set to undefined for initial state
-      hourlyRate: undefined, // Set to undefined for initial state
-      startDate: new Date().toISOString().split('T')[0], // Default to current date
-      personalId: "", // New default
+      salary: undefined,
+      hourlyRate: undefined,
+      startDate: new Date().toISOString().split('T')[0],
+      personalId: "",
       idNumber: "",
       phoneNumber: "",
       emergencyContactName: "",
       emergencyContactNumber: "",
-      emergencyContactAddress: "", // New default
+      emergencyContactAddress: "",
       addressLine1: "",
       addressLine2: "",
       city: "",
       province: "",
       postalCode: "",
       taxReferenceNumber: "",
-      uifNumber: "", // New default
+      uifNumber: "",
       bankName: "",
       bankAccountHolder: "",
       ibanNumber: "",
@@ -171,8 +165,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       portalAccess: false,
       permanentAddress: "",
       paymentMode: "Bank Transfer",
-      payFrequency: undefined, // New default
-      standardDailyHours: 8, // Default for new employees
+      payFrequency: undefined,
+      standardDailyHours: 8,
     },
   });
 
@@ -188,7 +182,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         salary: undefined,
         hourlyRate: undefined,
         startDate: new Date().toISOString().split('T')[0],
-        personalId: "", // New default
+        personalId: "",
         idNumber: "",
         phoneNumber: "",
         emergencyContactName: "",
@@ -217,7 +211,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         permanentAddress: "",
         paymentMode: "Bank Transfer",
         payFrequency: undefined,
-        standardDailyHours: 8, // Default for new employees
+        standardDailyHours: 8,
       });
     }
   }, [initialEmployee, formMethods]);
@@ -225,7 +219,6 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   const onSubmit = (data: EmployeeFormValues) => {
     onSave(data);
     onClose();
-    // Success toast is now handled by useEmployeesData
   };
 
   return (
@@ -237,20 +230,18 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             {initialEmployee ? "Make changes to employee details here." : "Fill in the details for the new employee."}
           </DialogDescription>
         </DialogHeader>
-        <FormProvider {...formMethods}> {/* Wrap the form with FormProvider */}
-          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow"> {/* Removed space-y-6 */}
-            <ScrollArea className="flex-grow pr-4 h-0"> {/* Added h-0 here */}
-              <div className="grid gap-4 py-4"> {/* py-4 provides vertical spacing */}
-                <BasicInfoForm />
-                <PersonalDetailsForm />
-                <PaymentInfoForm />
-              </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4">
-              <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
-            </DialogFooter>
-          </form>
-        </FormProvider>
+        <ScrollArea className="flex-grow pr-4">
+          <FormProvider {...formMethods}>
+            <form onSubmit={formMethods.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+              <BasicInfoForm />
+              <PersonalDetailsForm />
+              <PaymentInfoForm />
+            </form>
+          </FormProvider>
+        </ScrollArea>
+        <DialogFooter className="pt-4">
+          <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
