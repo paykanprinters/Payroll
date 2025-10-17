@@ -33,7 +33,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"
 
 const Dashboard: React.FC = () => {
   const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos: initialToDos } = usePayrollProcessor(); // Get toDos
-  const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled); // Use useToDosData
+  const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees); // Use useToDosData
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);

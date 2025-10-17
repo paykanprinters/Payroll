@@ -139,8 +139,10 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
     });
   };
 
-  const startDate = form.watch("startDate");
-  const endDate = form.watch("endDate");
+  const employeeId = form.watch("employeeId");
+  const date = form.watch("date");
+  const isCurrentDayLeave = employeeId && date ? isLeaveDay(employeeId, date) : false;
+
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

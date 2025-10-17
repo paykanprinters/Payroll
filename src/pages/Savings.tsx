@@ -32,7 +32,7 @@ import { useSavingPlansData } from "@/hooks/use-saving-plans-data"; // Import us
 const savingPlanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
   amount: z.preprocess(
-    (val) => (val === "" || isNaN(Number(val))) ? undefined : Number(val), // Convert empty string OR NaN to undefined
+    (val) => (val === "" || isNaN(Number(val))) ? 0 : Number(val), // Return 0 instead of undefined
     z.number().min(1, "Savings amount must be positive") // Now, it's a required number
   ),
   frequency: z.enum(["monthly", "weekly"], { message: "Deduction frequency is required" }),
@@ -57,7 +57,7 @@ const Savings: React.FC = () => {
     resolver: zodResolver(savingPlanSchema),
     defaultValues: {
       employeeId: "",
-      amount: undefined, // Change default to undefined to match preprocess
+      amount: 0, // Change default to 0 to match preprocess
       frequency: "monthly",
       startDate: new Date().toISOString().split('T')[0], // Default to current date
       endDate: "",

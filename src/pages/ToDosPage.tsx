@@ -12,8 +12,8 @@ import { ToDoEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const ToDosPage: React.FC = () => {
-  const { toDos: initialToDos, isMockDataEnabled } = usePayrollProcessor(); // Get from payroll processor
-  const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled);
+  const { toDos: initialToDos, isMockDataEnabled, employees } = usePayrollProcessor(); // Get from payroll processor
+  const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees);
 
   const pendingToDos = toDos.filter(todo => todo.status === "pending");
   const completedToDos = toDos.filter(todo => todo.status === "done");
