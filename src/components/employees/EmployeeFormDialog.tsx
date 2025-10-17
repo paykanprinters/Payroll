@@ -40,14 +40,22 @@ const employeeSchema = z.object({
   jobTitle: z.string().min(1, "Job Title is required"),
   // Updated salary field to use z.preprocess for handling empty strings and then z.number
   salary: z.preprocess(
-    (val) => (val === "" || isNaN(Number(val))) ? undefined : val, // Convert empty string OR NaN to undefined
+    (val) => {
+      if (val === null || val === "") return undefined; // Explicitly handle null and empty string
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
     z.number()
       .min(1, "Salary must be a positive number") // Validate as a number, ensure positive
       .optional() // The field itself is optional
   ),
   // Updated hourlyRate field to use z.preprocess for handling empty strings and then z.number
   hourlyRate: z.preprocess(
-    (val) => (val === "" || isNaN(Number(val))) ? undefined : val, // Convert empty string OR NaN to undefined
+    (val) => {
+      if (val === null || val === "") return undefined; // Explicitly handle null and empty string
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
     z.number()
       .min(1, "Hourly rate must be a positive number") // Validate as a number, ensure positive
       .optional() // The field itself is optional
