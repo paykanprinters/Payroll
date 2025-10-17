@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { format, eachDayOfInterval, isWeekend } from "date-fns";
-import { calculateWorkingDays } from "@/lib/utils";
+import { calculateWorkingDays } from "@/lib/payroll-calculations"; // Corrected import path
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
 
 export const useLeaveData = (initialLeaveRecords: LeaveEntry[], employees: MockEmployee[], isMockDataEnabled: boolean) => {

@@ -14,7 +14,7 @@ import { format, eachDayOfInterval } from "date-fns";
 import { CalendarIcon, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
-import { calculateWorkingDays } from "@/lib/utils"; // Corrected import path
+import { calculateWorkingDays } from "@/lib/payroll-calculations"; // Corrected import path
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 
 interface VacationAbsenceFormProps {
