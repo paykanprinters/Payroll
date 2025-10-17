@@ -238,16 +238,15 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...formMethods}> {/* Wrap the form with FormProvider */}
-          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-6 flex flex-col flex-grow">
-            <ScrollArea className="flex-grow pr-4">
-              <div className="grid gap-4 py-4">
+          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow"> {/* Removed space-y-6 */}
+            <ScrollArea className="flex-grow pr-4 h-0"> {/* Added h-0 here */}
+              <div className="grid gap-4 py-4"> {/* py-4 provides vertical spacing */}
                 <BasicInfoForm />
                 <PersonalDetailsForm />
                 <PaymentInfoForm />
               </div>
             </ScrollArea>
-            {/* DialogFooter moved outside the form, but still within DialogContent */}
-            <DialogFooter className="pt-4"> {/* Added pt-4 for spacing */}
+            <DialogFooter className="pt-4">
               <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
             </DialogFooter>
           </form>
