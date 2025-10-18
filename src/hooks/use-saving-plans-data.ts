@@ -5,6 +5,10 @@ import { SavingPlan, MockEmployee } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast"; // Import toast functions
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+import {
+  fetchSavingPlansFromSupabase,
+  upsertSavingPlanToSupabase,
+} from "@/integrations/supabase/saving-queries"; // Import new Supabase query functions
 
 // Helper to convert snake_case to camelCase for Supabase data
 const convertSavingPlanKeysToCamelCase = (obj: any): SavingPlan => {
@@ -47,24 +51,8 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
     setIsLoadingSavingPlans(true);
     try {
       console.log("useSavingPlansData: Fetching live saving plans from Supabase...");
-      const { data, error } = await supabase
-        .from('saving_plans')
-        .select('*')
-        .order('start_date', { ascending: false });
-
-      if (error) {
-        console.error("useSavingPlansData: Error fetching live saving plans:", error);
-        showError("Failed to load live saving plan data.");
-        setSavingPlans([]);
-      } else {
-        const camelCaseData = data.map(convertSavingPlanKeysToCamelCase);
-        console.log("useSavingPlansData: Live saving plans fetched:", camelCaseData);
-        setSavingPlans(camelCaseData);
-      }
-    } catch (err) {
-      console.error("useSavingPlansData: Unhandled error fetching live saving plans:", err);
-      showError("An unexpected error occurred while loading live saving plan data.");
-      setSavingPlans([]);
+      const data = await fetchSavingPlansFromSupabase();
+      setSavingPlans(data);
     } finally {
       setIsLoadingSavingPlans(false);
     }
