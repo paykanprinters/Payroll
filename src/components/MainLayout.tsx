@@ -17,22 +17,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
-import { useToDosData } from "@/hooks/use-todos-data"; // Import useToDosData
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+// import { useToDosData } from "@/hooks/use-todos-data"; // Removed redundant import
 
 interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, toDos: initialToDos, employees, addOrUpdateEmployee, triggerGenerateToDos } = usePayrollProcessor(); // Use usePayrollProcessor
-  const { pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Pass employees and addOrUpdateEmployee to useToDosData
+  // Destructure pendingCount directly from usePayrollProcessor
+  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, pendingCount } = usePayrollProcessor();
+  // const { pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Removed redundant call
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
-
-  // Removed the local isMockDataEnabled state and its useEffect,
-  // as it's now directly sourced from usePayrollProcessor.
 
   const gridColsClass = isCollapsed
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"
@@ -58,7 +56,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           setIsCollapsed={setIsCollapsed}
           companyDetails={companyDetails}
           isMockDataEnabled={isMockDataEnabled}
-          pendingToDosCount={pendingCount} // Pass pendingToDosCount to Sidebar
+          pendingToDosCount={pendingCount}
         />
       )}
       <div className="flex flex-col">
@@ -113,7 +111,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           setIsCollapsed={setIsCollapsed}
           companyDetails={companyDetails}
           isMockDataEnabled={isMockDataEnabled}
-          pendingToDosCount={pendingCount} // Pass pendingToDosCount to Sidebar
+          pendingToDosCount={pendingCount}
         />
       )}
     </div>

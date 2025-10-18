@@ -27,17 +27,18 @@ import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format } from "date-fns";
 import ToDoList from "@/components/ToDoList";
-import { useToDosData } from "@/hooks/use-todos-data";
-import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown"; // New import
-import { useDashboardSettings } from "@/hooks/use-dashboard-settings"; // New import
-import { Loader2 } from "lucide-react"; // Import Loader2
+// import { useToDosData } from "@/hooks/use-todos-data"; // Removed redundant import
+import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown";
+import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
+import { Loader2 } from "lucide-react";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
-  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos: initialToDos, addOrUpdateEmployee } = usePayrollProcessor();
-  const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee);
-  const { visibleWidgets, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled }); // Pass isMockDataEnabled here
+  // Destructure toDos, pendingCount, and markToDoAsDone directly from usePayrollProcessor
+  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos, pendingCount, markToDoAsDone, addOrUpdateEmployee } = usePayrollProcessor();
+  // const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Removed redundant call
+  const { visibleWidgets, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled });
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);

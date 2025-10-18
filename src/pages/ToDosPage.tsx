@@ -5,15 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, Info, ArrowRight, ListTodo } from "lucide-react";
-import { useToDosData } from "@/hooks/use-todos-data";
+// import { useToDosData } from "@/hooks/use-todos-data"; // Removed redundant import
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const ToDosPage: React.FC = () => {
-  const { toDos: initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee } = usePayrollProcessor(); // Get from payroll processor
-  const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee);
+  // Destructure toDos and markToDoAsDone directly from usePayrollProcessor
+  const { toDos, markToDoAsDone } = usePayrollProcessor();
+  // const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Removed redundant call
 
   const pendingToDos = toDos.filter(todo => todo.status === "pending");
   const completedToDos = toDos.filter(todo => todo.status === "done");
