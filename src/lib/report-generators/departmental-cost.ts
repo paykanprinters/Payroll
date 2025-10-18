@@ -1,14 +1,41 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
 import { getEmployeeName } from "../utils"; // Import from shared utils
+import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
-export const generateDepartmentalCostReportContent = (payslips: MockPayslip[], employees: MockEmployee[]): string => {
-  if (payslips.length === 0 || employees.length === 0) {
-    return "<p>No payslip or employee data available to generate this report.</p>";
+export const generateDepartmentalCostReportContent = (
+  payslips: MockPayslip[],
+  employees: MockEmployee[],
+  selectedDate: Date | undefined,
+  periodType: "monthly" | "yearly"
+): string => {
+  let filteredPayslips = payslips;
+  let reportPeriodDescription = "All Periods";
+
+  if (selectedDate) {
+    if (periodType === "monthly") {
+      filteredPayslips = payslips.filter(p => {
+        const [startPeriodStr] = p.payPeriod.split(' - ');
+        const payslipDate = parseISO(startPeriodStr);
+        return isSameMonth(payslipDate, selectedDate) && isSameYear(payslipDate, selectedDate);
+      });
+      reportPeriodDescription = format(selectedDate, "MMMM yyyy");
+    } else if (periodType === "yearly") {
+      filteredPayslips = payslips.filter(p => {
+        const [startPeriodStr] = p.payPeriod.split(' - ');
+        const payslipDate = parseISO(startPeriodStr);
+        return isSameYear(payslipDate, selectedDate);
+      });
+      reportPeriodDescription = format(selectedDate, "yyyy");
+    }
+  }
+
+  if (filteredPayslips.length === 0 || employees.length === 0) {
+    return `<p>No payslip or employee data available for ${reportPeriodDescription} to generate this report.</p>`;
   }
 
   const departmentCostMap = new Map<string, { gross: number; net: number }>();
 
-  payslips.forEach(p => {
+  filteredPayslips.forEach(p => {
     const employee = employees.find(emp => emp.id === p.employeeId);
     const department = employee?.jobTitle || "Unassigned"; // Using jobTitle as a proxy for department
 
@@ -20,7 +47,7 @@ export const generateDepartmentalCostReportContent = (payslips: MockPayslip[], e
   });
 
   let html = `
-    <p>This report breaks down payroll expenses by department (using job titles as a proxy).</p>
+    <p>This report breaks down payroll expenses by department (using job titles as a proxy) for ${reportPeriodDescription}.</p>
     <br/>
     <h4 class="text-md font-semibold mb-2">Payroll Costs by Department</h4>
     <table class="w-full text-left border-collapse">

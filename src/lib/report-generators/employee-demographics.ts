@@ -1,9 +1,38 @@
 import { MockEmployee } from "../mock-data";
 import { getEmployeeName } from "../utils"; // Import from shared utils
+import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
-export const generateEmployeeDemographicsReportContent = (employees: MockEmployee[]): string => {
-  if (employees.length === 0) {
-    return "<p>No employee data available to generate this report.</p>";
+export const generateEmployeeDemographicsReportContent = (
+  employees: MockEmployee[],
+  selectedDate: Date | undefined,
+  periodType: "monthly" | "yearly"
+): string => {
+  let filteredEmployees = employees;
+  let reportPeriodDescription = "All Periods";
+
+  if (selectedDate) {
+    let periodStart: Date;
+    let periodEnd: Date;
+
+    if (periodType === "monthly") {
+      periodStart = startOfMonth(selectedDate);
+      periodEnd = endOfMonth(selectedDate);
+      reportPeriodDescription = format(selectedDate, "MMMM yyyy");
+    } else { // yearly
+      periodStart = startOfYear(selectedDate);
+      periodEnd = endOfYear(selectedDate);
+      reportPeriodDescription = format(selectedDate, "yyyy");
+    }
+
+    // For demographics, we filter employees based on their start date falling within the period
+    filteredEmployees = employees.filter(emp => {
+      const hireDate = parseISO(emp.startDate);
+      return hireDate >= periodStart && hireDate <= periodEnd;
+    });
+  }
+
+  if (filteredEmployees.length === 0) {
+    return `<p>No employee data available for ${reportPeriodDescription} to generate this report.</p>`;
   }
 
   const jobTitleCounts = new Map<string, number>();
@@ -14,16 +43,18 @@ export const generateEmployeeDemographicsReportContent = (employees: MockEmploye
     "R60k+": 0,
   };
 
-  employees.forEach(emp => {
+  filteredEmployees.forEach(emp => {
     jobTitleCounts.set(emp.jobTitle, (jobTitleCounts.get(emp.jobTitle) || 0) + 1);
-    if (emp.salary <= 20000) salaryRangeCounts["R0 - R20k"]++;
-    else if (emp.salary <= 40000) salaryRangeCounts["R20k - R40k"]++;
-    else if (emp.salary <= 60000) salaryRangeCounts["R40k - R60k"]++;
-    else salaryRangeCounts["R60k+"]++;
+    if (emp.salary !== undefined) { // Only consider employees with a defined salary
+      if (emp.salary <= 20000) salaryRangeCounts["R0 - R20k"]++;
+      else if (emp.salary <= 40000) salaryRangeCounts["R20k - R40k"]++;
+      else if (emp.salary <= 60000) salaryRangeCounts["R40k - R60k"]++;
+      else salaryRangeCounts["R60k+"]++;
+    }
   });
 
   let html = `
-    <p>This report provides a demographic overview of your employee base (mock data).</p>
+    <p>This report provides a demographic overview of your employee base for ${reportPeriodDescription} (mock data).</p>
     <br/>
     <h4 class="text-md font-semibold mb-2">Employees by Job Title</h4>
     <table class="w-full text-left border-collapse mb-6">

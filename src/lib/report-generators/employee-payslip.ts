@@ -1,12 +1,39 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
 import { getEmployeeName } from "../utils"; // Import from shared utils
+import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
-export const generateEmployeePayslipReportContent = (payslips: MockPayslip[], employees: MockEmployee[]): string => {
-  if (payslips.length === 0) {
-    return "<p>No payslip data available to generate this report.</p>";
+export const generateEmployeePayslipReportContent = (
+  payslips: MockPayslip[],
+  employees: MockEmployee[],
+  selectedDate: Date | undefined,
+  periodType: "monthly" | "yearly"
+): string => {
+  let filteredPayslips = payslips;
+  let reportPeriodDescription = "All Periods";
+
+  if (selectedDate) {
+    if (periodType === "monthly") {
+      filteredPayslips = payslips.filter(p => {
+        const [startPeriodStr] = p.payPeriod.split(' - ');
+        const payslipDate = parseISO(startPeriodStr);
+        return isSameMonth(payslipDate, selectedDate) && isSameYear(payslipDate, selectedDate);
+      });
+      reportPeriodDescription = format(selectedDate, "MMMM yyyy");
+    } else if (periodType === "yearly") {
+      filteredPayslips = payslips.filter(p => {
+        const [startPeriodStr] = p.payPeriod.split(' - ');
+        const payslipDate = parseISO(startPeriodStr);
+        return isSameYear(payslipDate, selectedDate);
+      });
+      reportPeriodDescription = format(selectedDate, "yyyy");
+    }
   }
 
-  let html = `<p>This report provides a list of all generated payslips. For detailed individual payslips, please use the 'Payslips' section.</p><br/>`;
+  if (filteredPayslips.length === 0) {
+    return `<p>No payslip data available for ${reportPeriodDescription} to generate this report.</p>`;
+  }
+
+  let html = `<p>This report provides a list of all generated payslips for ${reportPeriodDescription}. For detailed individual payslips, please use the 'Payslips' section.</p><br/>`;
   html += `
     <table class="w-full text-left border-collapse">
       <thead>
@@ -20,7 +47,7 @@ export const generateEmployeePayslipReportContent = (payslips: MockPayslip[], em
       <tbody>
   `;
 
-  payslips.forEach(p => {
+  filteredPayslips.forEach(p => {
     html += `
       <tr class="border-b">
         <td class="py-2 px-4">${getEmployeeName(p.employeeId, employees)} (${p.employeeId})</td>

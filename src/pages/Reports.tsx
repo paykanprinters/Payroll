@@ -17,6 +17,13 @@ import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSe
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, isSameMonth, isSameYear } from "date-fns";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -31,6 +38,8 @@ const Reports: React.FC = () => {
 
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
+  const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(new Date()); // For month/year selection
+  const [reportPeriodType, setReportPeriodType] = useState<"monthly" | "yearly">("monthly"); // New state for period type
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
@@ -92,12 +101,105 @@ const Reports: React.FC = () => {
         Access various payroll reports, including tax summaries, deduction reports, and financial overviews.
       </p>
       
+      <Card>
+        <CardHeader>
+          <CardTitle>Report Period Selection</CardTitle>
+          <CardDescription>
+            Choose the period for which you want to generate reports.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <Label htmlFor="report-period-type">Report Type</Label>
+              <Select onValueChange={(value: "monthly" | "yearly") => setReportPeriodType(value)} value={reportPeriodType}>
+                <SelectTrigger id="report-period-type" className="mt-1">
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly Report</SelectItem>
+                  <SelectItem value="yearly">Yearly Report</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="report-date-picker">Select {reportPeriodType === "monthly" ? "Month" : "Year"}</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-1",
+                      !selectedReportDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedReportDate ? (
+                      reportPeriodType === "monthly" ? format(selectedReportDate, "MMM yyyy") : format(selectedReportDate, "yyyy")
+                    ) : (
+                      <span>Pick a {reportPeriodType === "monthly" ? "month" : "year"}</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedReportDate}
+                    onSelect={setSelectedReportDate}
+                    initialFocus
+                    captionLayout="dropdown-buttons"
+                    fromYear={2020}
+                    toYear={new Date().getFullYear() + 1}
+                    // Only show months if monthly, otherwise just years
+                    {...(reportPeriodType === "yearly" && {
+                      mode: "single",
+                      onSelect: (date) => setSelectedReportDate(date ? startOfYear(date) : undefined),
+                      selected: selectedReportDate ? startOfYear(selectedReportDate) : undefined,
+                      defaultMonth: selectedReportDate || new Date(),
+                      formatters: {
+                        formatCaption: (date) => format(date, 'yyyy'),
+                      },
+                      components: {
+                        Caption: ({ displayMonth, goToMonth, ...props }) => (
+                          <div className="flex justify-center p-2">
+                            <Select
+                              onValueChange={(value) => goToMonth(new Date(parseInt(value), 0))}
+                              value={displayMonth.getFullYear().toString()}
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 12 }, (_, i) => new Date().getFullYear() - 6 + i).map((year) => (
+                                  <SelectItem key={year} value={year.toString()}>
+                                    {year}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ),
+                        Day: () => null, // Hide days
+                        Row: () => null, // Hide rows
+                        Head: () => null, // Hide head
+                      },
+                    })}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <CorePayrollReportsSection
         employees={employees}
         payslips={payslips}
         leaveRecords={leaveRecords}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
+        selectedReportDate={selectedReportDate}
+        reportPeriodType={reportPeriodType}
       />
 
       <Card>

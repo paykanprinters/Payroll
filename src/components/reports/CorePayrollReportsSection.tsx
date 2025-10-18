@@ -28,10 +28,12 @@ interface ReportItemProps {
   title: string;
   description: string;
   onGenerate: (reportTitle: string, reportContent: string, documentType: 'payslip' | 'report') => void; // Added documentType
-  reportContentGenerator: (employees: MockEmployee[], payslips: MockPayslip[], leaveRecords: LeaveEntry[]) => string;
+  reportContentGenerator: (employees: MockEmployee[], payslips: MockPayslip[], leaveRecords: LeaveEntry[], selectedDate: Date | undefined, periodType: "monthly" | "yearly") => string;
   employees: MockEmployee[];
   payslips: MockPayslip[];
   leaveRecords: LeaveEntry[];
+  selectedReportDate: Date | undefined;
+  reportPeriodType: "monthly" | "yearly";
 }
 
 const ReportItem: React.FC<ReportItemProps> = ({
@@ -43,9 +45,11 @@ const ReportItem: React.FC<ReportItemProps> = ({
   employees,
   payslips,
   leaveRecords,
+  selectedReportDate,
+  reportPeriodType,
 }) => {
   const handleGenerateClick = () => {
-    const content = reportContentGenerator(employees, payslips, leaveRecords);
+    const content = reportContentGenerator(employees, payslips, leaveRecords, selectedReportDate, reportPeriodType);
     onGenerate(title, content, 'report'); // Pass 'report' as documentType
   };
 
@@ -73,6 +77,8 @@ interface CorePayrollReportsSectionProps {
   leaveRecords: LeaveEntry[];
   companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
   reportDesignSettings: ReportDesignSettings; // Prop for report design settings
+  selectedReportDate: Date | undefined;
+  reportPeriodType: "monthly" | "yearly";
 }
 
 const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
@@ -81,6 +87,8 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   leaveRecords,
   companyDetails, // Destructure companyDetails
   reportDesignSettings, // Destructure reportDesignSettings
+  selectedReportDate,
+  reportPeriodType,
 }) => {
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
   const [currentReportTitle, setCurrentReportTitle] = React.useState("");
@@ -110,70 +118,84 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
               title="Payroll Summary Report"
               description="Overview of total salaries, deductions, and net pay per pay period."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps) => generatePayrollSummaryReportContent(pslps, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generatePayrollSummaryReportContent(pslps, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={FileText}
               title="Employee Payslip Report"
               description="Individual breakdowns showing gross pay, deductions, benefits, and net pay."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps) => generateEmployeePayslipReportContent(pslps, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateEmployeePayslipReportContent(pslps, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={Scale}
               title="Tax and Statutory Reports"
               description="Includes PAYE, UIF, SDL, and other local tax obligations—critical for SARS compliance."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps) => generateTaxStatutoryReportContent(pslps, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateTaxStatutoryReportContent(pslps, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={CalendarDays}
               title="Leave and Absence Report"
               description="Tracks annual leave, sick leave, and unpaid leave balances."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps, lvs) => generateLeaveAbsenceReportContent(lvs, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateLeaveAbsenceReportContent(lvs, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={Clock}
               title="Overtime and Bonus Report"
               description="Details extra hours worked and incentive payouts."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps) => generateOvertimeBonusReportContent(pslps, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateOvertimeBonusReportContent(pslps, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={Building2}
               title="Departmental Cost Report"
               description="Shows payroll expenses by department or cost center—great for budgeting."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps) => generateDepartmentalCostReportContent(pslps, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateDepartmentalCostReportContent(pslps, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={Banknote}
               title="Bank Transfer Report"
               description="Lists payment instructions for salary disbursement."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps) => generateBankTransferReportContent(pslps, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateBankTransferReportContent(pslps, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             {/* Additional Reports */}
             <ReportItem
@@ -181,40 +203,48 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
               title="New Hires & Terminations Report"
               description="Tracks employee onboarding and offboarding activities."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps) => generateNewHiresTerminationsReportContent(emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateNewHiresTerminationsReportContent(emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={Users}
               title="Employee Demographics Report"
               description="Provides insights into workforce composition by job title and salary range."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps) => generateEmployeeDemographicsReportContent(emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateEmployeeDemographicsReportContent(emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={Wallet}
               title="Benefit Deductions Report"
               description="Detailed breakdown of non-statutory benefit deductions."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(emps, pslps) => generateBenefitDeductionsReportContent(pslps, emps)}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateBenefitDeductionsReportContent(pslps, emps, date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
             <ReportItem
               icon={ScrollText}
               title="Audit Trail Report"
               description="Logs significant system actions and changes for security and compliance."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={() => generateAuditTrailReportContent()}
+              reportContentGenerator={(emps, pslps, lvs, date, type) => generateAuditTrailReportContent(date, type)}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}
+              selectedReportDate={selectedReportDate}
+              reportPeriodType={reportPeriodType}
             />
           </div>
         </CardContent>

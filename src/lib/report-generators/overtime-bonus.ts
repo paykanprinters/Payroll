@@ -1,14 +1,41 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
 import { getEmployeeName } from "../utils"; // Import from shared utils
+import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
-export const generateOvertimeBonusReportContent = (payslips: MockPayslip[], employees: MockEmployee[]): string => {
-  if (payslips.length === 0) {
-    return "<p>No payslip data available to generate this report.</p>";
+export const generateOvertimeBonusReportContent = (
+  payslips: MockPayslip[],
+  employees: MockEmployee[],
+  selectedDate: Date | undefined,
+  periodType: "monthly" | "yearly"
+): string => {
+  let filteredPayslips = payslips;
+  let reportPeriodDescription = "All Periods";
+
+  if (selectedDate) {
+    if (periodType === "monthly") {
+      filteredPayslips = payslips.filter(p => {
+        const [startPeriodStr] = p.payPeriod.split(' - ');
+        const payslipDate = parseISO(startPeriodStr);
+        return isSameMonth(payslipDate, selectedDate) && isSameYear(payslipDate, selectedDate);
+      });
+      reportPeriodDescription = format(selectedDate, "MMMM yyyy");
+    } else if (periodType === "yearly") {
+      filteredPayslips = payslips.filter(p => {
+        const [startPeriodStr] = p.payPeriod.split(' - ');
+        const payslipDate = parseISO(startPeriodStr);
+        return isSameYear(payslipDate, selectedDate);
+      });
+      reportPeriodDescription = format(selectedDate, "yyyy");
+    }
+  }
+
+  if (filteredPayslips.length === 0) {
+    return `<p>No payslip data available for ${reportPeriodDescription} to generate this report.</p>`;
   }
 
   const overtimeBonusData: { employeeName: string; payPeriod: string; overtime: number; bonus: number }[] = [];
 
-  payslips.forEach(p => {
+  filteredPayslips.forEach(p => {
     const overtimeEntry = p.earningsBreakdown.find(e => e.name === "Overtime");
     const bonusEntry = p.earningsBreakdown.find(e => e.name === "Bonus"); // Assuming a 'Bonus' entry might exist
 
@@ -23,11 +50,11 @@ export const generateOvertimeBonusReportContent = (payslips: MockPayslip[], empl
   });
 
   if (overtimeBonusData.length === 0) {
-    return "<p>No overtime or bonus data found in payslips to generate this report.</p>";
+    return `<p>No overtime or bonus data found in payslips for ${reportPeriodDescription} to generate this report.</p>`;
   }
 
   let html = `
-    <p>This report details overtime hours and bonus payouts for employees.</p>
+    <p>This report details overtime hours and bonus payouts for employees for ${reportPeriodDescription}.</p>
     <br/>
     <h4 class="text-md font-semibold mb-2">Overtime & Bonus Payments</h4>
     <table class="w-full text-left border-collapse">
