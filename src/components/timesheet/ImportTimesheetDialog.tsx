@@ -21,7 +21,7 @@ import ValidatedDataTable from "./ValidatedDataTable";
 import { XCircle } from "lucide-react"; // Import XCircle for the error message
 import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea for error list
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Import Card components
-import { ImportableTimesheetEntry } from "@/hooks/use-timesheet-data"; // Import the new type
+import { ImportableTimesheetEntry } from "@/lib/timesheet-types"; // Import the new type from lib/timesheet-types
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;

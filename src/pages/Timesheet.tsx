@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { UploadCloud, CalendarDays } from "lucide-react";
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
-import { ImportableTimesheetEntry, TimesheetFormValues } from "@/hooks/use-timesheet-data";
+import { ImportableTimesheetEntry, TimesheetFormValues } from "@/lib/timesheet-types"; // Import from lib/timesheet-types
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const Timesheet: React.FC = () => {

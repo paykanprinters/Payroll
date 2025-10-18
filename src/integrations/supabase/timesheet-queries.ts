@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
+import { sql } from '@supabase/supabase-js'; // Import sql for raw SQL expressions
 
 // Helper to convert snake_case to camelCase for Supabase data
 export const convertTimesheetKeysToCamelCase = (obj: any): TimesheetEntry => {
@@ -86,7 +87,7 @@ export const updateTimesheetStatusInSupabase = async (timesheetId: string, newSt
   const auditEntry = { action: `Status changed to ${newStatus}`, timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const };
   const { data, error } = await supabase
     .from('timesheets')
-    .update({ status: newStatus, audit_log: supabase.fn.jsonb_insert('audit_log', '{$}', JSON.stringify(auditEntry), true) })
+    .update({ status: newStatus, audit_log: sql`jsonb_insert(audit_log, '{$}', ${JSON.stringify(auditEntry)}, true)` })
     .eq('id', timesheetId)
     .select();
 
