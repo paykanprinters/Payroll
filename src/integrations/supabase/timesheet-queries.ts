@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
-import { sql } from '@supabase/supabase-js'; // Import sql for raw SQL expressions
+// Removed: import { sql } from '@supabase/supabase-js'; // Import sql for raw SQL expressions
 
 // Helper to convert snake_case to camelCase for Supabase data
 export const convertTimesheetKeysToCamelCase = (obj: any): TimesheetEntry => {
@@ -84,10 +84,27 @@ export const deleteTimesheetFromSupabase = async (timesheetId: string): Promise<
 };
 
 export const updateTimesheetStatusInSupabase = async (timesheetId: string, newStatus: TimesheetEntry["status"]): Promise<TimesheetEntry | null> => {
+  // 1. Fetch the existing timesheet to get the current audit_log
+  const { data: existingTimesheetData, error: fetchError } = await supabase
+    .from('timesheets')
+    .select('audit_log')
+    .eq('id', timesheetId)
+    .single();
+
+  if (fetchError) {
+    console.error("timesheet-queries: Error fetching existing timesheet for status update:", fetchError);
+    showError(`Failed to update timesheet status: ${fetchError.message}`);
+    return null;
+  }
+
+  const currentAuditLog = existingTimesheetData?.audit_log || [];
   const auditEntry = { action: `Status changed to ${newStatus}`, timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const };
+  const updatedAuditLog = [...currentAuditLog, auditEntry];
+
+  // 2. Update the timesheet with the new status and the full updated audit_log
   const { data, error } = await supabase
     .from('timesheets')
-    .update({ status: newStatus, audit_log: sql`jsonb_insert(audit_log, '{$}', ${JSON.stringify(auditEntry)}, true)` })
+    .update({ status: newStatus, audit_log: updatedAuditLog }) // Pass the entire updated array
     .eq('id', timesheetId)
     .select();
 
