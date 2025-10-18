@@ -4,8 +4,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Loan, LoanDeductionHistoryEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast"; // Import toast functions
 import { format } from "date-fns";
-import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+import {
+  fetchLoansFromSupabase,
+  upsertLoanToSupabase,
+  deleteLoanFromSupabase,
+} from "@/integrations/supabase/loan-queries"; // Import new Supabase query functions
 
 // Helper to convert snake_case to camelCase for Supabase data
 const convertLoanKeysToCamelCase = (obj: any): Loan => {
@@ -47,25 +51,8 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
   const fetchLiveLoans = useCallback(async () => {
     setIsLoadingLoans(true);
     try {
-      console.log("useLoansData: Fetching live loans from Supabase...");
-      const { data, error } = await supabase
-        .from('loans')
-        .select('*')
-        .order('start_date', { ascending: false });
-
-      if (error) {
-        console.error("useLoansData: Error fetching live loans:", error);
-        showError("Failed to load live loan data.");
-        setLoans([]);
-      } else {
-        const camelCaseData = data.map(convertLoanKeysToCamelCase);
-        console.log("useLoansData: Live loans fetched:", camelCaseData);
-        setLoans(camelCaseData);
-      }
-    } catch (err) {
-      console.error("useLoansData: Unhandled error fetching live loans:", err);
-      showError("An unexpected error occurred while loading live loan data.");
-      setLoans([]);
+      const data = await fetchLoansFromSupabase();
+      setLoans(data);
     } finally {
       setIsLoadingLoans(false);
     }
@@ -75,36 +62,23 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
     const toastId = showLoading(loanData.id ? "Updating loan..." : "Adding new loan...") as string;
     setIsLoadingLoans(true);
     try {
-      const snakeCasePayload = convertLoanKeysToSnakeCase(loanData);
-      console.log("useLoansData: Upserting live loan with payload:", snakeCasePayload);
-
-      const { data, error } = await supabase
-        .from('loans')
-        .upsert(snakeCasePayload, { onConflict: 'id' })
-        .select();
-
-      if (error) {
-        console.error("useLoansData: Error upserting live loan:", error);
-        showError(`Failed to save loan: ${error.message}`);
-      } else if (data && data.length > 0) {
-        const camelCaseData = convertLoanKeysToCamelCase(data[0]);
+      const result = await upsertLoanToSupabase(loanData);
+      if (result) {
         setLoans(prev => {
-          const existingIndex = prev.findIndex(loan => loan.id === camelCaseData.id);
+          const existingIndex = prev.findIndex(loan => loan.id === result.id);
           if (existingIndex !== -1) {
-            return prev.map((loan, idx) => idx === existingIndex ? camelCaseData : loan);
+            return prev.map((loan, idx) => idx === existingIndex ? result : loan);
           } else {
-            return [...prev, camelCaseData];
+            return [...prev, result];
           }
         });
         showSuccess("Loan saved successfully!");
+        return result;
       } else {
-        console.warn("useLoansData: Upsert succeeded but returned no data. Refetching to ensure consistency.");
         showError("Loan saved, but data could not be retrieved. Please refresh.");
-        fetchLiveLoans();
+        fetchLiveLoans(); // Refetch to ensure consistency
+        return null;
       }
-    } catch (err) {
-      console.error("useLoansData: Unhandled error upserting live loan:", err);
-      showError("An unexpected error occurred while saving loan data.");
     } finally {
       dismissToast(toastId);
       setIsLoadingLoans(false);
@@ -115,22 +89,11 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
     const toastId = showLoading("Deleting loan...") as string;
     setIsLoadingLoans(true);
     try {
-      console.log("useLoansData: Deleting live loan with ID:", loanId);
-      const { error } = await supabase
-        .from('loans')
-        .delete()
-        .eq('id', loanId);
-
-      if (error) {
-        console.error("useLoansData: Error deleting live loan:", error);
-        showError(`Failed to delete loan: ${error.message}`);
-      } else {
+      const success = await deleteLoanFromSupabase(loanId);
+      if (success) {
         setLoans(prev => prev.filter(loan => loan.id !== loanId));
         showSuccess("Loan deleted successfully!");
       }
-    } catch (err) {
-      console.error("useLoansData: Unhandled error deleting live loan:", err);
-      showError("An unexpected error occurred while deleting loan data.");
     } finally {
       dismissToast(toastId);
       setIsLoadingLoans(false);
