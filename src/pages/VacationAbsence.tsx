@@ -11,7 +11,7 @@ import { LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const VacationAbsence: React.FC = () => {
-  const { employees, leaveRecords: initialLeaveRecords, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialLeaveRecords, isMockDataEnabled from usePayrollProcessor
+  const { employees, leaveRecords: initialLeaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor(); // Get employees, initialLeaveRecords, isMockDataEnabled from usePayrollProcessor
 
   const {
     leaveRecords,
@@ -20,7 +20,7 @@ const VacationAbsence: React.FC = () => {
     getEmployeeName,
     getEmployeeCustomId, // Get new helper
     addLeaveRecord,
-  } = useLeaveData(initialLeaveRecords, employees, isMockDataEnabled); // Pass initialLeaveRecords, employees, isMockDataEnabled to useLeaveData
+  } = useLeaveData({ initialLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Pass initialLeaveRecords, employees, isMockDataEnabled to useLeaveData
 
   const handleAddLeave = (newLeaveData: Omit<LeaveEntry, 'id'>) => {
     const newRecordWithId = { ...newLeaveData, id: `LEAVE-${Date.now()}` };

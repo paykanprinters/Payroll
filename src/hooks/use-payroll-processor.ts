@@ -306,5 +306,7 @@ export const usePayrollProcessor = () => {
     updateTimesheetStatus,
     addTimesheetBatch,
     markToDoAsDone,
+    isAuthenticated, // Exposed isAuthenticated
+    isLoadingAuth, // Exposed isLoadingAuth
   };
 };

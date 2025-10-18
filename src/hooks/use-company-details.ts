@@ -130,7 +130,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         accountholdername: details.accountholdername,
         accountnumber: details.accountNumber,
         branchcode: details.branchCode,
-        accounttype: details.accounttype,
+        accounttype: details.accountType, // Corrected: accounttype to accountType
         logourl: details.logoUrl,
         logowidth: details.logoWidth,
         logoheight: details.logoHeight,

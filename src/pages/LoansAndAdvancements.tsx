@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ResponsiveContainer,
   BarChart,
@@ -26,8 +28,8 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import u
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const LoansAndAdvancements: React.FC = () => {
-  const { employees, loans: initialLoans, isMockDataEnabled } = usePayrollProcessor(); // Get employees, initialLoans, isMockDataEnabled from usePayrollProcessor
-  const { loans, addLoan, getEmployeeName, getEmployeeCustomId, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData(initialLoans, employees, isMockDataEnabled); // Pass initialLoans, employees, isMockDataEnabled to useLoansData
+  const { employees, loans: initialLoans, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor(); // Get employees, initialLoans, isMockDataEnabled from usePayrollProcessor
+  const { loans, addLoan, getEmployeeName, getEmployeeCustomId, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData({ initialLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Pass initialLoans, employees, isMockDataEnabled to useLoansData
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   const [loanSummaryData, setLoanSummaryData] = useState<{ name: string; totalLoan: number; remaining: number }[]>([]);

@@ -45,13 +45,12 @@ type SavingPlanFormValues = z.infer<typeof savingPlanSchema>;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const Savings: React.FC = () => {
-  const { employees, savingPlans: initialSavingPlans, isMockDataEnabled } = usePayrollProcessor();
-  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan } = useSavingPlansData(initialSavingPlans, employees, isMockDataEnabled);
+  const { employees, savingPlans: initialSavingPlans, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
+  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan } = useSavingPlansData({ initialSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const dataVisualsFontSize = useDataVisualsFontSize();
 
   const [totalSavingsData, setTotalSavingsData] = useState<{ name: string; amount: number }[]>([]);
   const [savingsByFrequencyData, setSavingsByFrequencyData] = useState<{ name: string; value: number }[]>([]);
-
-  const dataVisualsFontSize = useDataVisualsFontSize();
 
   const form = useForm<SavingPlanFormValues>({
     resolver: zodResolver(savingPlanSchema),
