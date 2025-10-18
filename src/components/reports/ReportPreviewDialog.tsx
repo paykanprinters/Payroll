@@ -23,6 +23,7 @@ import ReportContentWrapper from "./ReportContentWrapper";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 import { saveReportToSupabase } from "@/integrations/supabase/report-queries"; // New import
+import { useAuth } from "@/context/AuthContext"; // Import useAuth
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -56,7 +57,8 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   const companyEmail = companyDetails?.companyEmail;
   const companyWebsite = companyDetails?.companyWebsite;
 
-  const { user, isMockDataEnabled } = usePayrollProcessor(); // Get user and isMockDataEnabled
+  const { isMockDataEnabled } = usePayrollProcessor(); // Get isMockDataEnabled from usePayrollProcessor
+  const { user } = useAuth(); // Get user from useAuth
 
   // Get explicit print styles for the preview display
   const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
