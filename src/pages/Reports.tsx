@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, isSameMonth, isSameYear } from "date-fns";
+import { Label } from "@/components/ui/label"; // Added Label import
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -145,44 +146,20 @@ const Reports: React.FC = () => {
                   <Calendar
                     mode="single"
                     selected={selectedReportDate}
-                    onSelect={setSelectedReportDate}
+                    onSelect={(date) => setSelectedReportDate(date ? (reportPeriodType === "yearly" ? startOfYear(date) : date) : undefined)}
                     initialFocus
                     captionLayout="dropdown-buttons"
                     fromYear={2020}
                     toYear={new Date().getFullYear() + 1}
-                    // Only show months if monthly, otherwise just years
                     {...(reportPeriodType === "yearly" && {
-                      mode: "single",
-                      onSelect: (date) => setSelectedReportDate(date ? startOfYear(date) : undefined),
-                      selected: selectedReportDate ? startOfYear(selectedReportDate) : undefined,
-                      defaultMonth: selectedReportDate || new Date(),
+                      // For yearly, we want to select a year, not a specific day.
+                      // The onSelect is already adjusted above to set the start of the year.
+                      // The formatters prop can be used to display only the year in the caption.
                       formatters: {
                         formatCaption: (date) => format(date, 'yyyy'),
                       },
-                      components: {
-                        Caption: ({ displayMonth, goToMonth, ...props }) => (
-                          <div className="flex justify-center p-2">
-                            <Select
-                              onValueChange={(value) => goToMonth(new Date(parseInt(value), 0))}
-                              value={displayMonth.getFullYear().toString()}
-                            >
-                              <SelectTrigger className="w-[100px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 12 }, (_, i) => new Date().getFullYear() - 6 + i).map((year) => (
-                                  <SelectItem key={year} value={year.toString()}>
-                                    {year}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ),
-                        Day: () => null, // Hide days
-                        Row: () => null, // Hide rows
-                        Head: () => null, // Hide head
-                      },
+                      // No need for custom Caption component, as dropdown-buttons handles year selection.
+                      // Removing custom components to avoid type errors and rely on default behavior.
                     })}
                   />
                 </PopoverContent>
