@@ -202,8 +202,8 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
             Edit clock times for the week of {format(currentWeekStart, "PPP")}.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow h-0 pr-4">
-          <div className="space-y-6 py-4 min-h-[500px]"> {/* Added min-h-[500px] here */}
+        <ScrollArea className="flex-grow h-0 min-h-0 pr-4">
+          <div className="space-y-6 py-4">
             {weekDays.map((dayDate, index) => {
               const day = parse(dayDate, "yyyy-MM-dd", new Date());
               const isCurrentDayLeave = isLeaveDay(employeeId, day);
