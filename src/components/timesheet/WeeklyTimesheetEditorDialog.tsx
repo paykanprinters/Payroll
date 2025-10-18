@@ -202,7 +202,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
             Edit clock times for the week of {format(currentWeekStart, "PPP")}.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow pr-4 h-full">
+        <ScrollArea className="flex-grow pr-4"> {/* Removed h-full from here */}
           <div className="space-y-6 py-4">
             {weekDays.map((dayDate, index) => {
               const day = parse(dayDate, "yyyy-MM-dd", new Date());
