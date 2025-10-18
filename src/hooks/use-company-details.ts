@@ -211,14 +211,12 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
       });
       setIsLoading(false);
-    } else if (isAuthenticated) {
-      fetchCompanyDetails();
     } else {
-      // Not mock data, not authenticated, and auth is done loading
-      setCompanyDetails(null);
-      setIsLoading(false);
+      // Not mock data, so attempt to fetch live data.
+      // This should happen whether authenticated or not, as company details are public.
+      fetchCompanyDetails();
     }
-  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchCompanyDetails]);
+  }, [isMockDataEnabled, isLoadingAuth, fetchCompanyDetails]);
 
   return { companyDetails, isLoading, error, upsertCompanyDetails, refetchCompanyDetails: fetchCompanyDetails };
 };
