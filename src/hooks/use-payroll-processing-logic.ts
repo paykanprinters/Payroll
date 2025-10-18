@@ -17,24 +17,26 @@ import {
 } from "@/lib/mock-data-interfaces";
 import { generatePayslipsForPeriod } from "@/lib/mock-data-generators";
 import { showError, showSuccess } from "@/utils/toast";
-import { TaxTables } from "./use-tax-tables"; // Import TaxTables interface
+import { TaxTables } from "./use-tax-tables";
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
-  payslips: MockPayslip[], // Keep as input for YTD calculation
-  loans: Loan[], // Keep as input for initial state
-  savingPlans: SavingPlan[], // Keep as input for initial state
+  payslips: MockPayslip[],
+  loans: Loan[],
+  savingPlans: SavingPlan[],
   leaveRecords: LeaveEntry[],
-  timesheets: TimesheetEntry[], // Keep as input for initial state
+  timesheets: TimesheetEntry[],
   taxTables: TaxTables | null,
-  setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>,
-  updateLoan: (loan: Loan) => Promise<void>, // New: function to update a single loan
-  updateSavingPlan: (plan: SavingPlan) => Promise<void>, // New: function to update a single saving plan
-  updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>, // New: function to update timesheet status
+  setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>, // For mock data
+  updateLoan: (loan: Loan) => Promise<void>,
+  updateSavingPlan: (plan: SavingPlan) => Promise<void>,
+  updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>,
+  batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>, // New prop for live data
+  isMockDataEnabled: boolean, // New prop to determine data source
 ) => {
 
   const runPayrollProcess = useCallback(
-    async (periodStart: Date, periodEnd: Date) => { // Made async
+    async (periodStart: Date, periodEnd: Date) => {
       if (!employees.length) {
         showError("No employees found to run payroll.");
         return;
@@ -44,11 +46,10 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
-      // 1. Generate payslips for the period, and get updated loans/saving plans
       const { payslips: newPayslips, updatedLoans, updatedSavingPlans } = generatePayslipsForPeriod(
         employees,
-        loans, // Pass immutable current loans
-        savingPlans, // Pass immutable current saving plans
+        loans,
+        savingPlans,
         leaveRecords,
         timesheets,
         periodStart,
@@ -61,28 +62,44 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
-      // 2. Update YTD for new payslips and merge with existing
-      const updatedAllPayslips = [...payslips]; // Start with existing payslips
-      newPayslips.forEach(newPayslip => {
-        const employeePayslips = updatedAllPayslips.filter(p => p.employeeId === newPayslip.employeeId);
+      const updatedPayslipsWithYTD = newPayslips.map(newPayslip => {
+        const employeePayslips = payslips.filter(p => p.employeeId === newPayslip.employeeId);
         const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
 
-        newPayslip.ytdGrossEarnings = (lastPayslipForEmployee?.ytdGrossEarnings || 0) + newPayslip.grossEarnings;
-        newPayslip.ytdTotalDeductions = (lastPayslipForEmployee?.ytdTotalDeductions || 0) + newPayslip.totalDeductions;
-
-        // Remove any existing payslip for the same employee and period before adding the new one
-        const existingPayslipIndex = updatedAllPayslips.findIndex(p =>
-          p.employeeId === newPayslip.employeeId &&
-          p.payPeriod === newPayslip.payPeriod
-        );
-        if (existingPayslipIndex !== -1) {
-          updatedAllPayslips[existingPayslipIndex] = newPayslip;
-        } else {
-          updatedAllPayslips.push(newPayslip);
-        }
+        return {
+          ...newPayslip,
+          ytdGrossEarnings: (lastPayslipForEmployee?.ytdGrossEarnings || 0) + newPayslip.grossEarnings,
+          ytdTotalDeductions: (lastPayslipForEmployee?.ytdTotalDeductions || 0) + newPayslip.totalDeductions,
+        };
       });
 
-      // 3. Update loans and saving plans using their respective update functions
+      // 1. Persist Payslips
+      if (isMockDataEnabled) {
+        const updatedAllPayslips = [...payslips];
+        updatedPayslipsWithYTD.forEach(newPayslip => {
+          const existingPayslipIndex = updatedAllPayslips.findIndex(p =>
+            p.employeeId === newPayslip.employeeId &&
+            p.payPeriod === newPayslip.payPeriod
+          );
+          if (existingPayslipIndex !== -1) {
+            updatedAllPayslips[existingPayslipIndex] = newPayslip;
+          } else {
+            updatedAllPayslips.push(newPayslip);
+          }
+        });
+        localStorage.setItem("mockPayslips", JSON.stringify(updatedAllPayslips));
+        setPayslips(updatedAllPayslips);
+        window.dispatchEvent(new CustomEvent('payslipsUpdated', { detail: updatedAllPayslips }));
+      } else {
+        const success = await batchUpsertPayslips(updatedPayslipsWithYTD);
+        if (!success) {
+          showError("Failed to save payslips to database.");
+          return;
+        }
+        // refetchPayslips will be called by usePayslipsData after batchUpsertPayslips
+      }
+
+      // 2. Update loans and saving plans
       for (const loan of updatedLoans) {
         await updateLoan(loan);
       }
@@ -90,12 +107,12 @@ export const usePayrollProcessingLogic = (
         await updateSavingPlan(plan);
       }
 
-      // 4. Lock timesheets for the processed period
+      // 3. Lock timesheets for the processed period
       const timesheetUpdatePromises = timesheets.map(async (ts) => {
         const tsDate = parseISO(ts.date);
         if (
           ts.employeeId &&
-          ts.status !== "Locked" && // Only lock if not already locked
+          ts.status !== "Locked" &&
           isWithinInterval(tsDate, { start: periodStart, end: periodEnd })
         ) {
           await updateTimesheetStatus(ts.id, "Locked");
@@ -103,22 +120,9 @@ export const usePayrollProcessingLogic = (
       });
       await Promise.all(timesheetUpdatePromises);
 
-
-      // 5. Save all updated data to localStorage (only for mock data)
-      // In a real app, this would be API calls to backend
-      // These localStorage updates are now handled by the individual update functions (updateLoan, updateSavingPlan, updateTimesheetStatus)
-      // For payslips, it's still a local state in usePayrollProcessor, so update it directly.
-      localStorage.setItem("mockPayslips", JSON.stringify(updatedAllPayslips));
-
-
-      // 6. Update state and notify components
-      setPayslips(updatedAllPayslips);
-      // Dispatch specific events instead of a general 'mockDataUpdated'
-      window.dispatchEvent(new CustomEvent('payslipsUpdated', { detail: updatedAllPayslips }));
-      // loans, savingPlans, timesheets events are dispatched by their respective update functions
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, isMockDataEnabled]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -133,23 +137,20 @@ export const usePayrollProcessingLogic = (
         return null;
       }
 
-      // For preview, we don't want to modify the actual loans/savingPlans/timesheets state
-      // So, we pass immutable copies to generatePayslipsForPeriod
       const { payslips: previewPayslips } = generatePayslipsForPeriod(
-        [employee], // Only generate for the selected employee
-        loans, // Pass immutable current loans
-        savingPlans, // Pass immutable current saving plans
+        [employee],
+        loans,
+        savingPlans,
         leaveRecords,
         timesheets,
         periodStart,
         periodEnd,
-        taxTables // Pass tax tables
+        taxTables
       );
 
       if (previewPayslips.length > 0) {
         const previewPayslip = previewPayslips[0];
 
-        // Calculate YTD for the preview based on existing payslips
         const employeePayslips = payslips.filter(p => p.employeeId === employeeId);
         const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
 
