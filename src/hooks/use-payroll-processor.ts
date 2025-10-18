@@ -169,6 +169,7 @@ export const usePayrollProcessor = () => {
     updateSavingPlan,
     updateTimesheetStatus,
     batchUpsertPayslips, // Pass batchUpsertPayslips
+    isMockDataEnabled, // Pass isMockDataEnabled
   );
 
   const triggerGenerateToDos = useCallback(async () => {
