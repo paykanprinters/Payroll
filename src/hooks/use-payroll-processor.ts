@@ -84,7 +84,7 @@ export const usePayrollProcessor = () => {
 
   // Use dedicated hooks for other data types
   const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData([], employees, isMockDataEnabled);
-  const { savingPlans, isLoadingSavingPlans, addSavingPlan } = useSavingPlansData([], employees, isMockDataEnabled);
+  const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData([], employees, isMockDataEnabled); // Get updateSavingPlan
   const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData([], employees, isMockDataEnabled);
   const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData([], employees, leaveRecords, isMockDataEnabled);
   const { toDos, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData([], isMockDataEnabled, employees, addOrUpdateEmployee); // Pass addOrUpdateEmployee
@@ -93,15 +93,15 @@ export const usePayrollProcessor = () => {
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
     employees,
     payslips, // Pass local payslips state
-    loans, // Pass local loans state
-    savingPlans, // Pass local savingPlans state
-    leaveRecords, // Pass local leaveRecords state
-    timesheets, // Pass local timesheets state
+    loans, // Pass current loans state
+    savingPlans, // Pass current savingPlans state
+    leaveRecords, // Pass current leaveRecords state
+    timesheets, // Pass current timesheets state
     taxTables,
     setPayslips, // Pass local setPayslips
-    setLoans, // Pass local setLoans
-    setSavingPlans, // Pass local setSavingPlans
-    setTimesheets, // Pass local setTimesheets
+    updateLoan, // Pass updateLoan from useLoansData
+    updateSavingPlan, // Pass updateSavingPlan from useSavingPlansData
+    updateTimesheetStatus, // Pass updateTimesheetStatus from useTimesheetData
   );
 
   // Function to trigger the generate-todos Edge Function
@@ -202,6 +202,7 @@ export const usePayrollProcessor = () => {
     togglePauseDeduction, // Expose from useLoansData
     applyManualPayment, // Expose from useLoansData
     addSavingPlan, // Expose from useSavingPlansData
+    updateSavingPlan, // Expose from useSavingPlansData
     addLeaveRecord, // Expose from useLeaveData
     addOrUpdateTimesheet, // Expose from useTimesheetData
     deleteTimesheet, // Expose from useTimesheetData

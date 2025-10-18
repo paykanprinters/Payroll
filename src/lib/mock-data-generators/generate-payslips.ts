@@ -68,12 +68,13 @@ const calculateEarnings = (
 
 /**
  * Calculates deductions for an employee for a given pay period, including statutory, loans, and savings.
+ * This function now takes mutable copies of loans and saving plans and modifies them directly.
  */
 const calculateDeductions = (
   emp: MockEmployee,
   grossEarnings: number,
-  currentLoans: Loan[],
-  currentSavingPlans: SavingPlan[],
+  processingLoans: Loan[], // Now mutable copy
+  processingSavingPlans: SavingPlan[], // Now mutable copy
   taxTables: TaxTables,
   payPeriodStart: Date,
   payPeriodEnd: Date,
@@ -130,7 +131,7 @@ const calculateDeductions = (
   }
 
   // Process Loan Deductions
-  currentLoans.forEach(loan => {
+  processingLoans.forEach(loan => { // Use processingLoans
     if (loan.employeeId === emp.id && loan.status !== "completed" && new Date(loan.startDate) <= payPeriodEnd) {
       if (loan.paused) {
         const pauseEntry: LoanDeductionHistoryEntry = {
@@ -140,7 +141,7 @@ const calculateDeductions = (
           notes: `Deduction paused for pay period ${payPeriodString}`,
         };
         loan.deductionHistory.push(pauseEntry);
-        loan.paused = false;
+        loan.paused = false; // Reset paused status after processing
         return;
       }
 
@@ -184,7 +185,7 @@ const calculateDeductions = (
   });
 
   // Process Savings Deductions
-  currentSavingPlans.forEach(plan => {
+  processingSavingPlans.forEach(plan => { // Use processingSavingPlans
     if (plan.employeeId === emp.id && plan.status === "active" && new Date(plan.startDate) <= payPeriodEnd) {
       if (!plan.endDate || new Date(plan.endDate) >= payPeriodStart) {
         let deductionAmount = 0;
@@ -239,8 +240,8 @@ const calculateLeaveSummary = (
       const overlapEnd = leaveEnd < payPeriodEnd ? leaveEnd : payPeriodEnd;
       const daysInPeriod = calculateWorkingDays(overlapStart, overlapEnd);
 
-      if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
-      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
+      if (rec.leaveType === "Annual Leave") annualLeaveTaken += eachDayOfInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
+      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += eachDayOfInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
     }
   });
 
@@ -253,32 +254,37 @@ const calculateLeaveSummary = (
 
 /**
  * Generates payslips for a specific pay period for all employees.
- * Also updates loan and saving plan balances based on deductions.
+ * Also returns updated loan and saving plan data based on deductions.
  *
  * @param employees All mock employees.
- * @param currentLoans Current state of mock loans (will be modified).
- * @param currentSavingPlans Current state of mock saving plans (will be modified).
+ * @param initialLoans Initial mock loans (immutable input).
+ * @param initialSavingPlans Initial mock saving plans (immutable input).
  * @param leaveRecords All mock leave records.
  * @param timesheets All mock timesheet entries.
  * @param payPeriodStart The start date of the target pay period (Date object).
  * @param payPeriodEnd The end date of the target pay period (Date object).
  * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates).
- * @returns An array of generated MockPayslips for the period.
+ * @returns An object containing an array of generated MockPayslips for the period,
+ *          and the updated loans and saving plans data.
  */
 export const generatePayslipsForPeriod = (
   employees: MockEmployee[],
-  currentLoans: Loan[], // Passed by reference, will be modified
-  currentSavingPlans: SavingPlan[], // Passed by reference, will be modified
+  initialLoans: Loan[], // Immutable input
+  initialSavingPlans: SavingPlan[], // Immutable input
   leaveRecords: LeaveEntry[],
   timesheets: TimesheetEntry[],
   payPeriodStart: Date,
   payPeriodEnd: Date,
   taxTables: TaxTables // New parameter for tax tables
-): MockPayslip[] => {
+): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[] } => {
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
   const monthString = format(payPeriodStart, "yyyy-MM");
   const payDateString = format(payPeriodEnd, "dd/MM/yyyy");
+
+  // Create deep copies of loans and saving plans to modify during this run
+  const processingLoans: Loan[] = JSON.parse(JSON.stringify(initialLoans));
+  const processingSavingPlans: SavingPlan[] = JSON.parse(JSON.stringify(initialSavingPlans));
 
   employees.forEach(emp => {
     const approvedTimesheetsForPeriod = timesheets.filter(ts =>
@@ -298,8 +304,8 @@ export const generatePayslipsForPeriod = (
     const { deductionsBreakdown, totalDeductions } = calculateDeductions(
       emp,
       grossEarnings,
-      currentLoans,
-      currentSavingPlans,
+      processingLoans, // Pass mutable copy
+      processingSavingPlans, // Pass mutable copy
       taxTables,
       payPeriodStart,
       payPeriodEnd,
@@ -331,7 +337,7 @@ export const generatePayslipsForPeriod = (
       ytdTotalDeductions: 0,
     });
   });
-  return payslipsForPeriod;
+  return { payslips: payslipsForPeriod, updatedLoans: processingLoans, updatedSavingPlans: processingSavingPlans };
 };
 
 /**
@@ -358,8 +364,9 @@ export const generateMockPayslips = (
   const currentYear = new Date().getFullYear();
   const currentMonthIndex = new Date().getMonth();
 
-  const loansCopy: Loan[] = JSON.parse(JSON.stringify(initialLoans));
-  const savingPlansCopy: SavingPlan[] = JSON.parse(JSON.stringify(initialSavingPlans));
+  // Create deep copies for the entire mock generation process
+  const processingLoansForMock: Loan[] = JSON.parse(JSON.stringify(initialLoans));
+  const processingSavingPlansForMock: SavingPlan[] = JSON.parse(JSON.stringify(initialSavingPlans));
 
   employees.forEach(emp => {
     let ytdGrossEarnings = 0;
@@ -370,10 +377,10 @@ export const generateMockPayslips = (
       const payPeriodStart = monthDate;
       const payPeriodEnd = new Date(currentYear, month + 1, 0);
 
-      const monthlyPayslips = generatePayslipsForPeriod(
+      const { payslips: monthlyPayslips } = generatePayslipsForPeriod( // Destructure payslips
         [emp],
-        loansCopy,
-        savingPlansCopy,
+        processingLoansForMock, // Pass mutable copy
+        processingSavingPlansForMock, // Pass mutable copy
         leaveRecords,
         timesheets,
         payPeriodStart,

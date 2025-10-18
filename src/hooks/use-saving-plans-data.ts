@@ -142,14 +142,28 @@ export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: 
     }
   }, [isMockDataEnabled, upsertLiveSavingPlan]);
 
-  // You can add update/delete functions here if needed in the future
-  // For now, we'll just expose addSavingPlan.
+  const updateSavingPlan = useCallback(async (updatedPlan: SavingPlan) => {
+    if (isMockDataEnabled) {
+      setSavingPlans(prevPlans => {
+        const updatedPlans = prevPlans.map(plan =>
+          plan.id === updatedPlan.id ? updatedPlan : plan
+        );
+        localStorage.setItem("mockSavingPlans", JSON.stringify(updatedPlans));
+        window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: updatedPlans }));
+        showSuccess("Savings plan updated successfully!");
+        return updatedPlans;
+      });
+    } else {
+      await upsertLiveSavingPlan(updatedPlan);
+    }
+  }, [isMockDataEnabled, upsertLiveSavingPlan]);
 
   return {
     savingPlans,
     getEmployeeName,
     getEmployeeCustomId,
     addSavingPlan,
+    updateSavingPlan,
     isLoadingSavingPlans,
   };
 };

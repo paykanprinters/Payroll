@@ -21,20 +21,20 @@ import { TaxTables } from "./use-tax-tables"; // Import TaxTables interface
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
-  payslips: MockPayslip[],
-  loans: Loan[],
-  savingPlans: SavingPlan[],
+  payslips: MockPayslip[], // Keep as input for YTD calculation
+  loans: Loan[], // Keep as input for initial state
+  savingPlans: SavingPlan[], // Keep as input for initial state
   leaveRecords: LeaveEntry[],
-  timesheets: TimesheetEntry[],
+  timesheets: TimesheetEntry[], // Keep as input for initial state
   taxTables: TaxTables | null,
   setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>,
-  setLoans: React.Dispatch<React.SetStateAction<Loan[]>>,
-  setSavingPlans: React.Dispatch<React.SetStateAction<SavingPlan[]>>,
-  setTimesheets: React.Dispatch<React.SetStateAction<TimesheetEntry[]>>,
+  updateLoan: (loan: Loan) => Promise<void>, // New: function to update a single loan
+  updateSavingPlan: (plan: SavingPlan) => Promise<void>, // New: function to update a single saving plan
+  updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>, // New: function to update timesheet status
 ) => {
 
   const runPayrollProcess = useCallback(
-    (periodStart: Date, periodEnd: Date) => {
+    async (periodStart: Date, periodEnd: Date) => { // Made async
       if (!employees.length) {
         showError("No employees found to run payroll.");
         return;
@@ -44,21 +44,16 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
-      // Deep copy current mutable states for processing
-      const currentLoansCopy: Loan[] = JSON.parse(JSON.stringify(loans));
-      const currentSavingPlansCopy: SavingPlan[] = JSON.parse(JSON.stringify(savingPlans));
-      const currentTimesheetsCopy: TimesheetEntry[] = JSON.parse(JSON.stringify(timesheets));
-
-      // 1. Generate payslips for the period
-      const newPayslips = generatePayslipsForPeriod(
+      // 1. Generate payslips for the period, and get updated loans/saving plans
+      const { payslips: newPayslips, updatedLoans, updatedSavingPlans } = generatePayslipsForPeriod(
         employees,
-        currentLoansCopy, // Pass mutable copy
-        currentSavingPlansCopy, // Pass mutable copy
+        loans, // Pass immutable current loans
+        savingPlans, // Pass immutable current saving plans
         leaveRecords,
-        currentTimesheetsCopy,
+        timesheets,
         periodStart,
         periodEnd,
-        taxTables // Pass tax tables
+        taxTables
       );
 
       if (newPayslips.length === 0) {
@@ -67,7 +62,7 @@ export const usePayrollProcessingLogic = (
       }
 
       // 2. Update YTD for new payslips and merge with existing
-      const updatedAllPayslips = [...payslips];
+      const updatedAllPayslips = [...payslips]; // Start with existing payslips
       newPayslips.forEach(newPayslip => {
         const employeePayslips = updatedAllPayslips.filter(p => p.employeeId === newPayslip.employeeId);
         const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
@@ -87,49 +82,43 @@ export const usePayrollProcessingLogic = (
         }
       });
 
-      // 3. Lock timesheets for the processed period
-      const updatedTimesheets = currentTimesheetsCopy.map((ts) => {
+      // 3. Update loans and saving plans using their respective update functions
+      for (const loan of updatedLoans) {
+        await updateLoan(loan);
+      }
+      for (const plan of updatedSavingPlans) {
+        await updateSavingPlan(plan);
+      }
+
+      // 4. Lock timesheets for the processed period
+      const timesheetUpdatePromises = timesheets.map(async (ts) => {
         const tsDate = parseISO(ts.date);
         if (
           ts.employeeId &&
           ts.status !== "Locked" && // Only lock if not already locked
           isWithinInterval(tsDate, { start: periodStart, end: periodEnd })
         ) {
-          const auditEntry = {
-            action: "Status changed to Locked (Payroll Run)",
-            timestamp: new Date().toISOString(),
-            user: "System (Payroll)",
-            captureMethod: "System" as const,
-          };
-          return {
-            ...ts,
-            status: "Locked" as const,
-            auditLog: [...(ts.auditLog || []), auditEntry],
-          };
+          await updateTimesheetStatus(ts.id, "Locked");
         }
-        return ts;
       });
+      await Promise.all(timesheetUpdatePromises);
 
-      // 4. Save all updated data to localStorage (only for mock data)
+
+      // 5. Save all updated data to localStorage (only for mock data)
       // In a real app, this would be API calls to backend
+      // These localStorage updates are now handled by the individual update functions (updateLoan, updateSavingPlan, updateTimesheetStatus)
+      // For payslips, it's still a local state in usePayrollProcessor, so update it directly.
       localStorage.setItem("mockPayslips", JSON.stringify(updatedAllPayslips));
-      localStorage.setItem("mockLoans", JSON.stringify(currentLoansCopy)); // Save updated loans
-      localStorage.setItem("mockSavingPlans", JSON.stringify(currentSavingPlansCopy));
-      localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
 
-      // 5. Update state and notify components
+
+      // 6. Update state and notify components
       setPayslips(updatedAllPayslips);
-      setLoans(currentLoansCopy); // Update loans state
-      setSavingPlans(currentSavingPlansCopy);
-      setTimesheets(updatedTimesheets);
       // Dispatch specific events instead of a general 'mockDataUpdated'
       window.dispatchEvent(new CustomEvent('payslipsUpdated', { detail: updatedAllPayslips }));
-      window.dispatchEvent(new CustomEvent('loansUpdated', { detail: currentLoansCopy }));
-      window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: currentSavingPlansCopy }));
-      window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets }));
+      // loans, savingPlans, timesheets events are dispatched by their respective update functions
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, setPayslips, setLoans, setSavingPlans, setTimesheets]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -144,17 +133,14 @@ export const usePayrollProcessingLogic = (
         return null;
       }
 
-      // Deep copy current mutable states for preview (don't modify actual data)
-      const currentLoansCopy: Loan[] = JSON.parse(JSON.stringify(loans));
-      const currentSavingPlansCopy: SavingPlan[] = JSON.parse(JSON.stringify(savingPlans));
-      const currentTimesheetsCopy: TimesheetEntry[] = JSON.parse(JSON.stringify(timesheets));
-
-      const previewPayslips = generatePayslipsForPeriod(
+      // For preview, we don't want to modify the actual loans/savingPlans/timesheets state
+      // So, we pass immutable copies to generatePayslipsForPeriod
+      const { payslips: previewPayslips } = generatePayslipsForPeriod(
         [employee], // Only generate for the selected employee
-        currentLoansCopy,
-        currentSavingPlansCopy,
+        loans, // Pass immutable current loans
+        savingPlans, // Pass immutable current saving plans
         leaveRecords,
-        currentTimesheetsCopy,
+        timesheets,
         periodStart,
         periodEnd,
         taxTables // Pass tax tables
