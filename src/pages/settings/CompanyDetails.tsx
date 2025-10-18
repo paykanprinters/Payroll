@@ -51,8 +51,8 @@ const companyDetailsSchema = z.object({
 type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
 
 const CompanyDetails: React.FC = () => {
-  console.log("CompanyDetails.tsx: Component is rendering."); // Add this line
-  const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails();
+  console.log("CompanyDetails.tsx: Component is rendering.");
+  const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails({ isMockDataEnabled: false, isAuthenticated: true, isLoadingAuth: false }); // Pass explicit values for now
   const { user, isLoadingAuth } = useAuth(); // Get current user from AuthContext
   const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
 
@@ -156,17 +156,31 @@ const CompanyDetails: React.FC = () => {
     );
   }
 
-  // TEMPORARY DEBUGGING: Render simple text
+  console.log("CompanyDetails.tsx: Rendering forms with data:", companyDetails); // New log here
+
   return (
-    <div style={{ padding: '20px', backgroundColor: 'lightgray', border: '1px solid black' }}>
-      <h2>Company Details Debug View</h2>
-      <p>Is Loading (useCompanyDetails): {isLoading ? "True" : "False"}</p>
-      <p>Is Loading Auth: {isLoadingAuth ? "True" : "False"}</p>
-      <p>Company Details: {companyDetails ? JSON.stringify(companyDetails) : "NULL"}</p>
-      <p>User Role: {user?.role || "N/A"}</p>
-      <p>Mock Data Enabled: {isMockDataEnabled ? "True" : "False"}</p>
-      <p>If you see this, the component is rendering!</p>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Company Details</CardTitle>
+        <CardDescription>
+          Manage your company's legal, contact, and banking information.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <FormProvider {...formMethods}>
+          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-8">
+            <CompanyLogoUpload canEdit={canEdit} isMockDataEnabled={isMockDataEnabled} />
+            <LegalTradeInfoForm canEdit={canEdit} />
+            <StatutoryInfoForm canEdit={canEdit} />
+            <ContactDetailsForm canEdit={canEdit} />
+            <BankingInfoForm canEdit={canEdit} />
+            <Button type="submit" className="w-full" disabled={!canEdit}>
+              Save Company Details
+            </Button>
+          </form>
+        </FormProvider>
+      </CardContent>
+    </Card>
   );
 };
 

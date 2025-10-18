@@ -78,28 +78,26 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         console.error("useCompanyDetails: Supabase fetchCompanyDetails error:", error);
         if (error.code === "PGRST116") {
           console.info("useCompanyDetails: No company details found in database (expected for initial setup). Setting companyDetails to null.");
-          setCompanyDetails(null);
+          setCompanyDetails(null); // This is correct for no data
           setError(null);
         } else {
           console.error("useCompanyDetails: Error fetching company details:", error);
           setError(error);
-          setCompanyDetails(null);
+          setCompanyDetails(null); // This is correct for an error
           showError(`Failed to load company details: ${error.message}`);
         }
       } else {
-        const camelCaseData = convertKeysToCamelCase(data); // Use the new conversion function
+        const camelCaseData = convertKeysToCamelCase(data); // This line correctly converts data
         console.log("useCompanyDetails: Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
-        setCompanyDetails(camelCaseData);
+        setCompanyDetails(camelCaseData); // This line should set the state with the fetched data
       }
     } catch (err: any) {
       console.error("useCompanyDetails: Unhandled error in fetchCompanyDetails:", err);
       setError(err);
-      setCompanyDetails(null);
+      setCompanyDetails(null); // This is correct for unhandled error
       showError('An unexpected error occurred while loading company details.');
     } finally {
-      console.log("useCompanyDetails: Setting isLoading to false in finally block."); // NEW LOG
       setIsLoading(false);
-      console.log("useCompanyDetails: Finished fetching. isLoading:", false, "companyDetails:", companyDetails);
     }
   }, []);
 
@@ -130,7 +128,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         companywebsite: details.companyWebsite,
         bankname: details.bankName,
         accountholdername: details.accountholdername,
-        accountnumber: details.accountnumber,
+        accountnumber: details.accountNumber,
         branchcode: details.branchCode,
         accounttype: details.accounttype,
         logourl: details.logoUrl,
