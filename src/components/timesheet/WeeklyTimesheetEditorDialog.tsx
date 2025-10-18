@@ -23,6 +23,7 @@ import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/hooks/use-timesheet-data"; // Re-use the form values type
 import { showSuccess, showError } from "@/utils/toast";
 import { Badge } from "@/components/ui/badge"; // Import Badge
+import { isLeaveDay as checkIsLeaveDayUtil } from "@/lib/timesheet-utils"; // Import from new utility
 
 interface WeeklyTimesheetEditorDialogProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ interface WeeklyTimesheetEditorDialogProps {
   allTimesheets: TimesheetEntry[];
   onSaveTimesheet: (data: TimesheetFormValues) => void;
   getEmployeeName: (employeeId: string) => string;
-  isLeaveDay: (employeeId: string, date: Date) => boolean;
+  isLeaveDay: (employeeId: string, date: Date) => boolean; // This prop is still expected from useTimesheetData
   employees: MockEmployee[]; // Pass all employees to get standardDailyHours
 }
 
@@ -116,7 +117,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
   allTimesheets,
   onSaveTimesheet,
   getEmployeeName,
-  isLeaveDay,
+  isLeaveDay, // Use the prop passed from useTimesheetData
   employees,
 }) => {
   const employee = employees.find(emp => emp.id === employeeId);

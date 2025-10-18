@@ -14,6 +14,7 @@ import { format, parse, isBefore, isAfter } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { isLeaveDay as checkIsLeaveDayUtil } from "@/lib/timesheet-utils"; // Import from new utility
 
 // Define the schema for form validation
 const timesheetSchema = z.object({
@@ -73,7 +74,7 @@ interface TimesheetFormProps {
   onSave: (data: TimesheetFormValues) => void;
   initialData?: TimesheetEntry | null;
   isEditing: boolean;
-  isLeaveDay: (employeeId: string, date: Date) => boolean;
+  isLeaveDay: (employeeId: string, date: Date) => boolean; // This prop is still expected from useTimesheetData
   onCancelEdit: () => void;
 }
 
@@ -82,7 +83,7 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
   onSave,
   initialData,
   isEditing,
-  isLeaveDay,
+  isLeaveDay, // Use the prop passed from useTimesheetData
   onCancelEdit,
 }) => {
   const form = useForm<TimesheetFormValues>({

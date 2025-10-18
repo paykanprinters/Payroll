@@ -3,22 +3,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, parse, isBefore, isAfter, eachDayOfInterval, isWeekend } from "date-fns";
 import { MockEmployee, TimesheetEntry, LeaveEntry } from "@/lib/mock-data-interfaces";
-import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast"; // Import toast functions
-import { supabase } from "@/integrations/supabase/client"; // Import supabase client
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
-
-// Helper to calculate time difference in hours
-const calculateTimeDifferenceInHours = (start: string, end: string): number => {
-  if (!start || !end) return 0;
-  const startDate = parse(start, 'HH:mm', new Date());
-  const endDate = parse(end, 'HH:mm', new Date());
-  if (isBefore(endDate, startDate)) {
-    // If end time is before start time, assume it's on the next day for calculation
-    endDate.setDate(endDate.getDate() + 1);
-  }
-  const diffMs = endDate.getTime() - startDate.getTime();
-  return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
-};
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
+import { calculateTimesheetMetrics, isLeaveDay } from "@/lib/timesheet-utils"; // Import from new utility
 
 // Define the expected input type for adding/updating timesheets
 export interface TimesheetFormValues {
@@ -219,45 +207,6 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     const employee = employees.find(emp => emp.id === employeeId);
     return employee ? employee.customEmployeeId : "N/A";
   }, [employees]);
-
-  const calculateTimesheetMetrics = useCallback((data: TimesheetFormValues | ImportableTimesheetEntry, employee?: MockEmployee) => {
-    const standardDailyHours = employee?.standardDailyHours || 8; // Default to 8 hours
-
-    let totalWorkHours = 0;
-    let overtimeHours = 0;
-    let lateArrival = false;
-    let earlyDeparture = false;
-    let absent = false;
-
-    const timeIn = data.timeIn;
-    const timeOut = data.timeOut;
-
-    if (!timeIn || !timeOut) {
-      absent = true;
-    } else {
-      const totalShiftDuration = calculateTimeDifferenceInHours(timeIn, timeOut);
-      const teaDuration = calculateTimeDifferenceInHours(data.teaStart || "", data.teaEnd || "");
-      const lunchDuration = calculateTimeDifferenceInHours(data.lunchStart || "", data.lunchEnd || "");
-
-      totalWorkHours = totalShiftDuration - teaDuration - lunchDuration;
-      overtimeHours = Math.max(0, totalWorkHours - standardDailyHours);
-
-      // Late Arrival / Early Departure (simplified logic)
-      const expectedTimeIn = parse("09:00", 'HH:mm', new Date());
-      const actualTimeIn = parse(timeIn, 'HH:mm', new Date());
-      if (isAfter(actualTimeIn, expectedTimeIn)) {
-        lateArrival = true;
-      }
-
-      const expectedTimeOut = parse("17:00", 'HH:mm', new Date());
-      const actualTimeOut = parse(timeOut, 'HH:mm', new Date());
-      if (isBefore(actualTimeOut, expectedTimeOut)) {
-        earlyDeparture = true;
-      }
-    }
-
-    return { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent };
-  }, []);
 
   const addOrUpdateTimesheet = useCallback(async (data: TimesheetFormValues) => {
     console.log("addOrUpdateTimesheet: Received data:", data);
@@ -548,14 +497,9 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     setEditingTimesheet(null);
   }, []);
 
-  const isLeaveDay = useCallback((employeeId: string, date: Date) => {
-    const formattedDate = format(date, "yyyy-MM-dd");
-    return leaveRecords.some(
-      (record) =>
-        record.employeeId === employeeId &&
-        record.startDate <= formattedDate &&
-        record.endDate >= formattedDate
-    );
+  // Use the external isLeaveDay utility
+  const checkIsLeaveDay = useCallback((employeeId: string, date: Date) => {
+    return isLeaveDay(employeeId, date, leaveRecords);
   }, [leaveRecords]);
 
   return {
@@ -564,13 +508,13 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     editingTimesheet,
     getEmployeeName,
     getEmployeeCustomId,
-    calculateTimesheetMetrics,
+    calculateTimesheetMetrics, // Still exposed for other components if needed
     addOrUpdateTimesheet,
     deleteTimesheet,
     updateTimesheetStatus,
     startEditing,
     cancelEditing,
-    isLeaveDay,
+    isLeaveDay: checkIsLeaveDay, // Expose the wrapped utility function
     addTimesheetBatch,
     isLoadingTimesheets,
   };
