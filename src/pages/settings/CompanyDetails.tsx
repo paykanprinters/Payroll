@@ -51,6 +51,7 @@ const companyDetailsSchema = z.object({
 type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
 
 const CompanyDetails: React.FC = () => {
+  console.log("CompanyDetails.tsx: Component is rendering."); // Add this line
   const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails();
   const { user, isLoadingAuth } = useAuth(); // Get current user from AuthContext
   const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
@@ -155,44 +156,17 @@ const CompanyDetails: React.FC = () => {
     );
   }
 
+  // TEMPORARY DEBUGGING: Render simple text
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Company Details</CardTitle>
-        <CardDescription>
-          Manage your company's legal, contact, statutory, and banking information.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {!canEdit && (
-          <div className="mb-6 p-4 border rounded-lg bg-red-50 text-red-800">
-            <h3 className="font-semibold text-lg mb-2">Access Denied</h3>
-            <p className="text-sm">
-              You do not have the necessary permissions to edit company details. Only users with the 'Admin' role can make changes here.
-            </p>
-          </div>
-        )}
-        {canEdit && !companyDetails && !isLoading && (
-          <div className="mb-6 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
-            <h3 className="font-semibold text-lg mb-2">Initial Company Setup Required</h3>
-            <p className="text-sm">
-              No company details found. Please fill out the form below and click "Save Company Details" to set up your company's information.
-            </p>
-          </div>
-        )}
-        <FormProvider {...formMethods}>
-          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-8">
-            <LegalTradeInfoForm canEdit={canEdit} />
-            <StatutoryInfoForm canEdit={canEdit} />
-            <ContactDetailsForm canEdit={canEdit} />
-            <BankingInfoForm canEdit={canEdit} />
-            <CompanyLogoUpload canEdit={canEdit} isMockDataEnabled={isMockDataEnabled} />
-
-            <Button type="submit" disabled={!canEdit}>Save Company Details</Button>
-          </form>
-        </FormProvider>
-      </CardContent>
-    </Card>
+    <div style={{ padding: '20px', backgroundColor: 'lightgray', border: '1px solid black' }}>
+      <h2>Company Details Debug View</h2>
+      <p>Is Loading (useCompanyDetails): {isLoading ? "True" : "False"}</p>
+      <p>Is Loading Auth: {isLoadingAuth ? "True" : "False"}</p>
+      <p>Company Details: {companyDetails ? JSON.stringify(companyDetails) : "NULL"}</p>
+      <p>User Role: {user?.role || "N/A"}</p>
+      <p>Mock Data Enabled: {isMockDataEnabled ? "True" : "False"}</p>
+      <p>If you see this, the component is rendering!</p>
+    </div>
   );
 };
 

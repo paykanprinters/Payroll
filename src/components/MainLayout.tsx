@@ -36,10 +36,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"
     : "md:grid-cols-[240px_1fr] lg:grid-cols-[240px_1fr]";
 
-  console.log("MainLayout Debug: isAuthenticated:", isAuthenticated, "isLoadingAuth:", isLoadingAuth, "isLoadingCompanyDetails:", isLoadingCompanyDetails, "user:", user);
-
   if (isLoadingAuth || isLoadingCompanyDetails) {
-    console.log("MainLayout Debug: Rendering loader.");
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -48,11 +45,8 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
   }
 
   if (!isAuthenticated) {
-    console.log("MainLayout Debug: Not authenticated, rendering Outlet (should redirect to /login).");
     return <Outlet />;
   }
-
-  console.log("MainLayout Debug: Authenticated and not loading, rendering main content.");
 
   return (
     <div className={cn("grid min-h-screen w-full", gridColsClass)}>
