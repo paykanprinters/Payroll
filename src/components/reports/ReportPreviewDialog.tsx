@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, Download } from "lucide-react";
+import { Printer, Download, Save } from "lucide-react"; // Import Save icon
 import { showSuccess, showError } from "@/utils/toast";
 import html2pdf from 'html2pdf.js';
 import { Separator } from "@/components/ui/separator";
@@ -19,8 +19,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getPrintStyles } from "@/lib/utils";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import ReportContentWrapper from "./ReportContentWrapper"; // Import the new component
-import { usePdfGenerator } from "@/hooks/use-pdf-generator"; // Import usePdfGenerator
+import ReportContentWrapper from "./ReportContentWrapper";
+import { usePdfGenerator } from "@/hooks/use-pdf-generator";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { saveReportToSupabase } from "@/integrations/supabase/report-queries"; // New import
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -54,6 +56,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   const companyEmail = companyDetails?.companyEmail;
   const companyWebsite = companyDetails?.companyWebsite;
 
+  const { user, isMockDataEnabled } = usePayrollProcessor(); // Get user and isMockDataEnabled
 
   // Get explicit print styles for the preview display
   const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
@@ -96,6 +99,25 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     } else {
       await printPdf(renderComponent, options);
     }
+  };
+
+  const handleSaveToSupabase = async () => {
+    if (isMockDataEnabled) {
+      showError("Cannot save reports to Supabase when mock data is enabled.");
+      return;
+    }
+    if (!user?.id) {
+      showError("User not authenticated. Cannot save report.");
+      return;
+    }
+
+    const payload = {
+      user_id: user.id,
+      report_title: reportTitle,
+      report_type: documentType, // Use documentType as report_type
+      content_html: reportContent,
+    };
+    await saveReportToSupabase(payload);
   };
 
   return (
@@ -163,6 +185,9 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           </Button>
           <Button onClick={() => handlePrintOrDownload('download')}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
+          </Button>
+          <Button variant="outline" onClick={handleSaveToSupabase} disabled={isMockDataEnabled || !user?.id}>
+            <Save className="mr-2 h-4 w-4" /> Save to Supabase
           </Button>
           <Button variant="secondary" onClick={onClose}>
             Close

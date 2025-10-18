@@ -10,10 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider"; // Import Slider
+import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const DEFAULT_IRP5_FONT_SIZE = 12; // Default font size for IRP5 content
 const MIN_IRP5_FONT_SIZE = 10;
@@ -32,6 +33,7 @@ type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
 
 const TaxLiabilities: React.FC = () => {
   const { user } = useAuth(); // Get current user for permissions
+  const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
   const currentYear = new Date().getFullYear();
   const taxYears = [
     (currentYear - 2).toString(),
@@ -76,6 +78,10 @@ const TaxLiabilities: React.FC = () => {
   const irp5ContentFontSize = form.watch("irp5ContentFontSize");
 
   const handleFetchTaxTables = async () => {
+    if (isMockDataEnabled) {
+      showError("Cannot fetch tax tables from SARS when mock data is enabled.");
+      return;
+    }
     if (!selectedTaxYear) {
       showError("Please select a tax year to fetch tables.");
       return;
@@ -112,6 +118,10 @@ const TaxLiabilities: React.FC = () => {
   };
 
   const onSubmitDeductions = async (data: TaxLiabilitiesFormValues) => {
+    if (isMockDataEnabled) {
+      showError("Cannot save authorised deductions settings to Supabase when mock data is enabled.");
+      return;
+    }
     if (user?.role !== 'Admin') {
       showError("Only Admin users can save authorised deductions settings.");
       return;
@@ -131,6 +141,10 @@ const TaxLiabilities: React.FC = () => {
   };
 
   const handleIrp5ToggleChange = (checked: boolean) => {
+    if (isMockDataEnabled) {
+      showError("Cannot change IRP5 export settings when mock data is enabled.");
+      return;
+    }
     if (user?.role !== 'Admin') {
       showError("Only Admin users can change IRP5 export settings.");
       return;
@@ -142,6 +156,10 @@ const TaxLiabilities: React.FC = () => {
   };
 
   const handleIrp5FontSizeChange = (value: number[]) => {
+    if (isMockDataEnabled) {
+      showError("Cannot change IRP5 font size settings when mock data is enabled.");
+      return;
+    }
     if (user?.role !== 'Admin') {
       showError("Only Admin users can change IRP5 font size settings.");
       return;
@@ -170,7 +188,7 @@ const TaxLiabilities: React.FC = () => {
               <Select
                 onValueChange={(value) => form.setValue("taxYear", value)}
                 defaultValue={form.getValues("taxYear")}
-                disabled={!canManageTaxSettings}
+                disabled={!canManageTaxSettings || isMockDataEnabled}
               >
                 <SelectTrigger id="taxYear" className="mt-1 w-[180px]">
                   <SelectValue placeholder="Select a year" />
@@ -187,7 +205,7 @@ const TaxLiabilities: React.FC = () => {
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.taxYear.message}</p>
               )}
             </div>
-            <Button onClick={handleFetchTaxTables} disabled={!selectedTaxYear || !canManageTaxSettings}>
+            <Button onClick={handleFetchTaxTables} disabled={!selectedTaxYear || !canManageTaxSettings || isMockDataEnabled}>
               Fetch & Apply Tax Tables
             </Button>
           </div>
@@ -214,7 +232,7 @@ const TaxLiabilities: React.FC = () => {
                 id="applyPAYE"
                 checked={form.watch("applyPAYE")}
                 onCheckedChange={(checked) => form.setValue("applyPAYE", checked as boolean)}
-                disabled={!canManageTaxSettings}
+                disabled={!canManageTaxSettings || isMockDataEnabled}
               />
               <Label htmlFor="applyPAYE">
                 Apply PAYE (Pay As You Earn)
@@ -225,13 +243,13 @@ const TaxLiabilities: React.FC = () => {
                 id="applySDL"
                 checked={form.watch("applySDL")}
                 onCheckedChange={(checked) => form.setValue("applySDL", checked as boolean)}
-                disabled={!canManageTaxSettings}
+                disabled={!canManageTaxSettings || isMockDataEnabled}
               />
               <Label htmlFor="applySDL">
                 Apply SDL (Skills Development Levy)
               </Label>
             </div>
-            <Button type="submit" disabled={!canManageTaxSettings}>Save Deductions Settings</Button>
+            <Button type="submit" disabled={!canManageTaxSettings || isMockDataEnabled}>Save Deductions Settings</Button>
           </form>
           <div className="mt-8 p-4 border rounded-lg bg-blue-50 text-blue-800">
             <h3 className="font-semibold text-lg mb-2">Important Note:</h3>
@@ -257,7 +275,7 @@ const TaxLiabilities: React.FC = () => {
               id="enableIrp5Export"
               checked={form.watch("enableIrp5Export")}
               onCheckedChange={handleIrp5ToggleChange}
-              disabled={!canManageTaxSettings}
+              disabled={!canManageTaxSettings || isMockDataEnabled}
             />
           </div>
           <div>
@@ -270,7 +288,7 @@ const TaxLiabilities: React.FC = () => {
               value={[irp5ContentFontSize]}
               onValueChange={handleIrp5FontSizeChange}
               className="mt-2"
-              disabled={!canManageTaxSettings}
+              disabled={!canManageTaxSettings || isMockDataEnabled}
             />
           </div>
           <div className="mt-8 p-4 border rounded-lg bg-purple-50 text-purple-800">

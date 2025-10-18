@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
-import { Eye, EyeOff, RefreshCcw, Mail } from "lucide-react"; // Import Mail icon
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { Eye, EyeOff, RefreshCcw, Mail } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 // Define the schema for user form validation
 const userSchema = z.object({
@@ -66,6 +67,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   });
 
   const [showPassword, setShowPassword] = React.useState(false);
+  const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
 
   React.useEffect(() => {
     if (initialUser) {
@@ -92,6 +94,10 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   };
 
   const handleResendConfirmationEmail = async () => {
+    if (isMockDataEnabled) {
+      showError("Cannot resend confirmation email when mock data is enabled.");
+      return;
+    }
     if (!initialUser?.email) {
       showError("No email address available to resend confirmation.");
       return;
@@ -111,6 +117,10 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   };
 
   const onSubmit = (data: UserFormValues) => {
+    if (isMockDataEnabled) {
+      showError("Cannot save user to Supabase when mock data is enabled.");
+      return;
+    }
     onSave(data);
     onClose();
     showSuccess(initialUser ? "User updated successfully!" : "User added successfully!");
@@ -128,17 +138,17 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <div className="space-y-1">
             <Label htmlFor="name">Name</Label>
-            <Input id="name" {...form.register("name")} />
+            <Input id="name" {...form.register("name")} disabled={isMockDataEnabled} />
             {form.formState.errors.name && (<p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>)}
           </div>
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...form.register("email")} />
+            <Input id="email" type="email" {...form.register("email")} disabled={isMockDataEnabled} />
             {form.formState.errors.email && (<p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>)}
           </div>
           <div className="space-y-1">
             <Label htmlFor="role">Role</Label>
-            <Select onValueChange={(value) => form.setValue("role", value as "Admin" | "Manager" | "Staff" | "Viewer")} value={form.watch("role")}>
+            <Select onValueChange={(value) => form.setValue("role", value as "Admin" | "Manager" | "Staff" | "Viewer")} value={form.watch("role")} disabled={isMockDataEnabled}>
               <SelectTrigger id="role">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
@@ -153,7 +163,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
           </div>
           <div className="space-y-1">
             <Label htmlFor="status">Status</Label>
-            <Select onValueChange={(value) => form.setValue("status", value as "Active" | "Inactive")} value={form.watch("status")}>
+            <Select onValueChange={(value) => form.setValue("status", value as "Active" | "Inactive")} value={form.watch("status")} disabled={isMockDataEnabled}>
               <SelectTrigger id="status">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -172,6 +182,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 type={showPassword ? "text" : "password"}
                 {...form.register("password")}
                 className="pr-10" // Add padding for the icon
+                disabled={isMockDataEnabled}
               />
               <Button
                 type="button"
@@ -179,22 +190,23 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 size="icon"
                 className="absolute right-0 top-0 h-full px-3"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isMockDataEnabled}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
             {form.formState.errors.password && (<p className="text-red-500 text-sm mt-1">{form.formState.errors.password.message}</p>)}
-            <Button type="button" variant="outline" size="sm" onClick={generatePassword} className="mt-2 w-full">
+            <Button type="button" variant="outline" size="sm" onClick={generatePassword} className="mt-2 w-full" disabled={isMockDataEnabled}>
               <RefreshCcw className="mr-2 h-4 w-4" /> Generate Password
             </Button>
           </div>
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
             {initialUser && (
-              <Button type="button" variant="outline" onClick={handleResendConfirmationEmail}>
+              <Button type="button" variant="outline" onClick={handleResendConfirmationEmail} disabled={isMockDataEnabled}>
                 <Mail className="mr-2 h-4 w-4" /> Resend Confirmation
               </Button>
             )}
-            <Button type="submit">{initialUser ? "Save Changes" : "Add User"}</Button>
+            <Button type="submit" disabled={isMockDataEnabled}>{initialUser ? "Save Changes" : "Add User"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

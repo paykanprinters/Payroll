@@ -23,6 +23,7 @@ import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDi
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 interface UserData {
   id: string;
@@ -53,8 +54,16 @@ const UserControlPanel: React.FC = () => {
   const [userToDelete, setUserToDelete] = React.useState<UserData | null>(null);
 
   const { user: currentUser, isAuthenticated } = useAuth();
+  const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
 
   const fetchUsers = React.useCallback(async () => {
+    if (isMockDataEnabled) {
+      // For mock data, users are not managed here.
+      setUsers([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     const { data, error } = await supabase.from('users').select('*').order('name', { ascending: true });
 
@@ -66,9 +75,13 @@ const UserControlPanel: React.FC = () => {
       setUsers(data as UserData[]);
     }
     setIsLoading(false);
-  }, []);
+  }, [isMockDataEnabled]);
 
   const seedInitialUsers = React.useCallback(async () => {
+    if (isMockDataEnabled) {
+      showError("Cannot seed users to Supabase when mock data is enabled.");
+      return;
+    }
     setIsSeeding(true);
     try {
       const response = await supabase.functions.invoke('seed-users', {
@@ -89,17 +102,20 @@ const UserControlPanel: React.FC = () => {
     } finally {
       setIsSeeding(false);
     }
-  }, [fetchUsers]);
+  }, [fetchUsers, isMockDataEnabled]);
 
   React.useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isMockDataEnabled) { // Only fetch if authenticated and not using mock data
       fetchUsers();
+    } else if (isMockDataEnabled) {
+      setUsers([]); // Clear users if mock data is enabled
+      setIsLoading(false);
     }
-  }, [isAuthenticated, fetchUsers]);
+  }, [isAuthenticated, fetchUsers, isMockDataEnabled]);
 
   React.useEffect(() => {
     const checkAndSeed = async () => {
-      if (isAuthenticated && !isLoading && users.length === 0 && !isSeeding) {
+      if (isAuthenticated && !isLoading && users.length === 0 && !isSeeding && !isMockDataEnabled) {
         const { count, error } = await supabase.from('users').select('id', { count: 'exact' });
         if (error) {
           console.error('Error checking user count for seeding:', error);
@@ -112,7 +128,7 @@ const UserControlPanel: React.FC = () => {
       }
     };
     checkAndSeed();
-  }, [isAuthenticated, isLoading, users.length, isSeeding, seedInitialUsers]);
+  }, [isAuthenticated, isLoading, users.length, isSeeding, seedInitialUsers, isMockDataEnabled]);
 
 
   const filteredUsers = users.filter(user => {
@@ -123,22 +139,34 @@ const UserControlPanel: React.FC = () => {
   });
 
   const handleAddUserClick = () => {
+    if (isMockDataEnabled) {
+      showError("Cannot add users to Supabase when mock data is enabled.");
+      return;
+    }
     setEditingUser(null);
     setIsUserFormOpen(true);
   };
 
   const handleEditUserClick = (user: UserData) => {
+    if (isMockDataEnabled) {
+      showError("Cannot edit users in Supabase when mock data is enabled.");
+      return;
+    }
     setEditingUser(user);
     setIsUserFormOpen(true);
   };
 
   const handleDeleteUserClick = (user: UserData) => {
+    if (isMockDataEnabled) {
+      showError("Cannot delete users from Supabase when mock data is enabled.");
+      return;
+    }
     setUserToDelete(user);
     setIsUserDeleteDialogOpen(true);
   };
 
   const confirmDeleteUser = async () => {
-    if (!userToDelete) return;
+    if (!userToDelete || isMockDataEnabled) return;
 
     setIsLoading(true);
     const { error: profileError } = await supabase
@@ -160,6 +188,10 @@ const UserControlPanel: React.FC = () => {
   };
 
   const handleSaveUser = async (userData: UserFormValues) => {
+    if (isMockDataEnabled) {
+      showError("Cannot save user to Supabase when mock data is enabled.");
+      return;
+    }
     setIsLoading(true);
     if (userData.id) {
       const { error } = await supabase
@@ -281,7 +313,7 @@ const UserControlPanel: React.FC = () => {
         <CardContent>
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-semibold">All Users</h3>
-            <Button onClick={handleAddUserClick} disabled={isSeeding}>
+            <Button onClick={handleAddUserClick} disabled={isSeeding || isMockDataEnabled}>
               {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
               {isSeeding ? "Seeding..." : "Add New User"}
             </Button>
@@ -298,12 +330,13 @@ const UserControlPanel: React.FC = () => {
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  disabled={isMockDataEnabled}
                 />
               </div>
             </div>
             <div>
               <Label htmlFor="filter-role">Filter by Role</Label>
-              <Select value={filterRole} onValueChange={setFilterRole}>
+              <Select value={filterRole} onValueChange={setFilterRole} disabled={isMockDataEnabled}>
                 <SelectTrigger id="filter-role" className="mt-1">
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
@@ -337,8 +370,8 @@ const UserControlPanel: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="flex justify-center items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditUserClick(user)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteUserClick(user)}>Delete</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleEditUserClick(user)} disabled={isMockDataEnabled}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteUserClick(user)} disabled={isMockDataEnabled}>Delete</Button>
                       </TableCell>
                     </TableRow>
                   ))
