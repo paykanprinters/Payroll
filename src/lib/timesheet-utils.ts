@@ -1,6 +1,6 @@
 import { format, parse, isBefore, isAfter, eachDayOfInterval, isWeekend } from "date-fns";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
-import { TimesheetFormValues, ImportableTimesheetEntry } from "@/hooks/use-timesheet-data"; // Import types
+import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types"; // Import types from new file
 
 /**
  * Calculates the time difference between two HH:mm time strings in hours.

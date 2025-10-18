@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { format, startOfWeek, eachDayOfInterval, isSameDay, parse, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
-import { TimesheetFormValues } from "@/hooks/use-timesheet-data"; // Re-use the form values type
+import { TimesheetFormValues } from "@/lib/timesheet-types"; // Import from new types file
 import { showSuccess, showError } from "@/utils/toast";
 import { Badge } from "@/components/ui/badge"; // Import Badge
 import { isLeaveDay as checkIsLeaveDayUtil } from "@/lib/timesheet-utils"; // Import from new utility

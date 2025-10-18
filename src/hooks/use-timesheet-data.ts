@@ -1,60 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format, parse, isBefore, isAfter, eachDayOfInterval, isWeekend } from "date-fns";
+import { format } from "date-fns";
 import { MockEmployee, TimesheetEntry, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
-import { calculateTimesheetMetrics, isLeaveDay } from "@/lib/timesheet-utils"; // Import from new utility
-
-// Define the expected input type for adding/updating timesheets
-export interface TimesheetFormValues {
-  employeeId: string;
-  date: Date; // Expecting a Date object now
-  timeIn: string;
-  teaStart?: string;
-  teaEnd?: string;
-  lunchStart?: string;
-  lunchEnd?: string;
-  timeOut: string;
-}
-
-// Define the expected input type for batch imports
-export interface ImportableTimesheetEntry {
-  employeeId: string;
-  date: Date; // Expecting a Date object
-  timeIn: string;
-  teaStart?: string;
-  teaEnd?: string;
-  lunchStart?: string;
-  lunchEnd?: string;
-  timeOut: string;
-}
-
-// Helper to convert snake_case to camelCase for Supabase data
-const convertTimesheetKeysToCamelCase = (obj: any): TimesheetEntry => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as TimesheetEntry;
-};
-
-// Helper to convert camelCase to snake_case for Supabase inserts/updates
-const convertTimesheetKeysToSnakeCase = (obj: Partial<TimesheetEntry>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+import { calculateTimesheetMetrics, isLeaveDay } from "@/lib/timesheet-utils";
+import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types"; // Import types from new file
+import {
+  fetchTimesheetsFromSupabase,
+  upsertTimesheetToSupabase,
+  deleteTimesheetFromSupabase,
+  updateTimesheetStatusInSupabase,
+  batchUpsertTimesheetsToSupabase,
+  fetchExistingTimesheetsForBatch,
+} from "@/integrations/supabase/timesheet-queries"; // Import new Supabase query functions
 
 export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees: MockEmployee[], leaveRecords: LeaveEntry[], isMockDataEnabled: boolean) => {
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>(initialTimesheets);
@@ -66,25 +26,8 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
   const fetchLiveTimesheets = useCallback(async () => {
     setIsLoadingTimesheets(true);
     try {
-      console.log("useTimesheetData: Fetching live timesheets from Supabase...");
-      const { data, error } = await supabase
-        .from('timesheets')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error("useTimesheetData: Error fetching live timesheets:", error);
-        showError("Failed to load live timesheet data.");
-        setTimesheets([]);
-      } else {
-        const camelCaseData = data.map(convertTimesheetKeysToCamelCase);
-        console.log("useTimesheetData: Live timesheets fetched:", camelCaseData);
-        setTimesheets(camelCaseData);
-      }
-    } catch (err) {
-      console.error("useTimesheetData: Unhandled error fetching live timesheets:", err);
-      showError("An unexpected error occurred while loading live timesheet data.");
-      setTimesheets([]);
+      const data = await fetchTimesheetsFromSupabase();
+      setTimesheets(data);
     } finally {
       setIsLoadingTimesheets(false);
     }
@@ -94,36 +37,21 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     const toastId = showLoading(timesheetData.id ? "Updating timesheet..." : "Adding new timesheet...") as string;
     setIsLoadingTimesheets(true);
     try {
-      const snakeCasePayload = convertTimesheetKeysToSnakeCase(timesheetData);
-      console.log("useTimesheetData: Upserting live timesheet with payload:", snakeCasePayload);
-
-      const { data, error } = await supabase
-        .from('timesheets')
-        .upsert(snakeCasePayload, { onConflict: 'id' })
-        .select();
-
-      if (error) {
-        console.error("useTimesheetData: Error upserting live timesheet:", error);
-        showError(`Failed to save timesheet: ${error.message}`);
-      } else if (data && data.length > 0) {
-        const camelCaseData = convertTimesheetKeysToCamelCase(data[0]);
+      const result = await upsertTimesheetToSupabase(timesheetData);
+      if (result) {
         setTimesheets(prev => {
-          const existingIndex = prev.findIndex(ts => ts.id === camelCaseData.id);
+          const existingIndex = prev.findIndex(ts => ts.id === result.id);
           if (existingIndex !== -1) {
-            return prev.map((ts, idx) => idx === existingIndex ? camelCaseData : ts);
+            return prev.map((ts, idx) => idx === existingIndex ? result : ts);
           } else {
-            return [...prev, camelCaseData];
+            return [...prev, result];
           }
         });
         showSuccess("Timesheet saved successfully!");
       } else {
-        console.warn("useTimesheetData: Upsert succeeded but returned no data. Refetching to ensure consistency.");
         showError("Timesheet saved, but data could not be retrieved. Please refresh.");
-        fetchLiveTimesheets();
+        fetchLiveTimesheets(); // Refetch to ensure consistency
       }
-    } catch (err) {
-      console.error("useTimesheetData: Unhandled error upserting live timesheet:", err);
-      showError("An unexpected error occurred while saving timesheet data.");
     } finally {
       dismissToast(toastId);
       setIsLoadingTimesheets(false);
@@ -134,22 +62,11 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     const toastId = showLoading("Deleting timesheet...") as string;
     setIsLoadingTimesheets(true);
     try {
-      console.log("useTimesheetData: Deleting live timesheet with ID:", timesheetId);
-      const { error } = await supabase
-        .from('timesheets')
-        .delete()
-        .eq('id', timesheetId);
-
-      if (error) {
-        console.error("useTimesheetData: Error deleting live timesheet:", error);
-        showError(`Failed to delete timesheet: ${error.message}`);
-      } else {
+      const success = await deleteTimesheetFromSupabase(timesheetId);
+      if (success) {
         setTimesheets(prev => prev.filter(ts => ts.id !== timesheetId));
         showSuccess("Timesheet deleted successfully!");
       }
-    } catch (err) {
-      console.error("useTimesheetData: Unhandled error deleting live timesheet:", err);
-      showError("An unexpected error occurred while deleting timesheet data.");
     } finally {
       dismissToast(toastId);
       setIsLoadingTimesheets(false);
@@ -160,28 +77,14 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
     const toastId = showLoading("Updating timesheet status...") as string;
     setIsLoadingTimesheets(true);
     try {
-      const auditEntry = { action: `Status changed to ${newStatus}`, timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const };
-      const { data, error } = await supabase
-        .from('timesheets')
-        .update({ status: newStatus, audit_log: supabase.fn.jsonb_insert('audit_log', '{$}', JSON.stringify(auditEntry), true) })
-        .eq('id', timesheetId)
-        .select();
-
-      if (error) {
-        console.error("useTimesheetData: Error updating live timesheet status:", error);
-        showError(`Failed to update timesheet status: ${error.message}`);
-      } else if (data && data.length > 0) {
-        const camelCaseData = convertTimesheetKeysToCamelCase(data[0]);
-        setTimesheets(prev => prev.map(ts => ts.id === camelCaseData.id ? camelCaseData : ts));
+      const result = await updateTimesheetStatusInSupabase(timesheetId, newStatus);
+      if (result) {
+        setTimesheets(prev => prev.map(ts => ts.id === result.id ? result : ts));
         showSuccess(`Timesheet status updated to ${newStatus}!`);
       } else {
-        console.warn("useTimesheetData: Status update succeeded but returned no data. Refetching to ensure consistency.");
         showError("Timesheet status updated, but data could not be retrieved. Please refresh.");
-        fetchLiveTimesheets();
+        fetchLiveTimesheets(); // Refetch to ensure consistency
       }
-    } catch (err) {
-      console.error("useTimesheetData: Unhandled error updating live timesheet status:", err);
-      showError("An unexpected error occurred while updating timesheet status.");
     } finally {
       dismissToast(toastId);
       setIsLoadingTimesheets(false);
@@ -364,19 +267,9 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
       const datesInBatch = Array.from(new Set(newEntries.map(e => format(e.date, "yyyy-MM-dd"))));
 
       if (employeeIdsInBatch.length > 0 && datesInBatch.length > 0) {
-        const { data: existingLiveTimesheets, error: fetchError } = await supabase
-          .from('timesheets')
-          .select('*')
-          .in('employee_id', employeeIdsInBatch)
-          .in('date', datesInBatch);
-
-        if (fetchError) {
-          console.error("useTimesheetData: Error fetching existing timesheets for batch:", fetchError);
-          showError("Failed to check for existing timesheets during import.");
-          return;
-        }
+        const existingLiveTimesheets = await fetchExistingTimesheetsForBatch(employeeIdsInBatch, datesInBatch);
         existingLiveTimesheets?.forEach(ts => {
-          existingTimesheetsMap.set(`${ts.employee_id}-${ts.date}`, convertTimesheetKeysToCamelCase(ts));
+          existingTimesheetsMap.set(`${ts.employeeId}-${ts.date}`, ts);
         });
       }
 
@@ -422,21 +315,11 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
       if (timesheetsToUpsert.length > 0) {
         const toastId = showLoading(`Importing ${timesheetsToUpsert.length} timesheet entries...`) as string;
         try {
-          const snakeCasePayloads = timesheetsToUpsert.map(convertTimesheetKeysToSnakeCase);
-          const { error } = await supabase
-            .from('timesheets')
-            .upsert(snakeCasePayloads, { onConflict: 'id' });
-
-          if (error) {
-            console.error("useTimesheetData: Error batch upserting live timesheets:", error);
-            showError(`Failed to import timesheets: ${error.message}`);
-          } else {
+          const success = await batchUpsertTimesheetsToSupabase(timesheetsToUpsert);
+          if (success) {
             showSuccess(`${timesheetsToUpsert.length} timesheet entries imported successfully!`);
             fetchLiveTimesheets(); // Re-fetch all to update state
           }
-        } catch (err) {
-          console.error("useTimesheetData: Unhandled error batch upserting live timesheets:", err);
-          showError("An unexpected error occurred during timesheet import.");
         } finally {
           dismissToast(toastId);
         }

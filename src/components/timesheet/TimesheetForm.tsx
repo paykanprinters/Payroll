@@ -14,7 +14,8 @@ import { format, parse, isBefore, isAfter } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
-import { isLeaveDay as checkIsLeaveDayUtil } from "@/lib/timesheet-utils"; // Import from new utility
+import { isLeaveDay as checkIsLeaveDayUtil } from "@/lib/timesheet-utils";
+import { TimesheetFormValues } from "@/lib/timesheet-types"; // Import from new types file
 
 // Define the schema for form validation
 const timesheetSchema = z.object({
@@ -67,7 +68,7 @@ const timesheetSchema = z.object({
   }
 });
 
-type TimesheetFormValues = z.infer<typeof timesheetSchema>;
+// type TimesheetFormValues = z.infer<typeof timesheetSchema>; // This line is now redundant, use imported type
 
 interface TimesheetFormProps {
   employees: MockEmployee[];
