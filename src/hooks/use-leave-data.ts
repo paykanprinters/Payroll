@@ -7,6 +7,10 @@ import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast"; // Import toast functions
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+import {
+  fetchLeaveRecordsFromSupabase,
+  upsertLeaveRecordToSupabase,
+} from "@/integrations/supabase/leave-queries"; // Import new Supabase query functions
 
 // Helper to convert snake_case to camelCase for Supabase data
 const convertLeaveEntryKeysToCamelCase = (obj: any): LeaveEntry => {
@@ -51,24 +55,8 @@ export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled
     setIsLoadingLeaveRecords(true);
     try {
       console.log("useLeaveData: Fetching live leave records from Supabase...");
-      const { data, error } = await supabase
-        .from('leave_records')
-        .select('*')
-        .order('start_date', { ascending: false });
-
-      if (error) {
-        console.error("useLeaveData: Error fetching live leave records:", error);
-        showError("Failed to load live leave record data.");
-        setLeaveRecords([]);
-      } else {
-        const camelCaseData = data.map(convertLeaveEntryKeysToCamelCase);
-        console.log("useLeaveData: Live leave records fetched:", camelCaseData);
-        setLeaveRecords(camelCaseData);
-      }
-    } catch (err) {
-      console.error("useLeaveData: Unhandled error fetching live leave records:", err);
-      showError("An unexpected error occurred while loading live leave record data.");
-      setLeaveRecords([]);
+      const data = await fetchLeaveRecordsFromSupabase();
+      setLeaveRecords(data);
     } finally {
       setIsLoadingLeaveRecords(false);
     }
