@@ -163,7 +163,8 @@ export const usePayrollProcessor = () => {
   const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: mockSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: mockLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { toDos, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee, isAuthenticated, isLoadingAuth });
+  // Destructure pendingCount from useToDosData
+  const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee, isAuthenticated, isLoadingAuth });
 
   // Payroll processing logic
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
@@ -277,6 +278,7 @@ export const usePayrollProcessor = () => {
     leaveRecords,
     timesheets,
     toDos,
+    pendingCount, // Expose pendingCount here
     companyDetails,
     isLoadingCompanyDetails,
     isMockDataEnabled,
