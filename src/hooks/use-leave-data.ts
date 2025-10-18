@@ -41,7 +41,7 @@ interface UseLeaveDataProps {
 }
 
 export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseLeaveDataProps) => {
-  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>(initialLeaveRecords);
+  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]); // Initialize as empty
   const [leaveTypeDistribution, setLeaveTypeDistribution] = useState<{ name: string; value: number }[]>([]);
   const [monthlyLeaveData, setMonthlyLeaveData] = useState<{ name: string; days: number }[]>([]);
   const [isLoadingLeaveRecords, setIsLoadingLeaveRecords] = useState(true);
@@ -122,7 +122,10 @@ export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled
     }
 
     if (isMockDataEnabled) {
-      setLeaveRecords(initialLeaveRecords);
+      // Only update if the current 'leaveRecords' state is different from 'initialLeaveRecords'
+      if (leaveRecords !== initialLeaveRecords) {
+        setLeaveRecords(initialLeaveRecords);
+      }
       setIsLoadingLeaveRecords(false);
     } else if (isAuthenticated) {
       fetchLiveLeaveRecords();

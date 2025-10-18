@@ -39,7 +39,7 @@ interface UseSavingPlansDataProps {
 }
 
 export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseSavingPlansDataProps) => {
-  const [savingPlans, setSavingPlans] = useState<SavingPlan[]>(initialSavingPlans);
+  const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]); // Initialize as empty
   const [isLoadingSavingPlans, setIsLoadingSavingPlans] = useState(true);
 
   // --- Live Saving Plan Data Management (Supabase) ---
@@ -118,7 +118,10 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
     }
 
     if (isMockDataEnabled) {
-      setSavingPlans(initialSavingPlans);
+      // Only update if the current 'savingPlans' state is different from 'initialSavingPlans'
+      if (savingPlans !== initialSavingPlans) {
+        setSavingPlans(initialSavingPlans);
+      }
       setIsLoadingSavingPlans(false);
     } else if (isAuthenticated) {
       fetchLiveSavingPlans();

@@ -69,7 +69,10 @@ export const useToDosData = (
     }
 
     if (isMockDataEnabled) {
-      setToDos(initialToDos);
+      // Only update if the current 'toDos' state is different from 'initialToDos'
+      if (toDos !== initialToDos) {
+        setToDos(initialToDos);
+      }
       setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
       setIsLoadingToDos(false);
     } else if (isAuthenticated) {

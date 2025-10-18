@@ -40,7 +40,7 @@ interface UseLoansDataProps {
 }
 
 export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseLoansDataProps) => {
-  const [loans, setLoans] = useState<Loan[]>(initialLoans);
+  const [loans, setLoans] = useState<Loan[]>([]); // Initialize as empty, will be set by effect
   const [isLoadingLoans, setIsLoadingLoans] = useState(true);
 
   // --- Live Loan Data Management (Supabase) ---
@@ -145,7 +145,10 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
     }
 
     if (isMockDataEnabled) {
-      setLoans(initialLoans);
+      // Only update if the current 'loans' state is different from 'initialLoans'
+      if (loans !== initialLoans) {
+        setLoans(initialLoans);
+      }
       setIsLoadingLoans(false);
     } else if (isAuthenticated) {
       fetchLiveLoans();
@@ -243,7 +246,7 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
     if (isMockDataEnabled) {
       setLoans(prevLoans => {
         const updatedLoans = prevLoans.map(loan =>
-          loan.id === loanId ? updatedLoan : loan
+          loan.id === loanToUpdate.id ? updatedLoan : loan
         );
         localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
         window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans }));
@@ -280,7 +283,7 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
     if (isMockDataEnabled) {
       setLoans(prevLoans => {
         const updatedLoans = prevLoans.map(loan =>
-          loan.id === loanId ? updatedLoan : loan
+          loan.id === loanToUpdate.id ? updatedLoan : loan
         );
         localStorage.setItem("mockLoans", JSON.stringify(updatedLoans));
         window.dispatchEvent(new CustomEvent('loansUpdated', { detail: updatedLoans }));

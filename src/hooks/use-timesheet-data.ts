@@ -26,7 +26,7 @@ interface UseTimesheetDataProps {
 }
 
 export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseTimesheetDataProps) => {
-  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>(initialTimesheets);
+  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]); // Initialize as empty
   const [isEditing, setIsEditing] = useState(false);
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetEntry | null>(null);
   const [isLoadingTimesheets, setIsLoadingTimesheets] = useState(true);
@@ -108,7 +108,10 @@ export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, i
     }
 
     if (isMockDataEnabled) {
-      setTimesheets(initialTimesheets);
+      // Only update if the current 'timesheets' state is different from 'initialTimesheets'
+      if (timesheets !== initialTimesheets) {
+        setTimesheets(initialTimesheets);
+      }
       setIsLoadingTimesheets(false);
     } else if (isAuthenticated) {
       fetchLiveTimesheets();
