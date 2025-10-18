@@ -93,7 +93,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } finally {
         if (isMounted) {
-          if (isLoadingAuth !== false) { // Only set to false if it's not already false
+          // Only set to false if it's not already false.
+          if (isLoadingAuth) { // Check current state
             setIsLoadingAuth(false);
             console.log("AuthContext: Setting isLoadingAuth to false in finally block.");
           }
@@ -113,18 +114,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // If session exists, handleAuthStateChange would have already processed it
           // or will process it shortly via 'INITIAL_SESSION' event.
           // We just ensure isLoadingAuth is set correctly.
-          if (isLoadingAuth !== false) {
+          if (isLoadingAuth) { // Check current state
             setIsLoadingAuth(false);
             console.log("Initial session found, setting isLoadingAuth to false.");
           }
         } else {
           // No initial session, ensure state is cleared and redirect if needed
-          if (isAuthenticated !== false) {
+          if (isAuthenticated) { // Check current state
             setIsAuthenticated(false);
             setUser(null);
             console.log("No initial session, clearing auth state.");
           }
-          if (isLoadingAuth !== false) {
+          if (isLoadingAuth) { // Check current state
             setIsLoadingAuth(false);
             console.log("No initial session, setting isLoadingAuth to false.");
           }
@@ -148,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       authListener.subscription.unsubscribe();
       console.log("AuthContext: Auth listener unsubscribed.");
     };
-  }, [navigate, isLoadingAuth, isAuthenticated]); // Added isLoadingAuth, isAuthenticated to dependencies to ensure correct logging
+  }, [navigate]); // Removed isLoadingAuth, isAuthenticated from dependencies
 
   // Log when isLoadingAuth changes
   useEffect(() => {

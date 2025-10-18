@@ -38,9 +38,10 @@ const Login: React.FC = () => {
   useEffect(() => {
     console.log("Login.tsx: isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
     if (isAuthenticated && user) {
+      console.log("Login.tsx: Authenticated user found, navigating to dashboard.");
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate, isLoadingAuth]); // Added isLoadingAuth to dependencies
+  }, [isAuthenticated, user, navigate]); // Removed isLoadingAuth from dependencies
 
   useEffect(() => {
     console.log("Login.tsx: companyDetails received:", companyDetails);
