@@ -103,14 +103,13 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
       const { data, error } = await supabase
         .from('employees')
         .upsert(snakeCasePayload, { onConflict: 'id' })
-        .select()
-        .single();
+        .select(); // Removed .single()
 
       if (error) {
         console.error("useEmployeesData: Error upserting live employee:", error);
         showError(`Failed to save employee: ${error.message}`);
-      } else {
-        const camelCaseData = convertEmployeeKeysToCamelCase(data);
+      } else if (data && data.length > 0) { // Check if data is returned and has elements
+        const camelCaseData = convertEmployeeKeysToCamelCase(data[0]); // Take the first element
         setEmployees(prev => {
           const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
           if (existingIndex !== -1) {
@@ -120,6 +119,13 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
           }
         });
         showSuccess("Employee saved successfully!");
+      } else {
+        // This case means upsert succeeded but returned no data, which is unexpected for onConflict: 'id'
+        // It might indicate an RLS issue on SELECT, or a Supabase internal issue.
+        console.warn("useEmployeesData: Upsert succeeded but returned no data. This might indicate an RLS issue or unexpected behavior.");
+        showError("Employee saved, but data could not be retrieved. Please refresh.");
+        // A refetch might be necessary here to ensure state is consistent
+        fetchLiveEmployees(); // Trigger a full refetch
       }
     } catch (err) {
       console.error("useEmployeesData: Unhandled error upserting live employee:", err);
@@ -128,7 +134,7 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
       dismissToast(toastId);
       setIsLoading(false);
     }
-  }, [employees, companyName]); // Added employees and companyName to dependencies
+  }, [employees, companyName, fetchLiveEmployees]); // Added employees, companyName, and fetchLiveEmployees to dependencies
 
   const deleteLiveEmployee = useCallback(async (employeeId: string) => {
     const toastId = showLoading("Deleting employee...") as string;
