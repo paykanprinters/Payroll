@@ -31,7 +31,15 @@ const convertLoanKeysToSnakeCase = (obj: Partial<Loan>): any => {
   return newObj;
 };
 
-export const useLoansData = (initialLoans: Loan[], employees: MockEmployee[], isMockDataEnabled: boolean) => {
+interface UseLoansDataProps {
+  initialLoans: Loan[];
+  employees: MockEmployee[];
+  isMockDataEnabled: boolean;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
+export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseLoansDataProps) => {
   const [loans, setLoans] = useState<Loan[]>(initialLoans);
   const [isLoadingLoans, setIsLoadingLoans] = useState(true);
 
@@ -131,13 +139,22 @@ export const useLoansData = (initialLoans: Loan[], employees: MockEmployee[], is
 
   // Effect to load data based on mockDataEnabled status
   useEffect(() => {
+    if (isLoadingAuth) {
+      setIsLoadingLoans(true); // Keep loading true while auth is loading
+      return;
+    }
+
     if (isMockDataEnabled) {
       setLoans(initialLoans);
       setIsLoadingLoans(false);
-    } else {
+    } else if (isAuthenticated) {
       fetchLiveLoans();
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setLoans([]);
+      setIsLoadingLoans(false);
     }
-  }, [isMockDataEnabled, initialLoans, fetchLiveLoans]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, initialLoans, fetchLiveLoans]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);

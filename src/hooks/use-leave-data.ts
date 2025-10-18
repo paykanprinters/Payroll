@@ -32,7 +32,15 @@ const convertLeaveEntryKeysToSnakeCase = (obj: Partial<LeaveEntry>): any => {
   return newObj;
 };
 
-export const useLeaveData = (initialLeaveRecords: LeaveEntry[], employees: MockEmployee[], isMockDataEnabled: boolean) => {
+interface UseLeaveDataProps {
+  initialLeaveRecords: LeaveEntry[];
+  employees: MockEmployee[];
+  isMockDataEnabled: boolean;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
+export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseLeaveDataProps) => {
   const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>(initialLeaveRecords);
   const [leaveTypeDistribution, setLeaveTypeDistribution] = useState<{ name: string; value: number }[]>([]);
   const [monthlyLeaveData, setMonthlyLeaveData] = useState<{ name: string; days: number }[]>([]);
@@ -108,13 +116,22 @@ export const useLeaveData = (initialLeaveRecords: LeaveEntry[], employees: MockE
 
   // Effect to load data based on mockDataEnabled status
   useEffect(() => {
+    if (isLoadingAuth) {
+      setIsLoadingLeaveRecords(true); // Keep loading true while auth is loading
+      return;
+    }
+
     if (isMockDataEnabled) {
       setLeaveRecords(initialLeaveRecords);
       setIsLoadingLeaveRecords(false);
-    } else {
+    } else if (isAuthenticated) {
       fetchLiveLeaveRecords();
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setLeaveRecords([]);
+      setIsLoadingLeaveRecords(false);
     }
-  }, [isMockDataEnabled, initialLeaveRecords, fetchLiveLeaveRecords]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, initialLeaveRecords, fetchLiveLeaveRecords]);
 
   // Recalculate charts whenever leaveRecords changes (either mock or live)
   useEffect(() => {

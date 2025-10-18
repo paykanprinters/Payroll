@@ -41,7 +41,13 @@ const mockTaxTables: TaxTables = {
   },
 };
 
-export const useTaxTables = (isMockDataEnabled: boolean) => {
+interface UseTaxTablesProps {
+  isMockDataEnabled: boolean;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
+export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseTaxTablesProps) => {
   const [taxTables, setTaxTables] = useState<TaxTables | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -82,10 +88,15 @@ export const useTaxTables = (isMockDataEnabled: boolean) => {
   }, []);
 
   useEffect(() => {
+    if (isLoadingAuth) {
+      setIsLoading(true); // Keep loading true while auth is loading
+      return;
+    }
+
     if (isMockDataEnabled) {
       setTaxTables(mockTaxTables);
       setIsLoading(false);
-    } else {
+    } else if (isAuthenticated) {
       const currentTaxYear = new Date().getFullYear(); // Or determine based on fiscal year
       fetchLiveTaxTables(currentTaxYear);
 
@@ -97,8 +108,12 @@ export const useTaxTables = (isMockDataEnabled: boolean) => {
       return () => {
         window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
       };
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setTaxTables(null);
+      setIsLoading(false);
     }
-  }, [isMockDataEnabled, fetchLiveTaxTables]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveTaxTables]);
 
   return {
     taxTables,

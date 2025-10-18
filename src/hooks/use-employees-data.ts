@@ -32,7 +32,14 @@ const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
   return newObj;
 };
 
-export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string) => {
+interface UseEmployeesDataProps {
+  isMockDataEnabled: boolean;
+  companyName: string;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
+export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticated, isLoadingAuth }: UseEmployeesDataProps) => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -237,14 +244,23 @@ export const useEmployeesData = (isMockDataEnabled: boolean, companyName: string
 
   // Effect to load data based on mockDataEnabled status
   useEffect(() => {
+    if (isLoadingAuth) {
+      setIsLoading(true); // Keep loading true while auth is loading
+      return;
+    }
+
     if (isMockDataEnabled) {
       const storedMockEmployees = localStorage.getItem("mockEmployees");
       setEmployees(storedMockEmployees ? JSON.parse(storedMockEmployees) : []);
       setIsLoading(false);
-    } else {
+    } else if (isAuthenticated) {
       fetchLiveEmployees();
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setEmployees([]);
+      setIsLoading(false);
     }
-  }, [isMockDataEnabled, fetchLiveEmployees]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveEmployees]);
 
   // Listen for specific update events to re-fetch/update state
   useEffect(() => {

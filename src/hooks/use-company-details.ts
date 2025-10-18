@@ -50,7 +50,13 @@ const convertKeysToCamelCase = (obj: any): any => {
   return obj;
 };
 
-export const useCompanyDetails = () => {
+interface UseCompanyDetailsProps {
+  isMockDataEnabled: boolean;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
+export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseCompanyDetailsProps) => {
   const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<any>(null);
@@ -163,13 +169,56 @@ export const useCompanyDetails = () => {
   );
 
   useEffect(() => {
-    fetchCompanyDetails();
-    // Removed: window.addEventListener("companyDetailsUpdated", fetchCompanyDetails);
-    // Rely on internal state updates and other components listening to the event.
-    return () => {
-      // Removed: window.removeEventListener("companyDetailsUpdated", fetchCompanyDetails);
-    };
-  }, [fetchCompanyDetails]);
+    if (isLoadingAuth) {
+      setIsLoading(true); // Keep loading true while auth is loading
+      return;
+    }
+
+    if (isMockDataEnabled) {
+      // For mock data, reconstruct company details from localStorage
+      const mockCompanyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
+      const mockCompanyTradingName = localStorage.getItem('companyTradingName') || "";
+      const mockCompanyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
+      const mockCompanyTaxNumber = localStorage.getItem('companyTaxNumber') || "";
+      const mockVatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
+      const mockIndustry = localStorage.getItem('industry') || "";
+      const mockPayeReferenceNumber = localStorage.getItem('payeReferenceNumber') || "";
+      const mockUifReferenceNumber = localStorage.getItem('uifReferenceNumber') || "";
+      const mockSdlReferenceNumber = localStorage.getItem('sdlReferenceNumber') || "";
+      const mockCoidaRegistrationNumber = localStorage.getItem('coidaRegistrationNumber') || "";
+      const mockPhysicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
+      const mockPostalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
+      const mockMainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
+      const mockAlternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
+      const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
+      const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.acmecorp.co.za";
+      const mockBankName = localStorage.getItem('bankName') || "";
+      const mockAccountholdername = localStorage.getItem('accountholdername') || "";
+      const mockAccountNumber = localStorage.getItem('accountNumber') || "";
+      const mockBranchCode = localStorage.getItem('branchCode') || "";
+      const mockAccountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
+      const mockLogoUrl = localStorage.getItem('companyLogoUrl') || '';
+      const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
+      const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
+      const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+
+      setCompanyDetails({
+        companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
+        companyTaxNumber: mockCompanyTaxNumber, vatRegistrationNumber: mockVatRegistrationNumber, industry: mockIndustry,
+        payeReferenceNumber: mockPayeReferenceNumber, uifReferenceNumber: mockUifReferenceNumber, sdlReferenceNumber: mockSdlReferenceNumber,
+        coidaRegistrationNumber: mockCoidaRegistrationNumber, physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
+        companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
+        branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
+      });
+      setIsLoading(false);
+    } else if (isAuthenticated) {
+      fetchCompanyDetails();
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setCompanyDetails(null);
+      setIsLoading(false);
+    }
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchCompanyDetails]);
 
   return { companyDetails, isLoading, error, upsertCompanyDetails, refetchCompanyDetails: fetchCompanyDetails };
 };

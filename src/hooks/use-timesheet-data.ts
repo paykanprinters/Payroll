@@ -16,7 +16,16 @@ import {
   fetchExistingTimesheetsForBatch,
 } from "@/integrations/supabase/timesheet-queries"; // Import new Supabase query functions
 
-export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees: MockEmployee[], leaveRecords: LeaveEntry[], isMockDataEnabled: boolean) => {
+interface UseTimesheetDataProps {
+  initialTimesheets: TimesheetEntry[];
+  employees: MockEmployee[];
+  leaveRecords: LeaveEntry[];
+  isMockDataEnabled: boolean;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
+export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseTimesheetDataProps) => {
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>(initialTimesheets);
   const [isEditing, setIsEditing] = useState(false);
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetEntry | null>(null);
@@ -93,13 +102,22 @@ export const useTimesheetData = (initialTimesheets: TimesheetEntry[], employees:
 
   // Effect to load data based on mockDataEnabled status
   useEffect(() => {
+    if (isLoadingAuth) {
+      setIsLoadingTimesheets(true); // Keep loading true while auth is loading
+      return;
+    }
+
     if (isMockDataEnabled) {
       setTimesheets(initialTimesheets);
       setIsLoadingTimesheets(false);
-    } else {
+    } else if (isAuthenticated) {
       fetchLiveTimesheets();
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setTimesheets([]);
+      setIsLoadingTimesheets(false);
     }
-  }, [isMockDataEnabled, initialTimesheets, fetchLiveTimesheets]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, initialTimesheets, fetchLiveTimesheets]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);

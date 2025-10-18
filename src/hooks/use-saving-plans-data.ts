@@ -30,7 +30,15 @@ const convertSavingPlanKeysToSnakeCase = (obj: Partial<SavingPlan>): any => {
   return newObj;
 };
 
-export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: MockEmployee[], isMockDataEnabled: boolean) => {
+interface UseSavingPlansDataProps {
+  initialSavingPlans: SavingPlan[];
+  employees: MockEmployee[];
+  isMockDataEnabled: boolean;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
+export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseSavingPlansDataProps) => {
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>(initialSavingPlans);
   const [isLoadingSavingPlans, setIsLoadingSavingPlans] = useState(true);
 
@@ -104,13 +112,22 @@ export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: 
 
   // Effect to load data based on mockDataEnabled status
   useEffect(() => {
+    if (isLoadingAuth) {
+      setIsLoadingSavingPlans(true); // Keep loading true while auth is loading
+      return;
+    }
+
     if (isMockDataEnabled) {
       setSavingPlans(initialSavingPlans);
       setIsLoadingSavingPlans(false);
-    } else {
+    } else if (isAuthenticated) {
       fetchLiveSavingPlans();
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setSavingPlans([]);
+      setIsLoadingSavingPlans(false);
     }
-  }, [isMockDataEnabled, initialSavingPlans, fetchLiveSavingPlans]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, initialSavingPlans, fetchLiveSavingPlans]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);

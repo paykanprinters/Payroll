@@ -18,11 +18,17 @@ const convertToDoKeysToCamelCase = (obj: any): ToDoEntry => {
   return newObj as ToDoEntry;
 };
 
+interface UseToDosDataProps {
+  initialToDos: ToDoEntry[];
+  isMockDataEnabled: boolean;
+  employees: MockEmployee[];
+  addOrUpdateEmployee: (employee: EmployeeFormValues) => Promise<void>;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+}
+
 export const useToDosData = (
-  initialToDos: ToDoEntry[],
-  isMockDataEnabled: boolean,
-  employees: MockEmployee[],
-  addOrUpdateEmployee: (employee: EmployeeFormValues) => Promise<void> // New prop
+  { initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee, isAuthenticated, isLoadingAuth }: UseToDosDataProps
 ) => {
   const [toDos, setToDos] = useState<ToDoEntry[]>([]); // Initialize as empty, will fetch from Supabase or localStorage
   const [pendingCount, setPendingCount] = useState<number>(0);
@@ -57,14 +63,24 @@ export const useToDosData = (
   }, []);
 
   useEffect(() => {
+    if (isLoadingAuth) {
+      setIsLoadingToDos(true); // Keep loading true while auth is loading
+      return;
+    }
+
     if (isMockDataEnabled) {
       setToDos(initialToDos);
       setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
       setIsLoadingToDos(false);
-    } else {
+    } else if (isAuthenticated) {
       fetchLiveToDos();
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      setToDos([]);
+      setPendingCount(0);
+      setIsLoadingToDos(false);
     }
-  }, [initialToDos, isMockDataEnabled, fetchLiveToDos]);
+  }, [initialToDos, isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveToDos]);
 
   const getEmployeeCustomId = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);

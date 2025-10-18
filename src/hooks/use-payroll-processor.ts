@@ -22,19 +22,22 @@ import { useSavingPlansData } from "./use-saving-plans-data"; // Import useSavin
 import { useLeaveData } from "./use-leave-data"; // Import useLeaveData
 import { useTimesheetData } from "./use-timesheet-data"; // Import useTimesheetData
 import { useToDosData } from "./use-todos-data"; // Import useToDosData
+import { useAuth } from "@/context/AuthContext"; // Import useAuth
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
 
 export const usePayrollProcessor = () => {
+  const { isAuthenticated, isLoadingAuth } = useAuth(); // Get auth state
+
   // Initialize isMockDataEnabled directly from localStorage to prevent re-render loops
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
     return localStorage.getItem("isMockDataEnabled") === "true";
   });
 
   // Orchestrate other data hooks
-  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails();
-  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables(isMockDataEnabled);
+  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
   // Derived state for companyDetails: always reflects the correct source
   const companyDetails = useMemo(() => {
@@ -80,17 +83,17 @@ export const usePayrollProcessor = () => {
 
   // Determine company name for employee ID generation
   const companyNameForEmployeeId = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
-  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData(isMockDataEnabled, companyNameForEmployeeId);
+  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
   // Local states for mock data that are not yet migrated to dedicated hooks
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
 
   // Use dedicated hooks for other data types
-  const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData([], employees, isMockDataEnabled);
-  const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData([], employees, isMockDataEnabled); // Get updateSavingPlan
-  const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData([], employees, isMockDataEnabled);
-  const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData([], employees, leaveRecords, isMockDataEnabled);
-  const { toDos, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData([], isMockDataEnabled, employees, addOrUpdateEmployee); // Pass addOrUpdateEmployee
+  const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: [], employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: [], employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Get updateSavingPlan
+  const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: [], employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: [], employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { toDos, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: [], isMockDataEnabled, employees, addOrUpdateEmployee, isAuthenticated, isLoadingAuth }); // Pass addOrUpdateEmployee
 
   // Payroll processing logic
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
@@ -110,6 +113,10 @@ export const usePayrollProcessor = () => {
   // Function to trigger the generate-todos Edge Function
   const triggerGenerateToDos = useCallback(async () => {
     if (isMockDataEnabled) return; // Only for live data
+    if (!isAuthenticated) {
+      console.warn("Not authenticated, skipping generate-todos Edge Function call.");
+      return;
+    }
 
     try {
       console.log("usePayrollProcessor: Triggering generate-todos Edge Function...");
@@ -127,7 +134,7 @@ export const usePayrollProcessor = () => {
       console.error('usePayrollProcessor: Unhandled error triggering generate-todos Edge Function:', error);
       showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
     }
-  }, [isMockDataEnabled, refetchToDos]);
+  }, [isMockDataEnabled, isAuthenticated, refetchToDos]);
 
 
   // Effect to handle changes in isMockDataEnabled and update local payslips state
@@ -138,9 +145,12 @@ export const usePayrollProcessor = () => {
       setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
     } else {
       setPayslips([]); // Clear mock payslips when switching to live
-      triggerGenerateToDos(); // Trigger To-Do generation when switching to live data
+      // Only trigger if authenticated and not loading auth
+      if (isAuthenticated && !isLoadingAuth) {
+        triggerGenerateToDos(); // Trigger To-Do generation when switching to live data
+      }
     }
-  }, [isMockDataEnabled, triggerGenerateToDos]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, triggerGenerateToDos]);
 
   // Listen for general mock data update event (for other components to react)
   useEffect(() => {
