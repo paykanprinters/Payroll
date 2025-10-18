@@ -2,14 +2,115 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { SavingPlan, MockEmployee } from "@/lib/mock-data-interfaces";
-import { showSuccess, showError } from "@/utils/toast";
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast"; // Import toast functions
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+
+// Helper to convert snake_case to camelCase for Supabase data
+const convertSavingPlanKeysToCamelCase = (obj: any): SavingPlan => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+      newObj[camelKey] = obj[key];
+    }
+  }
+  return newObj as SavingPlan;
+};
+
+// Helper to convert camelCase to snake_case for Supabase inserts/updates
+const convertSavingPlanKeysToSnakeCase = (obj: Partial<SavingPlan>): any => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+      newObj[snakeKey] = (obj as any)[key];
+    }
+  }
+  return newObj;
+};
 
 export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: MockEmployee[], isMockDataEnabled: boolean) => {
   const [savingPlans, setSavingPlans] = useState<SavingPlan[]>(initialSavingPlans);
+  const [isLoadingSavingPlans, setIsLoadingSavingPlans] = useState(true);
 
+  // --- Live Saving Plan Data Management (Supabase) ---
+  const fetchLiveSavingPlans = useCallback(async () => {
+    setIsLoadingSavingPlans(true);
+    try {
+      console.log("useSavingPlansData: Fetching live saving plans from Supabase...");
+      const { data, error } = await supabase
+        .from('saving_plans')
+        .select('*')
+        .order('start_date', { ascending: false });
+
+      if (error) {
+        console.error("useSavingPlansData: Error fetching live saving plans:", error);
+        showError("Failed to load live saving plan data.");
+        setSavingPlans([]);
+      } else {
+        const camelCaseData = data.map(convertSavingPlanKeysToCamelCase);
+        console.log("useSavingPlansData: Live saving plans fetched:", camelCaseData);
+        setSavingPlans(camelCaseData);
+      }
+    } catch (err) {
+      console.error("useSavingPlansData: Unhandled error fetching live saving plans:", err);
+      showError("An unexpected error occurred while loading live saving plan data.");
+      setSavingPlans([]);
+    } finally {
+      setIsLoadingSavingPlans(false);
+    }
+  }, []);
+
+  const upsertLiveSavingPlan = useCallback(async (savingPlanData: SavingPlan) => {
+    const toastId = showLoading(savingPlanData.id ? "Updating saving plan..." : "Adding new saving plan...") as string;
+    setIsLoadingSavingPlans(true);
+    try {
+      const snakeCasePayload = convertSavingPlanKeysToSnakeCase(savingPlanData);
+      console.log("useSavingPlansData: Upserting live saving plan with payload:", snakeCasePayload);
+
+      const { data, error } = await supabase
+        .from('saving_plans')
+        .upsert(snakeCasePayload, { onConflict: 'id' })
+        .select();
+
+      if (error) {
+        console.error("useSavingPlansData: Error upserting live saving plan:", error);
+        showError(`Failed to save saving plan: ${error.message}`);
+      } else if (data && data.length > 0) {
+        const camelCaseData = convertSavingPlanKeysToCamelCase(data[0]);
+        setSavingPlans(prev => {
+          const existingIndex = prev.findIndex(plan => plan.id === camelCaseData.id);
+          if (existingIndex !== -1) {
+            return prev.map((plan, idx) => idx === existingIndex ? camelCaseData : plan);
+          } else {
+            return [...prev, camelCaseData];
+          }
+        });
+        showSuccess("Savings plan saved successfully!");
+      } else {
+        console.warn("useSavingPlansData: Upsert succeeded but returned no data. Refetching to ensure consistency.");
+        showError("Savings plan saved, but data could not be retrieved. Please refresh.");
+        fetchLiveSavingPlans();
+      }
+    } catch (err) {
+      console.error("useSavingPlansData: Unhandled error upserting live saving plan:", err);
+      showError("An unexpected error occurred while saving saving plan data.");
+    } finally {
+      dismissToast(toastId);
+      setIsLoadingSavingPlans(false);
+    }
+  }, [fetchLiveSavingPlans]);
+
+  // Effect to load data based on mockDataEnabled status
   useEffect(() => {
-    setSavingPlans(initialSavingPlans);
-  }, [initialSavingPlans]);
+    if (isMockDataEnabled) {
+      setSavingPlans(initialSavingPlans);
+      setIsLoadingSavingPlans(false);
+    } else {
+      fetchLiveSavingPlans();
+    }
+  }, [isMockDataEnabled, initialSavingPlans, fetchLiveSavingPlans]);
 
   const getEmployeeName = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
@@ -21,30 +122,34 @@ export const useSavingPlansData = (initialSavingPlans: SavingPlan[], employees: 
     return employee ? employee.customEmployeeId : "N/A";
   }, [employees]);
 
-  const addSavingPlan = useCallback((newPlan: Omit<SavingPlan, 'id' | 'status'>) => {
-    setSavingPlans(prevPlans => { // Corrected: setSavingPlans and prevPlans
-      const planId = `SAV-${Date.now()}`;
-      const planToAdd: SavingPlan = {
-        ...newPlan,
-        id: planId,
-        status: "active",
-      };
-      const updatedPlans = [...prevPlans, planToAdd]; // Corrected: prevPlans
-      if (isMockDataEnabled) {
+  const addSavingPlan = useCallback(async (newPlan: Omit<SavingPlan, 'id' | 'status'>) => {
+    const planToAdd: SavingPlan = {
+      ...newPlan,
+      id: uuidv4(), // Generate ID for both mock and live
+      status: "active",
+    };
+
+    if (isMockDataEnabled) {
+      setSavingPlans(prevPlans => {
+        const updatedPlans = [...prevPlans, planToAdd];
         localStorage.setItem("mockSavingPlans", JSON.stringify(updatedPlans));
         window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: updatedPlans }));
-      }
-      showSuccess("Savings plan added successfully!");
-      return updatedPlans;
-    });
-  }, [isMockDataEnabled]);
+        showSuccess("Savings plan added successfully!");
+        return updatedPlans;
+      });
+    } else {
+      await upsertLiveSavingPlan(planToAdd);
+    }
+  }, [isMockDataEnabled, upsertLiveSavingPlan]);
 
   // You can add update/delete functions here if needed in the future
+  // For now, we'll just expose addSavingPlan.
 
   return {
     savingPlans,
     getEmployeeName,
-    getEmployeeCustomId, // Expose new helper
+    getEmployeeCustomId,
     addSavingPlan,
+    isLoadingSavingPlans,
   };
 };

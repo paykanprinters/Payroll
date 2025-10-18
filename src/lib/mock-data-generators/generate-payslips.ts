@@ -1,6 +1,6 @@
 import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO, isWithinInterval } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
-import { TaxTables } from "@/hooks/use-payroll-processor"; // Import TaxTables interface
+import { TaxTables } from "@/hooks/use-tax-tables"; // Import TaxTables interface
 import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations"; // Import from new utility
 
 /**
@@ -155,10 +155,11 @@ const calculateDeductions = (
         if (isMonthlyPayslipPeriod) {
           deductionAmount = loan.repaymentAmount * 4;
         } else {
-          const isFullWeekPeriod = (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6;
-          if (isFullWeekPeriod) {
-            deductionAmount = loan.repaymentAmount;
-          }
+            // Check if the period is a full week (7 days inclusive, so 6 difference)
+            const isFullWeekPeriod = (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6;
+            if (isFullWeekPeriod) {
+                deductionAmount = loan.repaymentAmount;
+            }
         }
       }
 
@@ -238,8 +239,8 @@ const calculateLeaveSummary = (
       const overlapEnd = leaveEnd < payPeriodEnd ? leaveEnd : payPeriodEnd;
       const daysInPeriod = calculateWorkingDays(overlapStart, overlapEnd);
 
-      if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInPeriod;
-      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInPeriod;
+      if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
+      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
     }
   });
 

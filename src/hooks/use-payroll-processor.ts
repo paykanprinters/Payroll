@@ -11,12 +11,17 @@ import {
   ToDoEntry,
 } from "@/lib/mock-data-interfaces";
 import { useCompanyDetails } from "./use-company-details";
-import { useEmployeesData } from "./use-employees-data"; // New import
-import { useTaxTables } from "./use-tax-tables"; // New import
-import { usePayrollProcessingLogic } from "./use-payroll-processing-logic"; // New import
-import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
-import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { useEmployeesData } from "./use-employees-data";
+import { useTaxTables } from "./use-tax-tables";
+import { usePayrollProcessingLogic } from "./use-payroll-processing-logic";
+import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { useLoansData } from "./use-loans-data"; // Import useLoansData
+import { useSavingPlansData } from "./use-saving-plans-data"; // Import useSavingPlansData
+import { useLeaveData } from "./use-leave-data"; // Import useLeaveData
+import { useTimesheetData } from "./use-timesheet-data"; // Import useTimesheetData
+import { useToDosData } from "./use-todos-data"; // Import useToDosData
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -72,29 +77,31 @@ export const usePayrollProcessor = () => {
 
   // Determine company name for employee ID generation
   const companyNameForEmployeeId = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
-  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData(isMockDataEnabled, companyNameForEmployeeId); // Pass companyNameForEmployeeId
+  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData(isMockDataEnabled, companyNameForEmployeeId);
 
   // Local states for mock data that are not yet migrated to dedicated hooks
   const [payslips, setPayslips] = useState<MockPayslip[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const [savingPlans, setSavingPlans] = useState<SavingPlan[]>([]);
-  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
-  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
-  const [toDos, setToDos] = useState<ToDoEntry[]>([]); // State for To-Dos
+
+  // Use dedicated hooks for other data types
+  const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData([], employees, isMockDataEnabled);
+  const { savingPlans, isLoadingSavingPlans, addSavingPlan } = useSavingPlansData([], employees, isMockDataEnabled);
+  const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData([], employees, isMockDataEnabled);
+  const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData([], employees, leaveRecords, isMockDataEnabled);
+  const { toDos, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData([], isMockDataEnabled, employees, addOrUpdateEmployee); // Pass addOrUpdateEmployee
 
   // Payroll processing logic
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
     employees,
-    payslips,
-    loans,
-    savingPlans,
-    leaveRecords,
-    timesheets,
+    payslips, // Pass local payslips state
+    loans, // Pass local loans state
+    savingPlans, // Pass local savingPlans state
+    leaveRecords, // Pass local leaveRecords state
+    timesheets, // Pass local timesheets state
     taxTables,
-    setPayslips,
-    setLoans,
-    setSavingPlans,
-    setTimesheets,
+    setPayslips, // Pass local setPayslips
+    setLoans, // Pass local setLoans
+    setSavingPlans, // Pass local setSavingPlans
+    setTimesheets, // Pass local setTimesheets
   );
 
   // Function to trigger the generate-todos Edge Function
@@ -110,15 +117,14 @@ export const usePayrollProcessor = () => {
         showError(`Failed to generate To-Dos: ${error.message}`);
       } else {
         console.log('Generate To-Dos Edge Function response:', data);
-        // After generating, trigger a refetch of To-Dos in useToDosData
-        window.dispatchEvent(new Event('refetchToDos'));
+        refetchToDos(); // Re-fetch To-Dos after generation
         showSuccess("To-Dos refreshed successfully!");
       }
     } catch (error: any) {
       console.error('usePayrollProcessor: Unhandled error triggering generate-todos Edge Function:', error);
       showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
     }
-  }, [isMockDataEnabled]);
+  }, [isMockDataEnabled, refetchToDos]);
 
 
   // Effect for initial load and when mock data is toggled (full re-parse)
@@ -131,20 +137,12 @@ export const usePayrollProcessor = () => {
       if (mockEnabled) {
         // Load all mock data from localStorage
         setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
-        setLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
-        setSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
-        setLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
-        setTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
-        setToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]")); // Load To-Dos
+        // Other data types are now handled by their respective hooks' initial load
         console.log("usePayrollProcessor: All mock data loaded from localStorage.");
       } else {
         // Clear all mock data states
         setPayslips([]);
-        setLoans([]);
-        setSavingPlans([]);
-        setLeaveRecords([]);
-        setTimesheets([]);
-        setToDos([]); // Clear To-Dos
+        // Other data types are now handled by their respective hooks' initial load
         console.log("usePayrollProcessor: All mock data states cleared.");
         // For live data, trigger initial To-Do generation
         triggerGenerateToDos();
@@ -166,57 +164,49 @@ export const usePayrollProcessor = () => {
     const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => {
       if (isMockDataEnabled) setPayslips(event.detail);
     };
-    const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {
-      if (isMockDataEnabled) setLoans(event.detail);
-    };
-    const handleSavingPlansUpdated = (event: CustomEvent<SavingPlan[]>) => {
-      if (isMockDataEnabled) setSavingPlans(event.detail);
-    };
-    const handleLeaveRecordsUpdated = (event: CustomEvent<LeaveEntry[]>) => {
-      if (isMockDataEnabled) setLeaveRecords(event.detail);
-    };
-    const handleTimesheetsUpdated = (event: CustomEvent<TimesheetEntry[]>) => {
-      if (isMockDataEnabled) setTimesheets(event.detail);
-    };
-    const handleToDosUpdated = (event: CustomEvent<ToDoEntry[]>) => {
-      if (isMockDataEnabled) setToDos(event.detail); // Update To-Dos state
-    };
 
     window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
-    window.addEventListener("loansUpdated", handleLoansUpdated as EventListener);
-    window.addEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
-    window.addEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
-    window.addEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
-    window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
 
     return () => {
       window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
-      window.removeEventListener("loansUpdated", handleLoansUpdated as EventListener);
-      window.removeEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
-      window.removeEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
-      window.removeEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
-      window.removeEventListener("toDosUpdated", handleToDosUpdated as EventListener);
     };
   }, [isMockDataEnabled]);
 
   return {
     employees,
-    addOrUpdateEmployee, // Expose addOrUpdateEmployee
+    addOrUpdateEmployee,
     deleteEmployee,
     payslips,
     loans,
     savingPlans,
     leaveRecords,
     timesheets,
-    toDos, // Expose toDos
+    toDos,
     companyDetails,
     isLoadingCompanyDetails,
     isMockDataEnabled,
     taxTables,
     isLoadingTaxTables,
     isLoadingEmployees,
+    isLoadingLoans, // Expose loading state
+    isLoadingSavingPlans, // Expose loading state
+    isLoadingLeaveRecords, // Expose loading state
+    isLoadingTimesheets, // Expose loading state
+    isLoadingToDos, // Expose loading state
     runPayrollProcess,
     calculateSinglePayslipPreview,
-    triggerGenerateToDos, // Expose function to manually trigger To-Do generation
+    triggerGenerateToDos,
+    addLoan, // Expose from useLoansData
+    updateLoan, // Expose from useLoansData
+    deleteLoan, // Expose from useLoansData
+    togglePauseDeduction, // Expose from useLoansData
+    applyManualPayment, // Expose from useLoansData
+    addSavingPlan, // Expose from useSavingPlansData
+    addLeaveRecord, // Expose from useLeaveData
+    addOrUpdateTimesheet, // Expose from useTimesheetData
+    deleteTimesheet, // Expose from useTimesheetData
+    updateTimesheetStatus, // Expose from useTimesheetData
+    addTimesheetBatch, // Expose from useTimesheetData
+    markToDoAsDone, // Expose from useToDosData
   };
 };

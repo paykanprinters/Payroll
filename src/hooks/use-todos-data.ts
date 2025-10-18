@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ToDoEntry, MockEmployee } from "@/lib/mock-data-interfaces"; // Import MockEmployee
 import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
-import { showSuccess, showError } from "@/utils/toast";
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 
 // Helper to convert snake_case to camelCase for Supabase ToDo data
@@ -166,8 +166,8 @@ export const useToDosData = (
     toDos,
     pendingCount,
     markToDoAsDone,
-    getEmployeeCustomId, // Expose new helper
+    getEmployeeCustomId,
     isLoadingToDos,
-    refetchToDos: fetchLiveToDos, // Expose refetch function
+    refetchToDos: fetchLiveToDos,
   };
 };
