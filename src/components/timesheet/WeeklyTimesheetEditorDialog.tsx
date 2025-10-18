@@ -203,7 +203,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow h-0 pr-4">
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-4 min-h-[500px]"> {/* Added min-h-[500px] here */}
             {weekDays.map((dayDate, index) => {
               const day = parse(dayDate, "yyyy-MM-dd", new Date());
               const isCurrentDayLeave = isLeaveDay(employeeId, day);
