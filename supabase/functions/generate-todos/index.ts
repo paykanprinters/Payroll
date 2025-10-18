@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 // Define fields to check for incompleteness and generate To-Dos
+// IMPORTANT: These keys must match the snake_case column names in the Supabase 'employees' table
 const fieldsToFlag = [
   { key: "personal_id", label: "Personal ID (Clock-in)", level: "critical" },
   { key: "id_number", label: "National ID Number", level: "critical" },
@@ -88,20 +89,20 @@ serve(async (req) => {
 
     const { data: existingToDos, error: todosError } = await supabaseAdmin
       .from('todos')
-      .select('id, employee_id, related_field, status')
+      .select('id, employee_id, related_field, message, status') // Select message to use as key for general todos
       .eq('status', 'pending'); // Only consider pending todos
     if (todosError) throw todosError;
     console.log(`generate-todos: Fetched ${existingToDos.length} existing pending To-Dos.`);
 
     const newToDosToInsert = [];
     const toDosToUpdateToDone = [];
-    const existingToDoMap = new Map<string, string>(); // Key: employee_id-related_field, Value: todo_id
+    const existingToDoMap = new Map<string, string>(); // Key: employee_id-related_field or message, Value: todo_id
 
     existingToDos.forEach(todo => {
       if (todo.employee_id && todo.related_field) {
         existingToDoMap.set(`${todo.employee_id}-${todo.related_field}`, todo.id);
-      } else if (!todo.employee_id && !todo.related_field) {
-        // Handle general todos without employee_id/related_field
+      } else {
+        // For general todos, use the message as the key
         existingToDoMap.set(todo.message, todo.id);
       }
     });
@@ -113,7 +114,7 @@ serve(async (req) => {
     // --- Employee Profile Incompleteness To-Dos ---
     for (const employee of employees) {
       for (const field of fieldsToFlag) {
-        const fieldValue = employee[field.key];
+        const fieldValue = employee[field.key]; // Now correctly accesses snake_case field
         const ignoredFields = Array.isArray(employee.ignored_incomplete_fields) ? employee.ignored_incomplete_fields : [];
         const isIgnored = ignoredFields.includes(field.key);
         const todoKey = `${employee.id}-${field.key}`;
@@ -212,7 +213,6 @@ serve(async (req) => {
       const message = `${pendingLoanRequests.length} loan requests pending approval or review.`;
       if (!existingToDoMap.has(message)) {
         newToDosToInsert.push({
-          id: `TODO-LOAN-002`, // Use a fixed ID for general todos if no employee/field
           message: message,
           level: "warning",
           module: "Loans & Advancements",
