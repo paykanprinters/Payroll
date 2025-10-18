@@ -23,6 +23,7 @@ serve(async (req) => {
   }
 
   try {
+    console.log('generate-todos: Function invoked.');
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -59,33 +60,37 @@ serve(async (req) => {
       .from('employees')
       .select('id, first_name, last_name, personal_id, id_number, phone_number, tax_reference_number, iban_number, ignored_incomplete_fields');
     if (employeesError) throw employeesError;
+    console.log(`generate-todos: Fetched ${employees.length} employees.`);
 
     const { data: payslips, error: payslipsError } = await supabaseAdmin
       .from('payslips')
       .select('employee_id, pay_period');
     if (payslipsError) throw payslipsError;
+    console.log(`generate-todos: Fetched ${payslips.length} payslips.`);
 
     const { data: loans, error: loansError } = await supabaseAdmin
       .from('loans')
       .select('id, employee_id, paused, start_date, status');
     if (loansError) throw loansError;
+    console.log(`generate-todos: Fetched ${loans.length} loans.`);
 
     const { data: savingPlans, error: savingPlansError } = await supabaseAdmin
       .from('saving_plans')
       .select('id, employee_id, status');
     if (savingPlansError) throw savingPlansError;
+    console.log(`generate-todos: Fetched ${savingPlans.length} saving plans.`);
 
     const { data: leaveRecords, error: leaveRecordsError } = await supabaseAdmin
       .from('leave_records')
       .select('id, employee_id, start_date, end_date');
     if (leaveRecordsError) throw leaveRecordsError;
+    console.log(`generate-todos: Fetched ${leaveRecords.length} leave records.`);
 
     const { data: timesheets, error: timesheetsError } = await supabaseAdmin
       .from('timesheets')
       .select('id, employee_id, date, status');
     if (timesheetsError) throw timesheetsError;
-
-    console.log(`generate-todos: Fetched ${employees.length} employees, ${payslips.length} payslips, ${loans.length} loans, ${savingPlans.length} saving plans, ${leaveRecords.length} leave records, ${timesheets.length} timesheets.`);
+    console.log(`generate-todos: Fetched ${timesheets.length} timesheets.`);
 
     const { data: existingToDos, error: todosError } = await supabaseAdmin
       .from('todos')
@@ -106,12 +111,14 @@ serve(async (req) => {
         existingToDoMap.set(todo.message, todo.id);
       }
     });
+    console.log('generate-todos: Populated existing To-Do map.');
 
     const today = new Date();
     const currentMonth = format(today, 'yyyy-MM');
     const lastMonth = format(subMonths(today, 1), 'yyyy-MM');
 
     // --- Employee Profile Incompleteness To-Dos ---
+    console.log('generate-todos: Checking employee profile incompleteness...');
     for (const employee of employees) {
       for (const field of fieldsToFlag) {
         const fieldValue = employee[field.key]; // Now correctly accesses snake_case field
@@ -138,8 +145,10 @@ serve(async (req) => {
         }
       }
     }
+    console.log('generate-todos: Finished checking employee profile incompleteness.');
 
     // --- Timesheet To-Dos ---
+    console.log('generate-todos: Checking timesheet To-Dos...');
     const incompleteTimesheets = timesheets.filter(ts =>
       ts.status === "Draft" && isPast(parseISO(ts.date)) && !format(parseISO(ts.date), 'yyyy-MM').startsWith(currentMonth)
     );
@@ -173,8 +182,10 @@ serve(async (req) => {
         });
       }
     }
+    console.log('generate-todos: Finished checking timesheet To-Dos.');
 
     // --- Payslips To-Dos ---
+    console.log('generate-todos: Checking payslip To-Dos...');
     const employeesWithoutPayslipLastMonth = employees.filter(emp =>
       !payslips.some(p => p.employee_id === emp.id && p.pay_period.startsWith(lastMonth))
     );
@@ -191,8 +202,10 @@ serve(async (req) => {
         });
       }
     }
+    console.log('generate-todos: Finished checking payslip To-Dos.');
 
     // --- Loans & Advancements To-Dos ---
+    console.log('generate-todos: Checking loans To-Dos...');
     const pausedLoans = loans.filter(loan => loan.paused);
     if (pausedLoans.length > 0) {
       const message = `${pausedLoans.length} loans are currently paused and require review.`;
@@ -222,8 +235,10 @@ serve(async (req) => {
         });
       }
     }
+    console.log('generate-todos: Finished checking loans To-Dos.');
 
     // --- Savings To-Dos ---
+    console.log('generate-todos: Checking savings To-Dos...');
     const activeSavingPlans = savingPlans.filter(plan => plan.status === "active");
     if (activeSavingPlans.length > 0 && activeSavingPlans.length % 2 !== 0) { // Mock: odd number of active plans needs review
       const message = `Review ${activeSavingPlans.length} active savings plans for consistency.`;
@@ -238,8 +253,10 @@ serve(async (req) => {
         });
       }
     }
+    console.log('generate-todos: Finished checking savings To-Dos.');
 
     // --- Vacation & Absence To-Dos ---
+    console.log('generate-todos: Checking vacation & absence To-Dos...');
     const overlappingLeaveRequests = leaveRecords.filter(rec => {
       const leaveStart = parseISO(rec.start_date);
       const leaveEnd = parseISO(rec.end_date);
@@ -259,8 +276,10 @@ serve(async (req) => {
         });
       }
     }
+    console.log('generate-todos: Finished checking vacation & absence To-Dos.');
 
     // --- Reports To-Dos ---
+    console.log('generate-todos: Checking reports To-Dos...');
     const emp201SubmittedLastMonth = payslips.some(p => p.pay_period.startsWith(lastMonth));
     if (!emp201SubmittedLastMonth) {
       const message = `EMP201 (Tax & Statutory Report) not generated for ${format(subMonths(today, 1), 'MMMM yyyy')}.`;
@@ -275,6 +294,7 @@ serve(async (req) => {
         });
       }
     }
+    console.log('generate-todos: Finished checking reports To-Dos.');
 
     console.log(`generate-todos: New To-Dos to insert: ${newToDosToInsert.length}`);
     console.log(`generate-todos: To-Dos to update to done: ${toDosToUpdateToDone.length}`);
