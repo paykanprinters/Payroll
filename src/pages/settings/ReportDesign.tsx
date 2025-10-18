@@ -32,8 +32,9 @@ const ReportDesign: React.FC = () => {
     resolver: zodResolver(reportDesignSchema),
     defaultValues: {
       defaultReportPaperSize: (localStorage.getItem('reportDesignPaperSize') as "Letter" | "A4" | "A5") || "A4",
-      includeCompanyLogo: localStorage.getItem('reportDesignIncludeLogo') === 'true',
-      includeCompanyDetails: localStorage.getItem('reportDesignIncludeDetails') === 'true',
+      // Ensure these default to true if not explicitly set to false
+      includeCompanyLogo: JSON.parse(localStorage.getItem('reportDesignIncludeLogo') ?? 'true'),
+      includeCompanyDetails: JSON.parse(localStorage.getItem('reportDesignIncludeDetails') ?? 'true'),
       reportContentFontSize: parseFloat(localStorage.getItem('reportDesignFontSize') || DEFAULT_FONT_SIZE.toString()),
     },
   });
@@ -43,8 +44,8 @@ const ReportDesign: React.FC = () => {
     const updateFormDefaults = () => {
       form.reset({
         defaultReportPaperSize: (localStorage.getItem('reportDesignPaperSize') as "Letter" | "A4" | "A5") || "A4",
-        includeCompanyLogo: localStorage.getItem('reportDesignIncludeLogo') === 'true',
-        includeCompanyDetails: localStorage.getItem('reportDesignIncludeDetails') === 'true',
+        includeCompanyLogo: JSON.parse(localStorage.getItem('reportDesignIncludeLogo') ?? 'true'),
+        includeCompanyDetails: JSON.parse(localStorage.getItem('reportDesignIncludeDetails') ?? 'true'),
         reportContentFontSize: parseFloat(localStorage.getItem('reportDesignFontSize') || DEFAULT_FONT_SIZE.toString()),
       });
     };

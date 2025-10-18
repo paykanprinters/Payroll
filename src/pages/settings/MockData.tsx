@@ -88,6 +88,9 @@ const MockData: React.FC = () => {
     localStorage.setItem("companyLogoWidth", mockCompany.logoWidth.toString());
     localStorage.setItem("companyLogoHeight", mockCompany.logoHeight.toString());
     localStorage.setItem("companyLogoFit", mockCompany.logoFit);
+    // Set report design settings to true when mock data is enabled
+    localStorage.setItem("reportDesignIncludeLogo", "true");
+    localStorage.setItem("reportDesignIncludeDetails", "true");
 
 
     window.dispatchEvent(new Event('companyDetailsUpdated'));
@@ -99,6 +102,7 @@ const MockData: React.FC = () => {
     window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: mockTimesheets }));
     window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: mockToDos }));
     window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
+    window.dispatchEvent(new Event('reportDesignUpdated')); // Dispatch event for report design
     showSuccess("Mock data populated successfully!");
   }, [internalMockTaxTables]); // Dependency on internalMockTaxTables
 
@@ -128,6 +132,10 @@ const MockData: React.FC = () => {
     localStorage.removeItem("mockToDos");
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
+    // Clear report design settings
+    localStorage.removeItem("reportDesignIncludeLogo");
+    localStorage.removeItem("reportDesignIncludeDetails");
+
 
     const payslipLogoKeys: (keyof PayslipDesignSettings)[] = [
       "payslipLogoUrl", "payslipLogoWidth", "payslipLogoHeight", "payslipLogoFit"
@@ -146,6 +154,7 @@ const MockData: React.FC = () => {
     window.dispatchEvent(new Event('toDosUpdated'));
     window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
     window.dispatchEvent(new Event('payslipDesignUpdated'));
+    window.dispatchEvent(new Event('reportDesignUpdated')); // Dispatch event for report design
     showSuccess("Mock data cleared successfully!");
   }, []); // No dependencies needed as it clears data
 
