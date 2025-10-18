@@ -145,10 +145,8 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
     }
 
     if (isMockDataEnabled) {
-      // Only update if the current 'loans' state is different from 'initialLoans'
-      if (loans !== initialLoans) {
-        setLoans(initialLoans);
-      }
+      // Set mock data directly. The initialLoans prop is now a stable reference from usePayrollProcessor.
+      setLoans(initialLoans);
       setIsLoadingLoans(false);
     } else if (isAuthenticated) {
       fetchLiveLoans();

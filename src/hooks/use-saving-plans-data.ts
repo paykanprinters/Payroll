@@ -118,10 +118,8 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
     }
 
     if (isMockDataEnabled) {
-      // Only update if the current 'savingPlans' state is different from 'initialSavingPlans'
-      if (savingPlans !== initialSavingPlans) {
-        setSavingPlans(initialSavingPlans);
-      }
+      // Set mock data directly. The initialSavingPlans prop is now a stable reference from usePayrollProcessor.
+      setSavingPlans(initialSavingPlans);
       setIsLoadingSavingPlans(false);
     } else if (isAuthenticated) {
       fetchLiveSavingPlans();

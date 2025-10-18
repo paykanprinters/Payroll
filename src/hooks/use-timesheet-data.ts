@@ -108,10 +108,8 @@ export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, i
     }
 
     if (isMockDataEnabled) {
-      // Only update if the current 'timesheets' state is different from 'initialTimesheets'
-      if (timesheets !== initialTimesheets) {
-        setTimesheets(initialTimesheets);
-      }
+      // Set mock data directly. The initialTimesheets prop is now a stable reference from usePayrollProcessor.
+      setTimesheets(initialTimesheets);
       setIsLoadingTimesheets(false);
     } else if (isAuthenticated) {
       fetchLiveTimesheets();

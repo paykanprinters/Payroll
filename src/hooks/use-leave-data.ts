@@ -122,10 +122,8 @@ export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled
     }
 
     if (isMockDataEnabled) {
-      // Only update if the current 'leaveRecords' state is different from 'initialLeaveRecords'
-      if (leaveRecords !== initialLeaveRecords) {
-        setLeaveRecords(initialLeaveRecords);
-      }
+      // Set mock data directly. The initialLeaveRecords prop is now a stable reference from usePayrollProcessor.
+      setLeaveRecords(initialLeaveRecords);
       setIsLoadingLeaveRecords(false);
     } else if (isAuthenticated) {
       fetchLiveLeaveRecords();

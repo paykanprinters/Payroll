@@ -69,10 +69,8 @@ export const useToDosData = (
     }
 
     if (isMockDataEnabled) {
-      // Only update if the current 'toDos' state is different from 'initialToDos'
-      if (toDos !== initialToDos) {
-        setToDos(initialToDos);
-      }
+      // Set mock data directly. The initialToDos prop is now a stable reference from usePayrollProcessor.
+      setToDos(initialToDos);
       setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
       setIsLoadingToDos(false);
     } else if (isAuthenticated) {

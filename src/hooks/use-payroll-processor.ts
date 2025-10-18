@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   MockPayslip,
   Loan,
@@ -35,7 +35,15 @@ export const usePayrollProcessor = () => {
     return localStorage.getItem("isMockDataEnabled") === "true";
   });
 
-  // New states for mock data arrays
+  // Refs to store stringified mock data from localStorage for stable comparison
+  const mockPayslipsRef = useRef<string | null>(null);
+  const mockLoansRef = useRef<string | null>(null);
+  const mockSavingPlansRef = useRef<string | null>(null);
+  const mockLeaveRecordsRef = useRef<string | null>(null);
+  const mockTimesheetsRef = useRef<string | null>(null);
+  const mockToDosRef = useRef<string | null>(null);
+
+  // States for mock data arrays, updated only when content changes
   const [mockPayslips, setMockPayslips] = useState<MockPayslip[]>([]);
   const [mockLoans, setMockLoans] = useState<Loan[]>([]);
   const [mockSavingPlans, setMockSavingPlans] = useState<SavingPlan[]>([]);
@@ -46,12 +54,41 @@ export const usePayrollProcessor = () => {
   // Effect to load mock data arrays from localStorage when isMockDataEnabled changes
   useEffect(() => {
     if (isMockDataEnabled) {
-      setMockPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
-      setMockLoans(JSON.parse(localStorage.getItem("mockLoans") || "[]"));
-      setMockSavingPlans(JSON.parse(localStorage.getItem("mockSavingPlans") || "[]"));
-      setMockLeaveRecords(JSON.parse(localStorage.getItem("mockLeaveRecords") || "[]"));
-      setMockTimesheets(JSON.parse(localStorage.getItem("mockTimesheets") || "[]"));
-      setMockToDos(JSON.parse(localStorage.getItem("mockToDos") || "[]"));
+      const currentPayslips = localStorage.getItem("mockPayslips");
+      if (currentPayslips !== mockPayslipsRef.current) {
+        setMockPayslips(JSON.parse(currentPayslips || "[]"));
+        mockPayslipsRef.current = currentPayslips;
+      }
+
+      const currentLoans = localStorage.getItem("mockLoans");
+      if (currentLoans !== mockLoansRef.current) {
+        setMockLoans(JSON.parse(currentLoans || "[]"));
+        mockLoansRef.current = currentLoans;
+      }
+
+      const currentSavingPlans = localStorage.getItem("mockSavingPlans");
+      if (currentSavingPlans !== mockSavingPlansRef.current) {
+        setMockSavingPlans(JSON.parse(currentSavingPlans || "[]"));
+        mockSavingPlansRef.current = currentSavingPlans;
+      }
+
+      const currentLeaveRecords = localStorage.getItem("mockLeaveRecords");
+      if (currentLeaveRecords !== mockLeaveRecordsRef.current) {
+        setMockLeaveRecords(JSON.parse(currentLeaveRecords || "[]"));
+        mockLeaveRecordsRef.current = currentLeaveRecords;
+      }
+
+      const currentTimesheets = localStorage.getItem("mockTimesheets");
+      if (currentTimesheets !== mockTimesheetsRef.current) {
+        setMockTimesheets(JSON.parse(currentTimesheets || "[]"));
+        mockTimesheetsRef.current = currentTimesheets;
+      }
+
+      const currentToDos = localStorage.getItem("mockToDos");
+      if (currentToDos !== mockToDosRef.current) {
+        setMockToDos(JSON.parse(currentToDos || "[]"));
+        mockToDosRef.current = currentToDos;
+      }
     } else {
       // Clear mock data when switching to live
       setMockPayslips([]);
@@ -60,6 +97,13 @@ export const usePayrollProcessor = () => {
       setMockLeaveRecords([]);
       setMockTimesheets([]);
       setMockToDos([]);
+      // Clear refs too
+      mockPayslipsRef.current = null;
+      mockLoansRef.current = null;
+      mockSavingPlansRef.current = null;
+      mockLeaveRecordsRef.current = null;
+      mockTimesheetsRef.current = null;
+      mockToDosRef.current = null;
     }
   }, [isMockDataEnabled]); // This effect depends only on isMockDataEnabled
 
