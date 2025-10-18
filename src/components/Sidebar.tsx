@@ -90,6 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
     };
   }, [companyDetails]);
 
+  console.log("Sidebar Debug: pendingToDosCount:", pendingToDosCount); // NEW DEBUG LOG
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
