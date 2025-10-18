@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,12 +29,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Initial state is true, as we're loading auth
   const navigate = useNavigate();
 
+  // Use a ref to track the previous isLoadingAuth state to avoid logging on every render
+  const prevIsLoadingAuthRef = useRef(true);
+
   useEffect(() => {
     let isMounted = true; // Flag to prevent state updates on unmounted component
     
     const handleAuthStateChange = async (event: string, session: any | null) => {
-      console.log("Auth state change event:", event, "session:", session); // Debugging log
-      if (!isMounted) return; // Prevent state updates if component unmounted
+      console.groupCollapsed(`AuthContext: handleAuthStateChange - Event: ${event}`);
+      console.log("Raw session:", session);
+      console.log("Current isMounted:", isMounted);
+
+      if (!isMounted) {
+        console.log("Component unmounted, skipping state update.");
+        console.groupEnd();
+        return;
+      }
 
       try {
         if (session) {
@@ -68,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(null);
             setIsAuthenticated(false);
             if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+              console.log("Redirecting to /login due to SIGNED_OUT or no initial session.");
               navigate('/login', { replace: true });
             }
           }
@@ -82,44 +93,108 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } finally {
         if (isMounted) {
-          console.log("AuthContext: Setting isLoadingAuth to false in finally block for event:", event);
-          setIsLoadingAuth(false);
+          if (isLoadingAuth !== false) { // Only set to false if it's not already false
+            setIsLoadingAuth(false);
+            console.log("AuthContext: Setting isLoadingAuth to false in finally block.");
+          }
         }
       }
+      console.groupEnd();
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
+    // Initial session check (runs once on mount)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.groupCollapsed("AuthContext: Initial session check.");
+      console.log("Initial session:", session);
+      if (isMounted) {
+        if (session) {
+          // If session exists, handleAuthStateChange would have already processed it
+          // or will process it shortly via 'INITIAL_SESSION' event.
+          // We just ensure isLoadingAuth is set correctly.
+          if (isLoadingAuth !== false) {
+            setIsLoadingAuth(false);
+            console.log("Initial session found, setting isLoadingAuth to false.");
+          }
+        } else {
+          // No initial session, ensure state is cleared and redirect if needed
+          if (isAuthenticated !== false) {
+            setIsAuthenticated(false);
+            setUser(null);
+            console.log("No initial session, clearing auth state.");
+          }
+          if (isLoadingAuth !== false) {
+            setIsLoadingAuth(false);
+            console.log("No initial session, setting isLoadingAuth to false.");
+          }
+          // handleAuthStateChange with 'INITIAL_SESSION' event will handle the redirect
+        }
+      }
+      console.groupEnd();
+    }).catch(err => {
+      console.error("AuthContext: Error during initial getSession:", err);
+      if (isMounted) {
+        setIsLoadingAuth(false);
+        setIsAuthenticated(false);
+        setUser(null);
+        showError('Failed to check initial session. Please try logging in.');
+        navigate('/login', { replace: true });
+      }
+    });
+
     return () => {
       isMounted = false; // Cleanup: component is unmounted
       authListener.subscription.unsubscribe();
+      console.log("AuthContext: Auth listener unsubscribed.");
     };
-  }, [navigate]);
+  }, [navigate, isLoadingAuth, isAuthenticated]); // Added isLoadingAuth, isAuthenticated to dependencies to ensure correct logging
+
+  // Log when isLoadingAuth changes
+  useEffect(() => {
+    if (prevIsLoadingAuthRef.current !== isLoadingAuth) {
+      console.log(`AuthContext: isLoadingAuth changed from ${prevIsLoadingAuthRef.current} to ${isLoadingAuth}.`);
+      prevIsLoadingAuthRef.current = isLoadingAuth;
+    }
+  }, [isLoadingAuth]);
+
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    setIsLoadingAuth(true); // Set loading true during login attempt
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      showError(error.message);
-      throw error;
-    }
+      if (error) {
+        showError(error.message);
+        throw error;
+      }
 
-    if (data.user) {
-      showSuccess('Login successful! Redirecting...');
+      if (data.user) {
+        showSuccess('Login successful! Redirecting...');
+      }
+    } finally {
+      // The onAuthStateChange listener will eventually set isLoadingAuth to false
+      // based on the new session. We don't set it here directly to avoid race conditions.
     }
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
+    setIsLoadingAuth(true); // Set loading true during logout attempt
+    try {
+      const { error } = await supabase.auth.signOut();
 
-    if (error) {
-      showError(error.message);
-      throw error;
+      if (error) {
+        showError(error.message);
+        throw error;
+      }
+      showSuccess('Logged out successfully.');
+    } finally {
+      // The onAuthStateChange listener will eventually set isLoadingAuth to false
+      // based on the new session (or lack thereof).
     }
-    showSuccess('Logged out successfully.');
   };
 
   return (
