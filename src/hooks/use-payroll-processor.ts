@@ -27,7 +27,10 @@ import { useToDosData } from "./use-todos-data"; // Import useToDosData
 export type { TaxTables } from "./use-tax-tables";
 
 export const usePayrollProcessor = () => {
-  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(false);
+  // Initialize isMockDataEnabled directly from localStorage to prevent re-render loops
+  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("isMockDataEnabled") === "true";
+  });
 
   // Orchestrate other data hooks
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails();
@@ -127,37 +130,35 @@ export const usePayrollProcessor = () => {
   }, [isMockDataEnabled, refetchToDos]);
 
 
-  // Effect for initial load and when mock data is toggled (full re-parse)
+  // Effect to handle changes in isMockDataEnabled and update local payslips state
   useEffect(() => {
-    const handleMockDataToggle = () => {
+    // This effect runs when isMockDataEnabled changes (e.g., from MockData.tsx toggle)
+    // or on initial mount after isMockDataEnabled is set from localStorage.
+    if (isMockDataEnabled) {
+      setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
+    } else {
+      setPayslips([]); // Clear mock payslips when switching to live
+      triggerGenerateToDos(); // Trigger To-Do generation when switching to live data
+    }
+  }, [isMockDataEnabled, triggerGenerateToDos]);
+
+  // Listen for general mock data update event (for other components to react)
+  useEffect(() => {
+    const handleMockDataToggleEvent = () => {
+      // When this event fires, it means MockData.tsx has updated localStorage.
+      // We need to update our internal isMockDataEnabled state to reflect this.
       const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
       setIsMockDataEnabled(mockEnabled);
-      console.log("usePayrollProcessor: handleMockDataToggle triggered. mockEnabled:", mockEnabled);
-
-      if (mockEnabled) {
-        // Load all mock data from localStorage
-        setPayslips(JSON.parse(localStorage.getItem("mockPayslips") || "[]"));
-        // Other data types are now handled by their respective hooks' initial load
-        console.log("usePayrollProcessor: All mock data loaded from localStorage.");
-      } else {
-        // Clear all mock data states
-        setPayslips([]);
-        // Other data types are now handled by their respective hooks' initial load
-        console.log("usePayrollProcessor: All mock data states cleared.");
-        // For live data, trigger initial To-Do generation
-        triggerGenerateToDos();
-      }
+      console.log("usePayrollProcessor: 'allMockDataUpdated' event received. Setting isMockDataEnabled to:", mockEnabled);
+      // The subsequent useEffect will handle updating payslips and triggering todos based on this new state.
     };
 
-    // Initial load
-    handleMockDataToggle();
-
-    // Listen for general mock data update event
-    window.addEventListener("allMockDataUpdated", handleMockDataToggle);
+    window.addEventListener("allMockDataUpdated", handleMockDataToggleEvent);
     return () => {
-      window.removeEventListener("allMockDataUpdated", handleMockDataToggle);
+      window.removeEventListener("allMockDataUpdated", handleMockDataToggleEvent);
     };
-  }, [triggerGenerateToDos]);
+  }, []);
+
 
   // Individual listeners for specific data updates (only for mock data)
   useEffect(() => {
