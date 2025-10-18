@@ -195,14 +195,14 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col min-h-0">
         <DialogHeader>
           <DialogTitle>Weekly Timesheet for {employeeName} ({employeeCustomId})</DialogTitle> {/* Display custom ID */}
           <DialogDescription>
             Edit clock times for the week of {format(currentWeekStart, "PPP")}.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow pr-4">
+        <ScrollArea className="flex-grow pr-4 h-full">
           <div className="space-y-6 py-4">
             {weekDays.map((dayDate, index) => {
               const day = parse(dayDate, "yyyy-MM-dd", new Date());
