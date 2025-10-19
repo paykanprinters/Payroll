@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.groupCollapsed(`AuthContext: handleAuthStateChange - Event: ${event}`);
       console.log("Raw session:", session);
       console.log("Current isMounted:", isMounted);
+      console.log("Current isLoadingAuth (before processing):", isLoadingAuth);
 
       if (!isMounted) {
         console.log("Component unmounted, skipping state update.");
@@ -48,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         if (session) {
+          console.log("Session found, fetching user profile...");
           const { data: profile, error } = await supabase
             .from('users')
             .select('id, email, name, role')
@@ -63,6 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               navigate('/login', { replace: true });
             }
           } else if (profile) {
+            console.log("User profile fetched:", profile);
             if (isMounted) {
               setUser({
                 id: profile.id,
@@ -74,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
         } else {
+          console.log("No session found.");
           if (isMounted) {
             setUser(null);
             setIsAuthenticated(false);
@@ -93,13 +97,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } finally {
         if (isMounted) {
-          // Only set to false if it's not already false.
-          if (isLoadingAuth) { // Check current state
+          // Always set isLoadingAuth to false once the auth state change has been processed
+          if (isLoadingAuth) { // Check current state to avoid unnecessary re-renders if already false
             setIsLoadingAuth(false);
-            console.log("AuthContext: Setting isLoadingAuth to false in finally block.");
+            console.log("AuthContext: Setting isLoadingAuth to false in finally block of onAuthStateChange.");
           }
         }
       }
+      console.log("AuthContext: Final isAuthenticated:", isAuthenticated, "Final user:", user, "Final isLoadingAuth:", isLoadingAuth);
       console.groupEnd();
     };
 
@@ -132,6 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // handleAuthStateChange with 'INITIAL_SESSION' event will handle the redirect
         }
       }
+      console.log("AuthContext: Initial check complete. isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
       console.groupEnd();
     }).catch(err => {
       console.error("AuthContext: Error during initial getSession:", err);
@@ -161,6 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const login = async (email: string, password: string) => {
+    console.log("AuthContext: Attempting login...");
     setIsLoadingAuth(true); // Set loading true during login attempt
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -169,32 +176,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
+        console.error("AuthContext: Login error:", error);
         showError(error.message);
         throw error;
       }
 
       if (data.user) {
+        console.log("AuthContext: Login successful for user:", data.user.id);
         showSuccess('Login successful! Redirecting...');
       }
+    } catch (err) {
+      console.error("AuthContext: Unhandled error during login:", err);
+      // Error toast handled by AuthContext
     } finally {
-      // The onAuthStateChange listener will eventually set isLoadingAuth to false
-      // based on the new session. We don't set it here directly to avoid race conditions.
+      // Explicitly set isLoadingAuth to false here as a fallback
+      // The onAuthStateChange listener will also handle this, but this ensures it's cleared.
+      setIsLoadingAuth(false);
+      console.log("AuthContext: Setting isLoadingAuth to false in login finally block.");
     }
   };
 
   const logout = async () => {
+    console.log("AuthContext: Attempting logout...");
     setIsLoadingAuth(true); // Set loading true during logout attempt
     try {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
+        console.error("AuthContext: Logout error:", error);
         showError(error.message);
         throw error;
       }
+      console.log("AuthContext: Logout successful.");
       showSuccess('Logged out successfully.');
+    } catch (err) {
+      console.error("AuthContext: Unhandled error during logout:", err);
     } finally {
-      // The onAuthStateChange listener will eventually set isLoadingAuth to false
-      // based on the new session (or lack thereof).
+      // Explicitly set isLoadingAuth to false here as a fallback
+      // The onAuthStateChange listener will also handle this, but this ensures it's cleared.
+      setIsLoadingAuth(false);
+      console.log("AuthContext: Setting isLoadingAuth to false in logout finally block.");
     }
   };
 
