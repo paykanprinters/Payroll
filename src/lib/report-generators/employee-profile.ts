@@ -31,10 +31,7 @@ export const generateEmployeeProfileReportContent = (
 
   return `
     <div class="p-8 bg-white text-gray-900 print:text-black">
-      <hr class="my-4 border-gray-300" />
-      <h3 class="text-xl font-bold text-center mb-4">Employee Profile: ${employee.firstName} ${employee.lastName}</h3>
-      <hr class="my-4 border-gray-300" />
-
+      
       <div class="space-y-4">
         <h4 class="text-lg font-semibold underline">Basic Information</h4>
         <div class="grid grid-cols-2 gap-2">
