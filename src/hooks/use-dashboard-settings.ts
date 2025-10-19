@@ -104,7 +104,11 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
       if (error) {
         console.error("useDashboardSettings: Error fetching live settings:", error);
         showError("Failed to load dashboard settings.");
-        setVisibleWidgets(getRoleBasedDefaults()); // Fallback to defaults on error
+        // Fallback to defaults on error, ensure comparison
+        const defaults = getRoleBasedDefaults();
+        if (JSON.stringify(defaults) !== JSON.stringify(visibleWidgets)) {
+          setVisibleWidgets(defaults);
+        }
       } else {
         const defaults = getRoleBasedDefaults();
         const userSettings: Partial<DashboardWidgetVisibility> = {};
@@ -113,69 +117,58 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
         });
         const mergedSettings = { ...defaults, ...userSettings };
         console.log("useDashboardSettings: Loaded from Supabase (merged):", mergedSettings);
-        setVisibleWidgets(mergedSettings);
+        // Only update state if the new settings are actually different
+        if (JSON.stringify(mergedSettings) !== JSON.stringify(visibleWidgets)) {
+          setVisibleWidgets(mergedSettings);
+        }
       }
     } catch (e) {
       console.error("useDashboardSettings: Unhandled error fetching live settings:", e);
       showError("An unexpected error occurred while loading dashboard settings.");
-      setVisibleWidgets(getRoleBasedDefaults());
+      const defaults = getRoleBasedDefaults();
+      if (JSON.stringify(defaults) !== JSON.stringify(visibleWidgets)) {
+        setVisibleWidgets(defaults);
+      }
     } finally {
       setIsLoadingSettings(false);
     }
-  }, [user, getRoleBasedDefaults]);
-
-  const saveLiveSetting = useCallback(async (widgetKey: keyof DashboardWidgetVisibility, isVisible: boolean) => {
-    if (!user?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from('user_dashboard_settings')
-        .upsert(
-          { user_id: user.id, widget_key: widgetKey, is_visible: isVisible },
-          { onConflict: 'user_id, widget_key' }
-        );
-
-      if (error) {
-        console.error("useDashboardSettings: Error saving live setting:", error);
-        showError("Failed to save dashboard setting.");
-      } else {
-        console.log(`useDashboardSettings: Saved setting for ${widgetKey}: ${isVisible} to Supabase.`);
-      }
-    } catch (e) {
-      console.error("useDashboardSettings: Unhandled error saving live setting:", e);
-      showError("An unexpected error occurred while saving dashboard setting.");
-    }
-  }, [user]);
+  }, [user, getRoleBasedDefaults, visibleWidgets]); // Add visibleWidgets to dependencies
 
   // Load settings from localStorage or Supabase on mount/auth/mockData change
   useEffect(() => {
-    if (isLoadingAuth || !user) {
-      setIsLoadingSettings(true); // Keep loading true until user is resolved
+    if (isLoadingAuth) {
+      setIsLoadingSettings(true); // Keep loading true while auth is loading
       return;
     }
 
     if (isMockDataEnabled) {
       const savedSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
       const defaults = getRoleBasedDefaults();
+      let newSettings: DashboardWidgetVisibility;
+
       if (savedSettings) {
         try {
           const parsedSettings: DashboardWidgetVisibility = JSON.parse(savedSettings);
-          const mergedSettings = { ...defaults, ...parsedSettings };
-          console.log("useDashboardSettings: Loaded from localStorage (merged):", mergedSettings);
-          setVisibleWidgets(mergedSettings);
+          newSettings = { ...defaults, ...parsedSettings };
+          console.log("useDashboardSettings: Loaded from localStorage (merged):", newSettings);
         } catch (e) {
           console.error("useDashboardSettings: Failed to parse dashboard settings from localStorage, using defaults.", e);
-          setVisibleWidgets(defaults);
+          newSettings = defaults;
         }
       } else {
         console.log("useDashboardSettings: No settings in localStorage, using defaults:", defaults);
-        setVisibleWidgets(defaults);
+        newSettings = defaults;
+      }
+
+      // Deep comparison to prevent infinite re-renders if content is the same
+      if (JSON.stringify(newSettings) !== JSON.stringify(visibleWidgets)) {
+        setVisibleWidgets(newSettings);
       }
       setIsLoadingSettings(false);
     } else {
       fetchLiveSettings();
     }
-  }, [isLoadingAuth, user, isMockDataEnabled, getRoleBasedDefaults, fetchLiveSettings]);
+  }, [isLoadingAuth, user, isMockDataEnabled, getRoleBasedDefaults, fetchLiveSettings, visibleWidgets]); // Add visibleWidgets to dependencies
 
   // Save settings to localStorage (for mock data) or Supabase (for live data) whenever they change
   useEffect(() => {
@@ -205,7 +198,11 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
 
   const resetToDefaults = useCallback(async () => {
     const defaults = getRoleBasedDefaults();
-    setVisibleWidgets(defaults);
+    // Only update if defaults are different from current state
+    if (JSON.stringify(defaults) !== JSON.stringify(visibleWidgets)) {
+      setVisibleWidgets(defaults);
+    }
+    
     if (isMockDataEnabled) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(defaults)); // Explicitly save defaults
       console.log("useDashboardSettings: Resetting to defaults (mock):", defaults);
@@ -235,7 +232,7 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
         }
       }
     }
-  }, [getRoleBasedDefaults, isMockDataEnabled, user, fetchLiveSettings]);
+  }, [getRoleBasedDefaults, isMockDataEnabled, user, fetchLiveSettings, visibleWidgets]); // Add visibleWidgets to dependencies
 
   return {
     visibleWidgets,
