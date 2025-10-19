@@ -29,32 +29,8 @@ export const generateEmployeeProfileReportContent = (
     return `<p class="text-sm"><span class="font-semibold">${label}:</span> ${addressParts.join(", ")}</p>`;
   };
 
-  const companyLogoHtml =
-    reportDesignSettings.includeCompanyLogo && companyDetails?.logoUrl
-      ? `<img src="${companyDetails.logoUrl}" alt="Company Logo" style="width: ${companyDetails.logoWidth}px; height: ${companyDetails.logoHeight}px; object-fit: ${companyDetails.logoFit};" class="rounded-md flex-shrink-0" />`
-      : "";
-
-  const companyDetailsHtml = reportDesignSettings.includeCompanyDetails && companyDetails
-    ? `
-    <div class="text-right text-xs">
-      <h2 class="text-md font-bold">${companyDetails.companyLegalName || "Your Company Legal Name"}</h2>
-      ${companyDetails.companyTradingName && companyDetails.companyTradingName !== companyDetails.companyLegalName ? `<p class="text-sm">${companyDetails.companyTradingName}</p>` : ""}
-      <p>${companyDetails.physicalAddress || "N/A"}</p>
-      <p>Reg. No: ${companyDetails.companyRegistrationNumber || "N/A"}</p>
-      <p>VAT No: ${companyDetails.vatRegistrationNumber || "N/A"}</p>
-      <p>Tel: ${companyDetails.mainContactNumber || "N/A"}</p>
-      <p>Email: ${companyDetails.companyEmail || "N/A"}</p>
-      <p>Web: ${companyDetails.companyWebsite || "N/A"}</p>
-    </div>
-  `
-    : "";
-
   return `
     <div class="p-8 bg-white text-gray-900 print:text-black">
-      <div class="flex justify-between items-start mb-6">
-        ${companyLogoHtml}
-        ${companyDetailsHtml}
-      </div>
       <hr class="my-4 border-gray-300" />
       <h3 class="text-xl font-bold text-center mb-4">Employee Profile: ${employee.firstName} ${employee.lastName}</h3>
       <hr class="my-4 border-gray-300" />
