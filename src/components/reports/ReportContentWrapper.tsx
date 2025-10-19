@@ -11,7 +11,7 @@ interface ReportContentWrapperProps {
   reportContent: string; // HTML string for the report body
   companyDetails: MockCompanyDetails | null; // Now accepts null
   reportDesignSettings: ReportDesignSettings;
-  onReadyForPdf?: () => void; // Callback to signal readiness for PDF generation
+  onReadyForPdf?: () => void;
   isPdfGeneration?: boolean; // New prop to indicate PDF generation context
 }
 
@@ -108,7 +108,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     <div
       className={cn(
         "bg-white text-gray-900",
-        !isPdfGeneration && "mx-auto rounded-lg shadow-lg", // Apply full styling for UI preview
+        !isPdfGeneration && "mx-auto rounded-lg shadow-lg max-w-full", // Apply full styling for UI preview, added max-w-full
         !isPdfGeneration && getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize) // width/min-height for UI preview
       )}
       style={isPdfGeneration ? {

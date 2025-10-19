@@ -440,7 +440,7 @@ const PayslipDesign: React.FC = () => {
 
           {/* Payslip Preview */}
           <div className={cn(
-            "p-6 border rounded-lg shadow-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mx-auto",
+            "p-6 border rounded-lg shadow-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mx-auto max-w-full", // Added max-w-full
             getPreviewCardClasses(settings.layoutSize)
           )}>
             {/* Company Header */}

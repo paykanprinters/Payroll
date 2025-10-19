@@ -277,7 +277,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] h-full flex flex-col">
+      <DialogContent className="w-full sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] h-full flex flex-col">
         <DialogHeader className="px-4 pt-4">
           <DialogTitle>{initialEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
           <DialogDescription>

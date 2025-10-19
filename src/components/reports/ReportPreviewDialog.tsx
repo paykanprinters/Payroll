@@ -124,7 +124,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
+      <DialogContent className="w-full sm:max-w-[800px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{reportTitle}</DialogTitle>
           <DialogDescription>Preview and manage your report.</DialogDescription>
@@ -132,7 +132,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
         <ScrollArea className="flex-grow pr-4">
           {/* This is the UI preview, not the content for PDF generation */}
           <div className={cn(
-            "bg-white text-gray-900 mx-auto rounded-lg shadow-lg", // Apply rounded-lg and shadow-lg for UI preview
+            "bg-white text-gray-900 mx-auto rounded-lg shadow-lg max-w-full", // Apply rounded-lg and shadow-lg for UI preview
             getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize), // Apply width/min-height classes
           )}
           style={{

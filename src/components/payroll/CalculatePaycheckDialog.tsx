@@ -118,7 +118,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col">
+      <DialogContent className="w-full sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Calculate Paycheck Preview</DialogTitle>
           <DialogDescription>
