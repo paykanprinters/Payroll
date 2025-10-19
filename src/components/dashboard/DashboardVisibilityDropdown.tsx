@@ -15,6 +15,7 @@ import { Settings, Eye } from "lucide-react";
 import { useDashboardSettings, DashboardWidgetVisibility } from "@/hooks/use-dashboard-settings";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 
 interface DashboardVisibilityDropdownProps {
   isMockDataEnabled: boolean; // New prop
@@ -58,32 +59,34 @@ const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = 
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Dashboard Widgets</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {Object.entries(widgetLabels).map(([key, label]) => (
+        <ScrollArea className="h-64 max-h-[calc(100vh-100px)]"> {/* Added ScrollArea with fixed height and max-height */}
+          <DropdownMenuLabel>Dashboard Widgets</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {Object.entries(widgetLabels).map(([key, label]) => (
+            <DropdownMenuCheckboxItem
+              key={key}
+              checked={visibleWidgets[key as keyof DashboardWidgetVisibility]}
+              onCheckedChange={() => toggleWidgetVisibility(key as keyof DashboardWidgetVisibility)}
+            >
+              {label}
+            </DropdownMenuCheckboxItem>
+          ))}
+          <DropdownMenuSeparator />
           <DropdownMenuCheckboxItem
-            key={key}
-            checked={visibleWidgets[key as keyof DashboardWidgetVisibility]}
-            onCheckedChange={() => toggleWidgetVisibility(key as keyof DashboardWidgetVisibility)}
+            checked={false} // This is a dummy item for the button, always unchecked
+            onCheckedChange={resetToDefaults}
+            disabled={!isAdmin} // Only Admin can reset to defaults
           >
-            {label}
+            <Button variant="ghost" size="sm" className="w-full justify-start p-0 h-auto" disabled={!isAdmin}>
+              <Settings className="mr-2 h-4 w-4" /> Reset to Default
+            </Button>
           </DropdownMenuCheckboxItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem
-          checked={false} // This is a dummy item for the button, always unchecked
-          onCheckedChange={resetToDefaults}
-          disabled={!isAdmin} // Only Admin can reset to defaults
-        >
-          <Button variant="ghost" size="sm" className="w-full justify-start p-0 h-auto" disabled={!isAdmin}>
-            <Settings className="mr-2 h-4 w-4" /> Reset to Default
-          </Button>
-        </DropdownMenuCheckboxItem>
-        {!isAdmin && (
-          <DropdownMenuLabel className="text-xs text-muted-foreground mt-2">
-            Only Admins can reset to default settings.
-          </DropdownMenuLabel>
-        )}
+          {!isAdmin && (
+            <DropdownMenuLabel className="text-xs text-muted-foreground mt-2">
+              Only Admins can reset to default settings.
+            </DropdownMenuLabel>
+          )}
+        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );
