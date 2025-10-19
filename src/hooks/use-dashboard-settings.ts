@@ -132,7 +132,36 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
     } finally {
       setIsLoadingSettings(false);
     }
-  }, [user, getRoleBasedDefaults, visibleWidgets]); // Add visibleWidgets to dependencies
+  }, [user, getRoleBasedDefaults, visibleWidgets]);
+
+  // NEW: Define saveLiveSetting
+  const saveLiveSetting = useCallback(async (widgetKey: keyof DashboardWidgetVisibility, isVisible: boolean) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_dashboard_settings')
+        .upsert(
+          {
+            user_id: user.id,
+            widget_key: widgetKey,
+            is_visible: isVisible,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id, widget_key' } // Upsert based on user_id and widget_key
+        );
+
+      if (error) {
+        console.error("useDashboardSettings: Error saving live setting:", error);
+        showError("Failed to save dashboard setting.");
+      } else {
+        console.log("useDashboardSettings: Saved live setting:", widgetKey, isVisible);
+      }
+    } catch (e) {
+      console.error("useDashboardSettings: Unhandled error saving live setting:", e);
+      showError("An unexpected error occurred while saving dashboard setting.");
+    }
+  }, [user]); // Dependency: user
 
   // Load settings from localStorage or Supabase on mount/auth/mockData change
   useEffect(() => {
@@ -168,7 +197,7 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
     } else {
       fetchLiveSettings();
     }
-  }, [isLoadingAuth, user, isMockDataEnabled, getRoleBasedDefaults, fetchLiveSettings, visibleWidgets]); // Add visibleWidgets to dependencies
+  }, [isLoadingAuth, user, isMockDataEnabled, getRoleBasedDefaults, fetchLiveSettings, visibleWidgets]);
 
   // Save settings to localStorage (for mock data) or Supabase (for live data) whenever they change
   useEffect(() => {
@@ -190,11 +219,11 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
       };
       console.log("useDashboardSettings: Toggling widget. New state for", widgetKey, ":", newState[widgetKey], "Full new state:", newState);
       if (!isMockDataEnabled) {
-        saveLiveSetting(widgetKey, newState[widgetKey]);
+        saveLiveSetting(widgetKey, newState[widgetKey]); // This call will now work
       }
       return newState;
     });
-  }, [isMockDataEnabled, saveLiveSetting]);
+  }, [isMockDataEnabled, saveLiveSetting]); // saveLiveSetting is correctly in dependencies
 
   const resetToDefaults = useCallback(async () => {
     const defaults = getRoleBasedDefaults();
@@ -232,7 +261,7 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
         }
       }
     }
-  }, [getRoleBasedDefaults, isMockDataEnabled, user, fetchLiveSettings, visibleWidgets]); // Add visibleWidgets to dependencies
+  }, [getRoleBasedDefaults, isMockDataEnabled, user, fetchLiveSettings, visibleWidgets]);
 
   return {
     visibleWidgets,
