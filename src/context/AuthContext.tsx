@@ -99,10 +99,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) {
           // Always set isLoadingAuth to false once the auth state change has been processed
           // This is the most reliable place to ensure loading is false after any auth event.
-          if (isLoadingAuth) { // Check current state to avoid unnecessary re-renders if already false
-            setIsLoadingAuth(false);
-            console.log("AuthContext: Setting isLoadingAuth to false in finally block of onAuthStateChange.");
-          }
+          setIsLoadingAuth(false); // Removed conditional check
+          console.log("AuthContext: Setting isLoadingAuth to false in finally block of onAuthStateChange.");
         }
       }
       console.log("AuthContext: handleAuthStateChange finished. isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
@@ -120,10 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // If session exists, handleAuthStateChange would have already processed it
           // or will process it shortly via 'INITIAL_SESSION' event.
           // We just ensure isLoadingAuth is set correctly.
-          if (isLoadingAuth) { // Check current state
-            setIsLoadingAuth(false);
-            console.log("Initial session found, setting isLoadingAuth to false.");
-          }
+          setIsLoadingAuth(false); // Removed conditional check
+          console.log("Initial session found, setting isLoadingAuth to false.");
         } else {
           // No initial session, ensure state is cleared and redirect if needed
           if (isAuthenticated) { // Check current state
@@ -131,10 +127,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(null);
             console.log("No initial session, clearing auth state.");
           }
-          if (isLoadingAuth) { // Check current state
-            setIsLoadingAuth(false);
-            console.log("No initial session, setting isLoadingAuth to false.");
-          }
+          setIsLoadingAuth(false); // Removed conditional check
+          console.log("No initial session, setting isLoadingAuth to false.");
           // handleAuthStateChange with 'INITIAL_SESSION' event will handle the redirect
         }
       }
