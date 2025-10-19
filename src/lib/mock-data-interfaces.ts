@@ -26,6 +26,21 @@ export interface MockCompanyDetails {
   logoWidth?: number; // New field for logo width
   logoHeight?: number; // New field for logo height
   logoFit?: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for object-fit
+  // New fields for tax and banking details, added to match usage in PayslipDesign.tsx
+  taxYearStartMonth?: number;
+  taxYearEndMonth?: number;
+  uifThreshold?: number;
+  sarsEfilingNumber?: string;
+  payeThreshold?: number;
+  sdlRate?: number;
+  uifRate?: number;
+  payeRates?: any[]; // Assuming an array of any for simplicity, could be more specific if needed
+  companyBankName?: string;
+  companyBankAccountNumber?: string;
+  companyBankBranchCode?: string;
+  companyBankAccountType?: string;
+  companyBankSwiftCode?: string;
+  companyBankIban?: string;
 }
 
 export interface MockEmployee {
