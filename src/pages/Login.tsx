@@ -35,28 +35,31 @@ const Login: React.FC = () => {
     },
   });
 
+  // Log auth and loading states from Login component's perspective
   useEffect(() => {
-    console.log("Login.tsx: isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
-    if (isAuthenticated && user) {
+    console.log("Login.tsx: Auth State Update - isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth, "isSubmitting:", isSubmitting);
+    if (isAuthenticated && user && !isSubmitting) { // Only navigate if not currently submitting
       console.log("Login.tsx: Authenticated user found, navigating to dashboard.");
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate]); // Removed isLoadingAuth from dependencies
+  }, [isAuthenticated, user, navigate, isLoadingAuth, isSubmitting]); // Added isLoadingAuth, isSubmitting to dependencies
 
   useEffect(() => {
-    console.log("Login.tsx: companyDetails received:", companyDetails);
-    console.log("Login.tsx: isLoadingCompanyDetails:", isLoadingCompanyDetails);
-    console.log("Login.tsx: isMockDataEnabled:", isMockDataEnabled);
+    console.log("Login.tsx: Company Details Update - companyDetails:", companyDetails, "isLoadingCompanyDetails:", isLoadingCompanyDetails, "isMockDataEnabled:", isMockDataEnabled);
   }, [companyDetails, isLoadingCompanyDetails, isMockDataEnabled]);
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
     try {
       await login(data.email, data.password);
+      // If login is successful, isAuthenticated will become true and the useEffect above will navigate.
+      // If login fails, an error is thrown, caught, and isLoadingAuth is set to false.
     } catch (error) {
       // Error toast handled by AuthContext
+      console.error("Login.tsx: onSubmit caught error from login function.");
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Always reset submitting state
+      console.log("Login.tsx: onSubmit finally block executed. isSubmitting set to false.");
     }
   };
 
@@ -67,8 +70,9 @@ const Login: React.FC = () => {
   const displayLogoFit = companyDetails?.logoFit || "contain";
 
   // Show a full-page loader if authentication state or company details are still being determined
-  if (isLoadingAuth || isLoadingCompanyDetails) {
-    console.log("Login.tsx: Showing full-page loader. isLoadingAuth:", isLoadingAuth, "isLoadingCompanyDetails:", isLoadingCompanyDetails); // NEW LOG
+  // Also show loader if form is submitting
+  if (isLoadingAuth || isLoadingCompanyDetails || isSubmitting) {
+    console.log("Login.tsx: Showing full-page loader. isLoadingAuth:", isLoadingAuth, "isLoadingCompanyDetails:", isLoadingCompanyDetails, "isSubmitting:", isSubmitting);
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

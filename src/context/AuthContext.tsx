@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.groupCollapsed(`AuthContext: handleAuthStateChange - Event: ${event}`);
       console.log("Raw session:", session);
       console.log("Current isMounted:", isMounted);
-      console.log("Current isLoadingAuth (before processing):", isLoadingAuth);
+      console.log("Current isLoadingAuth (before processing):", isLoadingAuth); // Log current state
 
       if (!isMounted) {
         console.log("Component unmounted, skipping state update.");
@@ -98,13 +98,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } finally {
         if (isMounted) {
           // Always set isLoadingAuth to false once the auth state change has been processed
+          // This is the most reliable place to ensure loading is false after any auth event.
           if (isLoadingAuth) { // Check current state to avoid unnecessary re-renders if already false
             setIsLoadingAuth(false);
             console.log("AuthContext: Setting isLoadingAuth to false in finally block of onAuthStateChange.");
           }
         }
       }
-      console.log("AuthContext: Final isAuthenticated:", isAuthenticated, "Final user:", user, "Final isLoadingAuth:", isLoadingAuth);
+      console.log("AuthContext: handleAuthStateChange finished. isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
       console.groupEnd();
     };
 
@@ -178,22 +179,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error("AuthContext: Login error:", error);
         showError(error.message);
+        setIsLoadingAuth(false); // Explicitly set to false on error
         throw error;
       }
 
       if (data.user) {
         console.log("AuthContext: Login successful for user:", data.user.id);
         showSuccess('Login successful! Redirecting...');
+        // The onAuthStateChange listener will handle setting isAuthenticated and isLoadingAuth to false.
       }
     } catch (err) {
       console.error("AuthContext: Unhandled error during login:", err);
       // Error toast handled by AuthContext
-    } finally {
-      // Explicitly set isLoadingAuth to false here as a fallback
-      // The onAuthStateChange listener will also handle this, but this ensures it's cleared.
-      setIsLoadingAuth(false);
-      console.log("AuthContext: Setting isLoadingAuth to false in login finally block.");
+      setIsLoadingAuth(false); // Ensure loading is false even for unhandled errors
     }
+    // No finally block for isLoadingAuth here, as it's handled in catch or onAuthStateChange.
+    console.log("AuthContext: Login function finished execution.");
   };
 
   const logout = async () => {
@@ -205,18 +206,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error("AuthContext: Logout error:", error);
         showError(error.message);
+        setIsLoadingAuth(false); // Explicitly set to false on error
         throw error;
       }
       console.log("AuthContext: Logout successful.");
       showSuccess('Logged out successfully.');
+      // The onAuthStateChange listener will handle setting isAuthenticated and isLoadingAuth to false.
     } catch (err) {
       console.error("AuthContext: Unhandled error during logout:", err);
-    } finally {
-      // Explicitly set isLoadingAuth to false here as a fallback
-      // The onAuthStateChange listener will also handle this, but this ensures it's cleared.
-      setIsLoadingAuth(false);
-      console.log("AuthContext: Setting isLoadingAuth to false in logout finally block.");
+      setIsLoadingAuth(false); // Ensure loading is false even for unhandled errors
     }
+    // No finally block for isLoadingAuth here, as it's handled in catch or onAuthStateChange.
+    console.log("AuthContext: Logout function finished execution.");
   };
 
   return (
