@@ -237,10 +237,17 @@ export const usePayrollProcessor = () => {
     };
 
     window.addEventListener("allMockDataUpdated", handleMockDataToggleEvent);
+
+    // NEW: Call triggerGenerateToDos on initial load if conditions are met
+    if (!isMockDataEnabled && isAuthenticated && !isLoadingAuth) {
+      console.log("usePayrollProcessor: Initial load - Mock data disabled, authenticated, and auth loaded. Triggering To-Dos generation.");
+      triggerGenerateToDos();
+    }
+
     return () => {
       window.removeEventListener("allMockDataUpdated", handleMockDataToggleEvent);
     };
-  }, [isAuthenticated, isLoadingAuth, triggerGenerateToDos]);
+  }, [isAuthenticated, isLoadingAuth, triggerGenerateToDos, isMockDataEnabled]); // Added isMockDataEnabled to dependencies
 
   useEffect(() => {
     const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {

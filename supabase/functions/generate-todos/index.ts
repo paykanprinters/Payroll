@@ -18,6 +18,7 @@ const fieldsToFlag = [
 ];
 
 serve(async (req) => {
+  console.log('generate-todos: Function started processing request.'); // Added this line
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
