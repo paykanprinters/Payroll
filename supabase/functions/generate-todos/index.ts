@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'; // Corrected: added 'from'
 import { format, isPast, subMonths, isBefore, isWithinInterval, parseISO } from "https://esm.sh/date-fns@2.30.0";
 
 const corsHeaders = {
@@ -373,7 +373,7 @@ serve(async (req) => {
         console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
       }
     } else {
-      const message = `EMP201 (Tax & Statutory Report) not generated for ${format(subMonths(today, 1), 'MMMM yyyy')}.`; // Message for 0 emp201 not submitted
+      const message = `EMP201 (Tax & Statutory Report) not generated for ${employeesWithoutPayslipLastMonth.length} employees for ${format(subMonths(today, 1), 'MMMM yyyy')}.`; // Message for 0 emp201 not submitted
       const existingId = existingToDoMap.get(message);
       if (existingId) {
         console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
