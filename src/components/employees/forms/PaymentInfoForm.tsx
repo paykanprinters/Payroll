@@ -77,9 +77,9 @@ const PaymentInfoForm: React.FC = () => {
             {errors.uifNumber && (<p className="text-red-500 text-sm">{errors.uifNumber.message as string}</p>)}
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ibanNumber">IBAN Number</Label>
-            <Input id="ibanNumber" {...register("ibanNumber")} />
-            {errors.ibanNumber && (<p className="text-red-500 text-sm">{errors.ibanNumber.message as string}</p>)}
+            <Label htmlFor="accountNumber">Account Number</Label>
+            <Input id="accountNumber" {...register("accountNumber")} />
+            {errors.accountNumber && (<p className="text-red-500 text-sm">{errors.accountNumber.message as string}</p>)}
           </div>
           <div className="space-y-1">
             <Label htmlFor="bankAccountHolder">Account Holder Name</Label>
@@ -92,9 +92,9 @@ const PaymentInfoForm: React.FC = () => {
             {errors.bankName && (<p className="text-red-500 text-sm">{errors.bankName.message as string}</p>)}
           </div>
           <div className="space-y-1">
-            <Label htmlFor="routingSwiftCode">Routing Number / SWIFT Code</Label>
-            <Input id="routingSwiftCode" {...register("routingSwiftCode")} />
-            {errors.routingSwiftCode && (<p className="text-red-500 text-sm">{errors.routingSwiftCode.message as string}</p>)}
+            <Label htmlFor="branchCode">Branch Code</Label>
+            <Input id="branchCode" {...register("branchCode")} />
+            {errors.branchCode && (<p className="text-red-500 text-sm">{errors.branchCode.message as string}</p>)}
           </div>
           <div className="space-y-1">
             <Label htmlFor="bankAccountType">Account Type</Label>

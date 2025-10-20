@@ -84,8 +84,8 @@ export const generateEmployeeProfileReportContent = (
           ${renderField("UIF Number", employee.uifNumber)}
           ${renderField("Bank Name", employee.bankName)}
           ${renderField("Account Holder Name", employee.bankAccountHolder)}
-          ${renderField("IBAN Number", employee.ibanNumber)}
-          ${renderField("Routing Number / SWIFT Code", employee.routingSwiftCode)}
+          ${renderField("Account Number", employee.accountNumber)}
+          ${renderField("Branch Code", employee.branchCode)}
           ${renderField("Account Type", employee.bankAccountType)}
         </div>
       </div>

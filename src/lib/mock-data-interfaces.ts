@@ -68,8 +68,8 @@ export interface MockEmployee {
   uifNumber?: string; // New field
   bankName?: string;
   bankAccountHolder?: string;
-  ibanNumber?: string; // Renamed from bankAccountNumber
-  routingSwiftCode?: string; // Renamed from bankBranchCode
+  accountNumber?: string; // Renamed from ibanNumber
+  branchCode?: string; // Renamed from routingSwiftCode
   bankAccountType?: "Cheque" | "Savings" | "Business";
   
   // New fields from screenshot

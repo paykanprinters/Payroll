@@ -287,8 +287,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           {payslipDesignSettings.showBankDetails && (
             <div style={isPdfGeneration ? { flex: '1', textAlign: 'right', marginLeft: `${baseFontSizePx * 0.5}px` } : {}} className="space-y-1 text-right">
               {renderParagraph("Bank Name", employee.bankName)}
-              {renderParagraph("Account No", employee.ibanNumber ? `********${employee.ibanNumber.slice(-4)}` : "N/A")}
-              {renderParagraph("Branch Code", employee.routingSwiftCode)}
+              {renderParagraph("Account No", employee.accountNumber ? `********${employee.accountNumber.slice(-4)}` : "N/A")}
+              {renderParagraph("Branch Code", employee.branchCode)}
               {renderParagraph("Account Type", employee.bankAccountType)}
             </div>
           )}

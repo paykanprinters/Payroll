@@ -57,8 +57,8 @@ export const generateBankTransferReportContent = (
         <tr class="border-b">
           <td class="py-2 px-4">${getEmployeeName(p.employeeId, employees)}</td>
           <td class="py-2 px-4">${employee.bankName || "N/A"}</td>
-          <td class="py-2 px-4">${employee.ibanNumber || "N/A"}</td>
-          <td class="py-2 px-4">${employee.routingSwiftCode || "N/A"}</td>
+          <td class="py-2 px-4">${employee.accountNumber || "N/A"}</td>
+          <td class="py-2 px-4">${employee.branchCode || "N/A"}</td>
           <td class="py-2 px-4 text-right">${p.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
         </tr>
       `;

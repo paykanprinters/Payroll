@@ -26,7 +26,14 @@ const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
+      // Special handling for renamed fields
+      if (key === 'accountNumber') {
+        newObj['iban_number'] = (obj as any)[key];
+      } else if (key === 'branchCode') {
+        newObj['routing_swift_code'] = (obj as any)[key];
+      } else {
+        newObj[snakeKey] = (obj as any)[key];
+      }
     }
   }
   return newObj;
