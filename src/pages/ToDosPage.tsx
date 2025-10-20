@@ -1,23 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, Info, ArrowRight, ListTodo } from "lucide-react";
-// import { useToDosData } from "@/hooks/use-todos-data"; // Removed redundant import
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const ToDosPage: React.FC = () => {
-  // Destructure toDos and markToDoAsDone directly from usePayrollProcessor
   const { toDos, markToDoAsDone } = usePayrollProcessor();
-  // const { toDos, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Removed redundant call
 
   const pendingToDos = toDos.filter(todo => todo.status === "pending");
   const completedToDos = toDos.filter(todo => todo.status === "done");
+
+  useEffect(() => {
+    console.log("ToDosPage: Rendered. Full To-Dos array:", toDos);
+    console.log("ToDosPage: Rendered. Pending To-Dos array (filtered):", pendingToDos);
+    console.log("ToDosPage: Rendered. Pending Count (from filter):", pendingToDos.length);
+  }, [toDos, pendingToDos]);
 
   const getLevelBadge = (level: ToDoEntry["level"]) => {
     switch (level) {

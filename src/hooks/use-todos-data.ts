@@ -49,7 +49,7 @@ export const useToDosData = (
         setToDos([]);
       } else {
         const camelCaseData = data.map(convertToDoKeysToCamelCase);
-        console.log("useToDosData: Live To-Dos fetched:", camelCaseData);
+        console.log("useToDosData: Live To-Dos fetched (camelCaseData):", camelCaseData); // ADDED THIS LOG
         setToDos(camelCaseData);
         setPendingCount(camelCaseData.filter(todo => todo.status === "pending").length);
       }
