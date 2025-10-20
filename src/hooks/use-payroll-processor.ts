@@ -147,14 +147,14 @@ export const usePayrollProcessor = () => {
   }, [isMockDataEnabled, supabaseCompanyDetails]);
 
   const companyNameForEmployeeId = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
-  const { employees, isLoadingEmployees, addOrUpdateEmployee, deleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
+  const { employees, isLoadingEmployees, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
   const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Use new hook
   const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: mockLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: mockSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: mockLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee, isAuthenticated, isLoadingAuth });
+  const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee: baseAddOrUpdateEmployee, isAuthenticated, isLoadingAuth });
 
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
     employees,
@@ -196,6 +196,22 @@ export const usePayrollProcessor = () => {
       showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
     }
   }, [isMockDataEnabled, isAuthenticated, refetchToDos]);
+
+  // Wrap addOrUpdateEmployee and deleteEmployee to trigger To-Do generation
+  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    await baseAddOrUpdateEmployee(employeeData);
+    if (!isMockDataEnabled) {
+      triggerGenerateToDos();
+    }
+  }, [baseAddOrUpdateEmployee, isMockDataEnabled, triggerGenerateToDos]);
+
+  const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
+    await baseDeleteEmployee(employeeId, employeeName);
+    if (!isMockDataEnabled) {
+      triggerGenerateToDos();
+    }
+  }, [baseDeleteEmployee, isMockDataEnabled, triggerGenerateToDos]);
+
 
   useEffect(() => {
     const handleMockDataToggleEvent = () => {
