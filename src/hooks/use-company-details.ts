@@ -78,28 +78,31 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         console.error("useCompanyDetails: Supabase fetchCompanyDetails error:", error);
         if (error.code === "PGRST116") {
           console.info("useCompanyDetails: No company details found in database (expected for initial setup). Setting companyDetails to null.");
-          setCompanyDetails(null); // This is correct for no data
+          if (companyDetails !== null) setCompanyDetails(null); // Only update if different
           setError(null);
         } else {
           console.error("useCompanyDetails: Error fetching company details:", error);
           setError(error);
-          setCompanyDetails(null); // This is correct for an error
+          if (companyDetails !== null) setCompanyDetails(null); // Only update if different
           showError(`Failed to load company details: ${error.message}`);
         }
       } else {
         const camelCaseData = convertKeysToCamelCase(data); // This line correctly converts data
         console.log("useCompanyDetails: Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
-        setCompanyDetails(camelCaseData); // This line should set the state with the fetched data
+        // Perform deep comparison to prevent unnecessary state updates
+        if (JSON.stringify(camelCaseData) !== JSON.stringify(companyDetails)) {
+          setCompanyDetails(camelCaseData); // This line should set the state with the fetched data
+        }
       }
     } catch (err: any) {
       console.error("useCompanyDetails: Unhandled error in fetchCompanyDetails:", err);
       setError(err);
-      setCompanyDetails(null); // This is correct for unhandled error
+      if (companyDetails !== null) setCompanyDetails(null); // Only update if different
       showError('An unexpected error occurred while loading company details.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [companyDetails]); // Dependency on companyDetails for deep comparison
 
   const upsertCompanyDetails = useCallback(
     async (details: Partial<MockCompanyDetails>) => {
@@ -156,14 +159,17 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
       } else {
         const camelCaseData = convertKeysToCamelCase(data && data.length > 0 ? data[0] : null); // Convert to camelCase
         console.log("useCompanyDetails: Supabase upsertCompanyDetails success. Data (camelCase):", camelCaseData);
-        setCompanyDetails(camelCaseData);
+        // Perform deep comparison to prevent unnecessary state updates
+        if (JSON.stringify(camelCaseData) !== JSON.stringify(companyDetails)) {
+          setCompanyDetails(camelCaseData);
+        }
         showSuccess("Company details saved successfully!");
         window.dispatchEvent(new Event("companyDetailsUpdated"));
       }
       setIsLoading(false);
       return { data, error };
     },
-    []
+    [companyDetails] // Dependency on companyDetails for deep comparison
   );
 
   useEffect(() => {
@@ -200,21 +206,26 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
       const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
       const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
 
-      setCompanyDetails({
+      const newMockCompanyDetails: MockCompanyDetails = {
         companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
         companyTaxNumber: mockCompanyTaxNumber, vatRegistrationNumber: mockVatRegistrationNumber, industry: mockIndustry,
         payeReferenceNumber: mockPayeReferenceNumber, uifReferenceNumber: mockUifReferenceNumber, sdlReferenceNumber: mockSdlReferenceNumber,
         coidaRegistrationNumber: mockCoidaRegistrationNumber, physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
         companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
         branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
-      });
+      };
+
+      // Deep comparison for mock data as well
+      if (JSON.stringify(newMockCompanyDetails) !== JSON.stringify(companyDetails)) {
+        setCompanyDetails(newMockCompanyDetails);
+      }
       setIsLoading(false);
     } else {
       // Not mock data, so attempt to fetch live data.
       // This should happen whether authenticated or not, as company details are public.
       fetchCompanyDetails();
     }
-  }, [isMockDataEnabled, isLoadingAuth, fetchCompanyDetails]);
+  }, [isMockDataEnabled, isLoadingAuth, fetchCompanyDetails, companyDetails, isAuthenticated]); // Added companyDetails to dependencies for mock data comparison
 
   return { companyDetails, isLoading, error, upsertCompanyDetails, refetchCompanyDetails: fetchCompanyDetails };
 };

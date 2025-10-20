@@ -106,47 +106,13 @@ export const usePayrollProcessor = () => {
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-  const companyDetails = useMemo(() => {
-    if (isMockDataEnabled) {
-      const mockCompanyLegalName = localStorage.getItem('companyLegalName') || "Your Company Legal Name";
-      const mockCompanyTradingName = localStorage.getItem('companyTradingName') || "";
-      const mockCompanyRegistrationNumber = localStorage.getItem('companyRegistrationNumber') || "N/A";
-      const mockCompanyTaxNumber = localStorage.getItem('companyTaxNumber') || "";
-      const mockVatRegistrationNumber = localStorage.getItem('vatRegistrationNumber') || "N/A";
-      const mockIndustry = localStorage.getItem('industry') || "";
-      const mockPayeReferenceNumber = localStorage.getItem('payeReferenceNumber') || "";
-      const mockUifReferenceNumber = localStorage.getItem('uifReferenceNumber') || "";
-      const mockSdlReferenceNumber = localStorage.getItem('sdlReferenceNumber') || "";
-      const mockCoidaRegistrationNumber = localStorage.getItem('coidaRegistrationNumber') || "";
-      const mockPhysicalAddress = localStorage.getItem('physicalAddress') || "123 Corporate Ave, Business City, 1234";
-      const mockPostalAddress = localStorage.getItem('postalAddress') || "PO Box 123, Business Centre, 2001";
-      const mockMainContactNumber = localStorage.getItem('mainContactNumber') || "+27 11 123 4567";
-      const mockAlternativeContactNumber = localStorage.getItem('alternativeContactNumber') || "";
-      const mockCompanyEmail = localStorage.getItem('companyEmail') || "info@yourcompany.co.za";
-      const mockCompanyWebsite = localStorage.getItem('companyWebsite') || "www.acmecorp.co.za";
-      const mockBankName = localStorage.getItem('bankName') || "";
-      const mockAccountholdername = localStorage.getItem('accountholdername') || "";
-      const mockAccountNumber = localStorage.getItem('accountNumber') || "";
-      const mockBranchCode = localStorage.getItem('branchCode') || "";
-      const mockAccountType = (localStorage.getItem('accountType') as "Cheque" | "Savings" | "Business") || "Cheque";
-      const mockLogoUrl = localStorage.getItem('companyLogoUrl') || '';
-      const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
-      const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
-      const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+  // Directly use supabaseCompanyDetails, which is now more stable due to deep comparison in useCompanyDetails
+  const companyDetails = supabaseCompanyDetails;
 
-      return {
-        companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
-        companyTaxNumber: mockCompanyTaxNumber, vatRegistrationNumber: mockVatRegistrationNumber, industry: mockIndustry,
-        payeReferenceNumber: mockPayeReferenceNumber, uifReferenceNumber: mockUifReferenceNumber, sdlReferenceNumber: mockSdlReferenceNumber,
-        coidaRegistrationNumber: mockCoidaRegistrationNumber, physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
-        companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
-        branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
-      };
-    }
-    return supabaseCompanyDetails;
-  }, [isMockDataEnabled, supabaseCompanyDetails]);
+  const companyNameForEmployeeId = useMemo(() => {
+    return companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
+  }, [companyDetails]);
 
-  const companyNameForEmployeeId = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
   const { employees, isLoadingEmployees, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
   const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Use new hook
