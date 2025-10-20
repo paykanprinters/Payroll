@@ -68,6 +68,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       setEmployees([]);
     } finally {
       setIsLoading(false);
+      console.log("useEmployeesData: fetchLiveEmployees finished. isLoading set to false.");
     }
   }, []);
 
@@ -140,6 +141,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
     } finally {
       dismissToast(toastId);
       setIsLoading(false);
+      console.log("useEmployeesData: upsertLiveEmployee finished. isLoading set to false.");
     }
   }, [employees, companyName, fetchLiveEmployees]); // Added employees, companyName, and fetchLiveEmployees to dependencies
 
@@ -166,6 +168,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
     } finally {
       dismissToast(toastId);
       setIsLoading(false);
+      console.log("useEmployeesData: deleteLiveEmployee finished. isLoading set to false.");
     }
   }, []);
 
@@ -244,19 +247,23 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
 
   // Effect to load data based on mockDataEnabled status
   useEffect(() => {
+    console.log("useEmployeesData: Main useEffect triggered. isMockDataEnabled:", isMockDataEnabled, "isAuthenticated:", isAuthenticated, "isLoadingAuth:", isLoadingAuth);
     if (isLoadingAuth) {
       setIsLoading(true); // Keep loading true while auth is loading
       return;
     }
 
     if (isMockDataEnabled) {
+      console.log("useEmployeesData: Mock data enabled. Loading from localStorage.");
       const storedMockEmployees = localStorage.getItem("mockEmployees");
       setEmployees(storedMockEmployees ? JSON.parse(storedMockEmployees) : []);
       setIsLoading(false);
     } else if (isAuthenticated) {
+      console.log("useEmployeesData: Live data enabled and authenticated. Calling fetchLiveEmployees.");
       fetchLiveEmployees();
     } else {
       // Not mock data, not authenticated, and auth is done loading
+      console.log("useEmployeesData: Live data enabled but not authenticated. Clearing employees.");
       setEmployees([]);
       setIsLoading(false);
     }
@@ -265,6 +272,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
   // Listen for specific update events to re-fetch/update state
   useEffect(() => {
     const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
+      console.log("useEmployeesData: 'employeesUpdated' event received. Updating state.");
       if (isMockDataEnabled) {
         setEmployees(event.detail);
       }

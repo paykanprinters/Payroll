@@ -23,7 +23,7 @@ import { useLeaveData } from "./use-leave-data";
 import { useTimesheetData } from "./use-timesheet-data";
 import { useToDosData } from "./use-todos-data";
 import { usePayslipsData } from "./use-payslips-data"; // New import
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/Auth/AuthContext"; // Corrected import path
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -173,21 +173,29 @@ export const usePayrollProcessor = () => {
   );
 
   const triggerGenerateToDos = useCallback(async () => {
-    if (isMockDataEnabled) return;
+    console.log("usePayrollProcessor: triggerGenerateToDos called.");
+    if (isMockDataEnabled) {
+      console.log("usePayrollProcessor: Mock data is enabled, skipping Edge Function call for To-Dos.");
+      // For mock data, we need to re-generate mock todos and update local storage
+      // This part is handled in MockData.tsx when mock data is toggled.
+      // If we want to trigger it here, we'd need to re-run generateMockToDos with current mock data.
+      // For now, let's assume mock data updates are handled by the MockData component.
+      return;
+    }
     if (!isAuthenticated) {
-      console.warn("Not authenticated, skipping generate-todos Edge Function call.");
+      console.warn("usePayrollProcessor: Not authenticated, skipping generate-todos Edge Function call.");
       return;
     }
 
     try {
-      console.log("usePayrollProcessor: Triggering generate-todos Edge Function...");
+      console.log("usePayrollProcessor: Attempting to invoke 'generate-todos' Edge Function...");
       const { data, error } = await supabase.functions.invoke('generate-todos');
 
       if (error) {
-        console.error('Error invoking generate-todos Edge Function:', error);
+        console.error('usePayrollProcessor: Error invoking generate-todos Edge Function:', error);
         showError(`Failed to generate To-Dos: ${error.message}`);
       } else {
-        console.log('Generate To-Dos Edge Function response:', data);
+        console.log('usePayrollProcessor: Generate To-Dos Edge Function response:', data);
         refetchToDos();
         showSuccess("To-Dos refreshed successfully!");
       }
@@ -199,15 +207,19 @@ export const usePayrollProcessor = () => {
 
   // Wrap addOrUpdateEmployee and deleteEmployee to trigger To-Do generation
   const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    console.log("usePayrollProcessor: addOrUpdateEmployee called. Triggering baseAddOrUpdateEmployee.");
     await baseAddOrUpdateEmployee(employeeData);
     if (!isMockDataEnabled) {
+      console.log("usePayrollProcessor: Live data mode, calling triggerGenerateToDos after employee update.");
       triggerGenerateToDos();
     }
   }, [baseAddOrUpdateEmployee, isMockDataEnabled, triggerGenerateToDos]);
 
   const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
+    console.log("usePayrollProcessor: deleteEmployee called. Triggering baseDeleteEmployee.");
     await baseDeleteEmployee(employeeId, employeeName);
     if (!isMockDataEnabled) {
+      console.log("usePayrollProcessor: Live data mode, calling triggerGenerateToDos after employee deletion.");
       triggerGenerateToDos();
     }
   }, [baseDeleteEmployee, isMockDataEnabled, triggerGenerateToDos]);
@@ -219,6 +231,7 @@ export const usePayrollProcessor = () => {
       setIsMockDataEnabled(mockEnabled);
       console.log("usePayrollProcessor: 'allMockDataUpdated' event received. Setting isMockDataEnabled to:", mockEnabled);
       if (!mockEnabled && isAuthenticated && !isLoadingAuth) {
+        console.log("usePayrollProcessor: Mock data disabled, authenticated, and auth loaded. Triggering To-Dos generation.");
         triggerGenerateToDos();
       }
     };

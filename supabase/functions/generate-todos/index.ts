@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { format, isPast, subMonths, isBefore, isWithinInterval, parseISO } from "https://esm.sh/date-fns@2.30.0";
 
 const corsHeaders = {
@@ -127,8 +127,11 @@ serve(async (req) => {
         const todoKey = `${employee.id}-${field.key}`;
         const existingToDoId = existingToDoMap.get(todoKey);
 
-        if (!fieldValue && !isIgnored) {
+        console.log(`generate-todos: Employee ${employee.first_name} ${employee.last_name} (ID: ${employee.id}) - Field: ${field.key}, Value: '${fieldValue}', Is Ignored: ${isIgnored}, Existing To-Do ID: ${existingToDoId}`);
+
+        if (!fieldValue && !isIgnored) { // This condition checks if fieldValue is falsy (null, undefined, empty string)
           if (!existingToDoId) {
+            console.log(`generate-todos: New To-Do: Employee ${employee.first_name} ${employee.last_name} is missing ${field.label}.`);
             newToDosToInsert.push({
               message: `Employee ${employee.first_name} ${employee.last_name} is missing ${field.label}.`,
               level: field.level,
@@ -139,8 +142,11 @@ serve(async (req) => {
               employee_id: employee.id,
               related_field: field.key,
             });
+          } else {
+            console.log(`generate-todos: Existing pending To-Do for ${employee.first_name} ${employee.last_name} - ${field.label} still pending.`);
           }
         } else if ((fieldValue || isIgnored) && existingToDoId) {
+          console.log(`generate-todos: To-Do for ${employee.first_name} ${employee.last_name} - ${field.label} is now resolved or ignored. Marking as done.`);
           toDosToUpdateToDone.push(existingToDoId);
         }
       }
@@ -155,6 +161,7 @@ serve(async (req) => {
     if (incompleteTimesheets.length > 0) {
       const message = `${incompleteTimesheets.length} employees have incomplete timesheets for past periods.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "critical",
@@ -163,6 +170,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "HR",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `${incompleteTimesheets.length} employees have incomplete timesheets for past periods.`; // Message for 0 incomplete timesheets
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
 
@@ -172,6 +188,7 @@ serve(async (req) => {
     if (unapprovedTimesheets.length > 0) {
       const message = `${unapprovedTimesheets.length} timesheets are submitted but not yet approved.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "warning",
@@ -180,6 +197,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "Admin",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `${unapprovedTimesheets.length} timesheets are submitted but not yet approved.`; // Message for 0 unapproved timesheets
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
     console.log('generate-todos: Finished checking timesheet To-Dos.');
@@ -192,6 +218,7 @@ serve(async (req) => {
     if (employeesWithoutPayslipLastMonth.length > 0) {
       const message = `Payslips not generated for ${employeesWithoutPayslipLastMonth.length} employees for ${format(subMonths(today, 1), 'MMMM yyyy')}.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "critical",
@@ -200,6 +227,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "Finance",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `Payslips not generated for ${employeesWithoutPayslipLastMonth.length} employees for ${format(subMonths(today, 1), 'MMMM yyyy')}.`; // Message for 0 employees without payslip
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
     console.log('generate-todos: Finished checking payslip To-Dos.');
@@ -210,6 +246,7 @@ serve(async (req) => {
     if (pausedLoans.length > 0) {
       const message = `${pausedLoans.length} loans are currently paused and require review.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "warning",
@@ -218,6 +255,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "Finance",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `${pausedLoans.length} loans are currently paused and require review.`; // Message for 0 paused loans
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
 
@@ -225,6 +271,7 @@ serve(async (req) => {
     if (pendingLoanRequests.length > 0) {
       const message = `${pendingLoanRequests.length} loan requests pending approval or review.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "warning",
@@ -233,6 +280,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "Finance",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `${pendingLoanRequests.length} loan requests pending approval or review.`; // Message for 0 pending loan requests
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
     console.log('generate-todos: Finished checking loans To-Dos.');
@@ -243,6 +299,7 @@ serve(async (req) => {
     if (activeSavingPlans.length > 0 && activeSavingPlans.length % 2 !== 0) { // Mock: odd number of active plans needs review
       const message = `Review ${activeSavingPlans.length} active savings plans for consistency.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "info",
@@ -251,6 +308,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "HR",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `Review ${activeSavingPlans.length} active savings plans for consistency.`; // Message for 0 active saving plans or even number
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
     console.log('generate-todos: Finished checking savings To-Dos.');
@@ -266,6 +332,7 @@ serve(async (req) => {
     if (overlappingLeaveRequests.length > 0) {
       const message = `${overlappingLeaveRequests.length} leave requests overlap with upcoming payroll run.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "critical",
@@ -274,6 +341,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "HR",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `${overlappingLeaveRequests.length} leave requests overlap with upcoming payroll run.`; // Message for 0 overlapping leave requests
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
     console.log('generate-todos: Finished checking vacation & absence To-Dos.');
@@ -284,6 +360,7 @@ serve(async (req) => {
     if (!emp201SubmittedLastMonth) {
       const message = `EMP201 (Tax & Statutory Report) not generated for ${format(subMonths(today, 1), 'MMMM yyyy')}.`;
       if (!existingToDoMap.has(message)) {
+        console.log(`generate-todos: New To-Do: ${message}`);
         newToDosToInsert.push({
           message: message,
           level: "critical",
@@ -292,6 +369,15 @@ serve(async (req) => {
           status: "pending",
           assigned_to: "Finance",
         });
+      } else {
+        console.log(`generate-todos: Existing pending To-Do: ${message} still pending.`);
+      }
+    } else {
+      const message = `EMP201 (Tax & Statutory Report) not generated for ${format(subMonths(today, 1), 'MMMM yyyy')}.`; // Message for 0 emp201 not submitted
+      const existingId = existingToDoMap.get(message);
+      if (existingId) {
+        console.log(`generate-todos: To-Do: ${message} is now resolved. Marking as done.`);
+        toDosToUpdateToDone.push(existingId);
       }
     }
     console.log('generate-todos: Finished checking reports To-Dos.');

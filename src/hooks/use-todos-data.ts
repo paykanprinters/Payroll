@@ -59,29 +59,34 @@ export const useToDosData = (
       setToDos([]);
     } finally {
       setIsLoadingToDos(false);
+      console.log("useToDosData: fetchLiveToDos finished. isLoadingToDos set to false.");
     }
   }, []);
 
   useEffect(() => {
+    console.log("useToDosData: useEffect triggered. isMockDataEnabled:", isMockDataEnabled, "isAuthenticated:", isAuthenticated, "isLoadingAuth:", isLoadingAuth);
+    console.log("useToDosData: Current initialToDos length:", initialToDos.length, "employees length:", employees.length);
     if (isLoadingAuth) {
       setIsLoadingToDos(true); // Keep loading true while auth is loading
       return;
     }
 
     if (isMockDataEnabled) {
-      // Set mock data directly. The initialToDos prop is now a stable reference from usePayrollProcessor.
+      console.log("useToDosData: Mock data enabled. Setting To-Dos from initialToDos.");
       setToDos(initialToDos);
       setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
       setIsLoadingToDos(false);
     } else if (isAuthenticated) {
+      console.log("useToDosData: Live data enabled and authenticated. Calling fetchLiveToDos.");
       fetchLiveToDos();
     } else {
       // Not mock data, not authenticated, and auth is done loading
+      console.log("useToDosData: Live data enabled but not authenticated. Clearing To-Dos.");
       setToDos([]);
       setPendingCount(0);
       setIsLoadingToDos(false);
     }
-  }, [initialToDos, isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveToDos]);
+  }, [initialToDos, isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveToDos, employees]);
 
   const getEmployeeCustomId = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
@@ -97,6 +102,7 @@ export const useToDosData = (
     }
 
     if (isMockDataEnabled) {
+      console.log("useToDosData: Mock data enabled. Marking To-Do as done locally.");
       // Mock data handling
       if (todoToMark.employeeId && todoToMark.relatedField) {
         const employee = employees.find(emp => emp.id === todoToMark.employeeId);
@@ -110,10 +116,11 @@ export const useToDosData = (
           };
 
           try {
+            console.log(`useToDosData: Updating mock employee ${employee.firstName} with ignored field ${todoToMark.relatedField}.`);
             await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee
             showSuccess(`Field '${todoToMark.relatedField}' for ${employee.firstName} ${employee.lastName} marked as intentionally blank.`);
           } catch (error) {
-            console.error("Failed to update employee with ignored field (mock):", error);
+            console.error("useToDosData: Failed to update employee with ignored field (mock):", error);
             showError("Failed to mark field as intentionally blank (mock).");
             return;
           }
@@ -130,7 +137,7 @@ export const useToDosData = (
         return updatedToDos;
       });
     } else {
-      // Live data handling with Supabase
+      console.log("useToDosData: Live data enabled. Marking To-Do as done in Supabase.");
       setIsLoadingToDos(true);
       try {
         // 1. Update To-Do status in Supabase
@@ -140,7 +147,7 @@ export const useToDosData = (
           .eq('id', id);
 
         if (updateTodoError) {
-          console.error("Error updating To-Do status in Supabase:", updateTodoError);
+          console.error("useToDosData: Error updating To-Do status in Supabase:", updateTodoError);
           showError(`Failed to mark To-Do as done: ${updateTodoError.message}`);
           return;
         }
@@ -158,10 +165,11 @@ export const useToDosData = (
             };
 
             try {
+              console.log(`useToDosData: Updating live employee ${employee.firstName} with ignored field ${todoToMark.relatedField}.`);
               await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee to Supabase
               showSuccess(`Field '${todoToMark.relatedField}' for ${employee.firstName} ${employee.lastName} marked as intentionally blank.`);
             } catch (error) {
-              console.error("Failed to update employee with ignored field (live):", error);
+              console.error("useToDosData: Failed to update employee with ignored field (live):", error);
               showError("Failed to mark field as intentionally blank (live).");
               return;
             }
@@ -175,6 +183,7 @@ export const useToDosData = (
         showError("An unexpected error occurred while marking To-Do as done.");
       } finally {
         setIsLoadingToDos(false);
+        console.log("useToDosData: markToDoAsDone finished. isLoadingToDos set to false.");
       }
     }
   }, [toDos, employees, isMockDataEnabled, addOrUpdateEmployee, fetchLiveToDos]);
