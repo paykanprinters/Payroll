@@ -23,7 +23,7 @@ import { useLeaveData } from "./use-leave-data";
 import { useTimesheetData } from "./use-timesheet-data";
 import { useToDosData } from "./use-todos-data";
 import { usePayslipsData } from "./use-payslips-data"; // New import
-import { useAuth } from "@/context/Auth/AuthContext"; // Corrected import path
+import { useAuth } from "@/context/AuthContext"; // Corrected import path
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
