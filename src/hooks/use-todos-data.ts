@@ -58,6 +58,7 @@ export const useToDosData = (
       showError("An unexpected error occurred while loading live To-Dos.");
       setToDos([]);
     } finally {
+      dismissToast("loading-todos"); // Dismiss any loading toast
       setIsLoadingToDos(false);
       console.log("useToDosData: fetchLiveToDos finished. isLoadingToDos set to false.");
     }
@@ -114,6 +115,7 @@ export const useToDosData = (
             ...employee,
             ignoredIncompleteFields: Array.from(updatedIgnoredFields),
           };
+          console.log("useToDosData: Mock - updatedEmployee before addOrUpdateEmployee:", updatedEmployee); // Added log
 
           try {
             console.log(`useToDosData: Updating mock employee ${employee.firstName} with ignored field ${todoToMark.relatedField}.`);
@@ -163,6 +165,7 @@ export const useToDosData = (
               ...employee,
               ignoredIncompleteFields: Array.from(updatedIgnoredFields),
             };
+            console.log("useToDosData: Live - updatedEmployee before addOrUpdateEmployee:", updatedEmployee); // Added log
 
             try {
               console.log(`useToDosData: Updating live employee ${employee.firstName} with ignored field ${todoToMark.relatedField}.`);
@@ -182,6 +185,7 @@ export const useToDosData = (
         console.error("useToDosData: Unhandled error marking To-Do as done (live):", err);
         showError("An unexpected error occurred while marking To-Do as done.");
       } finally {
+        dismissToast("loading-todos"); // Dismiss any loading toast
         setIsLoadingToDos(false);
         console.log("useToDosData: markToDoAsDone finished. isLoadingToDos set to false.");
       }
