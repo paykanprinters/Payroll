@@ -50,7 +50,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Employees: React.FC = () => {
-  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees } = usePayrollProcessor();
+  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees, isMutatingEmployee } = usePayrollProcessor(); // Get isMutatingEmployee
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -177,7 +177,9 @@ const Employees: React.FC = () => {
 
   const totalJobTitles = jobTitleDistribution.reduce((sum, entry) => sum + entry.value, 0);
 
-  if (isLoadingEmployees) {
+  // Only show full-page loader if initially loading employees AND no employees are currently displayed
+  // This prevents the full-page loader from appearing during updates/deletions if there's already data.
+  if (isLoadingEmployees && employees.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -194,8 +196,8 @@ const Employees: React.FC = () => {
       </p>
       
       <div className="flex justify-end">
-        <Button onClick={handleAddEmployeeClick}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Employee
+        <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee}>
+          {isMutatingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add New Employee
         </Button>
       </div>
 
@@ -276,13 +278,13 @@ const Employees: React.FC = () => {
                          employee.hourlyRate ? `R ${employee.hourlyRate.toLocaleString('en-ZA')} / hr` : "N/A"}
                       </TableCell>
                       <TableCell className="flex justify-center gap-2">
-                        <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)}>
+                        <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)} disabled={isMutatingEmployee}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)}>
+                        <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)} disabled={isMutatingEmployee}>
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)}>
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)} disabled={isMutatingEmployee}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -318,8 +320,8 @@ const Employees: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogAction onClick={confirmDeleteEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isMutatingEmployee}>
+              {isMutatingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

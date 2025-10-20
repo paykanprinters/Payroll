@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
-import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
+import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
 import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
 
@@ -48,11 +48,12 @@ interface UseEmployeesDataProps {
 
 export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticated, isLoadingAuth }: UseEmployeesDataProps) => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // For initial/full data fetch
+  const [isMutating, setIsMutating] = useState<boolean>(false); // For add/update/delete operations
 
   // --- Live Employee Data Management (Supabase) ---
   const refetchEmployees = useCallback(async () => { // Renamed from fetchLiveEmployees
-    setIsLoading(true);
+    setIsLoading(true); // Only set loading for full refetch
     try {
       console.log("useEmployeesData: Fetching live employees from Supabase...");
       const { data, error } = await supabase
@@ -81,7 +82,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
 
   const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues): Promise<MockEmployee | null> => {
     const toastId = showLoading(employeeData.id ? "Updating employee..." : "Adding new employee...") as string;
-    setIsLoading(true);
+    setIsMutating(true); // Set mutating for this specific operation
     try {
       let customEmployeeIdToUse = employeeData.customEmployeeId;
 
@@ -144,14 +145,14 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       return null;
     } finally {
       dismissToast(toastId);
-      setIsLoading(false);
-      console.log("useEmployeesData: upsertLiveEmployee finished. isLoading set to false.");
+      setIsMutating(false); // Reset mutating state
+      console.log("useEmployeesData: upsertLiveEmployee finished. isMutating set to false.");
     }
   }, [employees, companyName]); // `employees` is a dependency here because `customEmployeeIdToUse` generation depends on it.
 
   const deleteLiveEmployee = useCallback(async (employeeId: string) => {
     const toastId = showLoading("Deleting employee...") as string;
-    setIsLoading(true);
+    setIsMutating(true); // Set mutating for this specific operation
     try {
       console.log("useEmployeesData: Deleting live employee with ID:", employeeId);
       const { error } = await supabase
@@ -171,8 +172,8 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       showError("An unexpected error occurred while deleting employee data.");
     } finally {
       dismissToast(toastId);
-      setIsLoading(false);
-      console.log("useEmployeesData: deleteLiveEmployee finished. isLoading set to false.");
+      setIsMutating(false); // Reset mutating state
+      console.log("useEmployeesData: deleteLiveEmployee finished. isMutating set to false.");
     }
   }, []);
 
@@ -289,6 +290,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
   return {
     employees,
     isLoadingEmployees: isLoading,
+    isMutatingEmployee: isMutating, // Expose new mutating state
     addOrUpdateEmployee,
     deleteEmployee,
     refetchEmployees, // Expose refetchEmployees
