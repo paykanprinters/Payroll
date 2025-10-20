@@ -44,7 +44,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // --- Live Employee Data Management (Supabase) ---
-  const fetchLiveEmployees = useCallback(async () => {
+  const refetchEmployees = useCallback(async () => { // Renamed from fetchLiveEmployees
     setIsLoading(true);
     try {
       console.log("useEmployeesData: Fetching live employees from Supabase...");
@@ -68,11 +68,11 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       setEmployees([]);
     } finally {
       setIsLoading(false);
-      console.log("useEmployeesData: fetchLiveEmployees finished. isLoading set to false.");
+      console.log("useEmployeesData: refetchEmployees finished. isLoading set to false.");
     }
-  }, []);
+  }, []); // No dependencies needed for refetchEmployees itself
 
-  const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+  const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues): Promise<MockEmployee | null> => {
     const toastId = showLoading(employeeData.id ? "Updating employee..." : "Adding new employee...") as string;
     setIsLoading(true);
     try {
@@ -85,13 +85,10 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         }, 0);
         customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
       } else { // If updating an existing employee
-        // Prioritize customEmployeeId from form data if present
         if (!customEmployeeIdToUse) {
-          // If not from form, try to get from existing employee in state
           const existingEmployee = employees.find(emp => emp.id === employeeData.id);
           customEmployeeIdToUse = existingEmployee?.customEmployeeId;
         }
-        // If still no customEmployeeId, generate a new one (e.g., for legacy data)
         if (!customEmployeeIdToUse) {
              const currentMaxNumber = employees.reduce((max, emp) => {
                 const match = emp.customEmployeeId?.match(/\d+$/);
@@ -111,13 +108,14 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       const { data, error } = await supabase
         .from('employees')
         .upsert(snakeCasePayload, { onConflict: 'id' })
-        .select(); // Removed .single()
+        .select();
 
       if (error) {
         console.error("useEmployeesData: Error upserting live employee:", error);
         showError(`Failed to save employee: ${error.message}`);
-      } else if (data && data.length > 0) { // Check if data is returned and has elements
-        const camelCaseData = convertEmployeeKeysToCamelCase(data[0]); // Take the first element
+        return null;
+      } else if (data && data.length > 0) {
+        const camelCaseData = convertEmployeeKeysToCamelCase(data[0]);
         setEmployees(prev => {
           const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
           if (existingIndex !== -1) {
@@ -127,23 +125,22 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
           }
         });
         showSuccess("Employee saved successfully!");
+        return camelCaseData;
       } else {
-        // This case means upsert succeeded but returned no data, which is unexpected for onConflict: 'id'
-        // It might indicate an RLS issue on SELECT, or a Supabase internal issue.
         console.warn("useEmployeesData: Upsert succeeded but returned no data. This might indicate an RLS issue or unexpected behavior.");
         showError("Employee saved, but data could not be retrieved. Please refresh.");
-        // A refetch might be necessary here to ensure state is consistent
-        fetchLiveEmployees(); // Trigger a full refetch
+        return null;
       }
     } catch (err) {
       console.error("useEmployeesData: Unhandled error upserting live employee:", err);
       showError("An unexpected error occurred while saving employee data.");
+      return null;
     } finally {
       dismissToast(toastId);
       setIsLoading(false);
       console.log("useEmployeesData: upsertLiveEmployee finished. isLoading set to false.");
     }
-  }, [employees, companyName, fetchLiveEmployees]); // Added employees, companyName, and fetchLiveEmployees to dependencies
+  }, [employees, companyName]); // `employees` is a dependency here because `customEmployeeIdToUse` generation depends on it.
 
   const deleteLiveEmployee = useCallback(async (employeeId: string) => {
     const toastId = showLoading("Deleting employee...") as string;
@@ -178,15 +175,12 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       setEmployees(prevEmployees => {
         let updatedEmployees: MockEmployee[];
         if (employeeData.id) {
-          // For mock data, if ID exists, update the employee
           const existingEmployee = prevEmployees.find(emp => emp.id === employeeData.id);
           let customEmployeeIdToUse = employeeData.customEmployeeId;
 
-          // If form didn't provide customEmployeeId, try to use existing one
           if (!customEmployeeIdToUse && existingEmployee) {
             customEmployeeIdToUse = existingEmployee.customEmployeeId;
           }
-          // If still no customEmployeeId, generate one (e.g., for legacy mock data)
           if (!customEmployeeIdToUse) {
             const currentMaxNumber = prevEmployees.reduce((max, emp) => {
               const match = emp.customEmployeeId?.match(/\d+$/);
@@ -200,8 +194,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
           );
           showSuccess("Mock employee updated successfully!");
         } else {
-          // For new mock employee, generate ID
-          const newId = uuidv4(); // Generate UUID for internal ID
+          const newId = uuidv4();
           const currentMaxNumber = prevEmployees.reduce((max, emp) => {
             const match = emp.customEmployeeId?.match(/\d+$/);
             return match ? Math.max(max, parseInt(match[0])) : max;
@@ -227,9 +220,12 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         return updatedEmployees;
       });
     } else {
-      await upsertLiveEmployee(employeeData);
+      const result = await upsertLiveEmployee(employeeData);
+      if (!result) {
+        refetchEmployees(); // Call refetchEmployees if upsert didn't return data
+      }
     }
-  }, [isMockDataEnabled, upsertLiveEmployee, companyName]); // Added companyName to dependencies
+  }, [isMockDataEnabled, upsertLiveEmployee, companyName, refetchEmployees]); // Added refetchEmployees to dependencies
 
   const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
     if (isMockDataEnabled) {
@@ -259,15 +255,15 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       setEmployees(storedMockEmployees ? JSON.parse(storedMockEmployees) : []);
       setIsLoading(false);
     } else if (isAuthenticated) {
-      console.log("useEmployeesData: Live data enabled and authenticated. Calling fetchLiveEmployees.");
-      fetchLiveEmployees();
+      console.log("useEmployeesData: Live data enabled and authenticated. Calling refetchEmployees.");
+      refetchEmployees(); // Use refetchEmployees here
     } else {
       // Not mock data, not authenticated, and auth is done loading
       console.log("useEmployeesData: Live data enabled but not authenticated. Clearing employees.");
       setEmployees([]);
       setIsLoading(false);
     }
-  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveEmployees]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, refetchEmployees]); // Use refetchEmployees here
 
   // Listen for specific update events to re-fetch/update state
   useEffect(() => {
@@ -288,5 +284,6 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
     isLoadingEmployees: isLoading,
     addOrUpdateEmployee,
     deleteEmployee,
+    refetchEmployees, // Expose refetchEmployees
   };
 };
