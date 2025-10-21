@@ -32,6 +32,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
 
   const fetchLiveSettings = useCallback(async () => {
     if (!user?.id) {
+      console.log("useWorkHoursSettings: fetchLiveSettings - No user ID, skipping fetch.");
       setWorkHoursSettings(null);
       setIsLoading(false);
       return;
@@ -39,6 +40,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
 
     setIsLoading(true);
     try {
+      console.log(`useWorkHoursSettings: fetchLiveSettings - Fetching settings for user ID: ${user.id}`);
       const { data, error } = await supabase
         .from('work_hours_settings')
         .select('*')
@@ -46,7 +48,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
         .single();
 
       if (error && error.code !== "PGRST116") { // PGRST116 means no rows found
-        console.error("useWorkHoursSettings: Error fetching live settings:", error);
+        console.error("useWorkHoursSettings: fetchLiveSettings - Error fetching live settings:", error);
         showError("Failed to load work hours settings.");
         setWorkHoursSettings(null);
       } else if (data) {
@@ -62,12 +64,14 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
           workDays: data.work_days || [],
           overtimeThresholdHours: data.overtime_threshold_hours || undefined,
         };
+        console.log("useWorkHoursSettings: fetchLiveSettings - Successfully fetched and converted settings:", camelCaseData);
         setWorkHoursSettings(camelCaseData);
       } else {
+        console.log("useWorkHoursSettings: fetchLiveSettings - No settings found for user, setting to null.");
         setWorkHoursSettings(null); // No settings found for user
       }
     } catch (err) {
-      console.error("useWorkHoursSettings: Unhandled error fetching live settings:", err);
+      console.error("useWorkHoursSettings: fetchLiveSettings - Unhandled error fetching live settings:", err);
       showError("An unexpected error occurred while loading work hours settings.");
       setWorkHoursSettings(null);
     } finally {
@@ -77,6 +81,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
 
   const upsertLiveSettings = useCallback(async (settings: Omit<WorkHoursSettings, 'id'> & { id?: string }) => {
     if (!user?.id) {
+      console.error("useWorkHoursSettings: upsertLiveSettings - No user ID, cannot save settings.");
       showError("User not authenticated. Cannot save work hours settings.");
       return null;
     }
@@ -96,6 +101,8 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
         overtime_threshold_hours: settings.overtimeThresholdHours || null,
       };
 
+      console.log(`useWorkHoursSettings: upsertLiveSettings - Attempting to save settings for user ID: ${user.id} with payload:`, payload);
+
       const { data, error } = await supabase
         .from('work_hours_settings')
         .upsert(payload, { onConflict: 'user_id' }) // Upsert based on user_id
@@ -103,7 +110,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
         .single();
 
       if (error) {
-        console.error("useWorkHoursSettings: Error upserting live settings:", error);
+        console.error("useWorkHoursSettings: upsertLiveSettings - Error upserting live settings:", error);
         showError(`Failed to save work hours settings: ${error.message}`);
         return null;
       } else if (data) {
@@ -118,13 +125,15 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
           workDays: data.work_days || [],
           overtimeThresholdHours: data.overtime_threshold_hours || undefined,
         };
+        console.log("useWorkHoursSettings: upsertLiveSettings - Successfully saved and converted settings:", camelCaseData);
         setWorkHoursSettings(camelCaseData);
         showSuccess("Work hours settings saved successfully!");
         return camelCaseData;
       }
+      console.warn("useWorkHoursSettings: upsertLiveSettings - Upsert succeeded but returned no data.");
       return null;
     } catch (err) {
-      console.error("useWorkHoursSettings: Unhandled error upserting live settings:", err);
+      console.error("useWorkHoursSettings: upsertLiveSettings - Unhandled error upserting live settings:", err);
       showError("An unexpected error occurred while saving work hours settings.");
       return null;
     } finally {
@@ -139,6 +148,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
     }
 
     if (isMockDataEnabled) {
+      console.log("useWorkHoursSettings: useEffect - Mock data enabled. Loading from localStorage.");
       const storedSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedSettings) {
         setWorkHoursSettings(JSON.parse(storedSettings));
@@ -147,8 +157,10 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
       }
       setIsLoading(false);
     } else if (isAuthenticated) {
+      console.log("useWorkHoursSettings: useEffect - Live data enabled and authenticated. Calling fetchLiveSettings.");
       fetchLiveSettings();
     } else {
+      console.log("useWorkHoursSettings: useEffect - Live data enabled but not authenticated. Clearing settings.");
       setWorkHoursSettings(null);
       setIsLoading(false);
     }
