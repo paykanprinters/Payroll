@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { showSuccess } from "@/utils/toast";
+import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
+import { useWorkHoursSettings } from "@/hooks/use-work-hours-settings"; // Import the new hook
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor for isMockDataEnabled
+import { useAuth } from "@/context/AuthContext"; // Import useAuth for permissions
 
 // Helper to convert "HH:mm" to minutes from midnight
 const timeToMinutes = (time: string): number => {
@@ -25,13 +27,13 @@ const workHoursSchema = z.object({
   dailyEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").min(1, "End time is required"),
   fridayStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").optional().or(z.literal('')),
   fridayEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").optional().or(z.literal('')),
-  breakDurationMinutes: z.preprocess( // Changed to breakDurationMinutes
-    (val) => (val === "" || isNaN(Number(val))) ? undefined : val,
-    z.number().min(0, "Break duration cannot be negative").max(480, "Break duration cannot exceed 480 minutes (8 hours)").optional() // Max 8 hours in minutes
+  breakDurationMinutes: z.preprocess(
+    (val) => (val === "" || val === undefined || isNaN(Number(val))) ? undefined : Number(val),
+    z.number().min(0, "Break duration cannot be negative").max(480, "Break duration cannot exceed 480 minutes (8 hours)").optional()
   ),
   workDays: z.array(z.string()).min(1, "At least one work day must be selected"),
   overtimeThresholdHours: z.preprocess(
-    (val) => (val === "" || isNaN(Number(val))) ? undefined : val,
+    (val) => (val === "" || val === undefined || isNaN(Number(val))) ? undefined : Number(val),
     z.number().min(0, "Overtime threshold cannot be negative").max(168, "Overtime threshold cannot exceed 168 hours").optional()
   ),
 }).superRefine((data, ctx) => {
@@ -75,6 +77,10 @@ type WorkHoursFormValues = z.infer<typeof workHoursSchema>;
 const allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const WorkHours: React.FC = () => {
+  const { user } = useAuth();
+  const { isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
+  const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+
   const form = useForm<WorkHoursFormValues>({
     resolver: zodResolver(workHoursSchema),
     defaultValues: {
@@ -82,34 +88,49 @@ const WorkHours: React.FC = () => {
       dailyEndTime: "17:00",
       fridayStartTime: "",
       fridayEndTime: "",
-      breakDurationMinutes: 60, // Default to 60 minutes (1 hour)
+      breakDurationMinutes: 60,
       workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       overtimeThresholdHours: 40,
     },
   });
 
-  // Load settings from localStorage on mount
+  // Load settings from hook into form
   useEffect(() => {
-    const storedSettings = localStorage.getItem("workHoursSettings");
-    if (storedSettings) {
-      const parsedSettings = JSON.parse(storedSettings);
+    if (workHoursSettings) {
       form.reset({
-        ...parsedSettings,
-        // Ensure numbers are parsed correctly if stored as strings
-        breakDurationMinutes: parseFloat(parsedSettings.breakDurationMinutes) || 0, // Changed to breakDurationMinutes
-        overtimeThresholdHours: parseFloat(parsedSettings.overtimeThresholdHours) || 0,
-        // Ensure new fields are initialized if not present
-        fridayStartTime: parsedSettings.fridayStartTime || "",
-        fridayEndTime: parsedSettings.fridayEndTime || "",
+        dailyStartTime: workHoursSettings.dailyStartTime,
+        dailyEndTime: workHoursSettings.dailyEndTime,
+        fridayStartTime: workHoursSettings.fridayStartTime || "",
+        fridayEndTime: workHoursSettings.fridayEndTime || "",
+        breakDurationMinutes: workHoursSettings.breakDurationMinutes || 0,
+        workDays: workHoursSettings.workDays || [],
+        overtimeThresholdHours: workHoursSettings.overtimeThresholdHours || 0,
+      });
+    } else if (!isLoadingWorkHoursSettings) {
+      // If no settings found and not loading, reset to default form values
+      form.reset({
+        dailyStartTime: "09:00",
+        dailyEndTime: "17:00",
+        fridayStartTime: "",
+        fridayEndTime: "",
+        breakDurationMinutes: 60,
+        workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        overtimeThresholdHours: 40,
       });
     }
-  }, [form]);
+  }, [workHoursSettings, isLoadingWorkHoursSettings, form]);
 
-  const onSubmit = (data: WorkHoursFormValues) => {
-    console.log("Work Hours settings submitted:", data);
-    localStorage.setItem("workHoursSettings", JSON.stringify(data));
-    window.dispatchEvent(new Event('workHoursSettingsUpdated')); // Notify other components
-    showSuccess("Work hours settings saved successfully!");
+  const onSubmit = async (data: WorkHoursFormValues) => {
+    if (user?.id) {
+      await saveWorkHoursSettings({
+        ...data,
+        id: workHoursSettings?.id, // Pass existing ID for update
+        userId: user.id,
+      });
+      window.dispatchEvent(new Event('workHoursSettingsUpdated')); // Notify other components
+    } else {
+      showError("User not authenticated. Cannot save settings.");
+    }
   };
 
   const selectedWorkDays = form.watch("workDays");
@@ -117,14 +138,15 @@ const WorkHours: React.FC = () => {
   const dailyEndTime = form.watch("dailyEndTime");
   const fridayStartTime = form.watch("fridayStartTime");
   const fridayEndTime = form.watch("fridayEndTime");
-  const breakDurationMinutes = form.watch("breakDurationMinutes"); // Changed to breakDurationMinutes
+  const breakDurationMinutes = form.watch("breakDurationMinutes");
 
   const isFridaySelected = selectedWorkDays.includes("Friday");
+  const canEdit = user?.role === 'Admin'; // Only Admin can edit settings
 
   const weeklyTotalHours = useMemo(() => {
     if (!dailyStartTime || !dailyEndTime || !selectedWorkDays) return 0;
 
-    const breakDurationHours = (breakDurationMinutes || 0) / 60; // Convert minutes to hours
+    const breakDurationHours = (breakDurationMinutes || 0) / 60;
 
     const defaultDailyWorkMinutes = (timeToMinutes(dailyEndTime) - timeToMinutes(dailyStartTime)) - (breakDurationHours * 60);
     const defaultDailyWorkHours = Math.max(0, defaultDailyWorkMinutes / 60);
@@ -163,6 +185,7 @@ const WorkHours: React.FC = () => {
                   type="time"
                   {...form.register("dailyStartTime")}
                   className="mt-1"
+                  disabled={!canEdit}
                 />
                 {form.formState.errors.dailyStartTime && (
                   <p className="text-red-500 text-sm mt-1">{form.formState.errors.dailyStartTime.message}</p>
@@ -175,6 +198,7 @@ const WorkHours: React.FC = () => {
                   type="time"
                   {...form.register("dailyEndTime")}
                   className="mt-1"
+                  disabled={!canEdit}
                 />
                 {form.formState.errors.dailyEndTime && (
                   <p className="text-red-500 text-sm mt-1">{form.formState.errors.dailyEndTime.message}</p>
@@ -182,13 +206,14 @@ const WorkHours: React.FC = () => {
               </div>
             </div>
             <div>
-              <Label htmlFor="breakDurationMinutes">Break Duration (Minutes)</Label> {/* Changed label */}
+              <Label htmlFor="breakDurationMinutes">Break Duration (Minutes)</Label>
               <Input
                 id="breakDurationMinutes"
                 type="number"
-                step="1" // Changed step to 1 for minutes
+                step="1"
                 {...form.register("breakDurationMinutes", { valueAsNumber: true })}
                 className="mt-1"
+                disabled={!canEdit}
               />
               {form.formState.errors.breakDurationMinutes && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.breakDurationMinutes.message}</p>
@@ -211,6 +236,7 @@ const WorkHours: React.FC = () => {
                     type="time"
                     {...form.register("fridayStartTime")}
                     className="mt-1"
+                    disabled={!canEdit}
                   />
                   {form.formState.errors.fridayStartTime && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors.fridayStartTime.message}</p>
@@ -223,6 +249,7 @@ const WorkHours: React.FC = () => {
                     type="time"
                     {...form.register("fridayEndTime")}
                     className="mt-1"
+                    disabled={!canEdit}
                   />
                   {form.formState.errors.fridayEndTime && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors.fridayEndTime.message}</p>
@@ -247,6 +274,7 @@ const WorkHours: React.FC = () => {
                         : selectedWorkDays.filter((d) => d !== day);
                       form.setValue("workDays", newDays, { shouldValidate: true });
                     }}
+                    disabled={!canEdit}
                   />
                   <Label htmlFor={`day-${day}`}>{day}</Label>
                 </div>
@@ -272,6 +300,7 @@ const WorkHours: React.FC = () => {
                 step="1"
                 {...form.register("overtimeThresholdHours", { valueAsNumber: true })}
                 className="mt-1"
+                disabled={!canEdit}
               />
               {form.formState.errors.overtimeThresholdHours && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.overtimeThresholdHours.message}</p>
@@ -282,7 +311,7 @@ const WorkHours: React.FC = () => {
             </div>
           </div>
 
-          <Button type="submit">Save Work Hours Settings</Button>
+          <Button type="submit" disabled={!canEdit}>Save Work Hours Settings</Button>
         </form>
       </CardContent>
     </Card>

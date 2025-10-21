@@ -22,8 +22,9 @@ import { useSavingPlansData } from "./use-saving-plans-data";
 import { useLeaveData } from "./use-leave-data";
 import { useTimesheetData } from "./use-timesheet-data";
 import { useToDosData } from "./use-todos-data";
-import { usePayslipsData } from "./use-payslips-data"; // New import
-import { useAuth } from "@/context/AuthContext"; // Corrected import path
+import { usePayslipsData } from "./use-payslips-data";
+import { useAuth } from "@/context/AuthContext";
+import { useWorkHoursSettings } from "./use-work-hours-settings"; // New import
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -40,14 +41,16 @@ export const usePayrollProcessor = () => {
   const mockLeaveRecordsRef = useRef<string | null>(null);
   const mockTimesheetsRef = useRef<string | null>(null);
   const mockToDosRef = useRef<string | null>(null);
-  const mockPayslipsRef = useRef<string | null>(null); // New ref for mock payslips
+  const mockPayslipsRef = useRef<string | null>(null);
+  const mockWorkHoursSettingsRef = useRef<string | null>(null); // New ref for mock work hours settings
 
   const [mockLoans, setMockLoans] = useState<Loan[]>([]);
   const [mockSavingPlans, setMockSavingPlans] = useState<SavingPlan[]>([]);
   const [mockLeaveRecords, setMockLeaveRecords] = useState<LeaveEntry[]>([]);
   const [mockTimesheets, setMockTimesheets] = useState<TimesheetEntry[]>([]);
   const [mockToDos, setMockToDos] = useState<ToDoEntry[]>([]);
-  const [mockPayslips, setMockPayslips] = useState<MockPayslip[]>([]); // New state for mock payslips
+  const [mockPayslips, setMockPayslips] = useState<MockPayslip[]>([]);
+  const [mockWorkHoursSettings, setMockWorkHoursSettings] = useState<any>(null); // New state for mock work hours settings
 
   useEffect(() => {
     if (isMockDataEnabled) {
@@ -81,10 +84,16 @@ export const usePayrollProcessor = () => {
         mockToDosRef.current = currentToDos;
       }
 
-      const currentPayslips = localStorage.getItem("mockPayslips"); // Load mock payslips
+      const currentPayslips = localStorage.getItem("mockPayslips");
       if (currentPayslips !== mockPayslipsRef.current) {
         setMockPayslips(JSON.parse(currentPayslips || "[]"));
         mockPayslipsRef.current = currentPayslips;
+      }
+
+      const currentWorkHoursSettings = localStorage.getItem("workHoursSettings"); // Load mock work hours settings
+      if (currentWorkHoursSettings !== mockWorkHoursSettingsRef.current) {
+        setMockWorkHoursSettings(JSON.parse(currentWorkHoursSettings || "null"));
+        mockWorkHoursSettingsRef.current = currentWorkHoursSettings;
       }
     } else {
       setMockLoans([]);
@@ -92,19 +101,22 @@ export const usePayrollProcessor = () => {
       setMockLeaveRecords([]);
       setMockTimesheets([]);
       setMockToDos([]);
-      setMockPayslips([]); // Clear mock payslips
+      setMockPayslips([]);
+      setMockWorkHoursSettings(null); // Clear mock work hours settings
 
       mockLoansRef.current = null;
       mockSavingPlansRef.current = null;
       mockLeaveRecordsRef.current = null;
       mockTimesheetsRef.current = null;
       mockToDosRef.current = null;
-      mockPayslipsRef.current = null; // Clear ref
+      mockPayslipsRef.current = null;
+      mockWorkHoursSettingsRef.current = null; // Clear ref
     }
   }, [isMockDataEnabled]);
 
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth }); // New hook
 
   // Directly use supabaseCompanyDetails, which is now more stable due to deep comparison in useCompanyDetails
   const companyDetails = supabaseCompanyDetails;
@@ -115,7 +127,7 @@ export const usePayrollProcessor = () => {
 
   const { employees, isLoadingEmployees, isMutatingEmployee, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
-  const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Use new hook
+  const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: mockLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: mockSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: mockLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
@@ -124,28 +136,24 @@ export const usePayrollProcessor = () => {
 
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
     employees,
-    payslips, // Pass payslips from usePayslipsData
+    payslips,
     loans,
     savingPlans,
     leaveRecords,
     timesheets,
     taxTables,
-    setPayslips, // Pass setPayslips from usePayslipsData
+    setPayslips,
     updateLoan,
     updateSavingPlan,
     updateTimesheetStatus,
-    batchUpsertPayslips, // Pass batchUpsertPayslips
-    isMockDataEnabled, // Pass isMockDataEnabled
+    batchUpsertPayslips,
+    isMockDataEnabled,
   );
 
   const triggerGenerateToDos = useCallback(async () => {
     console.log("usePayrollProcessor: triggerGenerateToDos called.");
     if (isMockDataEnabled) {
       console.log("usePayrollProcessor: Mock data is enabled, skipping Edge Function call for To-Dos.");
-      // For mock data, we need to re-generate mock todos and update local storage
-      // This part is handled in MockData.tsx when mock data is toggled.
-      // If we want to trigger it here, we'd need to re-run generateMockToDos with current mock data.
-      // For now, let's assume mock data updates are handled by the MockData component.
       return;
     }
     if (!isAuthenticated) {
@@ -213,7 +221,7 @@ export const usePayrollProcessor = () => {
     return () => {
       window.removeEventListener("allMockDataUpdated", handleMockDataToggleEvent);
     };
-  }, [isAuthenticated, isLoadingAuth, triggerGenerateToDos, isMockDataEnabled]); // Added isMockDataEnabled to dependencies
+  }, [isAuthenticated, isLoadingAuth, triggerGenerateToDos, isMockDataEnabled]);
 
   useEffect(() => {
     const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {
@@ -231,8 +239,16 @@ export const usePayrollProcessor = () => {
     const handleToDosUpdated = (event: CustomEvent<ToDoEntry[]>) => {
       if (isMockDataEnabled) setMockToDos(event.detail);
     };
-    const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => { // New handler for payslips
+    const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => {
       if (isMockDataEnabled) setMockPayslips(event.detail);
+    };
+    const handleWorkHoursSettingsUpdated = () => { // New handler for work hours settings
+      if (isMockDataEnabled) {
+        const currentWorkHoursSettings = localStorage.getItem("workHoursSettings");
+        setMockWorkHoursSettings(JSON.parse(currentWorkHoursSettings || "null"));
+      } else {
+        refetchWorkHoursSettings(); // Refetch live settings
+      }
     };
 
 
@@ -241,7 +257,8 @@ export const usePayrollProcessor = () => {
     window.addEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
     window.addEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
     window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
-    window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener); // New listener
+    window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
+    window.addEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated); // New listener
 
 
     return () => {
@@ -250,16 +267,17 @@ export const usePayrollProcessor = () => {
       window.removeEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
       window.removeEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
       window.removeEventListener("toDosUpdated", handleToDosUpdated as EventListener);
-      window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener); // New cleanup
+      window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
+      window.removeEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated); // New cleanup
     };
-  }, [isMockDataEnabled]);
+  }, [isMockDataEnabled, refetchWorkHoursSettings]);
 
 
   return {
     employees,
     addOrUpdateEmployee,
     deleteEmployee,
-    payslips, // Now from usePayslipsData
+    payslips,
     loans,
     savingPlans,
     leaveRecords,
@@ -271,14 +289,16 @@ export const usePayrollProcessor = () => {
     isMockDataEnabled,
     taxTables,
     isLoadingTaxTables,
+    workHoursSettings: isMockDataEnabled ? mockWorkHoursSettings : workHoursSettings, // Provide mock or live settings
+    isLoadingWorkHoursSettings,
     isLoadingEmployees,
-    isMutatingEmployee, // Expose isMutatingEmployee
+    isMutatingEmployee,
     isLoadingLoans,
     isLoadingSavingPlans,
     isLoadingLeaveRecords,
     isLoadingTimesheets,
     isLoadingToDos,
-    isLoadingPayslips, // Expose isLoadingPayslips
+    isLoadingPayslips,
     runPayrollProcess,
     calculateSinglePayslipPreview,
     triggerGenerateToDos,
@@ -297,6 +317,6 @@ export const usePayrollProcessor = () => {
     markToDoAsDone,
     isAuthenticated,
     isLoadingAuth,
-    refetchPayslips, // Expose refetchPayslips
+    refetchPayslips,
   };
 };
