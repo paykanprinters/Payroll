@@ -184,8 +184,8 @@ const PayslipDesign: React.FC = () => {
     uifNumber: "987654321",
     bankName: "FNB",
     bankAccountHolder: "John Doe",
-    ibanNumber: "ZA12345678901234567890",
-    routingSwiftCode: "250655",
+    accountNumber: "ZA12345678901234567890", // Corrected from ibanNumber
+    branchCode: "250655", // Corrected from routingSwiftCode
     bankAccountType: "Cheque",
     dateOfBirth: "1990-01-01",
     gender: "Male",

@@ -113,7 +113,7 @@ export const usePayrollProcessor = () => {
     return companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
   }, [companyDetails]);
 
-  const { employees, isLoadingEmployees, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
+  const { employees, isLoadingEmployees, isMutatingEmployee, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
   const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Use new hook
   const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: mockLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
@@ -272,6 +272,7 @@ export const usePayrollProcessor = () => {
     taxTables,
     isLoadingTaxTables,
     isLoadingEmployees,
+    isMutatingEmployee, // Expose isMutatingEmployee
     isLoadingLoans,
     isLoadingSavingPlans,
     isLoadingLeaveRecords,
