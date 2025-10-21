@@ -25,9 +25,9 @@ const workHoursSchema = z.object({
   dailyEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").min(1, "End time is required"),
   fridayStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").optional().or(z.literal('')),
   fridayEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").optional().or(z.literal('')),
-  breakDurationHours: z.preprocess(
+  breakDurationMinutes: z.preprocess( // Changed to breakDurationMinutes
     (val) => (val === "" || isNaN(Number(val))) ? undefined : val,
-    z.number().min(0, "Break duration cannot be negative").max(8, "Break duration cannot exceed 8 hours").optional()
+    z.number().min(0, "Break duration cannot be negative").max(480, "Break duration cannot exceed 480 minutes (8 hours)").optional() // Max 8 hours in minutes
   ),
   workDays: z.array(z.string()).min(1, "At least one work day must be selected"),
   overtimeThresholdHours: z.preprocess(
@@ -82,7 +82,7 @@ const WorkHours: React.FC = () => {
       dailyEndTime: "17:00",
       fridayStartTime: "",
       fridayEndTime: "",
-      breakDurationHours: 1,
+      breakDurationMinutes: 60, // Default to 60 minutes (1 hour)
       workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       overtimeThresholdHours: 40,
     },
@@ -96,7 +96,7 @@ const WorkHours: React.FC = () => {
       form.reset({
         ...parsedSettings,
         // Ensure numbers are parsed correctly if stored as strings
-        breakDurationHours: parseFloat(parsedSettings.breakDurationHours) || 0,
+        breakDurationMinutes: parseFloat(parsedSettings.breakDurationMinutes) || 0, // Changed to breakDurationMinutes
         overtimeThresholdHours: parseFloat(parsedSettings.overtimeThresholdHours) || 0,
         // Ensure new fields are initialized if not present
         fridayStartTime: parsedSettings.fridayStartTime || "",
@@ -117,20 +117,22 @@ const WorkHours: React.FC = () => {
   const dailyEndTime = form.watch("dailyEndTime");
   const fridayStartTime = form.watch("fridayStartTime");
   const fridayEndTime = form.watch("fridayEndTime");
-  const breakDurationHours = form.watch("breakDurationHours");
+  const breakDurationMinutes = form.watch("breakDurationMinutes"); // Changed to breakDurationMinutes
 
   const isFridaySelected = selectedWorkDays.includes("Friday");
 
   const weeklyTotalHours = useMemo(() => {
     if (!dailyStartTime || !dailyEndTime || !selectedWorkDays) return 0;
 
-    const defaultDailyWorkMinutes = (timeToMinutes(dailyEndTime) - timeToMinutes(dailyStartTime)) - ((breakDurationHours || 0) * 60);
+    const breakDurationHours = (breakDurationMinutes || 0) / 60; // Convert minutes to hours
+
+    const defaultDailyWorkMinutes = (timeToMinutes(dailyEndTime) - timeToMinutes(dailyStartTime)) - (breakDurationHours * 60);
     const defaultDailyWorkHours = Math.max(0, defaultDailyWorkMinutes / 60);
 
     let totalHours = 0;
     selectedWorkDays.forEach(day => {
       if (day === "Friday" && isFridaySelected && fridayStartTime && fridayEndTime) {
-        const fridayWorkMinutes = (timeToMinutes(fridayEndTime) - timeToMinutes(fridayStartTime)) - ((breakDurationHours || 0) * 60);
+        const fridayWorkMinutes = (timeToMinutes(fridayEndTime) - timeToMinutes(fridayStartTime)) - (breakDurationHours * 60);
         totalHours += Math.max(0, fridayWorkMinutes / 60);
       } else {
         totalHours += defaultDailyWorkHours;
@@ -138,7 +140,7 @@ const WorkHours: React.FC = () => {
     });
     
     return totalHours;
-  }, [dailyStartTime, dailyEndTime, fridayStartTime, fridayEndTime, breakDurationHours, selectedWorkDays, isFridaySelected]);
+  }, [dailyStartTime, dailyEndTime, fridayStartTime, fridayEndTime, breakDurationMinutes, selectedWorkDays, isFridaySelected]);
 
   return (
     <Card>
@@ -180,16 +182,16 @@ const WorkHours: React.FC = () => {
               </div>
             </div>
             <div>
-              <Label htmlFor="breakDurationHours">Break Duration (Hours)</Label>
+              <Label htmlFor="breakDurationMinutes">Break Duration (Minutes)</Label> {/* Changed label */}
               <Input
-                id="breakDurationHours"
+                id="breakDurationMinutes"
                 type="number"
-                step="0.5"
-                {...form.register("breakDurationHours", { valueAsNumber: true })}
+                step="1" // Changed step to 1 for minutes
+                {...form.register("breakDurationMinutes", { valueAsNumber: true })}
                 className="mt-1"
               />
-              {form.formState.errors.breakDurationHours && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.breakDurationHours.message}</p>
+              {form.formState.errors.breakDurationMinutes && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.breakDurationMinutes.message}</p>
               )}
             </div>
           </div>
