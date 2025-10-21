@@ -23,6 +23,8 @@ const timeToMinutes = (time: string): number => {
 const workHoursSchema = z.object({
   dailyStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").min(1, "Start time is required"),
   dailyEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").min(1, "End time is required"),
+  fridayStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").optional().or(z.literal('')),
+  fridayEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").optional().or(z.literal('')),
   breakDurationHours: z.preprocess(
     (val) => (val === "" || isNaN(Number(val))) ? undefined : val,
     z.number().min(0, "Break duration cannot be negative").max(8, "Break duration cannot exceed 8 hours").optional()
@@ -43,6 +45,29 @@ const workHoursSchema = z.object({
       path: ["dailyEndTime"],
     });
   }
+
+  if (data.fridayStartTime && data.fridayEndTime) {
+    const fridayStartTimeInMinutes = timeToMinutes(data.fridayStartTime);
+    const fridayEndTimeInMinutes = timeToMinutes(data.fridayEndTime);
+    if (fridayEndTimeInMinutes <= fridayStartTimeInMinutes) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Friday End Time must be after Friday Start Time.",
+        path: ["fridayEndTime"],
+      });
+    }
+  } else if ((data.fridayStartTime && !data.fridayEndTime) || (!data.fridayStartTime && data.fridayEndTime)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Both Friday Start and End times are required if one is provided.",
+      path: ["fridayStartTime"],
+    });
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Both Friday Start and End times are required if one is provided.",
+      path: ["fridayEndTime"],
+    });
+  }
 });
 
 type WorkHoursFormValues = z.infer<typeof workHoursSchema>;
@@ -55,6 +80,8 @@ const WorkHours: React.FC = () => {
     defaultValues: {
       dailyStartTime: "09:00",
       dailyEndTime: "17:00",
+      fridayStartTime: "",
+      fridayEndTime: "",
       breakDurationHours: 1,
       workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       overtimeThresholdHours: 40,
@@ -71,6 +98,9 @@ const WorkHours: React.FC = () => {
         // Ensure numbers are parsed correctly if stored as strings
         breakDurationHours: parseFloat(parsedSettings.breakDurationHours) || 0,
         overtimeThresholdHours: parseFloat(parsedSettings.overtimeThresholdHours) || 0,
+        // Ensure new fields are initialized if not present
+        fridayStartTime: parsedSettings.fridayStartTime || "",
+        fridayEndTime: parsedSettings.fridayEndTime || "",
       });
     }
   }, [form]);
@@ -85,21 +115,30 @@ const WorkHours: React.FC = () => {
   const selectedWorkDays = form.watch("workDays");
   const dailyStartTime = form.watch("dailyStartTime");
   const dailyEndTime = form.watch("dailyEndTime");
+  const fridayStartTime = form.watch("fridayStartTime");
+  const fridayEndTime = form.watch("fridayEndTime");
   const breakDurationHours = form.watch("breakDurationHours");
+
+  const isFridaySelected = selectedWorkDays.includes("Friday");
 
   const weeklyTotalHours = useMemo(() => {
     if (!dailyStartTime || !dailyEndTime || !selectedWorkDays) return 0;
 
-    const startMinutes = timeToMinutes(dailyStartTime);
-    const endMinutes = timeToMinutes(dailyEndTime);
+    const defaultDailyWorkMinutes = (timeToMinutes(dailyEndTime) - timeToMinutes(dailyStartTime)) - ((breakDurationHours || 0) * 60);
+    const defaultDailyWorkHours = Math.max(0, defaultDailyWorkMinutes / 60);
 
-    if (endMinutes <= startMinutes) return 0; // Invalid time range
-
-    const dailyWorkMinutes = (endMinutes - startMinutes) - ((breakDurationHours || 0) * 60);
-    const dailyWorkHours = Math.max(0, dailyWorkMinutes / 60); // Ensure non-negative
+    let totalHours = 0;
+    selectedWorkDays.forEach(day => {
+      if (day === "Friday" && isFridaySelected && fridayStartTime && fridayEndTime) {
+        const fridayWorkMinutes = (timeToMinutes(fridayEndTime) - timeToMinutes(fridayStartTime)) - ((breakDurationHours || 0) * 60);
+        totalHours += Math.max(0, fridayWorkMinutes / 60);
+      } else {
+        totalHours += defaultDailyWorkHours;
+      }
+    });
     
-    return dailyWorkHours * selectedWorkDays.length;
-  }, [dailyStartTime, dailyEndTime, breakDurationHours, selectedWorkDays]);
+    return totalHours;
+  }, [dailyStartTime, dailyEndTime, fridayStartTime, fridayEndTime, breakDurationHours, selectedWorkDays, isFridaySelected]);
 
   return (
     <Card>
@@ -113,7 +152,7 @@ const WorkHours: React.FC = () => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           {/* Daily Hours */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Daily Schedule</h3>
+            <h3 className="text-lg font-semibold">Daily Schedule (Monday - Thursday, Saturday - Sunday)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="dailyStartTime">Daily Start Time</Label>
@@ -154,6 +193,42 @@ const WorkHours: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Friday Specific Hours */}
+          {isFridaySelected && (
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="text-lg font-semibold">Friday Schedule (Optional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Specify different start/end times for Fridays. If left blank, the daily schedule above will apply.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="fridayStartTime">Friday Start Time</Label>
+                  <Input
+                    id="fridayStartTime"
+                    type="time"
+                    {...form.register("fridayStartTime")}
+                    className="mt-1"
+                  />
+                  {form.formState.errors.fridayStartTime && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.fridayStartTime.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="fridayEndTime">Friday End Time</Label>
+                  <Input
+                    id="fridayEndTime"
+                    type="time"
+                    {...form.register("fridayEndTime")}
+                    className="mt-1"
+                  />
+                  {form.formState.errors.fridayEndTime && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.fridayEndTime.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Work Days */}
           <div className="space-y-4">
