@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
-import { useWorkHoursSettings } from "@/hooks/use-work-hours-settings"; // Import the new hook
+import { useWorkHoursSettings, WorkHoursSettings } from "@/hooks/use-work-hours-settings"; // Import WorkHoursSettings
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor for isMockDataEnabled
 import { useAuth } from "@/context/AuthContext"; // Import useAuth for permissions
 
@@ -122,10 +122,17 @@ const WorkHours: React.FC = () => {
 
   const onSubmit = async (data: WorkHoursFormValues) => {
     if (user?.id) {
-      await saveWorkHoursSettings({
-        ...data,
+      const settingsToSave: Omit<WorkHoursSettings, 'id' | 'userId'> & { id?: string } = {
         id: workHoursSettings?.id, // Pass existing ID for update
-      });
+        dailyStartTime: data.dailyStartTime,
+        dailyEndTime: data.dailyEndTime,
+        fridayStartTime: data.fridayStartTime || undefined,
+        fridayEndTime: data.fridayEndTime || undefined,
+        breakDurationMinutes: data.breakDurationMinutes || undefined,
+        workDays: data.workDays,
+        overtimeThresholdHours: data.overtimeThresholdHours || undefined,
+      };
+      await saveWorkHoursSettings(settingsToSave);
       window.dispatchEvent(new Event('workHoursSettingsUpdated')); // Notify other components
     } else {
       showError("User not authenticated. Cannot save settings.");
