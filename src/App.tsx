@@ -19,8 +19,30 @@ import ToDosPage from "./pages/ToDosPage";
 import Login from "./pages/Login";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import React from "react"; // Ensure React is imported for the component
+import { usePayrollProcessor } from "./hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const queryClient = new QueryClient();
+
+// Create a wrapper component to handle the dynamic title
+const TitleUpdater = () => {
+  const { companyDetails, isLoadingCompanyDetails } = usePayrollProcessor();
+
+  React.useEffect(() => {
+    const titleElement = document.getElementById("app-title");
+    if (titleElement) {
+      if (isLoadingCompanyDetails) {
+        titleElement.innerText = "Loading...";
+      } else if (companyDetails?.companyLegalName || companyDetails?.companyTradingName) {
+        titleElement.innerText = companyDetails.companyLegalName || companyDetails.companyTradingName || "Payroll App";
+      } else {
+        titleElement.innerText = "Payroll App";
+      }
+    }
+  }, [companyDetails, isLoadingCompanyDetails]);
+
+  return null; // This component doesn't render anything visible
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -29,6 +51,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <TitleUpdater /> {/* Render TitleUpdater inside AuthProvider */}
           <Routes>
             <Route path="/login" element={<Login />} />
 
