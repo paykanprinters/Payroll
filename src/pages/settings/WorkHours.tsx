@@ -125,7 +125,6 @@ const WorkHours: React.FC = () => {
       await saveWorkHoursSettings({
         ...data,
         id: workHoursSettings?.id, // Pass existing ID for update
-        userId: user.id,
       });
       window.dispatchEvent(new Event('workHoursSettingsUpdated')); // Notify other components
     } else {
