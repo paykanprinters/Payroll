@@ -335,7 +335,7 @@ export const generatePayslipsForPeriod = (
   userTaxSettings: UserTaxSettings | null // New parameter for user tax settings
 ): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[] } => {
   console.log(`[generatePayslipsForPeriod] START for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
-  console.log(`[generatePayslipsForPeriod] Number of employees: ${employees.length}`);
+  console.log(`[generatePayslipsForPeriod] Number of employees to process in this call: ${employees.length}`); // Corrected log
   console.log(`[generatePayslipsForPeriod] Received taxTables:`, taxTables);
   console.log(`[generatePayslipsForPeriod] Received userTaxSettings:`, userTaxSettings); // ADDED THIS LOG
   console.log(`[generatePayslipsForPeriod] All timesheets received (${timesheets.length}):`, timesheets.map(ts => ({ id: ts.id, employeeId: ts.employeeId, date: ts.date, status: ts.status })));
@@ -450,39 +450,41 @@ export const generateMockPayslips = (
   const processingLoansForMock: Loan[] = JSON.parse(JSON.stringify(initialLoans));
   const processingSavingPlansForMock: SavingPlan[] = JSON.parse(JSON.stringify(initialSavingPlans));
 
-  employees.forEach(emp => {
-    let ytdGrossEarnings = 0;
-    let ytdTotalDeductions = 0;
+  // Iterate through each month
+  for (let month = 0; month <= currentMonthIndex; month++) {
+    const monthDate = new Date(currentYear, month, 1);
+    const payPeriodStart = monthDate;
+    const payPeriodEnd = new Date(currentYear, month + 1, 0);
 
-    for (let month = 0; month <= currentMonthIndex; month++) {
-      const monthDate = new Date(currentYear, month, 1);
-      const payPeriodStart = monthDate;
-      const payPeriodEnd = new Date(currentYear, month + 1, 0);
+    // Call generatePayslipsForPeriod ONCE for all employees for this month
+    const { payslips: monthlyPayslips } = generatePayslipsForPeriod(
+      employees, // Pass ALL employees
+      processingLoansForMock,
+      processingSavingPlansForMock,
+      leaveRecords,
+      timesheets,
+      payPeriodStart,
+      payPeriodEnd,
+      taxTables,
+      userTaxSettings // Pass user tax settings
+    );
 
-      const { payslips: monthlyPayslips } = generatePayslipsForPeriod( // Destructure payslips
-        [emp],
-        processingLoansForMock, // Pass mutable copy
-        processingSavingPlansForMock, // Pass mutable copy
-        leaveRecords,
-        timesheets,
-        payPeriodStart,
-        payPeriodEnd,
-        taxTables,
-        userTaxSettings // Pass user tax settings
-      );
+    // Now, process the payslips generated for this month to calculate YTD values
+    monthlyPayslips.forEach(payslip => {
+      // Find the last payslip for this specific employee to get previous YTD
+      const employeePreviousPayslips = allPayslips.filter(p => p.employeeId === payslip.employeeId)
+                                                  .sort((a, b) => a.payPeriod.localeCompare(b.payPeriod));
+      const lastPayslipForEmployee = employeePreviousPayslips.length > 0 ? employeePreviousPayslips[employeePreviousPayslips.length - 1] : null;
 
-      if (monthlyPayslips.length > 0) {
-        const payslip = monthlyPayslips[0];
-        ytdGrossEarnings += payslip.grossEarnings;
-        ytdTotalDeductions += payslip.totalDeductions;
+      const ytdGrossEarnings = (lastPayslipForEmployee?.ytdGrossEarnings || 0) + payslip.grossEarnings;
+      const ytdTotalDeductions = (lastPayslipForEmployee?.ytdTotalDeductions || 0) + payslip.totalDeductions;
 
-        allPayslips.push({
-          ...payslip,
-          ytdGrossEarnings: ytdGrossEarnings,
-          ytdTotalDeductions: ytdTotalDeductions,
-        });
-      }
-    }
-  });
+      allPayslips.push({
+        ...payslip,
+        ytdGrossEarnings: ytdGrossEarnings,
+        ytdTotalDeductions: ytdTotalDeductions,
+      });
+    });
+  }
   return allPayslips;
 };
