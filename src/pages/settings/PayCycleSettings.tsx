@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
-import { usePayCycleSettings, PayCycleSettings } from "@/hooks/use-pay-cycle-settings";
+import { usePayCycleSettings } from "@/hooks/use-pay-cycle-settings";
+import { PayCycleSettings } from "@/integrations/supabase/pay-cycle-queries"; // Corrected import path
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -65,6 +66,7 @@ const PayCycleSettingsPage: React.FC = () => {
         payDayOffset: data.payDayOffset,
       };
       await savePayCycleSettings(settingsToSave);
+      window.dispatchEvent(new Event('payCycleSettingsUpdated')); // Notify other components
     } else {
       showError("User not authenticated. Cannot save settings.");
     }
