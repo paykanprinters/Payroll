@@ -1,9 +1,9 @@
 import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO, isWithinInterval } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
-import { TaxTables } from "@/hooks/use-tax-tables"; // Import TaxTables interface
-import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations"; // Import from new utility
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
-import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
+import { TaxTables } from "@/hooks/use-tax-tables";
+import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations";
+import { v4 as uuidv4 } from 'uuid';
+import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 
 /**
  * Calculates earnings for an employee for a given pay period.
@@ -19,7 +19,7 @@ const calculateEarnings = (
   let totalOvertimeAmount = 0;
   let unpaidLeaveDaysInPeriod = 0;
 
-  // Calculate total approved regular and overtime hours from timesheets
+  // Aggregate regular and overtime hours from approved timesheets
   let totalApprovedRegularHours = 0;
   let totalApprovedOvertimeHours = 0;
   approvedTimesheetsForPeriod.forEach(ts => {
@@ -27,26 +27,15 @@ const calculateEarnings = (
     totalApprovedOvertimeHours += ts.overtimeHours;
   });
 
-  console.log(`[calculateEarnings] Employee: ${emp.firstName} ${emp.lastName} (${emp.id})`);
-  console.log(`[calculateEarnings] Pay Period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
-  console.log(`[calculateEarnings] Total Approved Regular Hours: ${totalApprovedRegularHours}`);
-  console.log(`[calculateEarnings] Total Approved Overtime Hours: ${totalApprovedOvertimeHours}`);
-  console.log(`[calculateEarnings] Employee Hourly Rate: ${emp.hourlyRate}`);
-  console.log(`[calculateEarnings] Employee Salary: ${emp.salary}`);
-  console.log(`[calculateEarnings] Employee Employment Type: ${emp.employmentType}`);
-
   // Determine basic salary based on hourly rate or fixed salary
-  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) { // Added check for > 0
-    // If hourly rate is defined, use it for basic salary calculation
+  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) {
+    // For hourly employees, basic salary is based on approved regular hours
     basicSalary = totalApprovedRegularHours * emp.hourlyRate;
-    console.log(`[calculateEarnings] Hourly employee basicSalary calculated: ${basicSalary} (Hours: ${totalApprovedRegularHours} * Rate: ${emp.hourlyRate})`);
-  } else if (emp.salary !== undefined && emp.salary !== null && emp.salary > 0) { // Added check for > 0
-    // If salary is defined, use it
+  } else if (emp.salary !== undefined && emp.salary !== null && emp.salary > 0) {
+    // For salaried employees, use their fixed salary
     basicSalary = emp.salary;
-    console.log(`[calculateEarnings] Salaried employee basicSalary: ${basicSalary}`);
   } else {
-    // Fallback if neither salary nor hourly rate is explicitly defined (should ideally not happen with validation)
-    console.warn(`[calculateEarnings] Employee ${emp.firstName} ${emp.lastName} has neither valid salary nor hourly rate defined. Basic salary set to 0.`);
+    // Fallback if neither valid salary nor hourly rate is defined
     basicSalary = 0;
   }
 
@@ -55,57 +44,63 @@ const calculateEarnings = (
     const employeeUnpaidLeave = leaveRecords.filter(rec =>
       rec.employeeId === emp.id &&
       rec.leaveType === "Unpaid Leave" &&
-      isWithinInterval(new Date(rec.startDate), { start: payPeriodStart, end: payPeriodEnd })
+      // Check if leave period overlaps with the pay period
+      (isWithinInterval(new Date(rec.startDate), { start: payPeriodStart, end: payPeriodEnd }) ||
+      isWithinInterval(new Date(rec.endDate), { start: payPeriodStart, end: payPeriodEnd }) ||
+      (new Date(rec.startDate) < payPeriodStart && new Date(rec.endDate) > payPeriodEnd))
     );
+    
     employeeUnpaidLeave.forEach(rec => {
       const leaveStart = new Date(rec.startDate);
       const leaveEnd = new Date(rec.endDate);
+      // Calculate the overlap interval
       const overlapStart = leaveStart > payPeriodStart ? leaveStart : payPeriodStart;
       const overlapEnd = leaveEnd < payPeriodEnd ? leaveEnd : payPeriodEnd;
       unpaidLeaveDaysInPeriod += calculateWorkingDays(overlapStart, overlapEnd);
     });
 
     if (unpaidLeaveDaysInPeriod > 0) {
-      // Assuming 20 working days in a month for daily rate calculation from monthly salary
-      // Or if hourly, calculate based on standard daily hours
       let dailyRate = 0;
-      if (emp.salary) {
-        dailyRate = emp.salary / 20; // Assuming 20 working days in a month
-      } else if (emp.hourlyRate && emp.standardDailyHours) {
+      if (emp.salary && emp.payFrequency === "Monthly" && emp.salary > 0) {
+        // For monthly salaried employees, assume 20 working days in a month for daily rate
+        dailyRate = emp.salary / 20;
+      } else if (emp.hourlyRate && emp.hourlyRate > 0 && emp.standardDailyHours !== undefined && emp.standardDailyHours !== null && emp.standardDailyHours > 0) {
+        // For hourly employees, daily rate is hourly rate * standard daily hours
         dailyRate = emp.hourlyRate * emp.standardDailyHours;
       }
       
       if (dailyRate > 0) {
         basicSalary -= dailyRate * unpaidLeaveDaysInPeriod;
-        console.log(`[calculateEarnings] Deducted ${unpaidLeaveDaysInPeriod} unpaid leave days. New basicSalary: ${basicSalary}`);
       }
     }
   }
 
-
   // Calculate overtime amount
-  if (totalApprovedOvertimeHours > 0) { // THIS LINE WAS CHANGED
-    const effectiveHourlyRate = emp.hourlyRate || (emp.salary ? (emp.salary / (20 * (emp.standardDailyHours || 8))) : 0);
+  if (totalApprovedOvertimeHours > 0) {
+    let effectiveHourlyRate = 0;
+    if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) {
+      effectiveHourlyRate = emp.hourlyRate;
+    } else if (emp.salary !== undefined && emp.salary !== null && emp.salary > 0 && emp.standardDailyHours !== undefined && emp.standardDailyHours !== null && emp.standardDailyHours > 0) {
+      // For salaried employees, derive an effective hourly rate for overtime calculation
+      // Assuming 20 working days in a month and standard daily hours
+      effectiveHourlyRate = emp.salary / (20 * emp.standardDailyHours);
+    }
+
     if (effectiveHourlyRate > 0) {
       totalOvertimeAmount = totalApprovedOvertimeHours * effectiveHourlyRate * 1.5; // 1.5x for overtime
-      console.log(`[calculateEarnings] Overtime amount calculated: ${totalApprovedOvertimeHours} hours * R ${effectiveHourlyRate.toFixed(2)}/hr * 1.5 = R ${totalOvertimeAmount.toFixed(2)}`);
-    } else {
-      console.log(`[calculateEarnings] No effective hourly rate for overtime calculation.`);
     }
-  } else {
-    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalApprovedOvertimeHours}`);
   }
 
   const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
   if (totalOvertimeAmount > 0) {
     earningsBreakdown.push({ name: "Overtime", amount: totalOvertimeAmount });
   }
+  // Mock bonus logic, keep as is for now
   if (emp.id === "EMP004" && isSameMonth(payPeriodStart, new Date())) {
     earningsBreakdown.push({ name: "Bonus", amount: 2000 });
   }
 
   const grossEarnings = earningsBreakdown.reduce((sum, e) => sum + e.amount, 0);
-  console.log(`[calculateEarnings] Final Gross Earnings: ${grossEarnings}`);
   return { earningsBreakdown, grossEarnings, unpaidLeaveDaysInPeriod };
 };
 
@@ -127,55 +122,34 @@ const calculateDeductions = (
   let totalDeductions = 0;
   const deductionsBreakdown: { name: string; amount: number }[] = [];
 
-  console.log(`[calculateDeductions] Employee: ${emp.firstName} ${emp.lastName} (${emp.id})`);
-  console.log(`[calculateDeductions] Gross Earnings: ${grossEarnings}`);
-  console.log(`[calculateDeductions] userTaxSettings:`, userTaxSettings);
-  console.log(`[calculateDeductions] taxTables:`, taxTables);
-
-  // Use userTaxSettings for flags, fallback to true if settings not loaded (shouldn't happen in live)
   const applyPAYEFlag = userTaxSettings?.applyPaye ?? true;
   const applySDLFlag = userTaxSettings?.applySdl ?? true;
 
-  console.log(`[calculateDeductions] applyPAYEFlag: ${applyPAYEFlag}`);
-  console.log(`[calculateDeductions] applySDLFlag: ${applySDLFlag}`);
-
   const { payeBrackets, uifSdlRates } = taxTables;
-  console.log(`[calculateDeductions] payeBrackets length: ${payeBrackets.length}`);
-  console.log(`[calculateDeductions] payeBrackets content:`, payeBrackets); // Log content
-  console.log(`[calculateDeductions] uifSdlRates:`, uifSdlRates);
 
-  if (payeBrackets.length > 0 && applyPAYEFlag) {
-    console.log(`[calculateDeductions] Condition met for PAYE calculation.`);
+  // PAYE (Pay As You Earn)
+  if (payeBrackets && payeBrackets.length > 0 && applyPAYEFlag) {
     const paye = calculatePAYE(grossEarnings, payeBrackets);
-    console.log(`[calculateDeductions] Calculated PAYE for ${emp.firstName} ${emp.lastName}: R ${paye.toFixed(2)}`); // ADDED THIS LOG
-    if (paye > 0) { // Only add if PAYE is a positive amount
+    if (paye > 0) {
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
-      console.log(`[calculateDeductions] PAYE added to breakdown: R ${paye.toFixed(2)}`);
-    } else {
-      console.log(`[calculateDeductions] PAYE calculated as 0 or negative for ${emp.firstName} ${emp.lastName}, not added to breakdown.`);
     }
-  } else {
-    console.log(`[calculateDeductions] PAYE not applied for ${emp.firstName} ${emp.lastName}. payeBrackets.length: ${payeBrackets.length}, applyPAYEFlag: ${applyPAYEFlag}`);
   }
 
+  // UIF (Unemployment Insurance Fund) & SDL (Skills Development Levy)
   if (uifSdlRates) {
     const uif = Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap);
     deductionsBreakdown.push({ name: "UIF", amount: uif });
     totalDeductions += uif;
-    console.log(`[calculateDeductions] UIF added to breakdown: R ${uif.toFixed(2)}`);
 
     if (applySDLFlag) {
       const sdl = grossEarnings * uifSdlRates.sdl_rate;
       deductionsBreakdown.push({ name: "SDL", amount: sdl });
       totalDeductions += sdl;
-      console.log(`[calculateDeductions] SDL added to breakdown: R ${sdl.toFixed(2)}`);
-    } else {
-      console.log(`[calculateDeductions] SDL not applied for ${emp.firstName} ${emp.lastName}. applySDLFlag: ${applySDLFlag}`);
     }
   } else {
-    console.warn("UIF/SDL rates not loaded, using mock values for payslip generation.");
-    const uif = Math.min(grossEarnings * 0.01, 177.12);
+    // Fallback for UIF/SDL if rates are not loaded (should ideally not happen in live mode)
+    const uif = Math.min(grossEarnings * 0.01, 177.12); // Mock UIF cap
     deductionsBreakdown.push({ name: "UIF", amount: uif });
     totalDeductions += uif;
     if (applySDLFlag) {
@@ -185,9 +159,23 @@ const calculateDeductions = (
     }
   }
 
+  // Helper to determine if the current pay period is a "full" period for a given frequency
+  const isFullPeriod = (frequency: "monthly" | "weekly", periodStart: Date, periodEnd: Date): boolean => {
+    if (frequency === "monthly") {
+      // A full month period starts on the 1st and ends on the last day of the same month
+      return format(periodStart, 'dd') === '01' && isSameMonth(periodStart, periodEnd) && format(periodEnd, 'dd') === format(new Date(periodEnd.getFullYear(), periodEnd.getMonth() + 1, 0), 'dd');
+    } else if (frequency === "weekly") {
+      // A full week period is exactly 7 days (difference in days is 6)
+      return (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6;
+    }
+    return false;
+  };
+
   // Process Loan Deductions
-  processingLoans.forEach(loan => { // Use processingLoans
+  processingLoans.forEach(loan => {
+    // Check if loan is for this employee, not completed, and its start date is within or before the pay period end
     if (loan.employeeId === emp.id && loan.status !== "completed" && new Date(loan.startDate) <= payPeriodEnd) {
+      // If loan is paused, record the pause and reset status for next period
       if (loan.paused) {
         const pauseEntry: LoanDeductionHistoryEntry = {
           date: format(payPeriodEnd, 'yyyy-MM-dd'),
@@ -196,28 +184,31 @@ const calculateDeductions = (
           notes: `Deduction paused for pay period ${payPeriodString}`,
         };
         loan.deductionHistory.push(pauseEntry);
-        loan.paused = false; // Reset paused status after processing
-        return;
+        loan.paused = false; // Reset paused status after processing for this period
+        return; // Skip deduction for this period
       }
 
       let deductionAmount = 0;
-      if (loan.frequency === "monthly" && emp.payFrequency === "Monthly") {
-        const isFullMonthPeriod = format(payPeriodStart, 'dd') === '01' && isSameMonth(payPeriodStart, payPeriodEnd);
-        if (isFullMonthPeriod) {
+      const employeePayFrequency = emp.payFrequency?.toLowerCase(); // Ensure consistency
+
+      if (loan.frequency === employeePayFrequency) {
+        // Direct match: loan frequency matches employee's pay frequency
+        if (isFullPeriod(loan.frequency, payPeriodStart, payPeriodEnd)) {
           deductionAmount = loan.repaymentAmount;
         }
-      } else if (loan.frequency === "weekly" && (emp.payFrequency === "Weekly" || emp.payFrequency === "Bi-Weekly")) {
-        const isMonthlyPayslipPeriod = format(payPeriodStart, 'dd') === '01' && isSameMonth(payPeriodStart, payPeriodEnd);
-        if (isMonthlyPayslipPeriod) {
-          deductionAmount = loan.repaymentAmount * 4;
-        } else {
-            // Check if the period is a full week (7 days inclusive, so 6 difference)
-            const isFullWeekPeriod = (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6;
-            if (isFullWeekPeriod) {
-                deductionAmount = loan.repaymentAmount;
-            }
+      } else if (employeePayFrequency === "monthly" && loan.frequency === "weekly") {
+        // Monthly paid employee with a weekly loan deduction
+        if (isFullPeriod("monthly", payPeriodStart, payPeriodEnd)) {
+          deductionAmount = loan.repaymentAmount * 4; // Assume 4 weeks in a month for simplification
+        }
+      } else if (employeePayFrequency === "bi-weekly" && loan.frequency === "weekly") {
+        // Bi-weekly paid employee with a weekly loan deduction
+        // Assume a bi-weekly payslip covers two weekly deductions
+        if (isFullPeriod("weekly", payPeriodStart, payPeriodEnd)) { // Check if the current period is a full week
+            deductionAmount = loan.repaymentAmount * 2; // Apply two weekly deductions
         }
       }
+      // Other frequency mismatches are not handled by this simplified logic, resulting in 0 deduction.
 
       if (deductionAmount > 0) {
         deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: deductionAmount });
@@ -238,28 +229,29 @@ const calculateDeductions = (
     }
   });
 
-  // Process Savings Deductions
-  processingSavingPlans.forEach(plan => { // Use processingSavingPlans
+  // Process Savings Deductions (similar logic to loans)
+  processingSavingPlans.forEach(plan => {
+    // Check if saving plan is for this employee, active, and its start date is within or before the pay period end
     if (plan.employeeId === emp.id && plan.status === "active" && new Date(plan.startDate) <= payPeriodEnd) {
+      // Check if the plan has an end date and if it's already passed the current pay period start
       if (!plan.endDate || new Date(plan.endDate) >= payPeriodStart) {
         let deductionAmount = 0;
-        if (plan.frequency === "monthly" && emp.payFrequency === "Monthly") {
-          const isFullMonthPeriod = format(payPeriodStart, 'dd') === '01' && isSameMonth(payPeriodStart, payPeriodEnd);
-          if (isFullMonthPeriod) {
+        const employeePayFrequency = emp.payFrequency?.toLowerCase();
+
+        if (plan.frequency === employeePayFrequency) {
+          if (isFullPeriod(plan.frequency, payPeriodStart, payPeriodEnd)) {
             deductionAmount = plan.amount;
           }
-        } else if (plan.frequency === "weekly" && (emp.payFrequency === "Weekly" || emp.payFrequency === "Bi-Weekly")) {
-          const isMonthlyPayslipPeriod = format(payPeriodStart, 'dd') === '01' && isSameMonth(payPeriodStart, payPeriodEnd);
-          if (isMonthlyPayslipPeriod) {
+        } else if (employeePayFrequency === "monthly" && plan.frequency === "weekly") {
+          if (isFullPeriod("monthly", payPeriodStart, payPeriodEnd)) {
             deductionAmount = plan.amount * 4;
-          } else {
-            const isFullWeekPeriod = (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6;
-            if (isFullWeekPeriod) {
-              deductionAmount = plan.amount;
-            }
           }
+        } else if (employeePayFrequency === "bi-weekly" && plan.frequency === "weekly") {
+            if (isFullPeriod("weekly", payPeriodStart, payPeriodEnd)) {
+                deductionAmount = plan.amount * 2;
+            }
         }
-        
+
         if (deductionAmount > 0) {
           deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: deductionAmount });
           totalDeductions += deductionAmount;
@@ -267,8 +259,6 @@ const calculateDeductions = (
       }
     }
   });
-  console.log(`[calculateDeductions] Final deductionsBreakdown:`, deductionsBreakdown);
-  console.log(`[calculateDeductions] Final totalDeductions: ${totalDeductions}`);
   return { deductionsBreakdown, totalDeductions };
 };
 
@@ -290,19 +280,29 @@ const calculateLeaveSummary = (
     const leaveStart = new Date(rec.startDate);
     const leaveEnd = new Date(rec.endDate);
     
-    if (isWithinInterval(leaveStart, { start: payPeriodStart, end: payPeriodEnd }) || isWithinInterval(leaveEnd, { start: payPeriodStart, end: payPeriodEnd })) {
+    // Check if leave record overlaps with the pay period
+    if (isWithinInterval(leaveStart, { start: payPeriodStart, end: payPeriodEnd }) || 
+        isWithinInterval(leaveEnd, { start: payPeriodStart, end: payPeriodEnd }) ||
+        (leaveStart < payPeriodStart && leaveEnd > payPeriodEnd)) {
+      
       const overlapStart = leaveStart > payPeriodStart ? leaveStart : payPeriodStart;
       const overlapEnd = leaveEnd < payPeriodEnd ? leaveEnd : payPeriodEnd;
-      const daysInPeriod = calculateWorkingDays(overlapStart, overlapEnd);
+      
+      // Count only working days within the overlap
+      const daysInOverlap = eachDayOfInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
 
-      if (rec.leaveType === "Annual Leave") annualLeaveTaken += eachDayOfInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
-      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += eachDayOfInterval({start: overlapEnd, end: overlapEnd}).filter(day => !isWeekend(day)).length;
+      if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInOverlap;
+      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInOverlap;
     }
   });
 
+  // These are mock remaining days. In a real system, these would come from a leave balance system.
+  const mockAnnualLeaveBalance = 20;
+  const mockSickLeaveBalance = 10;
+
   return {
-    annual: 20 - annualLeaveTaken,
-    sick: 10 - sickLeaveTaken,
+    annual: mockAnnualLeaveBalance - annualLeaveTaken,
+    sick: mockSickLeaveBalance - sickLeaveTaken,
     unpaid: unpaidLeaveDaysInPeriod,
   };
 };
@@ -331,19 +331,11 @@ export const generatePayslipsForPeriod = (
   timesheets: TimesheetEntry[],
   payPeriodStart: Date,
   payPeriodEnd: Date,
-  taxTables: TaxTables, // New parameter for tax tables
-  userTaxSettings: UserTaxSettings | null // New parameter for user tax settings
+  taxTables: TaxTables,
+  userTaxSettings: UserTaxSettings | null
 ): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[] } => {
-  console.log(`[generatePayslipsForPeriod] START for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
-  console.log(`[generatePayslipsForPeriod] Number of employees to process in this call: ${employees.length}`); // Corrected log
-  console.log(`[generatePayslipsForPeriod] Received taxTables:`, taxTables);
-  console.log(`[generatePayslipsForPeriod] Received userTaxSettings:`, userTaxSettings); // ADDED THIS LOG
-  console.log(`[generatePayslipsForPeriod] All timesheets received (${timesheets.length}):`, timesheets.map(ts => ({ id: ts.id, employeeId: ts.employeeId, date: ts.date, status: ts.status })));
-
-
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
-  const monthString = format(payPeriodStart, "yyyy-MM");
   const payDateString = format(payPeriodEnd, "dd/MM/yyyy");
 
   // Create deep copies of loans and saving plans to modify during this run
@@ -351,24 +343,13 @@ export const generatePayslipsForPeriod = (
   const processingSavingPlans: SavingPlan[] = JSON.parse(JSON.stringify(initialSavingPlans));
 
   employees.forEach(emp => {
-    console.log(`[generatePayslipsForPeriod] Processing employee: ${emp.firstName} ${emp.lastName} (ID: ${emp.id}, Custom ID: ${emp.customEmployeeId})`);
-    console.log(`[generatePayslipsForPeriod] Employee Pay Frequency: ${emp.payFrequency}`); // ADDED THIS LOG
-    console.log(`[generatePayslipsForPeriod] Employee Salary: ${emp.salary}, Hourly Rate: ${emp.hourlyRate}`); // ADDED THIS LOG
-
+    // Filter timesheets for the current employee and period, including 'Submitted' status
     const approvedTimesheetsForPeriod = timesheets.filter(ts => {
       const isEmployeeMatch = ts.employeeId === emp.id;
-      // MODIFIED: Include "Submitted" status for payroll processing
       const isApprovedOrLockedOrSubmitted = ts.status === "Approved" || ts.status === "Locked" || ts.status === "Submitted";
       const isWithinPeriod = isWithinInterval(parseISO(ts.date), { start: payPeriodStart, end: payPeriodEnd });
-      
-      console.log(`  - Checking timesheet ${ts.id} (Date: ${ts.date}, Status: ${ts.status}) for employee ${emp.id}:`);
-      console.log(`    - Employee match: ${isEmployeeMatch}`);
-      console.log(`    - Is Approved, Locked, or Submitted: ${isApprovedOrLockedOrSubmitted}`); // Update log
-      console.log(`    - Is within period (${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}): ${isWithinPeriod}`);
-      
-      return isEmployeeMatch && isApprovedOrLockedOrSubmitted && isWithinPeriod; // Update return condition
+      return isEmployeeMatch && isApprovedOrLockedOrSubmitted && isWithinPeriod;
     });
-    console.log(`[generatePayslipsForPeriod] Employee: ${emp.firstName} ${emp.lastName} (${emp.id}) - Found ${approvedTimesheetsForPeriod.length} approved/locked/submitted timesheets for period.`);
 
     const { earningsBreakdown, grossEarnings, unpaidLeaveDaysInPeriod } = calculateEarnings(
       emp,
@@ -377,7 +358,6 @@ export const generatePayslipsForPeriod = (
       payPeriodStart,
       payPeriodEnd
     );
-    console.log(`[generatePayslipsForPeriod] Calculated Gross Earnings for ${emp.firstName} ${emp.lastName}: R ${grossEarnings.toFixed(2)}`); // ADDED THIS LOG
 
     const { deductionsBreakdown, totalDeductions } = calculateDeductions(
       emp,
@@ -402,7 +382,7 @@ export const generatePayslipsForPeriod = (
     );
 
     payslipsForPeriod.push({
-      id: uuidv4(), // Use uuidv4 for generating a valid UUID
+      id: uuidv4(),
       employeeId: emp.id,
       payPeriod: payPeriodString,
       payDate: payDateString,
@@ -412,10 +392,9 @@ export const generatePayslipsForPeriod = (
       earningsBreakdown: earningsBreakdown,
       deductionsBreakdown: deductionsBreakdown,
       leaveSummary: leaveSummary,
-      ytdGrossEarnings: 0,
-      ytdTotalDeductions: 0,
+      ytdGrossEarnings: 0, // YTD will be calculated externally
+      ytdTotalDeductions: 0, // YTD will be calculated externally
     });
   });
-  console.log(`[generatePayslipsForPeriod] END for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
   return { payslips: payslipsForPeriod, updatedLoans: processingLoans, updatedSavingPlans: processingSavingPlans };
 };
