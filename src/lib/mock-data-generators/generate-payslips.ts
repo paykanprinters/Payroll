@@ -357,15 +357,15 @@ export const generatePayslipsForPeriod = (
 
     const approvedTimesheetsForPeriod = timesheets.filter(ts => {
       const isEmployeeMatch = ts.employeeId === emp.id;
-      const isApproved = ts.status === "Approved";
+      const isApprovedOrLocked = ts.status === "Approved" || ts.status === "Locked"; // MODIFIED THIS LINE
       const isWithinPeriod = isWithinInterval(parseISO(ts.date), { start: payPeriodStart, end: payPeriodEnd });
       
       console.log(`  - Checking timesheet ${ts.id} (Date: ${ts.date}, Status: ${ts.status}) for employee ${emp.id}:`);
       console.log(`    - Employee match: ${isEmployeeMatch}`);
-      console.log(`    - Is Approved: ${isApproved}`);
+      console.log(`    - Is Approved or Locked: ${isApprovedOrLocked}`); // Update log
       console.log(`    - Is within period (${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}): ${isWithinPeriod}`);
       
-      return isEmployeeMatch && isApproved && isWithinPeriod;
+      return isEmployeeMatch && isApprovedOrLocked && isWithinPeriod; // Update return condition
     });
     console.log(`[generatePayslipsForPeriod] Employee: ${emp.firstName} ${emp.lastName} (${emp.id}) - Found ${approvedTimesheetsForPeriod.length} approved timesheets for period.`);
 
