@@ -19,9 +19,6 @@ const calculateEarnings = (
   let totalOvertimeAmount = 0;
   let unpaidLeaveDaysInPeriod = 0;
 
-  const totalApprovedRegularHours = approvedTimesheetsForPeriod.reduce((sum, ts) => sum + (ts.totalWorkHours - ts.overtimeHours), 0);
-  const totalApprovedOvertimeHours = approvedTimesheetsForPeriod.reduce((sum, ts) => sum + ts.overtimeHours, 0);
-
   console.log(`[calculateEarnings] Employee: ${emp.firstName} ${emp.lastName} (${emp.id})`);
   console.log(`[calculateEarnings] Pay Period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
   console.log(`[calculateEarnings] Total Approved Regular Hours: ${totalApprovedRegularHours}`);
@@ -88,7 +85,7 @@ const calculateEarnings = (
       console.log(`[calculateEarnings] No effective hourly rate for overtime calculation.`);
     }
   } else {
-    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalApprovedOvertimeHours}`);
+    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalOvertimeHours}`);
   }
 
   const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
@@ -136,12 +133,14 @@ const calculateDeductions = (
 
   const { payeBrackets, uifSdlRates } = taxTables;
   console.log(`[calculateDeductions] payeBrackets length: ${payeBrackets.length}`);
+  console.log(`[calculateDeductions] payeBrackets content:`, payeBrackets); // Log content
   console.log(`[calculateDeductions] uifSdlRates:`, uifSdlRates);
 
 
   if (payeBrackets.length > 0 && applyPAYEFlag) {
+    console.log(`[calculateDeductions] Calling calculatePAYE with grossEarnings: ${grossEarnings} and payeBrackets:`, payeBrackets);
     const paye = calculatePAYE(grossEarnings, payeBrackets);
-    console.log(`[calculateDeductions] Calculated PAYE: ${paye}`);
+    console.log(`[calculateDeductions] Calculated PAYE result: ${paye}`);
     if (paye > 0) { // Only add if PAYE is a positive amount
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
