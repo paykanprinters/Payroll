@@ -84,7 +84,7 @@ const calculateEarnings = (
 
 
   // Calculate overtime amount
-  if (totalOvertimeAmount > 0) {
+  if (totalApprovedOvertimeHours > 0) { // THIS LINE WAS CHANGED
     const effectiveHourlyRate = emp.hourlyRate || (emp.salary ? (emp.salary / (20 * (emp.standardDailyHours || 8))) : 0);
     if (effectiveHourlyRate > 0) {
       totalOvertimeAmount = totalApprovedOvertimeHours * effectiveHourlyRate * 1.5; // 1.5x for overtime
