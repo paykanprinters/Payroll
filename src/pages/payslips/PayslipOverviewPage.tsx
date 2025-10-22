@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react"; // Import Loader2 icon
 
 // Import new modular components
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
@@ -40,7 +41,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const PayslipOverviewPage: React.FC = () => {
-  const { employees, payslips, companyDetails } = usePayrollProcessor();
+  const { employees, payslips, companyDetails, isLoadingCompanyDetails } = usePayrollProcessor();
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
@@ -140,6 +141,29 @@ const PayslipOverviewPage: React.FC = () => {
 
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
 
+  if (isLoadingCompanyDetails) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading company details...</span>
+      </div>
+    );
+  }
+
+  if (!companyDetails) {
+    return (
+      <Card className="border-red-500 bg-red-50 text-red-800">
+        <CardHeader>
+          <CardTitle>Company Details Missing</CardTitle>
+          <CardDescription>
+            Company details are required to generate payslips. Please set them up in{" "}
+            <a href="/settings/company-details" className="underline font-semibold">Settings &gt; Company Details</a>.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">Payslip Overview</h1>
@@ -165,22 +189,20 @@ const PayslipOverviewPage: React.FC = () => {
         deductionsBreakdownData={deductionsBreakdownData}
       />
 
-      {companyDetails && (
-        <PayslipGenerationSection
-          employees={employees}
-          payslips={payslips}
-          selectedEmployeeId={selectedEmployeeId}
-          setSelectedEmployeeId={setSelectedEmployeeId}
-          selectedPayslipId={selectedPayslipId}
-          setSelectedPayslipId={setSelectedPayslipId}
-          getEmployeeName={getEmployeeName}
-          payslipDesignSettings={payslipDesignSettings}
-          companyDetails={companyDetails}
-          allEmployees={employees}
-        />
-      )}
+      <PayslipGenerationSection
+        employees={employees}
+        payslips={payslips}
+        selectedEmployeeId={selectedEmployeeId}
+        setSelectedEmployeeId={setSelectedEmployeeId}
+        selectedPayslipId={selectedPayslipId}
+        setSelectedPayslipId={setSelectedPayslipId}
+        getEmployeeName={getEmployeeName}
+        payslipDesignSettings={payslipDesignSettings}
+        companyDetails={companyDetails}
+        allEmployees={employees}
+      />
 
-      {selectedPayslipForPreview && companyDetails && (
+      {selectedPayslipForPreview && (
         <Card>
           <CardHeader>
             <CardTitle>Payslip Preview</CardTitle>
