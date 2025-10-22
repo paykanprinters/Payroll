@@ -290,7 +290,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             {renderParagraph("Employee No", employee.customEmployeeId)} {/* Display customEmployeeId */}
             {renderParagraph("ID No", employee.idNumber)}
             {renderParagraph("Job Title", employee.jobTitle)}
-            {payslipDesignSettings.showHourlyRate && employee.hourlyRate !== undefined && (
+            {payslipDesignSettings.showHourlyRate && employee.hourlyRate !== undefined && employee.hourlyRate !== null && (
               renderParagraph("Hourly Rate", `R ${employee.hourlyRate.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`)
             )}
             {renderParagraph("Tax No", employee.taxReferenceNumber)}
