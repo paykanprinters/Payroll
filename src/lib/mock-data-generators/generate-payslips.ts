@@ -3,6 +3,7 @@ import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry
 import { TaxTables } from "@/hooks/use-tax-tables"; // Import TaxTables interface
 import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations"; // Import from new utility
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
+import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
 
 /**
  * Calculates earnings for an employee for a given pay period.
@@ -113,6 +114,7 @@ const calculateDeductions = (
   processingLoans: Loan[], // Now mutable copy
   processingSavingPlans: SavingPlan[], // Now mutable copy
   taxTables: TaxTables,
+  userTaxSettings: UserTaxSettings | null, // New parameter for user tax settings
   payPeriodStart: Date,
   payPeriodEnd: Date,
   payPeriodString: string
@@ -120,8 +122,9 @@ const calculateDeductions = (
   let totalDeductions = 0;
   const deductionsBreakdown: { name: string; amount: number }[] = [];
 
-  const applyPAYEFlag = localStorage.getItem('applyPAYE') === 'true';
-  const applySDLFlag = localStorage.getItem('applySDL') === 'true';
+  // Use userTaxSettings for flags, fallback to true if settings not loaded (shouldn't happen in live)
+  const applyPAYEFlag = userTaxSettings?.applyPaye ?? true;
+  const applySDLFlag = userTaxSettings?.applySdl ?? true;
 
   const { payeBrackets, uifSdlRates } = taxTables;
 
@@ -302,6 +305,7 @@ const calculateLeaveSummary = (
  * @param payPeriodStart The start date of the target pay period (Date object).
  * @param payPeriodEnd The end date of the target pay period (Date object).
  * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates).
+ * @param userTaxSettings The user-specific tax settings (apply PAYE/SDL flags).
  * @returns An object containing an array of generated MockPayslips for the period,
  *          and the updated loans and saving plans data.
  */
@@ -313,7 +317,8 @@ export const generatePayslipsForPeriod = (
   timesheets: TimesheetEntry[],
   payPeriodStart: Date,
   payPeriodEnd: Date,
-  taxTables: TaxTables // New parameter for tax tables
+  taxTables: TaxTables, // New parameter for tax tables
+  userTaxSettings: UserTaxSettings | null // New parameter for user tax settings
 ): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[] } => {
   console.log(`[generatePayslipsForPeriod] START for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
   console.log(`[generatePayslipsForPeriod] Number of employees: ${employees.length}`);
@@ -350,6 +355,7 @@ export const generatePayslipsForPeriod = (
       processingLoans, // Pass mutable copy
       processingSavingPlans, // Pass mutable copy
       taxTables,
+      userTaxSettings, // Pass user tax settings
       payPeriodStart,
       payPeriodEnd,
       payPeriodString
@@ -394,6 +400,7 @@ export const generatePayslipsForPeriod = (
  * @param leaveRecords All mock leave records.
  * @param timesheets All mock timesheet entries.
  * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates).
+ * @param userTaxSettings The user-specific tax settings (apply PAYE/SDL flags).
  * @returns An array of all generated MockPayslips.
  */
 export const generateMockPayslips = (
@@ -402,7 +409,8 @@ export const generateMockPayslips = (
   initialSavingPlans: SavingPlan[],
   leaveRecords: LeaveEntry[],
   timesheets: TimesheetEntry[],
-  taxTables: TaxTables // New parameter for tax tables
+  taxTables: TaxTables, // New parameter for tax tables
+  userTaxSettings: UserTaxSettings | null // New parameter for user tax settings
 ): MockPayslip[] => {
   const allPayslips: MockPayslip[] = [];
   const currentYear = new Date().getFullYear();
@@ -429,7 +437,8 @@ export const generateMockPayslips = (
         timesheets,
         payPeriodStart,
         payPeriodEnd,
-        taxTables
+        taxTables,
+        userTaxSettings // Pass user tax settings
       );
 
       if (monthlyPayslips.length > 0) {

@@ -23,19 +23,17 @@ import {
   LeaveEntry,
   TimesheetEntry,
 } from "@/lib/mock-data";
-import { usePayrollProcessor, TaxTables } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor and TaxTables
-
+import { usePayrollProcessor, TaxTables } from "@/hooks/use-payroll-processor";
+import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
 
 const MockData: React.FC = () => {
-  const { taxTables, companyDetails } = usePayrollProcessor(); // Get taxTables and companyDetails from usePayrollProcessor
+  const { taxTables, companyDetails } = usePayrollProcessor();
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
-    // Initialize from localStorage on first render
     const initial = localStorage.getItem("isMockDataEnabled") === "true";
     console.log("MockData.tsx: Initializing isMockDataEnabled from localStorage:", initial);
     return initial;
   });
 
-  // Define mock tax tables directly in MockData.tsx for strict isolation
   const internalMockTaxTables: TaxTables = {
     payeBrackets: [
       { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
@@ -53,26 +51,25 @@ const MockData: React.FC = () => {
     },
   };
 
-  // Wrap these functions in useCallback to ensure they are stable
-  const applyMockData = useCallback(() => {
-    // No need to check taxTables here, as we'll use internalMockTaxTables for mock payslips
-    // if (!taxTables) {
-    //   showError("Tax tables not loaded. Cannot generate mock payslips accurately. Please fetch tax tables first.");
-    //   return;
-    // }
+  const internalMockUserTaxSettings: UserTaxSettings = { // Define mock user tax settings
+    userId: 'mock-user',
+    applyPaye: true,
+    applySdl: true,
+    enableIrp5Export: true, // Enable IRP5 export by default in mock
+    irp5ContentFontSize: 12,
+  };
 
+  const applyMockData = useCallback(() => {
     const mockCompany = generateMockCompanyDetails();
     const companyNameForId = mockCompany.companyLegalName || mockCompany.companyTradingName || "Acme Corp";
-    const mockEmployees: MockEmployee[] = generateMockEmployees(companyNameForId); // Pass company name
-    const mockLoans: Loan[] = generateMockLoans(); // Generate new loan structure
+    const mockEmployees: MockEmployee[] = generateMockEmployees(companyNameForId);
+    const mockLoans: Loan[] = generateMockLoans();
     const mockSavingPlans: SavingPlan[] = generateMockSavingPlans();
     const mockLeaveRecords: LeaveEntry[] = generateMockLeaveRecords();
     const mockTimesheets: TimesheetEntry[] = generateMockTimesheets(mockEmployees);
-    // Pass internalMockTaxTables for mock payslip generation
-    const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets, internalMockTaxTables);
+    const mockPayslips: MockPayslip[] = generateMockPayslips(mockEmployees, mockLoans, mockSavingPlans, mockLeaveRecords, mockTimesheets, internalMockTaxTables, internalMockUserTaxSettings); // Pass user tax settings
     const mockToDos = generateMockToDos(mockEmployees, mockPayslips, mockLeaveRecords, mockLoans, mockSavingPlans, mockTimesheets);
 
-    // Store mock company details in localStorage (DO NOT touch Supabase here)
     Object.entries(mockCompany).forEach(([key, value]) => {
       localStorage.setItem(key, String(value));
     });
@@ -80,7 +77,7 @@ const MockData: React.FC = () => {
     console.log("MockData.tsx: localStorage 'isMockDataEnabled' set to 'true'.");
     localStorage.setItem("mockEmployees", JSON.stringify(mockEmployees));
     console.log("MockData.tsx: Saved mockEmployees to localStorage:", mockEmployees);
-    localStorage.setItem("mockLoans", JSON.stringify(mockLoans)); // Store new loan structure
+    localStorage.setItem("mockLoans", JSON.stringify(mockLoans));
     console.log("MockData.tsx: Saved mockLoans to localStorage:", mockLoans);
     localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans));
     console.log("MockData.tsx: Saved mockSavingPlans to localStorage:", mockSavingPlans);
@@ -92,13 +89,14 @@ const MockData: React.FC = () => {
     console.log("MockData.tsx: Saved mockTimesheets to localStorage:", mockTimesheets);
     localStorage.setItem("mockToDos", JSON.stringify(mockToDos));
     console.log("MockData.tsx: Saved mockToDos to localStorage:", mockToDos);
-    localStorage.setItem("applyPAYE", "true");
-    localStorage.setItem("applySDL", "true");
-    // Set new logo properties
+    
+    // Save user tax settings to localStorage
+    localStorage.setItem("userTaxSettings", JSON.stringify(internalMockUserTaxSettings));
+    console.log("MockData.tsx: Saved mock userTaxSettings to localStorage:", internalMockUserTaxSettings);
+
     localStorage.setItem("companyLogoWidth", mockCompany.logoWidth.toString());
     localStorage.setItem("companyLogoHeight", mockCompany.logoHeight.toString());
     localStorage.setItem("companyLogoFit", mockCompany.logoFit);
-    // Set report design settings to true when mock data is enabled
     localStorage.setItem("reportDesignIncludeLogo", "true");
     localStorage.setItem("reportDesignIncludeDetails", "true");
 
@@ -111,10 +109,11 @@ const MockData: React.FC = () => {
     window.dispatchEvent(new CustomEvent('leaveRecordsUpdated', { detail: mockLeaveRecords }));
     window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: mockTimesheets }));
     window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: mockToDos }));
-    window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
-    window.dispatchEvent(new Event('reportDesignUpdated')); // Dispatch event for report design
+    window.dispatchEvent(new Event('allMockDataUpdated'));
+    window.dispatchEvent(new Event('reportDesignUpdated'));
+    window.dispatchEvent(new Event('userTaxSettingsUpdated')); // Dispatch event for user tax settings
     showSuccess("Mock data populated successfully!");
-  }, [internalMockTaxTables]); // Dependency on internalMockTaxTables
+  }, [internalMockTaxTables, internalMockUserTaxSettings]);
 
   const clearMockData = useCallback(() => {
     const mockCompanyKeys: (keyof MockCompanyDetails)[] = [
@@ -125,10 +124,9 @@ const MockData: React.FC = () => {
       "mainContactNumber", "alternativeContactNumber", "companyEmail",
       "companyWebsite", "bankName", "accountholdername", "accountNumber",
       "branchCode", "accountType", "logoUrl",
-      "logoWidth", "logoHeight", "logoFit" // New logo properties
+      "logoWidth", "logoHeight", "logoFit"
     ];
 
-    // Clear mock company details from localStorage (DO NOT touch Supabase here)
     mockCompanyKeys.forEach(key => {
       localStorage.removeItem(key);
     });
@@ -148,9 +146,13 @@ const MockData: React.FC = () => {
     console.log("MockData.tsx: Removed mockTimesheets from localStorage.");
     localStorage.removeItem("mockToDos");
     console.log("MockData.tsx: Removed mockToDos from localStorage.");
+    
+    // Clear user tax settings from localStorage
+    localStorage.removeItem("userTaxSettings");
+    console.log("MockData.tsx: Removed mock userTaxSettings from localStorage.");
+
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
-    // Clear report design settings
     localStorage.removeItem("reportDesignIncludeLogo");
     localStorage.removeItem("reportDesignIncludeDetails");
 
@@ -170,18 +172,16 @@ const MockData: React.FC = () => {
     window.dispatchEvent(new Event('leaveRecordsUpdated'));
     window.dispatchEvent(new Event('timesheetsUpdated'));
     window.dispatchEvent(new Event('toDosUpdated'));
-    window.dispatchEvent(new Event('allMockDataUpdated')); // Dispatch new event
+    window.dispatchEvent(new Event('allMockDataUpdated'));
     window.dispatchEvent(new Event('payslipDesignUpdated'));
-    window.dispatchEvent(new Event('reportDesignUpdated')); // Dispatch event for report design
+    window.dispatchEvent(new Event('reportDesignUpdated'));
+    window.dispatchEvent(new Event('userTaxSettingsUpdated')); // Dispatch event for user tax settings
     showSuccess("Mock data cleared successfully!");
-  }, []); // No dependencies needed as it clears data
+  }, [internalMockTaxTables, internalMockUserTaxSettings]);
 
-  // This useEffect is now only for initial setup, not for reacting to toggle changes
   useEffect(() => {
     const initialMockDataStatus = localStorage.getItem("isMockDataEnabled") === "true";
     setIsMockDataEnabled(initialMockDataStatus);
-    // No need to call applyMockData/clearMockData here, as handleToggleChange will handle it on user interaction.
-    // This prevents a potential loop on initial render if other components also trigger updates.
   }, []);
 
 

@@ -14,7 +14,8 @@ import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { useUserTaxSettings, UserTaxSettings } from "@/hooks/use-user-tax-settings"; // New import
 
 const DEFAULT_IRP5_FONT_SIZE = 12; // Default font size for IRP5 content
 const MIN_IRP5_FONT_SIZE = 10;
@@ -26,14 +27,16 @@ const taxLiabilitiesSchema = z.object({
   applyPAYE: z.boolean().default(false),
   applySDL: z.boolean().default(false),
   enableIrp5Export: z.boolean().default(false),
-  irp5ContentFontSize: z.number().min(MIN_IRP5_FONT_SIZE).max(MAX_IRP5_FONT_SIZE).default(DEFAULT_IRP5_FONT_SIZE), // New field
+  irp5ContentFontSize: z.number().min(MIN_IRP5_FONT_SIZE).max(MAX_IRP5_FONT_SIZE).default(DEFAULT_IRP5_FONT_SIZE),
 });
 
 type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
 
 const TaxLiabilities: React.FC = () => {
-  const { user } = useAuth(); // Get current user for permissions
-  const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
+  const { user } = useAuth();
+  const { isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
+  const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+
   const currentYear = new Date().getFullYear();
   const taxYears = [
     (currentYear - 2).toString(),
@@ -46,33 +49,34 @@ const TaxLiabilities: React.FC = () => {
     resolver: zodResolver(taxLiabilitiesSchema),
     defaultValues: {
       taxYear: currentYear.toString(),
-      applyPAYE: localStorage.getItem('applyPAYE') === 'true',
-      applySDL: localStorage.getItem('applySDL') === 'true',
-      enableIrp5Export: localStorage.getItem('enableIrp5Export') === 'true',
-      irp5ContentFontSize: parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_IRP5_FONT_SIZE.toString()),
+      applyPAYE: false,
+      applySDL: false,
+      enableIrp5Export: false,
+      irp5ContentFontSize: DEFAULT_IRP5_FONT_SIZE,
     },
   });
 
-  // Effect to update form defaults when mock data is toggled or on initial load
+  // Load settings from hook into form
   React.useEffect(() => {
-    const updateFormDefaults = () => {
+    if (userTaxSettings) {
       form.reset({
-        ...form.getValues(), // Keep current taxYear selection
-        applyPAYE: localStorage.getItem('applyPAYE') === 'true',
-        applySDL: localStorage.getItem('applySDL') === 'true',
-        enableIrp5Export: localStorage.getItem('enableIrp5Export') === 'true',
-        irp5ContentFontSize: parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_IRP5_FONT_SIZE.toString()),
+        taxYear: form.getValues("taxYear"), // Keep current taxYear selection
+        applyPAYE: userTaxSettings.applyPaye,
+        applySDL: userTaxSettings.applySdl,
+        enableIrp5Export: userTaxSettings.enableIrp5Export,
+        irp5ContentFontSize: userTaxSettings.irp5ContentFontSize,
       });
-    };
-
-    window.addEventListener('mockDataUpdated', updateFormDefaults);
-    window.addEventListener('irp5SettingsUpdated', updateFormDefaults); // Listen for changes to IRP5 settings
-    updateFormDefaults(); // Call on mount to ensure initial state reflects current localStorage
-    return () => {
-      window.removeEventListener('mockDataUpdated', updateFormDefaults);
-      window.removeEventListener('irp5SettingsUpdated', updateFormDefaults);
-    };
-  }, [form]);
+    } else if (!isLoadingUserTaxSettings) {
+      // If no settings found and not loading, reset to default form values
+      form.reset({
+        taxYear: currentYear.toString(),
+        applyPAYE: false,
+        applySDL: false,
+        enableIrp5Export: false,
+        irp5ContentFontSize: DEFAULT_IRP5_FONT_SIZE,
+      });
+    }
+  }, [userTaxSettings, isLoadingUserTaxSettings, form, currentYear]);
 
   const selectedTaxYear = form.watch("taxYear");
   const irp5ContentFontSize = form.watch("irp5ContentFontSize");
@@ -106,7 +110,6 @@ const TaxLiabilities: React.FC = () => {
       } else {
         console.log('Fetch tax tables Edge Function response:', data);
         showSuccess(`Tax tables for ${selectedTaxYear} fetched and applied successfully!`);
-        // Dispatch an event to notify other components (like payroll processor) that tax tables might have changed
         window.dispatchEvent(new Event('taxTablesUpdated'));
       }
     } catch (error: any) {
@@ -118,56 +121,48 @@ const TaxLiabilities: React.FC = () => {
   };
 
   const onSubmitDeductions = async (data: TaxLiabilitiesFormValues) => {
-    if (isMockDataEnabled) {
-      showError("Cannot save authorised deductions settings to Supabase when mock data is enabled.");
-      return;
+    if (user?.id) {
+      const settingsToSave: Omit<UserTaxSettings, 'id' | 'userId'> & { id?: string } = {
+        id: userTaxSettings?.id,
+        applyPaye: data.applyPAYE,
+        applySdl: data.applySDL,
+        enableIrp5Export: data.enableIrp5Export, // Ensure IRP5 settings are also saved
+        irp5ContentFontSize: data.irp5ContentFontSize, // Ensure IRP5 settings are also saved
+      };
+      await saveUserTaxSettings(settingsToSave);
+    } else {
+      showError("User not authenticated. Cannot save authorised deductions settings.");
     }
-    if (user?.role !== 'Admin') {
-      showError("Only Admin users can save authorised deductions settings.");
-      return;
-    }
-
-    const toastId = showLoading("Saving authorised deductions settings...") as string;
-    console.log("Saving authorised deductions:", { applyPAYE: data.applyPAYE, applySDL: data.applySDL });
-
-    // Simulate saving to backend/local storage
-    localStorage.setItem('applyPAYE', data.applyPAYE.toString());
-    localStorage.setItem('applySDL', data.applySDL.toString());
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    dismissToast(toastId);
-    showSuccess("Authorised deductions settings saved successfully!");
-    console.log(`PAYE applied: ${data.applyPAYE}, SDL applied: ${data.applySDL}. These settings would influence employee salary calculations.`);
   };
 
-  const handleIrp5ToggleChange = (checked: boolean) => {
-    if (isMockDataEnabled) {
-      showError("Cannot change IRP5 export settings when mock data is enabled.");
-      return;
+  const handleIrp5ToggleChange = async (checked: boolean) => {
+    if (user?.id) {
+      const settingsToSave: Omit<UserTaxSettings, 'id' | 'userId'> & { id?: string } = {
+        id: userTaxSettings?.id,
+        applyPaye: form.getValues("applyPAYE"),
+        applySdl: form.getValues("applySDL"),
+        enableIrp5Export: checked,
+        irp5ContentFontSize: form.getValues("irp5ContentFontSize"),
+      };
+      await saveUserTaxSettings(settingsToSave);
+    } else {
+      showError("User not authenticated. Cannot change IRP5 export settings.");
     }
-    if (user?.role !== 'Admin') {
-      showError("Only Admin users can change IRP5 export settings.");
-      return;
-    }
-    form.setValue("enableIrp5Export", checked);
-    localStorage.setItem('enableIrp5Export', checked.toString());
-    window.dispatchEvent(new Event('irp5SettingsUpdated')); // Dispatch event
-    showSuccess(`IRP5 Export functionality ${checked ? 'enabled' : 'disabled'}.`);
   };
 
-  const handleIrp5FontSizeChange = (value: number[]) => {
-    if (isMockDataEnabled) {
-      showError("Cannot change IRP5 font size settings when mock data is enabled.");
-      return;
+  const handleIrp5FontSizeChange = async (value: number[]) => {
+    if (user?.id) {
+      const settingsToSave: Omit<UserTaxSettings, 'id' | 'userId'> & { id?: string } = {
+        id: userTaxSettings?.id,
+        applyPaye: form.getValues("applyPAYE"),
+        applySdl: form.getValues("applySDL"),
+        enableIrp5Export: form.getValues("enableIrp5Export"),
+        irp5ContentFontSize: value[0],
+      };
+      await saveUserTaxSettings(settingsToSave);
+    } else {
+      showError("User not authenticated. Cannot change IRP5 font size settings.");
     }
-    if (user?.role !== 'Admin') {
-      showError("Only Admin users can change IRP5 font size settings.");
-      return;
-    }
-    form.setValue("irp5ContentFontSize", value[0]);
-    localStorage.setItem('irp5ContentFontSize', value[0].toString());
-    window.dispatchEvent(new Event('irp5SettingsUpdated')); // Dispatch event
-    showSuccess(`IRP5 content font size set to ${value[0]}px.`);
   };
 
   const canManageTaxSettings = user?.role === 'Admin';

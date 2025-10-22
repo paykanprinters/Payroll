@@ -25,7 +25,8 @@ import { useToDosData } from "./use-todos-data";
 import { usePayslipsData } from "./use-payslips-data";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkHoursSettings } from "./use-work-hours-settings";
-import { usePayCycleSettings } from "./use-pay-cycle-settings"; // New import
+import { usePayCycleSettings } from "./use-pay-cycle-settings";
+import { useUserTaxSettings } from "./use-user-tax-settings"; // New import
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -44,7 +45,8 @@ export const usePayrollProcessor = () => {
   const mockToDosRef = useRef<string | null>(null);
   const mockPayslipsRef = useRef<string | null>(null);
   const mockWorkHoursSettingsRef = useRef<string | null>(null);
-  const mockPayCycleSettingsRef = useRef<string | null>(null); // New ref for mock pay cycle settings
+  const mockPayCycleSettingsRef = useRef<string | null>(null);
+  const mockUserTaxSettingsRef = useRef<string | null>(null); // New ref for mock user tax settings
 
   const [mockLoans, setMockLoans] = useState<Loan[]>([]);
   const [mockSavingPlans, setMockSavingPlans] = useState<SavingPlan[]>([]);
@@ -53,7 +55,8 @@ export const usePayrollProcessor = () => {
   const [mockToDos, setMockToDos] = useState<ToDoEntry[]>([]);
   const [mockPayslips, setMockPayslips] = useState<MockPayslip[]>([]);
   const [mockWorkHoursSettings, setMockWorkHoursSettings] = useState<any>(null);
-  const [mockPayCycleSettings, setMockPayCycleSettings] = useState<any>(null); // New state for mock pay cycle settings
+  const [mockPayCycleSettings, setMockPayCycleSettings] = useState<any>(null);
+  const [mockUserTaxSettings, setMockUserTaxSettings] = useState<any>(null); // New state for mock user tax settings
 
   useEffect(() => {
     if (isMockDataEnabled) {
@@ -99,10 +102,16 @@ export const usePayrollProcessor = () => {
         mockWorkHoursSettingsRef.current = currentWorkHoursSettings;
       }
 
-      const currentPayCycleSettings = localStorage.getItem("payCycleSettings"); // Load mock pay cycle settings
+      const currentPayCycleSettings = localStorage.getItem("payCycleSettings");
       if (currentPayCycleSettings !== mockPayCycleSettingsRef.current) {
         setMockPayCycleSettings(JSON.parse(currentPayCycleSettings || "null"));
         mockPayCycleSettingsRef.current = currentPayCycleSettings;
+      }
+
+      const currentUserTaxSettings = localStorage.getItem("userTaxSettings"); // Load mock user tax settings
+      if (currentUserTaxSettings !== mockUserTaxSettingsRef.current) {
+        setMockUserTaxSettings(JSON.parse(currentUserTaxSettings || "null"));
+        mockUserTaxSettingsRef.current = currentUserTaxSettings;
       }
     } else {
       setMockLoans([]);
@@ -112,7 +121,8 @@ export const usePayrollProcessor = () => {
       setMockToDos([]);
       setMockPayslips([]);
       setMockWorkHoursSettings(null);
-      setMockPayCycleSettings(null); // Clear mock pay cycle settings
+      setMockPayCycleSettings(null);
+      setMockUserTaxSettings(null); // Clear mock user tax settings
 
       mockLoansRef.current = null;
       mockSavingPlansRef.current = null;
@@ -121,14 +131,16 @@ export const usePayrollProcessor = () => {
       mockToDosRef.current = null;
       mockPayslipsRef.current = null;
       mockWorkHoursSettingsRef.current = null;
-      mockPayCycleSettingsRef.current = null; // Clear ref
+      mockPayCycleSettingsRef.current = null;
+      mockUserTaxSettingsRef.current = null; // Clear ref
     }
   }, [isMockDataEnabled]);
 
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { payCycleSettings, isLoadingPayCycleSettings, savePayCycleSettings, refetchPayCycleSettings } = usePayCycleSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth }); // New hook
+  const { payCycleSettings, isLoadingPayCycleSettings, savePayCycleSettings, refetchPayCycleSettings } = usePayCycleSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings, refetchUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth }); // New hook
 
   // Directly use supabaseCompanyDetails, which is now more stable due to deep comparison in useCompanyDetails
   const companyDetails = supabaseCompanyDetails;
@@ -262,12 +274,20 @@ export const usePayrollProcessor = () => {
         refetchWorkHoursSettings();
       }
     };
-    const handlePayCycleSettingsUpdated = () => { // New handler for pay cycle settings
+    const handlePayCycleSettingsUpdated = () => {
       if (isMockDataEnabled) {
         const currentPayCycleSettings = localStorage.getItem("payCycleSettings");
         setMockPayCycleSettings(JSON.parse(currentPayCycleSettings || "null"));
       } else {
-        refetchPayCycleSettings(); // Refetch live settings
+        refetchPayCycleSettings();
+      }
+    };
+    const handleUserTaxSettingsUpdated = () => { // New handler for user tax settings
+      if (isMockDataEnabled) {
+        const currentUserTaxSettings = localStorage.getItem("userTaxSettings");
+        setMockUserTaxSettings(JSON.parse(currentUserTaxSettings || "null"));
+      } else {
+        refetchUserTaxSettings(); // Refetch live settings
       }
     };
 
@@ -279,7 +299,8 @@ export const usePayrollProcessor = () => {
     window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
     window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
     window.addEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated);
-    window.addEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated); // New listener
+    window.addEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated);
+    window.addEventListener("userTaxSettingsUpdated", handleUserTaxSettingsUpdated); // New listener
 
 
     return () => {
@@ -290,9 +311,10 @@ export const usePayrollProcessor = () => {
       window.removeEventListener("toDosUpdated", handleToDosUpdated as EventListener);
       window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
       window.removeEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated);
-      window.removeEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated); // New cleanup
+      window.removeEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated);
+      window.removeEventListener("userTaxSettingsUpdated", handleUserTaxSettingsUpdated); // New cleanup
     };
-  }, [isMockDataEnabled, refetchWorkHoursSettings, refetchPayCycleSettings]);
+  }, [isMockDataEnabled, refetchWorkHoursSettings, refetchPayCycleSettings, refetchUserTaxSettings]);
 
 
   return {
@@ -313,8 +335,10 @@ export const usePayrollProcessor = () => {
     isLoadingTaxTables,
     workHoursSettings: isMockDataEnabled ? mockWorkHoursSettings : workHoursSettings,
     isLoadingWorkHoursSettings,
-    payCycleSettings: isMockDataEnabled ? mockPayCycleSettings : payCycleSettings, // Provide mock or live settings
+    payCycleSettings: isMockDataEnabled ? mockPayCycleSettings : payCycleSettings,
     isLoadingPayCycleSettings,
+    userTaxSettings: isMockDataEnabled ? mockUserTaxSettings : userTaxSettings, // Provide mock or live settings
+    isLoadingUserTaxSettings,
     isLoadingEmployees,
     isMutatingEmployee,
     isLoadingLoans,

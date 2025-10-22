@@ -18,6 +18,7 @@ import {
 import { generatePayslipsForPeriod } from "@/lib/mock-data-generators";
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
+import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
@@ -27,6 +28,7 @@ export const usePayrollProcessingLogic = (
   leaveRecords: LeaveEntry[],
   timesheets: TimesheetEntry[],
   taxTables: TaxTables | null,
+  userTaxSettings: UserTaxSettings | null, // New parameter for user tax settings
   setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>, // For mock data
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
@@ -45,6 +47,10 @@ export const usePayrollProcessingLogic = (
         showError("Tax tables not loaded. Cannot run payroll.");
         return;
       }
+      if (!userTaxSettings) {
+        showError("User tax settings not loaded. Cannot run payroll.");
+        return;
+      }
 
       const { payslips: newPayslips, updatedLoans, updatedSavingPlans } = generatePayslipsForPeriod(
         employees,
@@ -54,7 +60,8 @@ export const usePayrollProcessingLogic = (
         timesheets,
         periodStart,
         periodEnd,
-        taxTables
+        taxTables,
+        userTaxSettings // Pass user tax settings
       );
 
       if (newPayslips.length === 0) {
@@ -122,7 +129,7 @@ export const usePayrollProcessingLogic = (
 
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, isMockDataEnabled]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -136,6 +143,10 @@ export const usePayrollProcessingLogic = (
         showError("Tax tables not loaded. Cannot generate payslip preview.");
         return null;
       }
+      if (!userTaxSettings) {
+        showError("User tax settings not loaded. Cannot generate payslip preview.");
+        return null;
+      }
 
       const { payslips: previewPayslips } = generatePayslipsForPeriod(
         [employee],
@@ -145,7 +156,8 @@ export const usePayrollProcessingLogic = (
         timesheets,
         periodStart,
         periodEnd,
-        taxTables
+        taxTables,
+        userTaxSettings // Pass user tax settings
       );
 
       if (previewPayslips.length > 0) {
@@ -161,7 +173,7 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings]
   );
 
   return {

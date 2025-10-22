@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, isSameYear } from "date-fns";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { useUserTaxSettings } from "@/hooks/use-user-tax-settings"; // New import
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -27,55 +28,50 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Irp5ExportPage: React.FC = () => {
-  const { employees, payslips, companyDetails } = usePayrollProcessor();
-  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
-  const [isIrp5ExportEnabled, setIsIrp5ExportEnabled] = useState<boolean>(() => {
-    return localStorage.getItem("enableIrp5Export") === "true";
-  });
+  const { employees, payslips, companyDetails, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
+  const { userTaxSettings, isLoadingUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
+  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
+  
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined);
 
-  const { generatePdf, printPdf } = usePdfGenerator(); // Destructure here
+  const { generatePdf, printPdf } = usePdfGenerator();
 
   const loadData = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
-    const savedIrp5FontSize = parseFloat(localStorage.getItem('irp5ContentFontSize') || DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize.toString());
-
     if (savedReportDesignSettings) {
       const parsedSettings = JSON.parse(savedReportDesignSettings);
-      setReportDesignSettings({ ...parsedSettings, irp5ContentFontSize: savedIrp5FontSize });
+      setReportDesignSettings({ ...parsedSettings, irp5ContentFontSize: userTaxSettings?.irp5ContentFontSize ?? DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize });
     } else {
-      const initialSettings = { ...DEFAULT_REPORT_DESIGN_SETTINGS, irp5ContentFontSize: savedIrp5FontSize };
+      const initialSettings = { ...DEFAULT_REPORT_DESIGN_SETTINGS, irp5ContentFontSize: userTaxSettings?.irp5ContentFontSize ?? DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize };
       localStorage.setItem("reportDesignSettings", JSON.stringify(initialSettings));
       setReportDesignSettings(initialSettings);
     }
-
-    setIsIrp5ExportEnabled(localStorage.getItem("enableIrp5Export") === "true");
-  }, []);
+  }, [userTaxSettings]); // Depend on userTaxSettings
 
   useEffect(() => {
     loadData();
-    window.addEventListener('allMockDataUpdated', loadData); // Listen for allMockDataUpdated
-    window.addEventListener('employeesUpdated', loadData); // Listen for specific employee updates
-    window.addEventListener('payslipsUpdated', loadData); // Listen for specific payslip updates
+    window.addEventListener('allMockDataUpdated', loadData);
+    window.addEventListener('employeesUpdated', loadData);
+    window.addEventListener('payslipsUpdated', loadData);
     window.addEventListener('companyDetailsUpdated', loadData);
     window.addEventListener('reportDesignUpdated', loadData);
-    window.addEventListener('irp5SettingsUpdated', loadData);
+    window.addEventListener('userTaxSettingsUpdated', loadData); // Listen for changes to user tax settings
     return () => {
       window.removeEventListener('allMockDataUpdated', loadData);
       window.removeEventListener('employeesUpdated', loadData);
       window.removeEventListener('payslipsUpdated', loadData);
       window.removeEventListener('companyDetailsUpdated', loadData);
       window.removeEventListener('reportDesignUpdated', loadData);
-      window.removeEventListener('irp5SettingsUpdated', loadData);
+      window.removeEventListener('userTaxSettingsUpdated', loadData);
     };
   }, [loadData]);
 
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
 
   const handleGenerateIrp5 = useCallback(async (action: 'print' | 'download') => {
-    if (!isIrp5ExportEnabled) {
+    if (!userTaxSettings?.enableIrp5Export) { // Use userTaxSettings
       showError("IRP5 Export is disabled. Please enable it in Settings > Tax Liabilities.");
       return;
     }
@@ -116,9 +112,9 @@ const Irp5ExportPage: React.FC = () => {
     } else {
       await printPdf(renderComponent, options);
     }
-  }, [isIrp5ExportEnabled, selectedEmployee, selectedIrpYear, companyDetails, payslips, selectedEmployeeId, reportDesignSettings, generatePdf, printPdf]);
+  }, [userTaxSettings, selectedEmployee, selectedIrpYear, companyDetails, payslips, selectedEmployeeId, reportDesignSettings, generatePdf, printPdf]);
 
-  const isDisabled = !selectedEmployeeId || !selectedIrpYear || !isIrp5ExportEnabled;
+  const isDisabled = !selectedEmployeeId || !selectedIrpYear || !userTaxSettings?.enableIrp5Export; // Use userTaxSettings
 
   return (
     <div className="flex flex-col gap-4">
@@ -127,7 +123,7 @@ const Irp5ExportPage: React.FC = () => {
         Generate IRP5 certificates for individual employees.
       </p>
 
-      {!isIrp5ExportEnabled && (
+      {!userTaxSettings?.enableIrp5Export && ( // Use userTaxSettings
         <Card className="border-yellow-500 bg-yellow-50 text-yellow-800">
           <CardHeader>
             <CardTitle>IRP5 Export Disabled</CardTitle>
@@ -143,7 +139,7 @@ const Irp5ExportPage: React.FC = () => {
         <CardHeader>
           <CardTitle>Generate Individual IRP5</CardTitle>
           <CardDescription>
-            Select an employee and an IRP year to generate their IRP5 certificate.
+            Select an employee and an IRP Year, and ensure company details are loaded to generate their IRP5 certificate.
           </CardDescription>
         </CardHeader>
         <CardContent>
