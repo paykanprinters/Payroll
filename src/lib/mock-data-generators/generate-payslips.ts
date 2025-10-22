@@ -156,6 +156,7 @@ const calculateDeductions = (
     if (paye > 0) { // Only add if PAYE is a positive amount
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
+      console.log(`[calculateDeductions] PAYE added to breakdown: R ${paye.toFixed(2)}`);
     } else {
       console.log(`[calculateDeductions] PAYE calculated as 0 or negative for ${emp.firstName} ${emp.lastName}, not added to breakdown.`);
     }
@@ -167,11 +168,15 @@ const calculateDeductions = (
     const uif = Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap);
     deductionsBreakdown.push({ name: "UIF", amount: uif });
     totalDeductions += uif;
+    console.log(`[calculateDeductions] UIF added to breakdown: R ${uif.toFixed(2)}`);
 
     if (applySDLFlag) {
       const sdl = grossEarnings * uifSdlRates.sdl_rate;
       deductionsBreakdown.push({ name: "SDL", amount: sdl });
       totalDeductions += sdl;
+      console.log(`[calculateDeductions] SDL added to breakdown: R ${sdl.toFixed(2)}`);
+    } else {
+      console.log(`[calculateDeductions] SDL not applied for ${emp.firstName} ${emp.lastName}. applySDLFlag: ${applySDLFlag}`);
     }
   } else {
     console.warn("UIF/SDL rates not loaded, using mock values for payslip generation.");
@@ -393,6 +398,8 @@ export const generatePayslipsForPeriod = (
       payPeriodString
     );
 
+    const netPay = grossEarnings - totalDeductions;
+
     const leaveSummary = calculateLeaveSummary(
       emp,
       leaveRecords,
@@ -400,8 +407,6 @@ export const generatePayslipsForPeriod = (
       payPeriodEnd,
       unpaidLeaveDaysInPeriod
     );
-
-    const netPay = grossEarnings - totalDeductions;
 
     payslipsForPeriod.push({
       id: uuidv4(), // Use uuidv4 for generating a valid UUID
