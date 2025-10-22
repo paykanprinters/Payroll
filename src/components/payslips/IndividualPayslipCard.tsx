@@ -153,6 +153,10 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
   const renderDeductionsContent = () => {
     if (!payslipDesignSettings.showDeductionsBreakdown) return null;
+    
+    // Log the deductions breakdown here to check its content
+    console.log("IndividualPayslipCard: Deductions Breakdown for payslip ID", payslip.id, ":", payslip.deductionsBreakdown);
+
     return (
       <div style={isPdfGeneration ? { marginBottom: `${baseFontSizePx * 0.5}px` } : {}}>
         <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px`, lineHeight: `${baseFontSizePx * 1.1 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.4}px` } : {}}>DEDUCTIONS</h4>

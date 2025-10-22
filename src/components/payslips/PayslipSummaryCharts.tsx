@@ -41,6 +41,9 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
 }) => {
   const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
 
+  // Log the deductions breakdown data here
+  console.log("PayslipSummaryCharts: Deductions Breakdown Data:", deductionsBreakdownData);
+
   // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;

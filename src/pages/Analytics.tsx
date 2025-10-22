@@ -83,10 +83,12 @@ const Analytics: React.FC = () => {
         }
       });
     });
-    setDeductionCategoryBreakdown([
+    const breakdown = [
       { name: "Statutory Deductions", value: totalStatutory },
       { name: "Other Deductions", value: totalOtherDeductions },
-    ].filter(item => item.value > 0));
+    ].filter(item => item.value > 0);
+    setDeductionCategoryBreakdown(breakdown);
+    console.log("Analytics: Deduction Category Breakdown Data:", breakdown); // Add this log
 
     // --- Employee Turnover Trend (Mocked for simplicity) ---
     const turnoverMap = new Map<string, { newHires: number; terminations: number }>();
