@@ -26,7 +26,7 @@ const mockSarsTaxData: { [year: string]: any } = {
     ],
     uifSdlRates: {
       uif_rate: 0.01,
-      uif_cap: 177.12, // Monthly cap
+      uif_cap: 177.12, // Monthly cap (1% of R17712)
       sdl_rate: 0.01,
     },
   },
@@ -38,21 +38,21 @@ const mockSarsTaxData: { [year: string]: any } = {
       description: "SARS Tax Year 2025/2026 (Mock Data)",
     },
     payeBrackets: [
-      { min_income: 0, max_income: 240000, rate: 0.18, deduction: 0 },
-      { min_income: 240001, max_income: 375000, rate: 0.26, deduction: 43200 },
-      { min_income: 375001, max_income: 520000, rate: 0.31, deduction: 78200 },
-      { min_income: 520001, max_income: 680000, rate: 0.36, deduction: 122500 },
-      { min_income: 680001, max_income: 865000, rate: 0.41, deduction: 180500 },
-      { min_income: 865001, max_income: 1830000, rate: 0.45, deduction: 257000 },
-      { min_income: 1830001, max_income: null, rate: 0.45, deduction: 685000 },
+      { min_income: 0, max_income: 245000, rate: 0.18, deduction: 0 },
+      { min_income: 245001, max_income: 385000, rate: 0.26, deduction: 44100 },
+      { min_income: 385001, max_income: 535000, rate: 0.31, deduction: 79900 },
+      { min_income: 535001, max_income: 700000, rate: 0.36, deduction: 125000 },
+      { min_income: 700001, max_income: 890000, rate: 0.41, deduction: 185000 },
+      { min_income: 890001, max_income: 1880000, rate: 0.45, deduction: 265000 },
+      { min_income: 1880001, max_income: null, rate: 0.45, deduction: 700000 },
     ],
     uifSdlRates: {
       uif_rate: 0.01,
-      uif_cap: 177.12, // Monthly cap
+      uif_cap: 180.00, // Slightly increased mock cap
       sdl_rate: 0.01,
     },
   },
-  "2026": { // New entry for 2026 tax year
+  "2026": {
     taxYearDetails: {
       year: 2026,
       start_date: "2026-03-01",
@@ -60,17 +60,17 @@ const mockSarsTaxData: { [year: string]: any } = {
       description: "SARS Tax Year 2026/2027 (Mock Data)",
     },
     payeBrackets: [
-      { min_income: 0, max_income: 245000, rate: 0.18, deduction: 0 },
-      { min_income: 245001, max_income: 380000, rate: 0.26, deduction: 44100 },
-      { min_income: 380001, max_income: 525000, rate: 0.31, deduction: 79500 },
-      { min_income: 525001, max_income: 685000, rate: 0.36, deduction: 124000 },
-      { min_income: 685001, max_income: 875000, rate: 0.41, deduction: 182500 },
-      { min_income: 875001, max_income: 1850000, rate: 0.45, deduction: 260000 },
-      { min_income: 1850001, max_income: null, rate: 0.45, deduction: 690000 },
+      { min_income: 0, max_income: 250000, rate: 0.18, deduction: 0 },
+      { min_income: 250001, max_income: 390000, rate: 0.26, deduction: 45000 },
+      { min_income: 390001, max_income: 540000, rate: 0.31, deduction: 81000 },
+      { min_income: 540001, max_income: 710000, rate: 0.36, deduction: 127000 },
+      { min_income: 710001, max_income: 900000, rate: 0.41, deduction: 188000 },
+      { min_income: 900001, max_income: 1900000, rate: 0.45, deduction: 270000 },
+      { min_income: 1900001, max_income: null, rate: 0.45, deduction: 710000 },
     ],
     uifSdlRates: {
       uif_rate: 0.01,
-      uif_cap: 180.00, // Monthly cap
+      uif_cap: 185.00, // Slightly increased mock cap
       sdl_rate: 0.01,
     },
   },
