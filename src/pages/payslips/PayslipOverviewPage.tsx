@@ -132,16 +132,23 @@ const PayslipOverviewPage: React.FC = () => {
     };
   }, [loadPayslipsAndEmployees, loadPayslipDesignSettings, loadReportDesignSettings]);
 
-  useEffect(() => {
-    if (selectedEmployeeId) {
-      const employeePayslips = payslips.filter(p => p.employeeId === selectedEmployeeId);
-      if (!employeePayslips.some(p => p.id === selectedPayslipId)) {
-        setSelectedPayslipId("");
+  React.useEffect(() => {
+    if (selectedEmployeeId && payslips.length > 0) {
+      const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
+      const isCurrentSelectionValid = filteredPayslipsForEmployee.some(p => p.id === selectedPayslipId);
+      
+      if (!selectedPayslipId || !isCurrentSelectionValid) {
+        const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
+        if (mostRecentPayslip) {
+          setSelectedPayslipId(mostRecentPayslip.id);
+        } else {
+          setSelectedPayslipId(""); // No payslips for this employee
+        }
       }
-    } else {
-      setSelectedPayslipId("");
+    } else if (!selectedEmployeeId && selectedPayslipId) {
+      setSelectedPayslipId(""); // Clear selected payslip if no employee is selected
     }
-  }, [selectedEmployeeId, payslips, selectedPayslipId]);
+  }, [selectedEmployeeId, payslips, selectedPayslipId, setSelectedPayslipId]);
 
 
   const getEmployeeName = (employeeId: string) => {
