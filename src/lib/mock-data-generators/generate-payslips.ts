@@ -29,9 +29,23 @@ const calculateEarnings = (
   console.log(`[calculateEarnings] Employee Salary: ${emp.salary}`);
   console.log(`[calculateEarnings] Employee Employment Type: ${emp.employmentType}`);
 
-  if (emp.employmentType === "Permanent" || emp.employmentType === "Contract") {
-    basicSalary = emp.salary || 0;
+  // Determine basic salary based on hourly rate or fixed salary
+  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null) {
+    // If hourly rate is defined, use it for basic salary calculation
+    basicSalary = totalApprovedRegularHours * emp.hourlyRate;
+    console.log(`[calculateEarnings] Hourly employee basicSalary calculated: ${basicSalary} (Hours: ${totalApprovedRegularHours} * Rate: ${emp.hourlyRate})`);
+  } else if (emp.salary !== undefined && emp.salary !== null) {
+    // If salary is defined, use it
+    basicSalary = emp.salary;
+    console.log(`[calculateEarnings] Salaried employee basicSalary: ${basicSalary}`);
+  } else {
+    // Fallback if neither salary nor hourly rate is explicitly defined (should ideally not happen with validation)
+    console.warn(`[calculateEarnings] Employee ${emp.firstName} ${emp.lastName} has neither salary nor hourly rate defined. Basic salary set to 0.`);
+    basicSalary = 0;
+  }
 
+  // Handle unpaid leave deductions from basic salary
+  if (basicSalary > 0) {
     const employeeUnpaidLeave = leaveRecords.filter(rec =>
       rec.employeeId === emp.id &&
       rec.leaveType === "Unpaid Leave" &&
@@ -45,29 +59,35 @@ const calculateEarnings = (
       unpaidLeaveDaysInPeriod += calculateWorkingDays(overlapStart, overlapEnd);
     });
 
-    if (unpaidLeaveDaysInPeriod > 0 && basicSalary > 0) {
-      const dailyRate = basicSalary / 20;
-      basicSalary -= dailyRate * unpaidLeaveDaysInPeriod;
-      console.log(`[calculateEarnings] Deducted ${unpaidLeaveDaysInPeriod} unpaid leave days. New basicSalary: ${basicSalary}`);
+    if (unpaidLeaveDaysInPeriod > 0) {
+      // Assuming 20 working days in a month for daily rate calculation from monthly salary
+      // Or if hourly, calculate based on standard daily hours
+      let dailyRate = 0;
+      if (emp.salary) {
+        dailyRate = emp.salary / 20; // Assuming 20 working days in a month
+      } else if (emp.hourlyRate && emp.standardDailyHours) {
+        dailyRate = emp.hourlyRate * emp.standardDailyHours;
+      }
+      
+      if (dailyRate > 0) {
+        basicSalary -= dailyRate * unpaidLeaveDaysInPeriod;
+        console.log(`[calculateEarnings] Deducted ${unpaidLeaveDaysInPeriod} unpaid leave days. New basicSalary: ${basicSalary}`);
+      }
     }
-
-  } else if (emp.employmentType === "Temporary" && emp.hourlyRate !== undefined && emp.hourlyRate !== null) {
-    basicSalary = totalApprovedRegularHours * emp.hourlyRate;
-    console.log(`[calculateEarnings] Hourly employee basicSalary calculated: ${basicSalary} (Hours: ${totalApprovedRegularHours} * Rate: ${emp.hourlyRate})`);
-  } else {
-    basicSalary = emp.salary || (emp.hourlyRate ? emp.hourlyRate * (emp.standardDailyHours || 8) * 20 : 0);
-    console.log(`[calculateEarnings] Fallback basicSalary calculation: ${basicSalary}`);
   }
 
-  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && totalApprovedOvertimeHours > 0) {
-    totalOvertimeAmount = totalApprovedOvertimeHours * emp.hourlyRate * 1.5;
-    console.log(`[calculateEarnings] Overtime amount calculated: ${totalOvertimeAmount} (Hours: ${totalApprovedOvertimeHours} * Rate: ${emp.hourlyRate} * 1.5)`);
-  } else if (emp.salary !== undefined && emp.salary !== null && totalApprovedOvertimeHours > 0) {
-    const hourlyEquivalent = (emp.salary / (20 * (emp.standardDailyHours || 8)));
-    totalOvertimeAmount = totalApprovedOvertimeHours * hourlyEquivalent * 1.5;
-    console.log(`[calculateEarnings] Salary-based overtime amount calculated: ${totalOvertimeAmount}`);
+
+  // Calculate overtime amount
+  if (totalApprovedOvertimeHours > 0) {
+    const effectiveHourlyRate = emp.hourlyRate || (emp.salary ? (emp.salary / (20 * (emp.standardDailyHours || 8))) : 0);
+    if (effectiveHourlyRate > 0) {
+      totalOvertimeAmount = totalApprovedOvertimeHours * effectiveHourlyRate * 1.5; // 1.5x for overtime
+      console.log(`[calculateEarnings] Overtime amount calculated: ${totalOvertimeHours} hours * R ${effectiveHourlyRate.toFixed(2)}/hr * 1.5 = R ${totalOvertimeAmount.toFixed(2)}`);
+    } else {
+      console.log(`[calculateEarnings] No effective hourly rate for overtime calculation.`);
+    }
   } else {
-    console.log(`[calculateEarnings] No overtime calculated. Hourly rate: ${emp.hourlyRate}, Salary: ${emp.salary}, Overtime hours: ${totalApprovedOvertimeHours}`);
+    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalApprovedOvertimeHours}`);
   }
 
   const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
@@ -294,6 +314,9 @@ export const generatePayslipsForPeriod = (
   payPeriodEnd: Date,
   taxTables: TaxTables // New parameter for tax tables
 ): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[] } => {
+  console.log(`[generatePayslipsForPeriod] START for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
+  console.log(`[generatePayslipsForPeriod] Number of employees: ${employees.length}`);
+
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
   const monthString = format(payPeriodStart, "yyyy-MM");
@@ -304,6 +327,7 @@ export const generatePayslipsForPeriod = (
   const processingSavingPlans: SavingPlan[] = JSON.parse(JSON.stringify(initialSavingPlans));
 
   employees.forEach(emp => {
+    console.log(`[generatePayslipsForPeriod] Processing employee: ${emp.firstName} ${emp.lastName} (ID: ${emp.id}, Custom ID: ${emp.customEmployeeId})`);
     const approvedTimesheetsForPeriod = timesheets.filter(ts =>
       ts.employeeId === emp.id &&
       ts.status === "Approved" &&
@@ -355,6 +379,7 @@ export const generatePayslipsForPeriod = (
       ytdTotalDeductions: 0,
     });
   });
+  console.log(`[generatePayslipsForPeriod] END for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
   return { payslips: payslipsForPeriod, updatedLoans: processingLoans, updatedSavingPlans: processingSavingPlans };
 };
 
