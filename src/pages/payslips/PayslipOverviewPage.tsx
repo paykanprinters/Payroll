@@ -41,10 +41,15 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const PayslipOverviewPage: React.FC = () => {
-  const { employees, payslips, companyDetails, isLoadingCompanyDetails } = usePayrollProcessor();
+  const { employees, payslips, companyDetails, isLoadingCompanyDetails, isLoadingEmployees, isLoadingPayslips } = usePayrollProcessor();
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
-    const savedSettings = localStorage.getItem("payslipDesignSettings");
-    return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
+    try {
+      const savedSettings = localStorage.getItem("payslipDesignSettings");
+      return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
+    } catch (e) {
+      console.error("Failed to parse payslip design settings from localStorage, using defaults.", e);
+      return defaultPayslipSettings;
+    }
   });
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
@@ -78,8 +83,13 @@ const PayslipOverviewPage: React.FC = () => {
   }, [payslips, employees]);
 
   const loadPayslipDesignSettings = useCallback(() => {
-    const savedSettings = localStorage.getItem("payslipDesignSettings");
-    setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings);
+    try {
+      const savedSettings = localStorage.getItem("payslipDesignSettings");
+      setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings);
+    } catch (e) {
+      console.error("Failed to parse payslip design settings from localStorage during update, using defaults.", e);
+      setPayslipDesignSettings(defaultPayslipSettings);
+    }
   }, []);
 
   const loadReportDesignSettings = useCallback(() => {
@@ -141,11 +151,13 @@ const PayslipOverviewPage: React.FC = () => {
 
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
 
-  if (isLoadingCompanyDetails) {
+  const isLoadingPage = isLoadingCompanyDetails || isLoadingEmployees || isLoadingPayslips;
+
+  if (isLoadingPage) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading company details...</span>
+        <span className="ml-2">Loading payroll data...</span>
       </div>
     );
   }
