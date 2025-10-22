@@ -15,7 +15,7 @@ import {
   TimesheetEntry,
   LoanDeductionHistoryEntry,
 } from "@/lib/mock-data-interfaces";
-import { generatePayslipsForPeriod } from "@/lib/mock-data-generators";
+import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator"; // Import from new location
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
