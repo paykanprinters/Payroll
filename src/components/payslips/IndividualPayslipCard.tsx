@@ -24,6 +24,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   isPdfGeneration = false,
   onReadyForPdf,
 }) => {
+  // Removed previous console.log("IndividualPayslipCard: Received payslip data:", payslip);
+
   // Add an explicit null check here
   if (!companyDetails) {
     console.error("IndividualPayslipCard: companyDetails is null or undefined during render.");
@@ -95,7 +97,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     if (imagesLoaded && onReadyForPdf) {
       onReadyForPdf();
     }
-  }, [imagesLoaded, onReadyForPdf]);
+    // Removed previous console.log("IndividualPayslipCard: Payslip data after image load check:", payslip);
+  }, [imagesLoaded, onReadyForPdf, payslip]);
 
   // Determine which logo to use and its properties
   const logoToUse = payslipDesignSettings.showCompanyLogo && payslipDesignSettings.payslipLogoUrl
@@ -134,15 +137,22 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
 
   const renderEarningsContent = () => {
     if (!payslipDesignSettings.showEarningsBreakdown) return null;
+    
+    const hasEarnings = payslip.earningsBreakdown && payslip.earningsBreakdown.length > 0;
+
     return (
       <div style={isPdfGeneration ? { marginBottom: `${baseFontSizePx * 0.5}px` } : {}}>
         <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px`, lineHeight: `${baseFontSizePx * 1.1 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.4}px` } : {}}>EARNINGS</h4>
-        {payslip.earningsBreakdown.map((item, idx) => (
-          <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>
-            <span>{item.name}</span>
-            <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
-          </p>
-        ))}
+        {hasEarnings ? (
+          payslip.earningsBreakdown.map((item, idx) => (
+            <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>
+              <span>{item.name}</span>
+              <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+            </p>
+          ))
+        ) : (
+          <p style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}} className="text-gray-500 italic">No earnings details to display.</p>
+        )}
         <p className="font-bold border-t pt-1 flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
           <span>GROSS EARNINGS</span>
           <span>R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
@@ -154,18 +164,22 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   const renderDeductionsContent = () => {
     if (!payslipDesignSettings.showDeductionsBreakdown) return null;
     
-    // Log the deductions breakdown here to check its content
-    console.log("IndividualPayslipCard: Deductions Breakdown for payslip ID", payslip.id, ":", payslip.deductionsBreakdown);
+    // Removed previous console.log("IndividualPayslipCard: Deductions Breakdown for payslip ID", payslip.id, ":", payslip.deductionsBreakdown);
+    const hasDeductions = payslip.deductionsBreakdown && payslip.deductionsBreakdown.length > 0;
 
     return (
       <div style={isPdfGeneration ? { marginBottom: `${baseFontSizePx * 0.5}px` } : {}}>
         <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px`, lineHeight: `${baseFontSizePx * 1.1 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.4}px` } : {}}>DEDUCTIONS</h4>
-        {payslip.deductionsBreakdown.map((item, idx) => (
-          <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>
-            <span>{item.name}</span>
-            <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
-          </p>
-        ))}
+        {hasDeductions ? (
+          payslip.deductionsBreakdown.map((item, idx) => (
+            <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>
+              <span>{item.name}</span>
+              <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+            </p>
+          ))
+        ) : (
+          <p style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}} className="text-gray-500 italic">No deductions details to display.</p>
+        )}
         <p className="font-bold border-t pt-1 flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
           <span>TOTAL DEDUCTIONS</span>
           <span>R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
