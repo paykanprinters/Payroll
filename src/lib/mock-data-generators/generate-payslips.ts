@@ -153,10 +153,11 @@ const calculateDeductions = (
     }
   }
 
-  const providentFundRate = 0.075;
-  const providentFund = grossEarnings * providentFundRate;
-  deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
-  totalDeductions += providentFund;
+  // Removed hardcoded Provident Fund deduction
+  // const providentFundRate = 0.075;
+  // const providentFund = grossEarnings * providentFundRate;
+  // deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
+  // totalDeductions += providentFund;
 
   if (emp.id === "EMP002" && payPeriodStart.getMonth() % 3 === 0) {
     deductionsBreakdown.push({ name: "Medical Aid", amount: 1200 });
