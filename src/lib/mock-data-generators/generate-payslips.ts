@@ -84,7 +84,7 @@ const calculateEarnings = (
 
 
   // Calculate overtime amount
-  if (totalApprovedOvertimeHours > 0) {
+  if (totalOvertimeAmount > 0) {
     const effectiveHourlyRate = emp.hourlyRate || (emp.salary ? (emp.salary / (20 * (emp.standardDailyHours || 8))) : 0);
     if (effectiveHourlyRate > 0) {
       totalOvertimeAmount = totalApprovedOvertimeHours * effectiveHourlyRate * 1.5; // 1.5x for overtime
@@ -357,17 +357,18 @@ export const generatePayslipsForPeriod = (
 
     const approvedTimesheetsForPeriod = timesheets.filter(ts => {
       const isEmployeeMatch = ts.employeeId === emp.id;
-      const isApprovedOrLocked = ts.status === "Approved" || ts.status === "Locked"; // MODIFIED THIS LINE
+      // MODIFIED: Include "Submitted" status for payroll processing
+      const isApprovedOrLockedOrSubmitted = ts.status === "Approved" || ts.status === "Locked" || ts.status === "Submitted";
       const isWithinPeriod = isWithinInterval(parseISO(ts.date), { start: payPeriodStart, end: payPeriodEnd });
       
       console.log(`  - Checking timesheet ${ts.id} (Date: ${ts.date}, Status: ${ts.status}) for employee ${emp.id}:`);
       console.log(`    - Employee match: ${isEmployeeMatch}`);
-      console.log(`    - Is Approved or Locked: ${isApprovedOrLocked}`); // Update log
+      console.log(`    - Is Approved, Locked, or Submitted: ${isApprovedOrLockedOrSubmitted}`); // Update log
       console.log(`    - Is within period (${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}): ${isWithinPeriod}`);
       
-      return isEmployeeMatch && isApprovedOrLocked && isWithinPeriod; // Update return condition
+      return isEmployeeMatch && isApprovedOrLockedOrSubmitted && isWithinPeriod; // Update return condition
     });
-    console.log(`[generatePayslipsForPeriod] Employee: ${emp.firstName} ${emp.lastName} (${emp.id}) - Found ${approvedTimesheetsForPeriod.length} approved timesheets for period.`);
+    console.log(`[generatePayslipsForPeriod] Employee: ${emp.firstName} ${emp.lastName} (${emp.id}) - Found ${approvedTimesheetsForPeriod.length} approved/locked/submitted timesheets for period.`);
 
     const { earningsBreakdown, grossEarnings, unpaidLeaveDaysInPeriod } = calculateEarnings(
       emp,
