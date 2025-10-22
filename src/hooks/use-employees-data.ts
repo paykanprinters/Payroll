@@ -68,6 +68,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       } else {
         const camelCaseData = data.map(convertEmployeeKeysToCamelCase);
         console.log("useEmployeesData: Live employees fetched:", camelCaseData);
+        console.log(`useEmployeesData: Successfully fetched ${camelCaseData.length} employees from Supabase.`);
         setEmployees(camelCaseData);
       }
     } catch (err) {

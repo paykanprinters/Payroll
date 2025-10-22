@@ -58,6 +58,7 @@ export const usePayrollProcessingLogic = (
       console.log("[usePayrollProcessingLogic] Period End:", format(periodEnd, 'yyyy-MM-dd'));
       console.log("[usePayrollProcessingLogic] Tax Tables received:", taxTables);
       console.log("[usePayrollProcessingLogic] User Tax Settings received:", userTaxSettings);
+      console.log("[usePayrollProcessingLogic] runPayrollProcess: Number of employees to process:", employees.length);
 
 
       const { payslips: newPayslips, updatedLoans, updatedSavingPlans } = generatePayslipsForPeriod(
