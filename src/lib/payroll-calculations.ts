@@ -29,6 +29,12 @@ export const calculatePAYE = (taxableIncome: number, payeBrackets: TaxTables['pa
 
   console.log(`[calculatePAYE] Annualized Income: ${annualIncome}`);
 
+  // Ensure payeBrackets is not empty before iterating
+  if (payeBrackets.length === 0) {
+    console.warn("[calculatePAYE] No PAYE brackets provided. Returning 0.");
+    return 0;
+  }
+
   for (const bracket of payeBrackets) {
     console.log(`[calculatePAYE] Checking bracket: min_income=${bracket.min_income}, max_income=${bracket.max_income}, rate=${bracket.rate}, deduction=${bracket.deduction}`);
     if (annualIncome > bracket.min_income && (bracket.max_income === null || annualIncome <= bracket.max_income)) {

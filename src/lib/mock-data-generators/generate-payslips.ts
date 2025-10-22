@@ -19,6 +19,14 @@ const calculateEarnings = (
   let totalOvertimeAmount = 0;
   let unpaidLeaveDaysInPeriod = 0;
 
+  // Calculate total approved regular and overtime hours from timesheets
+  let totalApprovedRegularHours = 0;
+  let totalApprovedOvertimeHours = 0;
+  approvedTimesheetsForPeriod.forEach(ts => {
+    totalApprovedRegularHours += (ts.totalWorkHours - ts.overtimeHours);
+    totalApprovedOvertimeHours += ts.overtimeHours;
+  });
+
   console.log(`[calculateEarnings] Employee: ${emp.firstName} ${emp.lastName} (${emp.id})`);
   console.log(`[calculateEarnings] Pay Period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
   console.log(`[calculateEarnings] Total Approved Regular Hours: ${totalApprovedRegularHours}`);
@@ -80,12 +88,12 @@ const calculateEarnings = (
     const effectiveHourlyRate = emp.hourlyRate || (emp.salary ? (emp.salary / (20 * (emp.standardDailyHours || 8))) : 0);
     if (effectiveHourlyRate > 0) {
       totalOvertimeAmount = totalApprovedOvertimeHours * effectiveHourlyRate * 1.5; // 1.5x for overtime
-      console.log(`[calculateEarnings] Overtime amount calculated: ${totalOvertimeHours} hours * R ${effectiveHourlyRate.toFixed(2)}/hr * 1.5 = R ${totalOvertimeAmount.toFixed(2)}`);
+      console.log(`[calculateEarnings] Overtime amount calculated: ${totalApprovedOvertimeHours} hours * R ${effectiveHourlyRate.toFixed(2)}/hr * 1.5 = R ${totalOvertimeAmount.toFixed(2)}`);
     } else {
       console.log(`[calculateEarnings] No effective hourly rate for overtime calculation.`);
     }
   } else {
-    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalOvertimeHours}`);
+    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalApprovedOvertimeHours}`);
   }
 
   const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
@@ -136,19 +144,23 @@ const calculateDeductions = (
   console.log(`[calculateDeductions] payeBrackets content:`, payeBrackets); // Log content
   console.log(`[calculateDeductions] uifSdlRates:`, uifSdlRates);
 
+  console.log(`[calculateDeductions] Before PAYE calculation for ${emp.firstName} ${emp.lastName}:`);
+  console.log(`  - grossEarnings: ${grossEarnings}`);
+  console.log(`  - payeBrackets:`, taxTables.payeBrackets);
+  console.log(`  - applyPAYEFlag: ${applyPAYEFlag}`);
 
   if (payeBrackets.length > 0 && applyPAYEFlag) {
-    console.log(`[calculateDeductions] Calling calculatePAYE with grossEarnings: ${grossEarnings} and payeBrackets:`, payeBrackets);
+    console.log(`[calculateDeductions] Condition met: payeBrackets.length > 0 (${payeBrackets.length}) and applyPAYEFlag is true.`);
     const paye = calculatePAYE(grossEarnings, payeBrackets);
-    console.log(`[calculateDeductions] Calculated PAYE result: ${paye}`);
+    console.log(`[calculateDeductions] Calculated PAYE for ${emp.firstName} ${emp.lastName}: ${paye}`);
     if (paye > 0) { // Only add if PAYE is a positive amount
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
     } else {
-      console.log(`[calculateDeductions] PAYE calculated as 0 or negative, not added to breakdown.`);
+      console.log(`[calculateDeductions] PAYE calculated as 0 or negative for ${emp.firstName} ${emp.lastName}, not added to breakdown.`);
     }
   } else {
-    console.log(`[calculateDeductions] PAYE not applied. payeBrackets.length: ${payeBrackets.length}, applyPAYEFlag: ${applyPAYEFlag}`);
+    console.log(`[calculateDeductions] PAYE not applied for ${emp.firstName} ${emp.lastName}. payeBrackets.length: ${payeBrackets.length}, applyPAYEFlag: ${applyPAYEFlag}`);
   }
 
   if (uifSdlRates) {
@@ -299,7 +311,7 @@ const calculateLeaveSummary = (
       const daysInPeriod = calculateWorkingDays(overlapStart, overlapEnd);
 
       if (rec.leaveType === "Annual Leave") annualLeaveTaken += eachDayOfInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
-      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += eachDayOfInterval({start: overlapStart, end: overlapEnd}).filter(day => !isWeekend(day)).length;
+      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += eachDayOfInterval({start: overlapEnd, end: overlapEnd}).filter(day => !isWeekend(day)).length;
     }
   });
 
@@ -339,6 +351,9 @@ export const generatePayslipsForPeriod = (
 ): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[] } => {
   console.log(`[generatePayslipsForPeriod] START for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
   console.log(`[generatePayslipsForPeriod] Number of employees: ${employees.length}`);
+  console.log(`[generatePayslipsForPeriod] Received taxTables:`, taxTables);
+  console.log(`[generatePayslipsForPeriod] Received userTaxSettings:`, userTaxSettings);
+
 
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
