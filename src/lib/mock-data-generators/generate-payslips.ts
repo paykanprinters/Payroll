@@ -93,7 +93,7 @@ const calculateEarnings = (
       console.log(`[calculateEarnings] No effective hourly rate for overtime calculation.`);
     }
   } else {
-    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalApprovedOvertimeHours}`);
+    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalOvertimeHours}`);
   }
 
   const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
@@ -144,15 +144,10 @@ const calculateDeductions = (
   console.log(`[calculateDeductions] payeBrackets content:`, payeBrackets); // Log content
   console.log(`[calculateDeductions] uifSdlRates:`, uifSdlRates);
 
-  console.log(`[calculateDeductions] Before PAYE calculation for ${emp.firstName} ${emp.lastName}:`);
-  console.log(`  - grossEarnings: ${grossEarnings}`);
-  console.log(`  - payeBrackets:`, taxTables.payeBrackets);
-  console.log(`  - applyPAYEFlag: ${applyPAYEFlag}`);
-
   if (payeBrackets.length > 0 && applyPAYEFlag) {
-    console.log(`[calculateDeductions] Condition met: payeBrackets.length > 0 (${payeBrackets.length}) and applyPAYEFlag is true.`);
+    console.log(`[calculateDeductions] Condition met for PAYE calculation.`);
     const paye = calculatePAYE(grossEarnings, payeBrackets);
-    console.log(`[calculateDeductions] Calculated PAYE for ${emp.firstName} ${emp.lastName}: ${paye}`);
+    console.log(`[calculateDeductions] Calculated PAYE for ${emp.firstName} ${emp.lastName}: R ${paye.toFixed(2)}`); // ADDED THIS LOG
     if (paye > 0) { // Only add if PAYE is a positive amount
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
@@ -188,21 +183,6 @@ const calculateDeductions = (
       deductionsBreakdown.push({ name: "SDL", amount: sdl });
       totalDeductions += sdl;
     }
-  }
-
-  // Removed Provident Fund deduction as it was incorrectly added
-  // const providentFundRate = 0.075; // Default rate
-  // const providentFund = grossEarnings * providentFundRate;
-  // deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
-  // totalDeductions += providentFund;
-
-  if (emp.id === "EMP002" && payPeriodStart.getMonth() % 3 === 0) {
-    deductionsBreakdown.push({ name: "Medical Aid", amount: 1200 });
-    totalDeductions += 1200;
-  }
-  if (emp.id === "EMP005" && payPeriodStart.getMonth() % 4 === 1) {
-    deductionsBreakdown.push({ name: "Retirement Fund", amount: 800 });
-    totalDeductions += 800;
   }
 
   // Process Loan Deductions
@@ -357,8 +337,7 @@ export const generatePayslipsForPeriod = (
   console.log(`[generatePayslipsForPeriod] START for period: ${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}`);
   console.log(`[generatePayslipsForPeriod] Number of employees: ${employees.length}`);
   console.log(`[generatePayslipsForPeriod] Received taxTables:`, taxTables);
-  console.log(`[generatePayslipsForPeriod] Received userTaxSettings:`, userTaxSettings);
-
+  console.log(`[generatePayslipsForPeriod] Received userTaxSettings:`, userTaxSettings); // ADDED THIS LOG
 
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
@@ -371,6 +350,9 @@ export const generatePayslipsForPeriod = (
 
   employees.forEach(emp => {
     console.log(`[generatePayslipsForPeriod] Processing employee: ${emp.firstName} ${emp.lastName} (ID: ${emp.id}, Custom ID: ${emp.customEmployeeId})`);
+    console.log(`[generatePayslipsForPeriod] Employee Pay Frequency: ${emp.payFrequency}`); // ADDED THIS LOG
+    console.log(`[generatePayslipsForPeriod] Employee Salary: ${emp.salary}, Hourly Rate: ${emp.hourlyRate}`); // ADDED THIS LOG
+
     const approvedTimesheetsForPeriod = timesheets.filter(ts =>
       ts.employeeId === emp.id &&
       ts.status === "Approved" &&
@@ -385,14 +367,15 @@ export const generatePayslipsForPeriod = (
       payPeriodStart,
       payPeriodEnd
     );
+    console.log(`[generatePayslipsForPeriod] Calculated Gross Earnings for ${emp.firstName} ${emp.lastName}: R ${grossEarnings.toFixed(2)}`); // ADDED THIS LOG
 
     const { deductionsBreakdown, totalDeductions } = calculateDeductions(
       emp,
       grossEarnings,
-      processingLoans, // Pass mutable copy
-      processingSavingPlans, // Pass mutable copy
+      processingLoans,
+      processingSavingPlans,
       taxTables,
-      userTaxSettings, // Pass user tax settings
+      userTaxSettings,
       payPeriodStart,
       payPeriodEnd,
       payPeriodString
