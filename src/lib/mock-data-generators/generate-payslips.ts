@@ -2,6 +2,7 @@ import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO
 import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
 import { TaxTables } from "@/hooks/use-tax-tables"; // Import TaxTables interface
 import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations"; // Import from new utility
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
 
 /**
  * Calculates earnings for an employee for a given pay period.
@@ -323,7 +324,7 @@ export const generatePayslipsForPeriod = (
     const netPay = grossEarnings - totalDeductions;
 
     payslipsForPeriod.push({
-      id: `PS-${emp.id}-${monthString}-${Date.now()}`,
+      id: uuidv4(), // Use uuidv4 for generating a valid UUID
       employeeId: emp.id,
       payPeriod: payPeriodString,
       payDate: payDateString,
