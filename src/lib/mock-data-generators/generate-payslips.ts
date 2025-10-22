@@ -122,16 +122,34 @@ const calculateDeductions = (
   let totalDeductions = 0;
   const deductionsBreakdown: { name: string; amount: number }[] = [];
 
+  console.log(`[calculateDeductions] Employee: ${emp.firstName} ${emp.lastName} (${emp.id})`);
+  console.log(`[calculateDeductions] Gross Earnings: ${grossEarnings}`);
+  console.log(`[calculateDeductions] userTaxSettings:`, userTaxSettings);
+  console.log(`[calculateDeductions] taxTables:`, taxTables);
+
   // Use userTaxSettings for flags, fallback to true if settings not loaded (shouldn't happen in live)
   const applyPAYEFlag = userTaxSettings?.applyPaye ?? true;
   const applySDLFlag = userTaxSettings?.applySdl ?? true;
 
+  console.log(`[calculateDeductions] applyPAYEFlag: ${applyPAYEFlag}`);
+  console.log(`[calculateDeductions] applySDLFlag: ${applySDLFlag}`);
+
   const { payeBrackets, uifSdlRates } = taxTables;
+  console.log(`[calculateDeductions] payeBrackets length: ${payeBrackets.length}`);
+  console.log(`[calculateDeductions] uifSdlRates:`, uifSdlRates);
+
 
   if (payeBrackets.length > 0 && applyPAYEFlag) {
     const paye = calculatePAYE(grossEarnings, payeBrackets);
-    deductionsBreakdown.push({ name: "PAYE", amount: paye });
-    totalDeductions += paye;
+    console.log(`[calculateDeductions] Calculated PAYE: ${paye}`);
+    if (paye > 0) { // Only add if PAYE is a positive amount
+      deductionsBreakdown.push({ name: "PAYE", amount: paye });
+      totalDeductions += paye;
+    } else {
+      console.log(`[calculateDeductions] PAYE calculated as 0 or negative, not added to breakdown.`);
+    }
+  } else {
+    console.log(`[calculateDeductions] PAYE not applied. payeBrackets.length: ${payeBrackets.length}, applyPAYEFlag: ${applyPAYEFlag}`);
   }
 
   if (uifSdlRates) {
@@ -206,7 +224,6 @@ const calculateDeductions = (
       }
 
       if (deductionAmount > 0) {
-        deductionAmount = Math.min(deductionAmount, loan.remainingBalance);
         deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: deductionAmount });
         totalDeductions += deductionAmount;
         loan.remainingBalance -= deductionAmount;
@@ -254,7 +271,8 @@ const calculateDeductions = (
       }
     }
   });
-
+  console.log(`[calculateDeductions] Final deductionsBreakdown:`, deductionsBreakdown);
+  console.log(`[calculateDeductions] Final totalDeductions: ${totalDeductions}`);
   return { deductionsBreakdown, totalDeductions };
 };
 
