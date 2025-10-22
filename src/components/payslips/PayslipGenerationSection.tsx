@@ -48,11 +48,15 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
   React.useEffect(() => {
     if (selectedEmployeeId && filteredPayslipsForEmployee.length > 0) {
-      const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
-      if (mostRecentPayslip && mostRecentPayslip.id !== selectedPayslipId) {
-        setSelectedPayslipId(mostRecentPayslip.id);
+      // Only set a default if no payslip is currently selected
+      if (!selectedPayslipId) {
+        const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
+        if (mostRecentPayslip) {
+          setSelectedPayslipId(mostRecentPayslip.id);
+        }
       }
     } else if (!selectedEmployeeId && selectedPayslipId) {
+      // If employee is deselected, clear the payslip selection
       setSelectedPayslipId("");
     }
   }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
