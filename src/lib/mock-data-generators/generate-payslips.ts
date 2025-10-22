@@ -153,8 +153,8 @@ const calculateDeductions = (
     }
   }
 
-  // Removed hardcoded Provident Fund deduction
-  // const providentFundRate = 0.075;
+  // Removed Provident Fund deduction as it was incorrectly added
+  // const providentFundRate = 0.075; // Default rate
   // const providentFund = grossEarnings * providentFundRate;
   // deductionsBreakdown.push({ name: "Provident Fund", amount: providentFund });
   // totalDeductions += providentFund;
