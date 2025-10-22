@@ -12,8 +12,12 @@ const sidebarNavItems = [
     href: "/settings/company-details",
   },
   {
-    title: "Work Hours", // New sub-menu item
+    title: "Work Hours",
     href: "/settings/work-hours",
+  },
+  {
+    title: "Pay Cycle Settings", // New sub-menu item
+    href: "/settings/pay-cycle-settings",
   },
   {
     title: "Biometric Devices",
@@ -40,7 +44,7 @@ const sidebarNavItems = [
     href: "/settings/data-visuals",
   },
   {
-    title: "User Control Panel", // New item
+    title: "User Control Panel",
     href: "/settings/user-control-panel",
   },
   // Add more settings sub-menus here
@@ -78,7 +82,7 @@ const SettingsLayout: React.FC = () => {
             ))}
           </nav>
         </aside>
-        <div className="flex-1 lg:max-w-full"> {/* Changed from lg:max-w-2xl to lg:max-w-full */}
+        <div className="flex-1 lg:max-w-full">
           <Outlet /> {/* This is where nested routes will render */}
         </div>
       </div>

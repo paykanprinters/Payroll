@@ -11,7 +11,8 @@ import MockData from "./settings/MockData";
 import DataVisuals from "./settings/DataVisuals";
 import ReportDesign from "./settings/ReportDesign";
 import WorkHours from "./settings/WorkHours";
-import UserControlPanel from "./settings/UserControlPanel"; // New import
+import UserControlPanel from "./settings/UserControlPanel";
+import PayCycleSettingsPage from "./settings/PayCycleSettings"; // New import
 
 const Settings: React.FC = () => {
   return (
@@ -21,13 +22,14 @@ const Settings: React.FC = () => {
         <Route index element={<Navigate to="company-details" replace />} />
         <Route path="company-details" element={<CompanyDetails />} />
         <Route path="work-hours" element={<WorkHours />} />
+        <Route path="pay-cycle-settings" element={<PayCycleSettingsPage />} /> {/* New route */}
         <Route path="biometric-devices" element={<BiometricDevices />} />
         <Route path="tax-liabilities" element={<TaxLiabilities />} />
         <Route path="payslip-design" element={<PayslipDesign />} />
         <Route path="report-design" element={<ReportDesign />} />
         <Route path="mock-data" element={<MockData />} />
         <Route path="data-visuals" element={<DataVisuals />} />
-        <Route path="user-control-panel" element={<UserControlPanel />} /> {/* New route */}
+        <Route path="user-control-panel" element={<UserControlPanel />} />
         {/* Add more settings sub-routes here */}
       </Route>
     </Routes>
