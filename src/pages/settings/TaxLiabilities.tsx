@@ -43,6 +43,7 @@ const TaxLiabilities: React.FC = () => {
     (currentYear - 1).toString(),
     currentYear.toString(),
     (currentYear + 1).toString(),
+    (currentYear + 2).toString(), // Added 2026
   ];
 
   const form = useForm<TaxLiabilitiesFormValues>({

@@ -52,11 +52,33 @@ const mockSarsTaxData: { [year: string]: any } = {
       sdl_rate: 0.01,
     },
   },
+  "2026": { // New entry for 2026 tax year
+    taxYearDetails: {
+      year: 2026,
+      start_date: "2026-03-01",
+      end_date: "2027-02-28",
+      description: "SARS Tax Year 2026/2027 (Mock Data)",
+    },
+    payeBrackets: [
+      { min_income: 0, max_income: 245000, rate: 0.18, deduction: 0 },
+      { min_income: 245001, max_income: 380000, rate: 0.26, deduction: 44100 },
+      { min_income: 380001, max_income: 525000, rate: 0.31, deduction: 79500 },
+      { min_income: 525001, max_income: 685000, rate: 0.36, deduction: 124000 },
+      { min_income: 685001, max_income: 875000, rate: 0.41, deduction: 182500 },
+      { min_income: 875001, max_income: 1850000, rate: 0.45, deduction: 260000 },
+      { min_income: 1850001, max_income: null, rate: 0.45, deduction: 690000 },
+    ],
+    uifSdlRates: {
+      uif_rate: 0.01,
+      uif_cap: 180.00, // Monthly cap
+      sdl_rate: 0.01,
+    },
+  },
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
