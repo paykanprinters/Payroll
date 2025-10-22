@@ -44,41 +44,44 @@ const TitleUpdater = () => {
   return null; // This component doesn't render anything visible
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <TitleUpdater /> {/* Render TitleUpdater inside AuthProvider */}
-          <Routes>
-            <Route path="/login" element={<Login />} />
+const App = () => {
+  console.log("App.tsx: Initial localStorage.isMockDataEnabled:", localStorage.getItem("isMockDataEnabled"));
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <TitleUpdater /> {/* Render TitleUpdater inside AuthProvider */}
+            <Routes>
+              <Route path="/login" element={<Login />} />
 
-            {/* Protected Routes wrapped by MainLayout */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/todos" element={<ToDosPage />} />
-                <Route path="/employees" element={<Employees />} />
-                <Route path="/timesheet" element={<Timesheet />} />
-                <Route path="/payslips/*" element={<Payslips />} />
-                <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
-                <Route path="/savings" element={<Savings />} />
-                <Route path="/vacation-absence" element={<VacationAbsence />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/settings/*" element={<Settings />} />
-                {/* Catch-all for 404 within protected routes */}
-                <Route path="*" element={<NotFound />} />
+              {/* Protected Routes wrapped by MainLayout */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/todos" element={<ToDosPage />} />
+                  <Route path="/employees" element={<Employees />} />
+                  <Route path="/timesheet" element={<Timesheet />} />
+                  <Route path="/payslips/*" element={<Payslips />} />
+                  <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
+                  <Route path="/savings" element={<Savings />} />
+                  <Route path="/vacation-absence" element={<VacationAbsence />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/settings/*" element={<Settings />} />
+                  {/* Catch-all for 404 within protected routes */}
+                  <Route path="*" element={<NotFound />} />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

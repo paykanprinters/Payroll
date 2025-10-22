@@ -30,7 +30,9 @@ const MockData: React.FC = () => {
   const { taxTables, companyDetails } = usePayrollProcessor(); // Get taxTables and companyDetails from usePayrollProcessor
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
     // Initialize from localStorage on first render
-    return localStorage.getItem("isMockDataEnabled") === "true";
+    const initial = localStorage.getItem("isMockDataEnabled") === "true";
+    console.log("MockData.tsx: Initializing isMockDataEnabled from localStorage:", initial);
+    return initial;
   });
 
   // Define mock tax tables directly in MockData.tsx for strict isolation
@@ -75,13 +77,21 @@ const MockData: React.FC = () => {
       localStorage.setItem(key, String(value));
     });
     localStorage.setItem("isMockDataEnabled", "true");
+    console.log("MockData.tsx: localStorage 'isMockDataEnabled' set to 'true'.");
     localStorage.setItem("mockEmployees", JSON.stringify(mockEmployees));
+    console.log("MockData.tsx: Saved mockEmployees to localStorage:", mockEmployees);
     localStorage.setItem("mockLoans", JSON.stringify(mockLoans)); // Store new loan structure
+    console.log("MockData.tsx: Saved mockLoans to localStorage:", mockLoans);
     localStorage.setItem("mockSavingPlans", JSON.stringify(mockSavingPlans));
+    console.log("MockData.tsx: Saved mockSavingPlans to localStorage:", mockSavingPlans);
     localStorage.setItem("mockLeaveRecords", JSON.stringify(mockLeaveRecords));
+    console.log("MockData.tsx: Saved mockLeaveRecords to localStorage:", mockLeaveRecords);
     localStorage.setItem("mockPayslips", JSON.stringify(mockPayslips));
+    console.log("MockData.tsx: Saved mockPayslips to localStorage:", mockPayslips);
     localStorage.setItem("mockTimesheets", JSON.stringify(mockTimesheets));
+    console.log("MockData.tsx: Saved mockTimesheets to localStorage:", mockTimesheets);
     localStorage.setItem("mockToDos", JSON.stringify(mockToDos));
+    console.log("MockData.tsx: Saved mockToDos to localStorage:", mockToDos);
     localStorage.setItem("applyPAYE", "true");
     localStorage.setItem("applySDL", "true");
     // Set new logo properties
@@ -123,13 +133,21 @@ const MockData: React.FC = () => {
       localStorage.removeItem(key);
     });
     localStorage.removeItem("isMockDataEnabled");
+    console.log("MockData.tsx: localStorage 'isMockDataEnabled' removed.");
     localStorage.removeItem("mockEmployees");
+    console.log("MockData.tsx: Removed mockEmployees from localStorage.");
     localStorage.removeItem("mockLoans");
+    console.log("MockData.tsx: Removed mockLoans from localStorage.");
     localStorage.removeItem("mockSavingPlans");
+    console.log("MockData.tsx: Removed mockSavingPlans from localStorage.");
     localStorage.removeItem("mockLeaveRecords");
+    console.log("MockData.tsx: Removed mockLeaveRecords from localStorage.");
     localStorage.removeItem("mockPayslips");
+    console.log("MockData.tsx: Removed mockPayslips from localStorage.");
     localStorage.removeItem("mockTimesheets");
+    console.log("MockData.tsx: Removed mockTimesheets from localStorage.");
     localStorage.removeItem("mockToDos");
+    console.log("MockData.tsx: Removed mockToDos from localStorage.");
     localStorage.removeItem("applyPAYE");
     localStorage.removeItem("applySDL");
     // Clear report design settings
@@ -168,6 +186,7 @@ const MockData: React.FC = () => {
 
 
   const handleToggleChange = (checked: boolean) => {
+    console.log("MockData.tsx: handleToggleChange called. Checked:", checked);
     setIsMockDataEnabled(checked);
     if (checked) {
       applyMockData();
