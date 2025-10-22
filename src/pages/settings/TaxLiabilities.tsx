@@ -208,7 +208,7 @@ const TaxLiabilities: React.FC = () => {
           <div className="mt-8 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
             <h3 className="font-semibold text-lg mb-2">Important Note:</h3>
             <p className="text-sm">
-              Fetching live tax tables from SARS and applying complex payroll calculations requires a robust backend system with secure API integrations. This interface provides the UI for selecting the year and triggering the action, but the actual data retrieval and calculation logic would be handled server-side.
+              This demonstration uses **mock SARS tax data** for various years. For a production system, fetching and applying legally compliant tax tables from SARS requires a robust backend system with secure API integrations to official data sources. This interface provides the UI for selecting the year and triggering the action, but the actual data retrieval and calculation logic would be handled server-side.
             </p>
           </div>
         </CardContent>

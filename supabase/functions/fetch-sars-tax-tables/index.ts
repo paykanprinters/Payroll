@@ -8,12 +8,12 @@ const corsHeaders = {
 
 // Mock SARS tax data for demonstration purposes
 const mockSarsTaxData: { [year: string]: any } = {
-  "2024": {
+  "2023": {
     taxYearDetails: {
-      year: 2024,
-      start_date: "2024-03-01",
-      end_date: "2025-02-28",
-      description: "SARS Tax Year 2024/2025",
+      year: 2023,
+      start_date: "2023-03-01",
+      end_date: "2024-02-29",
+      description: "SARS Tax Year 2023/2024 (Mock Data)",
     },
     payeBrackets: [
       { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
@@ -22,7 +22,29 @@ const mockSarsTaxData: { [year: string]: any } = {
       { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
       { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
       { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
-      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 }, // Highest bracket
+      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
+    ],
+    uifSdlRates: {
+      uif_rate: 0.01,
+      uif_cap: 177.12, // Monthly cap (1% of R17712)
+      sdl_rate: 0.01,
+    },
+  },
+  "2024": {
+    taxYearDetails: {
+      year: 2024,
+      start_date: "2024-03-01",
+      end_date: "2025-02-28",
+      description: "SARS Tax Year 2024/2025 (Mock Data)",
+    },
+    payeBrackets: [
+      { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
+      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
+      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
+      { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
+      { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
+      { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
+      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
     ],
     uifSdlRates: {
       uif_rate: 0.01,
@@ -57,20 +79,38 @@ const mockSarsTaxData: { [year: string]: any } = {
       year: 2026,
       start_date: "2026-03-01",
       end_date: "2027-02-28",
-      description: "SARS Tax Year 2026/2027 (Mock Data - based on 2024/2025 guidelines)",
+      description: "SARS Tax Year 2026/2027 (Mock Data - based on user guidelines)",
     },
     payeBrackets: [
       { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
-      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
-      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
-      { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
-      { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
-      { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
-      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
+      { min_income: 237101, max_income: 1817000, rate: 0.26, deduction: 42678 }, // Simplified to 26% for a large range
+      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 }, // 45% for highest bracket
     ],
     uifSdlRates: {
       uif_rate: 0.01,
       uif_cap: 185.00, // Slightly increased mock cap for 2026
+      sdl_rate: 0.01,
+    },
+  },
+  "2027": {
+    taxYearDetails: {
+      year: 2027,
+      start_date: "2027-03-01",
+      end_date: "2028-02-29",
+      description: "SARS Tax Year 2027/2028 (Mock Data)",
+    },
+    payeBrackets: [
+      { min_income: 0, max_income: 240000, rate: 0.18, deduction: 0 },
+      { min_income: 240001, max_income: 375000, rate: 0.26, deduction: 43200 },
+      { min_income: 375001, max_income: 520000, rate: 0.31, deduction: 78200 },
+      { min_income: 520001, max_income: 680000, rate: 0.36, deduction: 122700 },
+      { min_income: 680001, max_income: 865000, rate: 0.41, deduction: 180700 },
+      { min_income: 865001, max_income: 1830000, rate: 0.45, deduction: 257000 },
+      { min_income: 1830001, max_income: null, rate: 0.45, deduction: 685000 },
+    ],
+    uifSdlRates: {
+      uif_rate: 0.01,
+      uif_cap: 190.00, // Slightly increased mock cap
       sdl_rate: 0.01,
     },
   },
