@@ -37,7 +37,8 @@ export const calculatePAYE = (taxableIncome: number, payeBrackets: TaxTables['pa
 
   for (const bracket of payeBrackets) {
     console.log(`[calculatePAYE] Checking bracket: min_income=${bracket.min_income}, max_income=${bracket.max_income}, rate=${bracket.rate}, deduction=${bracket.deduction}`);
-    if (annualIncome > bracket.min_income && (bracket.max_income === null || annualIncome <= bracket.max_income)) {
+    // Corrected condition: Use >= for min_income to include the starting value of the bracket
+    if (annualIncome >= bracket.min_income && (bracket.max_income === null || annualIncome <= bracket.max_income)) {
       annualPAYE = (annualIncome - bracket.min_income) * bracket.rate + bracket.deduction;
       console.log(`[calculatePAYE] Matched bracket. Calculation: (${annualIncome} - ${bracket.min_income}) * ${bracket.rate} + ${bracket.deduction} = ${annualPAYE}`);
       break;
