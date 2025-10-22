@@ -24,8 +24,19 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
   isPdfGeneration = false,
   onReadyForPdf,
 }) => {
+  // Add an explicit null check here
+  if (!companyDetails) {
+    console.error("IndividualPayslipCard: companyDetails is null or undefined during render.");
+    return (
+      <div className="p-4 text-center text-red-500 border rounded-md bg-red-50">
+        Company details not available for payslip. Please ensure company details are configured in settings.
+      </div>
+    );
+  }
+
   const employee = employees.find(emp => emp.id === payslip.employeeId);
 
+  // Now companyDetails is guaranteed not null, so we can destructure directly
   const {
     companyLegalName,
     companyTradingName,
@@ -39,7 +50,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
     logoWidth: companyLogoWidth, // Use new width
     logoHeight: companyLogoHeight, // Use new height
     logoFit: companyLogoFit, // Use new fit
-  } = companyDetails || {}; // Destructure with fallback to empty object
+  } = companyDetails;
 
   // Get explicit print styles based on layout size
   const printStyles = getPrintStyles(payslipDesignSettings.layoutSize);
@@ -245,7 +256,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             />
           </div>
         )}
-        {payslipDesignSettings.showCompanyDetails && companyDetails && (
+        {payslipDesignSettings.showCompanyDetails && (
           <div style={isPdfGeneration ? { textAlign: 'right', fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, flexGrow: 1, width: logoToUse ? 'calc(100% - ' + (logoWidth + baseFontSizePx * 0.5) + 'px)' : '100%' } : {}} className={cn("text-right flex-grow", !logoToUse && "w-full")}>
             <h2 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.2}px`, lineHeight: `${baseFontSizePx * 1.2 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>{companyLegalName}</h2>
             {companyTradingName && companyTradingName !== companyLegalName && (
