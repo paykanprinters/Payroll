@@ -52,8 +52,7 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
-      // Add logging here for live data context
-      console.log("[usePayrollProcessingLogic] Running payroll process for live data.");
+      console.log(`[usePayrollProcessingLogic] runPayrollProcess called. isMockDataEnabled: ${isMockDataEnabled}`);
       console.log("[usePayrollProcessingLogic] Period Start:", format(periodStart, 'yyyy-MM-dd'));
       console.log("[usePayrollProcessingLogic] Period End:", format(periodEnd, 'yyyy-MM-dd'));
       console.log("[usePayrollProcessingLogic] Tax Tables received:", taxTables);
@@ -157,8 +156,7 @@ export const usePayrollProcessingLogic = (
         return null;
       }
 
-      // Add logging here for live data context
-      console.log("[usePayrollProcessingLogic] Calculating single payslip preview for live data.");
+      console.log(`[usePayrollProcessingLogic] calculateSinglePayslipPreview called. isMockDataEnabled: ${isMockDataEnabled}`);
       console.log("[usePayrollProcessingLogic] Employee ID:", employeeId);
       console.log("[usePayrollProcessingLogic] Period Start:", format(periodStart, 'yyyy-MM-dd'));
       console.log("[usePayrollProcessingLogic] Period End:", format(periodEnd, 'yyyy-MM-dd'));
@@ -190,7 +188,7 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, isMockDataEnabled]
   );
 
   return {

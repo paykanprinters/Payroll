@@ -36,17 +36,17 @@ const calculateEarnings = (
   console.log(`[calculateEarnings] Employee Employment Type: ${emp.employmentType}`);
 
   // Determine basic salary based on hourly rate or fixed salary
-  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null) {
+  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) { // Added check for > 0
     // If hourly rate is defined, use it for basic salary calculation
     basicSalary = totalApprovedRegularHours * emp.hourlyRate;
     console.log(`[calculateEarnings] Hourly employee basicSalary calculated: ${basicSalary} (Hours: ${totalApprovedRegularHours} * Rate: ${emp.hourlyRate})`);
-  } else if (emp.salary !== undefined && emp.salary !== null) {
+  } else if (emp.salary !== undefined && emp.salary !== null && emp.salary > 0) { // Added check for > 0
     // If salary is defined, use it
     basicSalary = emp.salary;
     console.log(`[calculateEarnings] Salaried employee basicSalary: ${basicSalary}`);
   } else {
     // Fallback if neither salary nor hourly rate is explicitly defined (should ideally not happen with validation)
-    console.warn(`[calculateEarnings] Employee ${emp.firstName} ${emp.lastName} has neither salary nor hourly rate defined. Basic salary set to 0.`);
+    console.warn(`[calculateEarnings] Employee ${emp.firstName} ${emp.lastName} has neither valid salary nor hourly rate defined. Basic salary set to 0.`);
     basicSalary = 0;
   }
 
@@ -93,7 +93,7 @@ const calculateEarnings = (
       console.log(`[calculateEarnings] No effective hourly rate for overtime calculation.`);
     }
   } else {
-    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalOvertimeHours}`);
+    console.log(`[calculateEarnings] No overtime calculated. Total overtime hours: ${totalApprovedOvertimeHours}`);
   }
 
   const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
