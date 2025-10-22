@@ -158,6 +158,9 @@ export const usePayrollProcessor = () => {
   const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee: baseAddOrUpdateEmployee, isAuthenticated, isLoadingAuth });
 
+  // Add this console log to check the type of batchUpsertPayslips
+  console.log("usePayrollProcessor: Type of batchUpsertPayslips from usePayslipsData:", typeof batchUpsertPayslips);
+
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
     employees,
     payslips,
@@ -166,11 +169,12 @@ export const usePayrollProcessor = () => {
     leaveRecords,
     timesheets,
     taxTables,
+    userTaxSettings, // New parameter for user tax settings
     setPayslips,
     updateLoan,
     updateSavingPlan,
     updateTimesheetStatus,
-    batchUpsertPayslips,
+    batchUpsertPayslips, // This is the argument being passed
     isMockDataEnabled,
   );
 
