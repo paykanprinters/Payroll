@@ -338,6 +338,8 @@ export const generatePayslipsForPeriod = (
   console.log(`[generatePayslipsForPeriod] Number of employees: ${employees.length}`);
   console.log(`[generatePayslipsForPeriod] Received taxTables:`, taxTables);
   console.log(`[generatePayslipsForPeriod] Received userTaxSettings:`, userTaxSettings); // ADDED THIS LOG
+  console.log(`[generatePayslipsForPeriod] All timesheets received (${timesheets.length}):`, timesheets.map(ts => ({ id: ts.id, employeeId: ts.employeeId, date: ts.date, status: ts.status })));
+
 
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
@@ -353,11 +355,18 @@ export const generatePayslipsForPeriod = (
     console.log(`[generatePayslipsForPeriod] Employee Pay Frequency: ${emp.payFrequency}`); // ADDED THIS LOG
     console.log(`[generatePayslipsForPeriod] Employee Salary: ${emp.salary}, Hourly Rate: ${emp.hourlyRate}`); // ADDED THIS LOG
 
-    const approvedTimesheetsForPeriod = timesheets.filter(ts =>
-      ts.employeeId === emp.id &&
-      ts.status === "Approved" &&
-      isWithinInterval(parseISO(ts.date), { start: payPeriodStart, end: payPeriodEnd })
-    );
+    const approvedTimesheetsForPeriod = timesheets.filter(ts => {
+      const isEmployeeMatch = ts.employeeId === emp.id;
+      const isApproved = ts.status === "Approved";
+      const isWithinPeriod = isWithinInterval(parseISO(ts.date), { start: payPeriodStart, end: payPeriodEnd });
+      
+      console.log(`  - Checking timesheet ${ts.id} (Date: ${ts.date}, Status: ${ts.status}) for employee ${emp.id}:`);
+      console.log(`    - Employee match: ${isEmployeeMatch}`);
+      console.log(`    - Is Approved: ${isApproved}`);
+      console.log(`    - Is within period (${format(payPeriodStart, 'yyyy-MM-dd')} to ${format(payPeriodEnd, 'yyyy-MM-dd')}): ${isWithinPeriod}`);
+      
+      return isEmployeeMatch && isApproved && isWithinPeriod;
+    });
     console.log(`[generatePayslipsForPeriod] Employee: ${emp.firstName} ${emp.lastName} (${emp.id}) - Found ${approvedTimesheetsForPeriod.length} approved timesheets for period.`);
 
     const { earningsBreakdown, grossEarnings, unpaidLeaveDaysInPeriod } = calculateEarnings(
