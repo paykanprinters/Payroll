@@ -52,6 +52,14 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
+      // Add logging here for live data context
+      console.log("[usePayrollProcessingLogic] Running payroll process for live data.");
+      console.log("[usePayrollProcessingLogic] Period Start:", format(periodStart, 'yyyy-MM-dd'));
+      console.log("[usePayrollProcessingLogic] Period End:", format(periodEnd, 'yyyy-MM-dd'));
+      console.log("[usePayrollProcessingLogic] Tax Tables received:", taxTables);
+      console.log("[usePayrollProcessingLogic] User Tax Settings received:", userTaxSettings);
+
+
       const { payslips: newPayslips, updatedLoans, updatedSavingPlans } = generatePayslipsForPeriod(
         employees,
         loans,
@@ -147,6 +155,14 @@ export const usePayrollProcessingLogic = (
         showError("User tax settings not loaded. Cannot generate payslip preview.");
         return null;
       }
+
+      // Add logging here for live data context
+      console.log("[usePayrollProcessingLogic] Calculating single payslip preview for live data.");
+      console.log("[usePayrollProcessingLogic] Employee ID:", employeeId);
+      console.log("[usePayrollProcessingLogic] Period Start:", format(periodStart, 'yyyy-MM-dd'));
+      console.log("[usePayrollProcessingLogic] Period End:", format(periodEnd, 'yyyy-MM-dd'));
+      console.log("[usePayrollProcessingLogic] Tax Tables received for preview:", taxTables);
+      console.log("[usePayrollProcessingLogic] User Tax Settings received for preview:", userTaxSettings);
 
       const { payslips: previewPayslips } = generatePayslipsForPeriod(
         [employee],
