@@ -133,21 +133,51 @@ const PayslipOverviewPage: React.FC = () => {
   }, [loadPayslipsAndEmployees, loadPayslipDesignSettings, loadReportDesignSettings]);
 
   React.useEffect(() => {
-    if (selectedEmployeeId && payslips.length > 0) {
-      const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
-      const isCurrentSelectionValid = filteredPayslipsForEmployee.some(p => p.id === selectedPayslipId);
-      
-      if (!selectedPayslipId || !isCurrentSelectionValid) {
-        const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
-        if (mostRecentPayslip) {
-          setSelectedPayslipId(mostRecentPayslip.id);
-        } else {
-          setSelectedPayslipId(""); // No payslips for this employee
-        }
+    console.log("PayslipOverviewPage useEffect: Running...");
+    console.log("  selectedEmployeeId:", selectedEmployeeId);
+    console.log("  selectedPayslipId (before logic):", selectedPayslipId);
+    console.log("  payslips.length:", payslips.length);
+
+    if (!selectedEmployeeId || payslips.length === 0) {
+      // If no employee is selected or no payslips exist, ensure selectedPayslipId is cleared.
+      if (selectedPayslipId) {
+        console.log("  No employee or no payslips, clearing selectedPayslipId.");
+        setSelectedPayslipId("");
       }
-    } else if (!selectedEmployeeId && selectedPayslipId) {
-      setSelectedPayslipId(""); // Clear selected payslip if no employee is selected
+      return;
     }
+
+    const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
+    console.log("  filteredPayslipsForEmployee.length:", filteredPayslipsForEmployee.length);
+
+    if (filteredPayslipsForEmployee.length === 0) {
+      // If no payslips for the selected employee, clear the selectedPayslipId
+      if (selectedPayslipId) {
+        console.log("  No payslips for selected employee, clearing selectedPayslipId.");
+        setSelectedPayslipId("");
+      }
+      return;
+    }
+
+    // ONLY set a default if NO payslip is currently selected.
+    // If selectedPayslipId has a value, we assume the user made a choice and don't override it.
+    if (!selectedPayslipId) {
+      console.log("  No payslip currently selected. Attempting to set to most recent as default.");
+      const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
+      if (mostRecentPayslip) {
+        console.log("  Setting selectedPayslipId to most recent:", mostRecentPayslip.id);
+        setSelectedPayslipId(mostRecentPayslip.id);
+      } else {
+        console.log("  No most recent payslip found, clearing selectedPayslipId.");
+        setSelectedPayslipId("");
+      }
+    } else {
+      console.log("  A payslip is already selected. Not automatically changing user's selection.");
+      // We could add a check here to see if the selectedPayslipId is *still valid*
+      // for the current employee. If not, the dropdown might show an empty state.
+      // But we won't force it to the most recent.
+    }
+    console.log("PayslipOverviewPage useEffect: Finished. selectedPayslipId (after logic):", selectedPayslipId);
   }, [selectedEmployeeId, payslips, selectedPayslipId, setSelectedPayslipId]);
 
 
