@@ -12,7 +12,7 @@ import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queri
  * @param initialSavingPlans Initial mock saving plans.
  * @param leaveRecords All mock leave records.
  * @param timesheets All mock timesheet entries.
- * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates).
+ * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates, taxYearDetails).
  * @param userTaxSettings The user-specific tax settings (apply PAYE/SDL flags).
  * @returns An array of all generated MockPayslips.
  */

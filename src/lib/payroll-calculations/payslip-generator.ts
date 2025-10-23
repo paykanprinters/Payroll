@@ -1,4 +1,4 @@
-import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO, isWithinInterval } from "date-fns";
+import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO, isWithinInterval, differenceInYears } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations";
@@ -125,11 +125,17 @@ const calculateDeductions = (
   const applyPAYEFlag = userTaxSettings?.applyPaye ?? true;
   const applySDLFlag = userTaxSettings?.applySdl ?? true;
 
-  const { payeBrackets, uifSdlRates } = taxTables;
+  const { payeBrackets, uifSdlRates, taxYearDetails } = taxTables;
+
+  // Calculate employee age for rebates
+  let employeeAge: number | null = null;
+  if (emp.dateOfBirth) {
+    employeeAge = differenceInYears(new Date(), new Date(emp.dateOfBirth));
+  }
 
   // PAYE (Pay As You Earn)
   if (payeBrackets && payeBrackets.length > 0 && applyPAYEFlag) {
-    const paye = calculatePAYE(grossEarnings, payeBrackets);
+    const paye = calculatePAYE(grossEarnings, payeBrackets, taxYearDetails, employeeAge);
     if (paye > 0) {
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
@@ -318,7 +324,7 @@ const calculateLeaveSummary = (
  * @param timesheets All mock timesheet entries.
  * @param payPeriodStart The start date of the target pay period (Date object).
  * @param payPeriodEnd The end date of the target pay period (Date object).
- * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates).
+ * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates, taxYearDetails).
  * @param userTaxSettings The user-specific tax settings (apply PAYE/SDL flags).
  * @returns An object containing an array of generated MockPayslips for the period,
  *          and the updated loans and saving plans data.

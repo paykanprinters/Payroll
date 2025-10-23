@@ -18,9 +18,22 @@ interface TaxRatesUIFSDL {
   sdl_rate: number;
 }
 
+interface TaxYearDetails {
+  year: number;
+  start_date: string;
+  end_date: string;
+  description: string | null;
+  rebates: {
+    under65: number;
+    sixtyFiveToSeventyFour: number;
+    seventyFivePlus: number;
+  };
+}
+
 export interface TaxTables {
   payeBrackets: TaxBracketPAYE[];
   uifSdlRates: TaxRatesUIFSDL | null;
+  taxYearDetails: TaxYearDetails | null; // New field for tax year details including rebates
 }
 
 // Define mock tax tables for when mock data is enabled
@@ -38,6 +51,17 @@ const mockTaxTables: TaxTables = {
     uif_rate: 0.01,
     uif_cap: 177.12, // Monthly cap
     sdl_rate: 0.01,
+  },
+  taxYearDetails: { // Mock tax year details with rebates
+    year: new Date().getFullYear(),
+    start_date: `${new Date().getFullYear()}-03-01`,
+    end_date: `${new Date().getFullYear() + 1}-02-28`,
+    description: "SARS Tax Year (Mock Data)",
+    rebates: {
+      under65: 16425,
+      sixtyFiveToSeventyFour: 9033,
+      seventyFivePlus: 2994,
+    },
   },
 };
 
@@ -66,15 +90,22 @@ export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth
         .select('*')
         .eq('tax_year', year)
         .single();
+      
+      const { data: taxYearDetailsData, error: taxYearDetailsError } = await supabase
+        .from('tax_years')
+        .select('*')
+        .eq('year', year)
+        .single();
 
-      if (payeError || uifSdlError) {
-        console.error("useTaxTables: Error fetching live tax tables:", payeError || uifSdlError);
+      if (payeError || uifSdlError || taxYearDetailsError) {
+        console.error("useTaxTables: Error fetching live tax tables:", payeError || uifSdlError || taxYearDetailsError);
         setTaxTables(null);
         showError("Failed to load live tax tables for payroll calculations.");
       } else {
         setTaxTables({
           payeBrackets: payeData || [],
           uifSdlRates: uifSdlData || null,
+          taxYearDetails: taxYearDetailsData as TaxYearDetails || null, // Assign fetched tax year details
         });
         console.log(`useTaxTables: Live tax tables for ${year} loaded successfully.`);
       }

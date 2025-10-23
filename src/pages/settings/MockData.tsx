@@ -48,6 +48,17 @@ const MockData: React.FC = () => {
       uif_cap: 177.12, // Monthly cap
       sdl_rate: 0.01,
     },
+    taxYearDetails: { // Mock tax year details with rebates
+      year: new Date().getFullYear(),
+      start_date: `${new Date().getFullYear()}-03-01`,
+      end_date: `${new Date().getFullYear() + 1}-02-28`,
+      description: "SARS Tax Year (Mock Data)",
+      rebates: {
+        under65: 16425,
+        sixtyFiveToSeventyFour: 9033,
+        seventyFivePlus: 2994,
+      },
+    },
   };
 
   const internalMockUserTaxSettings: UserTaxSettings = { // Define mock user tax settings
