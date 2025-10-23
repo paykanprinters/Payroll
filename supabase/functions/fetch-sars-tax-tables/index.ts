@@ -14,6 +14,11 @@ const mockSarsTaxData: { [year: string]: any } = {
       start_date: "2023-03-01",
       end_date: "2024-02-29",
       description: "SARS Tax Year 2023/2024 (Mock Data)",
+      rebates: {
+        under65: 16425,
+        sixtyFiveToSeventyFour: 9033,
+        seventyFivePlus: 2994,
+      },
     },
     payeBrackets: [
       { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
@@ -36,6 +41,11 @@ const mockSarsTaxData: { [year: string]: any } = {
       start_date: "2024-03-01",
       end_date: "2025-02-28",
       description: "SARS Tax Year 2024/2025 (Mock Data)",
+      rebates: {
+        under65: 17235,
+        sixtyFiveToSeventyFour: 9444,
+        seventyFivePlus: 3145,
+      },
     },
     payeBrackets: [
       { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
@@ -58,6 +68,11 @@ const mockSarsTaxData: { [year: string]: any } = {
       start_date: "2025-03-01",
       end_date: "2026-02-28",
       description: "SARS Tax Year 2025/2026 (Mock Data)",
+      rebates: {
+        under65: 17500,
+        sixtyFiveToSeventyFour: 9600,
+        seventyFivePlus: 3200,
+      },
     },
     payeBrackets: [
       { min_income: 0, max_income: 245000, rate: 0.18, deduction: 0 },
@@ -80,6 +95,11 @@ const mockSarsTaxData: { [year: string]: any } = {
       start_date: "2026-03-01",
       end_date: "2027-02-28",
       description: "SARS Tax Year 2026/2027 (User Provided Data)",
+      rebates: {
+        under65: 17235,
+        sixtyFiveToSeventyFour: 26679,
+        seventyFivePlus: 29824,
+      },
     },
     payeBrackets: [
       { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
@@ -102,6 +122,11 @@ const mockSarsTaxData: { [year: string]: any } = {
       start_date: "2027-03-01",
       end_date: "2028-02-29",
       description: "SARS Tax Year 2027/2028 (Mock Data)",
+      rebates: {
+        under65: 17800,
+        sixtyFiveToSeventyFour: 9800,
+        seventyFivePlus: 3300,
+      },
     },
     payeBrackets: [
       { min_income: 0, max_income: 240000, rate: 0.18, deduction: 0 },
@@ -173,7 +198,7 @@ serve(async (req) => {
       });
     }
 
-    // Upsert tax_years entry
+    // Upsert tax_years entry, now including rebates
     const { data: upsertedTaxYear, error: taxYearError } = await supabaseAdmin
       .from('tax_years')
       .upsert(taxData.taxYearDetails, { onConflict: 'year' })
