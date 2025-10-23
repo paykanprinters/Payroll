@@ -26,6 +26,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useWorkHoursSettings } from "./use-work-hours-settings";
 import { usePayCycleSettings } from "./use-pay-cycle-settings";
 import { useUserTaxSettings } from "./use-user-tax-settings"; // New import
+import { useEmployeesData } from "./use-employees-data"; // Import useEmployeesData
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
