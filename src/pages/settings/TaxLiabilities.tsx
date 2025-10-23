@@ -15,7 +15,8 @@ import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { useUserTaxSettings, UserTaxSettings } from "@/hooks/use-user-tax-settings"; // New import
+import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
+import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // Corrected import path for UserTaxSettings
 
 const DEFAULT_IRP5_FONT_SIZE = 12; // Default font size for IRP5 content
 const MIN_IRP5_FONT_SIZE = 10;
@@ -129,8 +130,8 @@ const TaxLiabilities: React.FC = () => {
         id: userTaxSettings?.id,
         applyPaye: data.applyPAYE,
         applySdl: data.applySDL,
-        enableIrp5Export: data.enableIrp5Export, // Ensure IRP5 settings are also saved
-        irp5ContentFontSize: data.irp5ContentFontSize, // Ensure IRP5 settings are also saved
+        enableIrp5Export: data.enableIrp5Export, // Ensure this is included
+        irp5ContentFontSize: data.irp5ContentFontSize, // Ensure this is included
       };
       await saveUserTaxSettings(settingsToSave);
     } else {
@@ -145,7 +146,7 @@ const TaxLiabilities: React.FC = () => {
         applyPaye: form.getValues("applyPAYE"),
         applySdl: form.getValues("applySDL"),
         enableIrp5Export: checked,
-        irp5ContentFontSize: form.getValues("irp5ContentFontSize"),
+        irp5ContentFontSize: form.getValues("irp5ContentFontSize"), // Ensure this is included
       };
       await saveUserTaxSettings(settingsToSave);
     } else {
