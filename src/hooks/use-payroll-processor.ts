@@ -11,7 +11,6 @@ import {
   ToDoEntry,
 } from "@/lib/mock-data-interfaces";
 import { useCompanyDetails } from "./use-company-details";
-import { useEmployeesData } from "./use-employees-data";
 import { useTaxTables } from "./use-tax-tables";
 import { usePayrollProcessingLogic } from "./use-payroll-processing-logic";
 import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
@@ -37,6 +36,19 @@ export const usePayrollProcessor = () => {
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
     return localStorage.getItem("isMockDataEnabled") === "true";
   });
+
+  // NEW: State to hold the active tax year for calculations
+  const [activeTaxYearForCalculations, setActiveTaxYearForCalculations] = useState<number>(() => {
+    // Initialize from localStorage if available, otherwise current year
+    const savedYear = localStorage.getItem("activeTaxYearForCalculations");
+    return savedYear ? parseInt(savedYear) : new Date().getFullYear();
+  });
+
+  // Persist activeTaxYearForCalculations to localStorage
+  useEffect(() => {
+    localStorage.setItem("activeTaxYearForCalculations", activeTaxYearForCalculations.toString());
+  }, [activeTaxYearForCalculations]);
+
 
   const mockLoansRef = useRef<string | null>(null);
   const mockSavingPlansRef = useRef<string | null>(null);
@@ -137,7 +149,8 @@ export const usePayrollProcessor = () => {
   }, [isMockDataEnabled]);
 
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  // Pass activeTaxYearForCalculations to useTaxTables
+  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear: activeTaxYearForCalculations });
   const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { payCycleSettings, isLoadingPayCycleSettings, savePayCycleSettings, refetchPayCycleSettings } = usePayCycleSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings, refetchUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth }); // New hook
@@ -370,5 +383,7 @@ export const usePayrollProcessor = () => {
     isAuthenticated,
     isLoadingAuth,
     refetchPayslips,
+    activeTaxYearForCalculations, // Expose active tax year
+    setActiveTaxYearForCalculations, // Expose setter for active tax year
   };
 };

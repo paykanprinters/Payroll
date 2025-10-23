@@ -69,9 +69,10 @@ interface UseTaxTablesProps {
   isMockDataEnabled: boolean;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
+  activeTaxYear: number; // NEW: Prop to specify the active tax year
 }
 
-export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseTaxTablesProps) => {
+export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear }: UseTaxTablesProps) => {
   const [taxTables, setTaxTables] = useState<TaxTables | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -128,11 +129,11 @@ export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth
       setTaxTables(mockTaxTables);
       setIsLoading(false);
     } else if (isAuthenticated) {
-      const currentTaxYear = new Date().getFullYear(); // Or determine based on fiscal year
-      fetchLiveTaxTables(currentTaxYear);
+      // Use the activeTaxYear prop for fetching
+      fetchLiveTaxTables(activeTaxYear);
 
       const handleTaxTablesUpdate = () => {
-        fetchLiveTaxTables(currentTaxYear); // Re-fetch if the event is triggered
+        fetchLiveTaxTables(activeTaxYear); // Re-fetch if the event is triggered
       };
 
       window.addEventListener('taxTablesUpdated', handleTaxTablesUpdate);
@@ -144,7 +145,7 @@ export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth
       setTaxTables(null);
       setIsLoading(false);
     }
-  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveTaxTables]);
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveTaxTables, activeTaxYear]); // Add activeTaxYear to dependencies
 
   return {
     taxTables,

@@ -34,7 +34,7 @@ type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
 
 const TaxLiabilities: React.FC = () => {
   const { user } = useAuth();
-  const { isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
+  const { isMockDataEnabled, isAuthenticated, isLoadingAuth, setActiveTaxYearForCalculations } = usePayrollProcessor(); // Get setActiveTaxYearForCalculations
   const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
   const currentYear = new Date().getFullYear();
@@ -111,7 +111,9 @@ const TaxLiabilities: React.FC = () => {
       } else {
         console.log('Fetch tax tables Edge Function response:', data);
         showSuccess(`Tax tables for ${selectedTaxYear} fetched and applied successfully!`);
-        window.dispatchEvent(new Event('taxTablesUpdated'));
+        // NEW: Set the active tax year for calculations
+        setActiveTaxYearForCalculations(parseInt(selectedTaxYear));
+        // Removed: window.dispatchEvent(new Event('taxTablesUpdated'));
       }
     } catch (error: any) {
       console.error('Error calling fetch-sars-tax-tables Edge Function:', error);
