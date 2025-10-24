@@ -228,10 +228,9 @@ const Dashboard: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+          {visibleWidgets.upcomingPayrollCard && <UpcomingPayrollCard />}
         </div>
       )}
-
-      {visibleWidgets.upcomingPayrollCard && <UpcomingPayrollCard />}
 
       {visibleWidgets.toDoListCard && <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />}
 
