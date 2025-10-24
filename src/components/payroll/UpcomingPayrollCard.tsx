@@ -35,7 +35,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
 
 const UpcomingPayrollCard: React.FC = () => {
   const navigate = useNavigate();
-  const { employees, calculateSinglePayslipPreview, companyDetails, payCycleSettings, isLoadingPayCycleSettings } = usePayrollProcessor(); // Get payCycleSettings
+  const { employees, calculateSinglePayslipPreview, companyDetails, payCycleSettings, isLoadingPayCycleSettings, runPayrollProcess } = usePayrollProcessor(); // Get payCycleSettings and runPayrollProcess
 
   const [currentDateForCalculation, setCurrentDateForCalculation] = useState<Date>(new Date());
   const [checkDate, setCheckDate] = useState<Date>(new Date());
