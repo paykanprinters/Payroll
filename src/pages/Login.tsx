@@ -38,7 +38,8 @@ const Login: React.FC = () => {
   // Log auth and loading states from Login component's perspective
   useEffect(() => {
     console.log("Login.tsx: Auth State Update - isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth, "isSubmitting:", isSubmitting);
-    if (isAuthenticated && user && !isSubmitting) { // Only navigate if not currently submitting
+    // Only navigate if authenticated, user is loaded, NOT submitting, AND auth state is fully loaded (not loading anymore)
+    if (isAuthenticated && user && !isSubmitting && !isLoadingAuth) {
       console.log("Login.tsx: Authenticated user found, navigating to dashboard.");
       navigate('/dashboard', { replace: true });
     }
