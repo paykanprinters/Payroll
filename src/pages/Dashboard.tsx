@@ -42,7 +42,7 @@ const Dashboard: React.FC = () => {
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
-  const [upcomingPayrollAmount, setUpcomingPayrollAmount] = useState(0);
+  // Removed: const [upcomingPayrollAmount, setUpcomingPayrollAmount] = useState(0);
   const [recentPayslipCount, setRecentPayslipCount] = useState(0);
   const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
   const [monthlyPayrollData, setMonthlyPayrollData] = useState<{ name: string; payroll: number }[]>([]);
@@ -59,8 +59,8 @@ const Dashboard: React.FC = () => {
 
     setRecentPayslipCount(payslips.length);
 
-    const totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), 0);
-    setUpcomingPayrollAmount(totalSalaries);
+    // Removed: const totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), 0);
+    // Removed: setUpcomingPayrollAmount(totalSalaries);
 
     const jobTitleMap = new Map<string, number>();
     employees.forEach((emp) => {
@@ -201,18 +201,6 @@ const Dashboard: React.FC = () => {
               <div className="text-2xl font-bold">{employeeCount}</div>
               <p className="text-xs text-muted-foreground">
                 {isMockDataEnabled ? "+20.1% from last month (mock)" : (employeeCount > 0 ? "+20.1% from last month" : "No employees")}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming Payroll</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">R {upcomingPayrollAmount.toLocaleString('en-ZA')}</div>
-              <p className="text-xs text-muted-foreground">
-                {isMockDataEnabled ? "Due: 25th of the month (mock)" : "Due: 25th of the month"}
               </p>
             </CardContent>
           </Card>

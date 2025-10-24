@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import CalculatePaycheckDialog from "./CalculatePaycheckDialog";
 import { PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { PayCycleSettings } from "@/integrations/supabase/pay-cycle-queries"; // Import PayCycleSettings
+import { calculatePayPeriodDetails } from "@/lib/payroll-calculations"; // Import the new function
 
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
@@ -32,86 +33,9 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   payslipLogoFit: 'contain',
 };
 
-// Helper function to calculate pay period and check date based on settings
-const calculatePayPeriodAndCheckDate = (
-  currentDate: Date,
-  settings: PayCycleSettings
-): { checkDate: Date; payPeriodStart: Date; payPeriodEnd: Date } => {
-  let payPeriodEnd: Date;
-  let checkDate: Date;
-
-  const today = new Date();
-
-  if (settings.payCycleType === "Monthly") {
-    // For monthly, cut-off day is a day of the month (1-31)
-    let cutOffDateThisMonth = setDate(currentDate, settings.cutOffDay);
-    
-    // If cut-off day is in the future, use this month's cut-off
-    // If cut-off day is in the past, use next month's cut-off
-    if (cutOffDateThisMonth < today && getDate(currentDate) > settings.cutOffDay) {
-      cutOffDateThisMonth = addMonths(cutOffDateThisMonth, 1);
-    } else if (cutOffDateThisMonth > today && getDate(currentDate) > settings.cutOffDay) {
-      // If current date is after cut-off day, but cut-off date is still in the future (e.g., today is 26th, cut-off is 28th)
-      // This means the current period's cut-off is still this month.
-    } else if (cutOffDateThisMonth < today && getDate(currentDate) <= settings.cutOffDay) {
-      // If current date is before or on cut-off day, but cut-off date is in the past (e.g., today is 2nd, cut-off is 28th last month)
-      // This means the current period's cut-off is last month.
-      cutOffDateThisMonth = subMonths(cutOffDateThisMonth, 1);
-    }
-
-    payPeriodEnd = cutOffDateThisMonth;
-    checkDate = addDays(payPeriodEnd, settings.payDayOffset);
-    
-    // Adjust payPeriodStart to be the day after the previous cut-off
-    let previousCutOffDate = subMonths(payPeriodEnd, 1);
-    previousCutOffDate = setDate(previousCutOffDate, settings.cutOffDay);
-    const payPeriodStart = addDays(previousCutOffDate, 1);
-
-    return { checkDate, payPeriodStart, payPeriodEnd };
-
-  } else if (settings.payCycleType === "Weekly" || settings.payCycleType === "Bi-Weekly") {
-    // For weekly/bi-weekly, cut-off day is a day of the week (1=Mon, 7=Sun)
-    // date-fns getDay returns 0=Sun, 1=Mon, ..., 6=Sat. We need to convert settings.cutOffDay (1=Mon, 7=Sun)
-    const targetDayOfWeek = settings.cutOffDay === 7 ? 0 : settings.cutOffDay; // Convert 7 (Sunday) to 0 for date-fns
-
-    let currentCutOffDay = setDay(currentDate, targetDayOfWeek, { weekStartsOn: 1 }); // weekStartsOn: 1 means Monday is 1
-
-    // If the currentCutOffDay is in the past relative to today, move to next week
-    if (currentCutOffDay < today && getDay(currentDate) > targetDayOfWeek) {
-      currentCutOffDay = addWeeks(currentCutOffDay, 1);
-    } else if (currentCutOffDay > today && getDay(currentDate) > targetDayOfWeek) {
-      // If current date is after cut-off day, but cut-off date is still in the future (e.g., today is Sat, cut-off is Fri next week)
-      // This means the current period's cut-off is still this week.
-    } else if (currentCutOffDay < today && getDay(currentDate) <= targetDayOfWeek) {
-      // If current date is before or on cut-off day, but cut-off date is in the past (e.g., today is Mon, cut-off is Fri last week)
-      // This means the current period's cut-off is last week.
-      currentCutOffDay = subWeeks(currentCutOffDay, 1);
-    }
-
-    payPeriodEnd = currentCutOffDay;
-    checkDate = addDays(payPeriodEnd, settings.payDayOffset);
-
-    let payPeriodStart: Date;
-    if (settings.payCycleType === "Weekly") {
-      payPeriodStart = addDays(subWeeks(payPeriodEnd, 1), 1); // Day after previous cut-off
-    } else { // Bi-Weekly
-      payPeriodStart = addDays(subWeeks(payPeriodEnd, 2), 1); // Day after previous bi-weekly cut-off
-    }
-    
-    return { checkDate, payPeriodStart, payPeriodEnd };
-  }
-
-  // Fallback to a default weekly if settings are invalid or not found
-  const defaultCheckDate = addDays(startOfWeek(currentDate, { weekStartsOn: 1 }), 4); // Default to Friday
-  const defaultPayPeriodEnd = defaultCheckDate;
-  const defaultPayPeriodStart = subDays(defaultPayPeriodEnd, 6);
-  return { checkDate: defaultCheckDate, payPeriodStart: defaultPayPeriodStart, payPeriodEnd: defaultPayPeriodEnd };
-};
-
-
 const UpcomingPayrollCard: React.FC = () => {
   const navigate = useNavigate();
-  const { runPayrollProcess, companyDetails, payCycleSettings, isLoadingPayCycleSettings } = usePayrollProcessor(); // Get payCycleSettings
+  const { employees, calculateSinglePayslipPreview, companyDetails, payCycleSettings, isLoadingPayCycleSettings } = usePayrollProcessor(); // Get payCycleSettings
 
   const [currentDateForCalculation, setCurrentDateForCalculation] = useState<Date>(new Date());
   const [checkDate, setCheckDate] = useState<Date>(new Date());
@@ -122,12 +46,18 @@ const UpcomingPayrollCard: React.FC = () => {
     const savedSettings = localStorage.getItem("payslipDesignSettings");
     return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
   });
+  const [totalUpcomingPayrollAmount, setTotalUpcomingPayrollAmount] = useState<number>(0); // New state for total amount
 
   // Effect to update pay period and check date when settings or current date change
   useEffect(() => {
     if (payCycleSettings) {
       const { checkDate: newCheckDate, payPeriodStart: newPayPeriodStart, payPeriodEnd: newPayPeriodEnd } =
-        calculatePayPeriodAndCheckDate(currentDateForCalculation, payCycleSettings);
+        calculatePayPeriodDetails(
+          currentDateForCalculation,
+          payCycleSettings.payCycleType,
+          payCycleSettings.cutOffDay,
+          payCycleSettings.payDayOffset
+        );
       setCheckDate(newCheckDate);
       setPayPeriodStart(newPayPeriodStart);
       setPayPeriodEnd(newPayPeriodEnd);
@@ -141,6 +71,39 @@ const UpcomingPayrollCard: React.FC = () => {
       setPayPeriodEnd(defaultPayPeriodEnd);
     }
   }, [payCycleSettings, currentDateForCalculation]);
+
+  // NEW: Effect to calculate total upcoming payroll amount
+  useEffect(() => {
+    const calculateTotalUpcomingPayroll = () => {
+      if (!employees.length || !payCycleSettings || !payPeriodStart || !payPeriodEnd) {
+        setTotalUpcomingPayrollAmount(0);
+        return;
+      }
+
+      let totalGross = 0;
+      employees.forEach(employee => {
+        // Use employee's payFrequency, fallback to company-wide if not set
+        const employeePayCycleType = employee.payFrequency || payCycleSettings.payCycleType;
+        
+        // Calculate employee-specific pay period details using the global pay cycle settings
+        const { payPeriodStart: employeeSpecificPeriodStart, payPeriodEnd: employeeSpecificPeriodEnd } = calculatePayPeriodDetails(
+          currentDateForCalculation, // Use the base date for calculation
+          employeePayCycleType, // Use employee's specific pay cycle type
+          payCycleSettings.cutOffDay,
+          payCycleSettings.payDayOffset
+        );
+
+        const previewPayslip = calculateSinglePayslipPreview(employee.id, employeeSpecificPeriodStart, employeeSpecificPeriodEnd);
+        if (previewPayslip) {
+          totalGross += previewPayslip.grossEarnings;
+        }
+      });
+      setTotalUpcomingPayrollAmount(totalGross);
+    };
+
+    calculateTotalUpcomingPayroll();
+  }, [employees, payCycleSettings, calculateSinglePayslipPreview, currentDateForCalculation, payPeriodStart, payPeriodEnd]);
+
 
   useEffect(() => {
     const handlePayslipDesignUpdate = () => {
@@ -208,14 +171,29 @@ const UpcomingPayrollCard: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Upcoming Payroll</CardTitle>
-        <CardDescription>
-          Manage your upcoming payroll cycle and perform quick actions.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Upcoming Payroll</CardTitle>
+        {/* Display the dollar sign icon here */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          className="h-4 w-4 text-muted-foreground"
+        >
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="text-2xl font-bold">R {totalUpcomingPayrollAmount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</div>
+        <p className="text-xs text-muted-foreground">
+          {dueText}
+        </p>
+      </CardContent>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold">{payCycleLabel}</h3>
@@ -258,7 +236,6 @@ const UpcomingPayrollCard: React.FC = () => {
             </Button>
           </div>
         </div>
-      </CardContent>
       <CalculatePaycheckDialog
         isOpen={isCalculatePaycheckDialogOpen}
         onClose={() => setIsCalculatePaycheckDialogOpen(false)}
