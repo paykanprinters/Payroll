@@ -134,8 +134,8 @@ const calculateDeductions = (
   }
 
   // PAYE (Pay As You Earn)
-  if (payeBrackets && payeBrackets.length > 0 && applyPAYEFlag) {
-    const paye = calculatePAYE(grossEarnings, payeBrackets, taxYearDetails, employeeAge);
+  if (payeBrackets && payeBrackets.length > 0 && applyPAYEFlag && emp.payFrequency) { // Ensure payFrequency is available
+    const paye = calculatePAYE(grossEarnings, payeBrackets, taxYearDetails, employeeAge, emp.payFrequency);
     if (paye > 0) {
       deductionsBreakdown.push({ name: "PAYE", amount: paye });
       totalDeductions += paye;
@@ -166,13 +166,16 @@ const calculateDeductions = (
   }
 
   // Helper to determine if the current pay period is a "full" period for a given frequency
-  const isFullPeriod = (frequency: "monthly" | "weekly", periodStart: Date, periodEnd: Date): boolean => {
-    if (frequency === "monthly") {
+  const isFullPeriod = (frequency: "Monthly" | "Weekly" | "Bi-Weekly", periodStart: Date, periodEnd: Date): boolean => {
+    if (frequency === "Monthly") {
       // A full month period starts on the 1st and ends on the last day of the same month
       return format(periodStart, 'dd') === '01' && isSameMonth(periodStart, periodEnd) && format(periodEnd, 'dd') === format(new Date(periodEnd.getFullYear(), periodEnd.getMonth() + 1, 0), 'dd');
-    } else if (frequency === "weekly") {
+    } else if (frequency === "Weekly") {
       // A full week period is exactly 7 days (difference in days is 6)
       return (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 6;
+    } else if (frequency === "Bi-Weekly") {
+      // A full bi-weekly period is exactly 14 days (difference in days is 13)
+      return (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24) === 13;
     }
     return false;
   };
@@ -195,22 +198,22 @@ const calculateDeductions = (
       }
 
       let deductionAmount = 0;
-      const employeePayFrequency = emp.payFrequency?.toLowerCase(); // Ensure consistency
+      const employeePayFrequency = emp.payFrequency; // Use the actual enum type
 
-      if (loan.frequency === employeePayFrequency) {
+      if (loan.frequency === employeePayFrequency?.toLowerCase()) { // Compare string to lowercase string
         // Direct match: loan frequency matches employee's pay frequency
-        if (isFullPeriod(loan.frequency, payPeriodStart, payPeriodEnd)) {
+        if (isFullPeriod(employeePayFrequency, payPeriodStart, payPeriodEnd)) {
           deductionAmount = loan.repaymentAmount;
         }
-      } else if (employeePayFrequency === "monthly" && loan.frequency === "weekly") {
+      } else if (employeePayFrequency === "Monthly" && loan.frequency === "weekly") {
         // Monthly paid employee with a weekly loan deduction
-        if (isFullPeriod("monthly", payPeriodStart, payPeriodEnd)) {
+        if (isFullPeriod("Monthly", payPeriodStart, payPeriodEnd)) {
           deductionAmount = loan.repaymentAmount * 4; // Assume 4 weeks in a month for simplification
         }
-      } else if (employeePayFrequency === "bi-weekly" && loan.frequency === "weekly") {
+      } else if (employeePayFrequency === "Bi-Weekly" && loan.frequency === "weekly") {
         // Bi-weekly paid employee with a weekly loan deduction
         // Assume a bi-weekly payslip covers two weekly deductions
-        if (isFullPeriod("weekly", payPeriodStart, payPeriodEnd)) { // Check if the current period is a full week
+        if (isFullPeriod("Bi-Weekly", payPeriodStart, payPeriodEnd)) { // Check if the current period is a full bi-week
             deductionAmount = loan.repaymentAmount * 2; // Apply two weekly deductions
         }
       }
@@ -242,18 +245,18 @@ const calculateDeductions = (
       // Check if the plan has an end date and if it's already passed the current pay period start
       if (!plan.endDate || new Date(plan.endDate) >= payPeriodStart) {
         let deductionAmount = 0;
-        const employeePayFrequency = emp.payFrequency?.toLowerCase();
+        const employeePayFrequency = emp.payFrequency;
 
-        if (plan.frequency === employeePayFrequency) {
-          if (isFullPeriod(plan.frequency, payPeriodStart, payPeriodEnd)) {
+        if (plan.frequency === employeePayFrequency?.toLowerCase()) {
+          if (isFullPeriod(employeePayFrequency, payPeriodStart, payPeriodEnd)) {
             deductionAmount = plan.amount;
           }
-        } else if (employeePayFrequency === "monthly" && plan.frequency === "weekly") {
-          if (isFullPeriod("monthly", payPeriodStart, payPeriodEnd)) {
+        } else if (employeePayFrequency === "Monthly" && plan.frequency === "weekly") {
+          if (isFullPeriod("Monthly", payPeriodStart, payPeriodEnd)) {
             deductionAmount = plan.amount * 4;
           }
-        } else if (employeePayFrequency === "bi-weekly" && plan.frequency === "weekly") {
-            if (isFullPeriod("weekly", payPeriodStart, payPeriodEnd)) {
+        } else if (employeePayFrequency === "Bi-Weekly" && plan.frequency === "weekly") {
+            if (isFullPeriod("Bi-Weekly", payPeriodStart, payPeriodEnd)) {
                 deductionAmount = plan.amount * 2;
             }
         }

@@ -19,22 +19,43 @@ export const calculateWorkingDays = (start: Date, end: Date): number => {
  * @param payeBrackets Array of PAYE tax brackets.
  * @param taxYearDetails Details of the tax year, including rebates.
  * @param employeeAge The age of the employee.
+ * @param payFrequency The employee's pay frequency ("Monthly", "Weekly", "Bi-Weekly").
  * @returns The calculated PAYE amount.
  */
 export const calculatePAYE = (
   taxableIncome: number,
   payeBrackets: TaxTables['payeBrackets'],
   taxYearDetails: TaxTables['taxYearDetails'] | null,
-  employeeAge: number | null
+  employeeAge: number | null,
+  payFrequency: "Monthly" | "Weekly" | "Bi-Weekly"
 ): number => {
-  console.log(`[calculatePAYE] START - taxableIncome: ${taxableIncome}, payeBrackets length: ${payeBrackets.length}, employeeAge: ${employeeAge}`);
+  console.log(`[calculatePAYE] START - taxableIncome: ${taxableIncome}, payFrequency: ${payFrequency}, employeeAge: ${employeeAge}`);
   console.log(`[calculatePAYE] taxYearDetails:`, taxYearDetails);
 
-  // Annualize income for PAYE calculation (assuming monthly income * 12)
-  const annualIncome = taxableIncome * 12;
+  let annualizationFactor = 1;
+  let deAnnualizationFactor = 1;
+
+  switch (payFrequency) {
+    case "Weekly":
+      annualizationFactor = 52;
+      deAnnualizationFactor = 52;
+      break;
+    case "Bi-Weekly":
+      annualizationFactor = 26;
+      deAnnualizationFactor = 26;
+      break;
+    case "Monthly":
+    default:
+      annualizationFactor = 12;
+      deAnnualizationFactor = 12;
+      break;
+  }
+
+  // Annualize income for PAYE calculation
+  const annualIncome = taxableIncome * annualizationFactor;
   let annualPAYE = 0;
 
-  console.log(`[calculatePAYE] Annualized Income: ${annualIncome}`);
+  console.log(`[calculatePAYE] Annualization Factor: ${annualizationFactor}, Annualized Income: ${annualIncome}`);
 
   // Ensure payeBrackets is not empty before iterating
   if (payeBrackets.length === 0) {
@@ -68,9 +89,9 @@ export const calculatePAYE = (
     annualPAYE = Math.max(0, annualPAYE - totalRebate); // Ensure PAYE doesn't go negative
   }
 
-  // De-annualize PAYE to get monthly amount
-  const monthlyPAYE = annualPAYE / 12;
-  console.log(`[calculatePAYE] Annual PAYE (after rebates): ${annualPAYE}, Monthly PAYE: ${monthlyPAYE}`);
-  console.log(`[calculatePAYE] END - Returning monthlyPAYE: ${monthlyPAYE}`);
-  return monthlyPAYE;
+  // De-annualize PAYE to get the amount for the current pay period
+  const periodPAYE = annualPAYE / deAnnualizationFactor;
+  console.log(`[calculatePAYE] Annual PAYE (after rebates): ${annualPAYE}, Period PAYE: ${periodPAYE}`);
+  console.log(`[calculatePAYE] END - Returning periodPAYE: ${periodPAYE}`);
+  return periodPAYE;
 };

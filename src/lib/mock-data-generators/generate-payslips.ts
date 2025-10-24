@@ -8,8 +8,8 @@ import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queri
  * This function is used for initial mock data setup.
  *
  * @param employees All mock employees.
- * @param initialLoans Initial mock loans.
- * @param initialSavingPlans Initial mock saving plans.
+ * @param initialLoans Initial mock loans (immutable input).
+ * @param initialSavingPlans Initial mock saving plans (immutable input).
  * @param leaveRecords All mock leave records.
  * @param timesheets All mock timesheet entries.
  * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates, taxYearDetails).
