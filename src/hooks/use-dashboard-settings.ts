@@ -17,6 +17,7 @@ export interface DashboardWidgetVisibility {
   employeeSalaryDistributionChart: boolean;
   monthlyLeaveDaysTakenChart: boolean;
   quickActionsCard: boolean;
+  payrollRunCard: boolean; // NEW: Added for the Payroll Run Card
 }
 
 // Define default visibility settings based on user roles
@@ -33,6 +34,7 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     employeeSalaryDistributionChart: true,
     monthlyLeaveDaysTakenChart: true,
     quickActionsCard: true,
+    payrollRunCard: true, // NEW: Default to visible for Admin
   },
   Manager: {
     summaryCards: true,
@@ -46,6 +48,7 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     employeeSalaryDistributionChart: false, // Managers might not need detailed salary distribution
     monthlyLeaveDaysTakenChart: true,
     quickActionsCard: true,
+    payrollRunCard: true, // NEW: Default to visible for Manager
   },
   Staff: {
     summaryCards: true,
@@ -59,6 +62,7 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     employeeSalaryDistributionChart: false,
     monthlyLeaveDaysTakenChart: false,
     quickActionsCard: false, // Staff might not need quick actions for payroll
+    payrollRunCard: false, // NEW: Default to hidden for Staff
   },
   Viewer: {
     summaryCards: true,
@@ -72,6 +76,7 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     employeeSalaryDistributionChart: true,
     monthlyLeaveDaysTakenChart: true,
     quickActionsCard: false,
+    payrollRunCard: false, // NEW: Default to hidden for Viewer
   },
 };
 
@@ -80,6 +85,21 @@ const LOCAL_STORAGE_KEY = "dashboardWidgetVisibility";
 interface UseDashboardSettingsProps {
   isMockDataEnabled: boolean;
 }
+
+const widgetLabels: Record<keyof DashboardWidgetVisibility, string> = {
+  summaryCards: "Summary Cards (Top Row)",
+  upcomingPayrollCard: "Upcoming Payroll Card",
+  toDoListCard: "To-Do List Card",
+  monthlyPayrollOverviewChart: "Monthly Payroll Overview Chart",
+  currentDateCalendar: "Current Date Calendar",
+  employeeJobTitleDistributionChart: "Employee Job Title Distribution Chart",
+  totalDeductionsBreakdownChart: "Total Deductions Breakdown Chart",
+  averageNetPayTrendChart: "Average Net Pay Trend Chart",
+  employeeSalaryDistributionChart: "Employee Salary Distribution Chart",
+  monthlyLeaveDaysTakenChart: "Monthly Leave Days Taken Chart",
+  quickActionsCard: "Quick Actions Card",
+  payrollRunCard: "Payroll Run Card", // NEW: Added label
+};
 
 export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettingsProps) => {
   const { user, isLoadingAuth } = useAuth();

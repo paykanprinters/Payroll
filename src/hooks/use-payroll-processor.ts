@@ -265,9 +265,9 @@ export const usePayrollProcessor = () => {
     window.addEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
     window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
     window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
-    // Removed: window.addEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated);
-    // Removed: window.addEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated);
-    // Removed: window.addEventListener("userTaxSettingsUpdated", handleUserTaxSettingsUpdated);
+    // Removed: window.removeEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated);
+    // Removed: window.removeEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated);
+    // Removed: window.removeEventListener("userTaxSettingsUpdated", handleUserTaxSettingsUpdated);
 
 
     return () => {

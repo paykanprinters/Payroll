@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, CreditCard, Activity } from "lucide-react";
+import { Users, CreditCard, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer,
@@ -21,28 +21,40 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
-import UpcomingPayrollCard from "@/components/payroll/UpcomingPayrollCard";
+import PayrollRunCard from "@/components/payroll/PayrollRunCard"; // Renamed import
+import UpcomingPayrollSummaryCard from "@/components/payroll/UpcomingPayrollSummaryCard"; // New import
 import { Calendar } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import ToDoList from "@/components/ToDoList";
-// import { useToDosData } from "@/hooks/use-todos-data"; // Removed redundant import
 import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown";
 import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
 import { Loader2 } from "lucide-react";
+import { calculatePayPeriodDetails } from "@/lib/payroll-calculations"; // Import calculatePayPeriodDetails
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Dashboard: React.FC = () => {
-  // Destructure toDos, pendingCount, and markToDoAsDone directly from usePayrollProcessor
-  const { employees, payslips, leaveRecords, isMockDataEnabled, companyDetails, toDos, pendingCount, markToDoAsDone, addOrUpdateEmployee } = usePayrollProcessor();
-  // const { toDos, pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Removed redundant call
+  const {
+    employees,
+    payslips,
+    leaveRecords,
+    isMockDataEnabled,
+    companyDetails,
+    toDos,
+    pendingCount,
+    markToDoAsDone,
+    addOrUpdateEmployee,
+    payCycleSettings,
+    isLoadingPayCycleSettings,
+    runPayrollProcess,
+    calculateSinglePayslipPreview,
+  } = usePayrollProcessor();
   const { visibleWidgets, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled });
 
   const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
-  // Removed: const [upcomingPayrollAmount, setUpcomingPayrollAmount] = useState(0);
   const [recentPayslipCount, setRecentPayslipCount] = useState(0);
   const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
   const [monthlyPayrollData, setMonthlyPayrollData] = useState<{ name: string; payroll: number }[]>([]);
@@ -52,15 +64,44 @@ const Dashboard: React.FC = () => {
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
   const [date, setDate] = React.useState<Date | undefined>(new Date());
 
+  const [totalUpcomingPayrollAmount, setTotalUpcomingPayrollAmount] = useState<number>(0);
+  const [upcomingPayrollDueText, setUpcomingPayrollDueText] = useState<string>("Loading...");
+
   const dataVisualsFontSize = useDataVisualsFontSize();
+
+  // Payslip design settings for CalculatePaycheckDialog
+  const [payslipDesignSettings, setPayslipDesignSettings] = useState<any>(() => {
+    try {
+      const savedSettings = localStorage.getItem("payslipDesignSettings");
+      return savedSettings ? JSON.parse(savedSettings) : {}; // Default to empty object if not found
+    } catch (e) {
+      console.error("Failed to parse payslip design settings from localStorage, using empty object.", e);
+      return {};
+    }
+  });
+
+  // Effect to load payslip design settings
+  useEffect(() => {
+    const loadPayslipDesignSettings = () => {
+      try {
+        const savedSettings = localStorage.getItem("payslipDesignSettings");
+        setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : {});
+      } catch (e) {
+        console.error("Failed to parse payslip design settings from localStorage during update, using empty object.", e);
+        setPayslipDesignSettings({});
+      }
+    };
+
+    loadPayslipDesignSettings();
+    window.addEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
+    return () => {
+      window.removeEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
+    };
+  }, []);
 
   const loadDashboardData = React.useCallback(() => {
     setEmployeeCount(employees.length);
-
     setRecentPayslipCount(payslips.length);
-
-    // Removed: const totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0), 0);
-    // Removed: setUpcomingPayrollAmount(totalSalaries);
 
     const jobTitleMap = new Map<string, number>();
     employees.forEach((emp) => {
@@ -70,7 +111,6 @@ const Dashboard: React.FC = () => {
       Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
     );
 
-    // Dynamically calculate monthly payroll data from payslips
     const monthlyGrossPayMap = new Map<string, number>();
     payslips.forEach(p => {
       const monthYear = p.payPeriod.substring(0, 7);
@@ -139,7 +179,37 @@ const Dashboard: React.FC = () => {
       }))
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
     setLeaveDaysTakenTrend(sortedLeaveDaysTrend);
-  }, [employees, payslips, leaveRecords]);
+
+    // Calculate total upcoming payroll amount and due text
+    if (payCycleSettings && employees.length > 0) {
+      const today = new Date();
+      const { checkDate: currentCheckDate, payPeriodStart: currentPeriodStart, payPeriodEnd: currentPeriodEnd } =
+        calculatePayPeriodDetails(today, payCycleSettings.payCycleType, payCycleSettings.cutOffDay, payCycleSettings.payDayOffset);
+
+      let totalGross = 0;
+      employees.forEach(employee => {
+        const employeePayCycleType = employee.payFrequency || payCycleSettings.payCycleType;
+        const { payPeriodStart: employeeSpecificPeriodStart, payPeriodEnd: employeeSpecificPeriodEnd } = calculatePayPeriodDetails(
+          today,
+          employeePayCycleType,
+          payCycleSettings.cutOffDay,
+          payCycleSettings.payDayOffset
+        );
+        const previewPayslip = calculateSinglePayslipPreview(employee.id, employeeSpecificPeriodStart, employeeSpecificPeriodEnd);
+        if (previewPayslip) {
+          totalGross += previewPayslip.grossEarnings;
+        }
+      });
+      setTotalUpcomingPayrollAmount(totalGross);
+
+      const daysUntilDue = differenceInCalendarDays(currentCheckDate, today);
+      setUpcomingPayrollDueText(daysUntilDue > 0 ? `Due in ${daysUntilDue} days` : (daysUntilDue === 0 ? "Due Today" : "Overdue"));
+    } else {
+      setTotalUpcomingPayrollAmount(0);
+      setUpcomingPayrollDueText("N/A");
+    }
+
+  }, [employees, payslips, leaveRecords, payCycleSettings, calculateSinglePayslipPreview]);
 
   useEffect(() => {
     loadDashboardData();
@@ -151,12 +221,14 @@ const Dashboard: React.FC = () => {
     window.addEventListener('payslipsUpdated', loadDashboardData);
     window.addEventListener('leaveRecordsUpdated', loadDashboardData);
     window.addEventListener('companyDetailsUpdated', loadDashboardData);
+    window.addEventListener('payCycleSettingsUpdated', loadDashboardData); // Listen for pay cycle updates
     return () => {
       window.removeEventListener('allMockDataUpdated', loadDashboardData);
       window.removeEventListener('employeesUpdated', loadDashboardData);
       window.removeEventListener('payslipsUpdated', loadDashboardData);
       window.removeEventListener('leaveRecordsUpdated', loadDashboardData);
       window.removeEventListener('companyDetailsUpdated', loadDashboardData);
+      window.removeEventListener('payCycleSettingsUpdated', loadDashboardData);
     };
   }, [loadDashboardData, companyDetails]);
 
@@ -168,11 +240,7 @@ const Dashboard: React.FC = () => {
   const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
   const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
 
-  // Add console logs here
-  console.log("Dashboard.tsx render: visibleWidgets:", visibleWidgets);
-  console.log("Dashboard.tsx render: visibleWidgets.toDoListCard:", visibleWidgets?.toDoListCard);
-
-  if (isLoadingSettings || !visibleWidgets) {
+  if (isLoadingSettings || !visibleWidgets || isLoadingPayCycleSettings) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -204,6 +272,13 @@ const Dashboard: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+          {visibleWidgets.upcomingPayrollCard && (
+            <UpcomingPayrollSummaryCard
+              totalUpcomingPayrollAmount={totalUpcomingPayrollAmount}
+              dueText={upcomingPayrollDueText}
+              isMockDataEnabled={isMockDataEnabled}
+            />
+          )}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Recent Payslips</CardTitle>
@@ -228,7 +303,6 @@ const Dashboard: React.FC = () => {
               </p>
             </CardContent>
           </Card>
-          {visibleWidgets.upcomingPayrollCard && <UpcomingPayrollCard />}
         </div>
       )}
 
@@ -274,6 +348,19 @@ const Dashboard: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {visibleWidgets.payrollRunCard && payCycleSettings && (
+        <PayrollRunCard
+          employees={employees}
+          companyDetails={companyDetails}
+          payCycleType={payCycleSettings.payCycleType}
+          cutOffDay={payCycleSettings.cutOffDay}
+          payDayOffset={payCycleSettings.payDayOffset}
+          runPayrollProcess={runPayrollProcess}
+          calculateSinglePayslipPreview={calculateSinglePayslipPreview}
+          payslipDesignSettings={payslipDesignSettings}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         {visibleWidgets.employeeJobTitleDistributionChart && (

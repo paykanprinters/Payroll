@@ -33,6 +33,7 @@ const widgetLabels: Record<keyof DashboardWidgetVisibility, string> = {
   employeeSalaryDistributionChart: "Employee Salary Distribution Chart",
   monthlyLeaveDaysTakenChart: "Monthly Leave Days Taken Chart",
   quickActionsCard: "Quick Actions Card",
+  payrollRunCard: "Payroll Run Card", // NEW: Added label
 };
 
 const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = ({ isMockDataEnabled }) => {
