@@ -2,38 +2,23 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CreditCard, Activity } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
-import PayrollRunCard from "@/components/payroll/PayrollRunCard"; // Renamed import
-import UpcomingPayrollSummaryCard from "@/components/payroll/UpcomingPayrollSummaryCard"; // New import
-import { Calendar } from "@/components/ui/calendar";
-import { Link } from "react-router-dom";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { format, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import ToDoList from "@/components/ToDoList";
-import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown";
-import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
 import { Loader2 } from "lucide-react";
-import { calculatePayPeriodDetails } from "@/lib/payroll-calculations"; // Import calculatePayPeriodDetails
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { format } from "date-fns";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
+// Import new modular components
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
+import ToDoList from "@/components/ToDoList";
+import DashboardMonthlyPayrollOverviewChart from "@/components/dashboard/DashboardMonthlyPayrollOverviewChart";
+import DashboardCurrentDateCalendar from "@/components/dashboard/DashboardCurrentDateCalendar";
+import PayrollRunCard from "@/components/payroll/PayrollRunCard";
+import DashboardEmployeeJobTitleDistributionChart from "@/components/dashboard/DashboardEmployeeJobTitleDistributionChart";
+import DashboardTotalDeductionsBreakdownChart from "@/components/dashboard/DashboardTotalDeductionsBreakdownChart";
+import DashboardAverageNetPayTrendChart from "@/components/dashboard/DashboardAverageNetPayTrendChart";
+import DashboardEmployeeSalaryDistributionChart from "@/components/dashboard/DashboardEmployeeSalaryDistributionChart";
+import DashboardMonthlyLeaveDaysTakenChart from "@/components/dashboard/DashboardMonthlyLeaveDaysTakenChart";
+import DashboardQuickActionsCard from "@/components/dashboard/DashboardQuickActionsCard";
 
 const Dashboard: React.FC = () => {
   const {
@@ -45,7 +30,6 @@ const Dashboard: React.FC = () => {
     toDos,
     pendingCount,
     markToDoAsDone,
-    addOrUpdateEmployee,
     payCycleSettings,
     isLoadingPayCycleSettings,
     runPayrollProcess,
@@ -53,7 +37,6 @@ const Dashboard: React.FC = () => {
   } = usePayrollProcessor();
   const { visibleWidgets, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled });
 
-  const [companyLegalName, setCompanyLegalName] = useState<string>("");
   const [employeeCount, setEmployeeCount] = useState(0);
   const [recentPayslipCount, setRecentPayslipCount] = useState(0);
   const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
@@ -62,12 +45,6 @@ const Dashboard: React.FC = () => {
   const [averageNetPayTrend, setAverageNetPayTrend] = useState<{ name: string; avgNetPay: number }[]>([]);
   const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
-
-  const [totalUpcomingPayrollAmount, setTotalUpcomingPayrollAmount] = useState<number>(0);
-  const [upcomingPayrollDueText, setUpcomingPayrollDueText] = useState<string>("Loading...");
-
-  const dataVisualsFontSize = useDataVisualsFontSize();
 
   // Payslip design settings for CalculatePaycheckDialog
   const [payslipDesignSettings, setPayslipDesignSettings] = useState<any>(() => {
@@ -180,48 +157,16 @@ const Dashboard: React.FC = () => {
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
     setLeaveDaysTakenTrend(sortedLeaveDaysTrend);
 
-    // Calculate total upcoming payroll amount and due text
-    if (payCycleSettings && employees.length > 0) {
-      const today = new Date();
-      const { checkDate: currentCheckDate, payPeriodStart: currentPeriodStart, payPeriodEnd: currentPeriodEnd } =
-        calculatePayPeriodDetails(today, payCycleSettings.payCycleType, payCycleSettings.cutOffDay, payCycleSettings.payDayOffset);
-
-      let totalGross = 0;
-      employees.forEach(employee => {
-        const employeePayCycleType = employee.payFrequency || payCycleSettings.payCycleType;
-        const { payPeriodStart: employeeSpecificPeriodStart, payPeriodEnd: employeeSpecificPeriodEnd } = calculatePayPeriodDetails(
-          today,
-          employeePayCycleType,
-          payCycleSettings.cutOffDay,
-          payCycleSettings.payDayOffset
-        );
-        const previewPayslip = calculateSinglePayslipPreview(employee.id, employeeSpecificPeriodStart, employeeSpecificPeriodEnd);
-        if (previewPayslip) {
-          totalGross += previewPayslip.grossEarnings;
-        }
-      });
-      setTotalUpcomingPayrollAmount(totalGross);
-
-      const daysUntilDue = differenceInCalendarDays(currentCheckDate, today);
-      setUpcomingPayrollDueText(daysUntilDue > 0 ? `Due in ${daysUntilDue} days` : (daysUntilDue === 0 ? "Due Today" : "Overdue"));
-    } else {
-      setTotalUpcomingPayrollAmount(0);
-      setUpcomingPayrollDueText("N/A");
-    }
-
   }, [employees, payslips, leaveRecords, payCycleSettings, calculateSinglePayslipPreview]);
 
   useEffect(() => {
     loadDashboardData();
-    if (companyDetails) {
-      setCompanyLegalName(companyDetails.companyLegalName || "");
-    }
     window.addEventListener('allMockDataUpdated', loadDashboardData);
     window.addEventListener('employeesUpdated', loadDashboardData);
     window.addEventListener('payslipsUpdated', loadDashboardData);
     window.addEventListener('leaveRecordsUpdated', loadDashboardData);
     window.addEventListener('companyDetailsUpdated', loadDashboardData);
-    window.addEventListener('payCycleSettingsUpdated', loadDashboardData); // Listen for pay cycle updates
+    window.addEventListener('payCycleSettingsUpdated', loadDashboardData);
     return () => {
       window.removeEventListener('allMockDataUpdated', loadDashboardData);
       window.removeEventListener('employeesUpdated', loadDashboardData);
@@ -231,14 +176,6 @@ const Dashboard: React.FC = () => {
       window.removeEventListener('payCycleSettingsUpdated', loadDashboardData);
     };
   }, [loadDashboardData, companyDetails]);
-
-  const renderLegendText = (value: string, entry: any, total: number) => {
-    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
-    return `${value} (${percentage}%)`;
-  };
-
-  const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
-  const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
 
   if (isLoadingSettings || !visibleWidgets || isLoadingPayCycleSettings) {
     return (
@@ -250,102 +187,24 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">
-          {companyLegalName && <span className="text-muted-foreground mr-2">{companyLegalName}</span>}
-          Payroll Dashboard
-        </h1>
-        <DashboardVisibilityDropdown isMockDataEnabled={isMockDataEnabled} />
-      </div>
+      <DashboardHeader />
       
       {visibleWidgets.summaryCards && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{employeeCount}</div>
-              <p className="text-xs text-muted-foreground">
-                {isMockDataEnabled ? "+20.1% from last month (mock)" : (employeeCount > 0 ? "+20.1% from last month" : "No employees")}
-              </p>
-            </CardContent>
-          </Card>
-          {visibleWidgets.upcomingPayrollCard && (
-            <UpcomingPayrollSummaryCard
-              totalUpcomingPayrollAmount={totalUpcomingPayrollAmount}
-              dueText={upcomingPayrollDueText}
-              isMockDataEnabled={isMockDataEnabled}
-            />
-          )}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Payslips</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{recentPayslipCount}</div>
-              <p className="text-xs text-muted-foreground">
-                {isMockDataEnabled ? "Generated this month (mock)" : "Generated this month"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Compliance Status</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Good</div>
-              <p className="text-xs text-muted-foreground">
-                {isMockDataEnabled ? "All regulations met (mock)" : "All regulations met"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <DashboardSummaryCards
+          employeeCount={employeeCount}
+          recentPayslipCount={recentPayslipCount}
+        />
       )}
 
       {visibleWidgets.toDoListCard && <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />}
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         {visibleWidgets.monthlyPayrollOverviewChart && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Payroll Overview</CardTitle>
-              <CardDescription>Total gross payroll amount per month.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyPayrollData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                  <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />
         )}
 
         {visibleWidgets.currentDateCalendar && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Date</CardTitle>
-              <CardDescription>A quick view of the current date.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border"
-                fixedWeeks
-              />
-            </CardContent>
-          </Card>
+          <DashboardCurrentDateCalendar />
         )}
       </div>
 
@@ -364,161 +223,32 @@ const Dashboard: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         {visibleWidgets.employeeJobTitleDistributionChart && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Employee Distribution by Job Title</CardTitle>
-              <CardDescription>Breakdown of employees across different roles.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={employeeJobTitleData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    labelLine={false}
-                    style={{ fontSize: dataVisualsFontSize }}
-                  >
-                    {employeeJobTitleData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <DashboardEmployeeJobTitleDistributionChart employeeJobTitleData={employeeJobTitleData} />
         )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         {visibleWidgets.totalDeductionsBreakdownChart && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Total Deductions Breakdown</CardTitle>
-              <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={totalDeductionsBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    labelLine={false}
-                    style={{ fontSize: dataVisualsFontSize }}
-                  >
-                    {totalDeductionsBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={totalDeductionsBreakdown} />
         )}
 
         {visibleWidgets.averageNetPayTrendChart && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Average Net Pay Trend</CardTitle>
-              <CardDescription>Average net pay per employee over recent months.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={averageNetPayTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                  <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-                  <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Line type="monotone" dataKey="avgNetPay" stroke="#82ca9d" name="Average Net Pay" activeDot={{ r: 8 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <DashboardAverageNetPayTrendChart averageNetPayTrend={averageNetPayTrend} />
         )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         {visibleWidgets.employeeSalaryDistributionChart && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Employee Salary Distribution</CardTitle>
-              <CardDescription>Number of employees within different salary ranges.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={employeeSalaryDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
-                  <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
-                  <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <DashboardEmployeeSalaryDistributionChart employeeSalaryDistribution={employeeSalaryDistribution} />
         )}
 
         {visibleWidgets.monthlyLeaveDaysTakenChart && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Leave Days Taken</CardTitle>
-              <CardDescription>Total working days taken as leave per month.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={leaveDaysTakenTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                  <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
-                  <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                  <Bar dataKey="days" fill="#00C49F" name="Working Days Taken" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTakenTrend} />
         )}
       </div>
 
-
       {visibleWidgets.quickActionsCard && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="flex items-center space-x-2">
-              <Button asChild className="w-full">
-                <Link to="/employees">Add New Employee</Link>
-              </Button>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button asChild className="w-full">
-                <Link to="/payslips/overview">Generate Payslips</Link>
-              </Button>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button asChild className="w-full">
-                <Link to="/reports">View Reports</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <DashboardQuickActionsCard />
       )}
 
       <div className="mt-8 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
