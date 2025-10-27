@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
