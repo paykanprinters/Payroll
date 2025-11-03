@@ -17,7 +17,7 @@ type Props = {
 const currency = (n: number) => `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) => {
-  const { employees, taxTables, userTaxSettings } = usePayrollProcessor();
+  const { employees, taxTables, userTaxSettings } = usePayrollProcessor({ silent: true });
 
   const breakdown = useMemo(() => {
     const employee = employees.find(e => e.id === payslip.employeeId);
@@ -176,7 +176,7 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
               )}
               {Math.abs(breakdown.payeFromPayslip - breakdown.periodPayeRounded) > 0.01 && (
                 <p className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 p-2 rounded">
-                  Heads up: The computed PAYE differs from the payslip’s stored PAYE. Check that the active tax year and settings match the payslip’s period.
+                  Heads up: The computed PAYE differs from the payslip's stored PAYE. Check that the active tax year and settings match the payslip's period.
                 </p>
               )}
             </div>

@@ -31,8 +31,9 @@ import { useEmployeesData } from "./use-employees-data";
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
 
-export const usePayrollProcessor = () => {
+export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const { isAuthenticated, isLoadingAuth } = useAuth();
+  const silent = options?.silent === true;
 
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
     return localStorage.getItem("isMockDataEnabled") === "true";
@@ -221,6 +222,8 @@ export const usePayrollProcessor = () => {
 
 
   useEffect(() => {
+    if (silent) return;
+
     const handleMockDataToggleEvent = () => {
       const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
       setIsMockDataEnabled(mockEnabled);
@@ -242,9 +245,11 @@ export const usePayrollProcessor = () => {
     return () => {
       window.removeEventListener("allMockDataUpdated", handleMockDataToggleEvent);
     };
-  }, [isAuthenticated, isLoadingAuth, triggerGenerateToDos, isMockDataEnabled]);
+  }, [isAuthenticated, isLoadingAuth, triggerGenerateToDos, isMockDataEnabled, silent]);
 
   useEffect(() => {
+    if (silent) return;
+
     const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {
       if (isMockDataEnabled) setMockLoans(event.detail);
     };
@@ -263,8 +268,6 @@ export const usePayrollProcessor = () => {
     const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => {
       if (isMockDataEnabled) setMockPayslips(event.detail);
     };
-    // Removed: handleWorkHoursSettingsUpdated, handlePayCycleSettingsUpdated, handleUserTaxSettingsUpdated
-
 
     window.addEventListener("loansUpdated", handleLoansUpdated as EventListener);
     window.addEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
@@ -272,10 +275,6 @@ export const usePayrollProcessor = () => {
     window.addEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
     window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
     window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
-    // Removed: window.removeEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated);
-    // Removed: window.removeEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated);
-    // Removed: window.removeEventListener("userTaxSettingsUpdated", handleUserTaxSettingsUpdated);
-
 
     return () => {
       window.removeEventListener("loansUpdated", handleLoansUpdated as EventListener);
@@ -284,11 +283,8 @@ export const usePayrollProcessor = () => {
       window.removeEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
       window.removeEventListener("toDosUpdated", handleToDosUpdated as EventListener);
       window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
-      // Removed: window.removeEventListener("workHoursSettingsUpdated", handleWorkHoursSettingsUpdated);
-      // Removed: window.removeEventListener("payCycleSettingsUpdated", handlePayCycleSettingsUpdated);
-      // Removed: window.removeEventListener("userTaxSettingsUpdated", handleUserTaxSettingsUpdated);
     };
-  }, [isMockDataEnabled]);
+  }, [isMockDataEnabled, silent]);
 
 
   return {
