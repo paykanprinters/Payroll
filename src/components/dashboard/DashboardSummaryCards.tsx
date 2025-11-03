@@ -6,6 +6,7 @@ import { Users, CreditCard, Activity } from "lucide-react";
 import UpcomingPayrollSummaryCard from "@/components/payroll/UpcomingPayrollSummaryCard";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+import { bankersRound } from "@/lib/utils";
 import { differenceInCalendarDays } from "date-fns";
 
 interface DashboardSummaryCardsProps {
@@ -38,7 +39,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeC
           totalGross += previewPayslip.grossEarnings;
         }
       });
-      setTotalUpcomingPayrollAmount(totalGross);
+      setTotalUpcomingPayrollAmount(bankersRound(totalGross, 2));
 
       const daysUntilDue = differenceInCalendarDays(currentCheckDate, today);
       setUpcomingPayrollDueText(daysUntilDue > 0 ? `Due in ${daysUntilDue} days` : (daysUntilDue === 0 ? "Due Today" : "Overdue"));

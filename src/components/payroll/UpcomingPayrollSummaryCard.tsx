@@ -3,6 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface UpcomingPayrollSummaryCardProps {
   totalUpcomingPayrollAmount: number;
@@ -22,7 +23,7 @@ const UpcomingPayrollSummaryCard: React.FC<UpcomingPayrollSummaryCardProps> = ({
         <DollarSign className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">R {totalUpcomingPayrollAmount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</div>
+        <div className="text-2xl font-bold">R {formatCurrency(totalUpcomingPayrollAmount, 'en-ZA')}</div>
         <p className="text-xs text-muted-foreground">
           {dueText}
         </p>
