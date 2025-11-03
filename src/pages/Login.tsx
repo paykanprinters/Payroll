@@ -15,6 +15,7 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import u
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
+import CloudHorizonBackground from "@/components/CloudHorizonBackground";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address").min(1, "Email is required"),
@@ -57,7 +58,10 @@ function Login() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full relative bg-gray-100">
+    <div className="min-h-screen w-full relative">
+      {/* Background */}
+      <CloudHorizonBackground />
+
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md rounded-xl bg-white/85 backdrop-blur-md shadow-lg p-6">
           {/* Company logo and welcome heading */}
