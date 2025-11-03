@@ -294,8 +294,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
 
   return {
     employees,
-    addOrUpdateEmployee,
-    deleteEmployee,
+    addOrUpdateEmployee: baseAddOrUpdateEmployee,
+    deleteEmployee: baseDeleteEmployee,
     payslips,
     loans,
     savingPlans,
