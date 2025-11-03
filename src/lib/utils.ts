@@ -86,5 +86,9 @@ export const bankersRound = (value: number, decimals: number = 2): number => {
 
 // NEW: Format currency string with bankers rounding first
 export const formatCurrency = (value: number, locale: string = 'en-ZA'): string => {
-  return bankersRound(value, 2).toLocaleString(locale, { minimumFractionDigits: 2 });
+  const rounded = bankersRound(value, 2);
+  return rounded.toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2, // ensure exactly two decimals
+  });
 };
