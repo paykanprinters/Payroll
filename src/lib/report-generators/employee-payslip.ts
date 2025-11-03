@@ -1,5 +1,5 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
-import { getEmployeeName } from "../utils"; // Import from shared utils
+import { getEmployeeName, formatCurrency } from "../utils"; // Import from shared utils
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
 export const generateEmployeePayslipReportContent = (
@@ -52,8 +52,8 @@ export const generateEmployeePayslipReportContent = (
       <tr class="border-b">
         <td class="py-2 px-4">${getEmployeeName(p.employeeId, employees)} (${p.employeeId})</td>
         <td class="py-2 px-4">${p.payPeriod}</td>
-        <td class="py-2 px-4 text-right">${p.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-        <td class="py-2 px-4 text-right">${p.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-4 text-right">R ${formatCurrency(p.grossEarnings)}</td>
+        <td class="py-2 px-4 text-right">R ${formatCurrency(p.netPay)}</td>
       </tr>
     `;
   });
