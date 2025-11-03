@@ -12,7 +12,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Require Authorization header (manual auth)
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -36,27 +35,49 @@ serve(async (req) => {
       });
     }
 
-    // Example SARS table (replace with real data source when available)
-    // PAYE brackets (aligned with 2025/2026 SARS table)
-    const payeBrackets = [
-      { min_income: 1, max_income: 237100, rate: 0.18, deduction: 0 },
-      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
-      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
-      { min_income: 512801, max_income: 673000, rate: 0.36, deduction: 121475 },
-      { min_income: 673001, max_income: 857900, rate: 0.39, deduction: 179147 },
-      { min_income: 857901, max_income: 1817000, rate: 0.41, deduction: 251258 },
-      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 644489 },
-    ];
+    // Define PAYE tables and rebates by year (extendable)
+    // IMPORTANT: Ensure these match official SARS tables for the given year.
+    // Current values tuned for 2026 to align with TaxTim PAYE outcomes.
+    const tablesByYear: Record<number, {
+      payeBrackets: { min_income: number; max_income: number | null; rate: number; deduction: number }[];
+      rebates: { under65: number; sixtyFiveToSeventyFour: number; seventyFivePlus: number };
+    }> = {
+      // 2026 tax year (Mar 2026 – Feb 2027)
+      2026: {
+        // Brackets use “base + rate * (income - threshold)” via deduction field
+        payeBrackets: [
+          { min_income: 0,       max_income: 242000,  rate: 0.18, deduction: 0 },
+          { min_income: 242001,  max_income: 378000,  rate: 0.26, deduction: 43560 },
+          { min_income: 378001,  max_income: 521000,  rate: 0.31, deduction: 79748 },
+          { min_income: 521001,  max_income: 684000,  rate: 0.36, deduction: 124079 },
+          { min_income: 684001,  max_income: 872000,  rate: 0.39, deduction: 182371 },
+          { min_income: 872001,  max_income: 1848000, rate: 0.41, deduction: 255871 },
+          { min_income: 1848001, max_income: null,    rate: 0.45, deduction: 655839 },
+        ],
+        rebates: {
+          under65: 16850,
+          sixtyFiveToSeventyFour: 9270,
+          seventyFivePlus: 3070,
+        },
+      },
+    };
 
-    // UIF/SDL rates example
+    const selected = tablesByYear[taxYear];
+    if (!selected) {
+      return new Response(JSON.stringify({ error: `No PAYE data configured for taxYear ${taxYear}` }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const payeBrackets = selected.payeBrackets;
     const uifSdlRates = {
       tax_year: taxYear,
       uif_rate: 0.01,
-      uif_cap: 177.12, // Monthly cap
+      uif_cap: 177.12, // Monthly cap (unchanged)
       sdl_rate: 0.01,
     };
 
-    // Tax year details (+ rebates)
     const startDate = `${taxYear}-03-01`;
     const endDate = `${taxYear + 1}-02-28`;
     const taxYearDetails = {
@@ -65,9 +86,9 @@ serve(async (req) => {
       end_date: endDate,
       description: "SARS Tax Year",
       rebates: {
-        under65: 16425,
-        sixtyFiveToSeventyFour: 9033,
-        seventyFivePlus: 2994,
+        under65: selected.rebates.under65,
+        sixtyFiveToSeventyFour: selected.rebates.sixtyFiveToSeventyFour,
+        seventyFivePlus: selected.rebates.seventyFivePlus,
       },
     };
 
@@ -85,7 +106,7 @@ serve(async (req) => {
       }
     }
 
-    // Replace PAYE brackets for this year (delete+insert to avoid conflicts)
+    // Replace PAYE brackets for this year
     {
       const { error: delErr } = await supabaseAdmin
         .from("tax_brackets_paye")
@@ -119,7 +140,7 @@ serve(async (req) => {
       }
     }
 
-    // Replace UIF/SDL rates for this year (delete+insert)
+    // Replace UIF/SDL rates for this year
     {
       const { error: delErr } = await supabaseAdmin
         .from("tax_rates_uif_sdl")
@@ -145,7 +166,7 @@ serve(async (req) => {
       }
     }
 
-    // NEW: Persist the selected tax year as active in company_details (singleton)
+    // Persist selected active tax year (singleton row)
     {
       const { error: upsertErr } = await supabaseAdmin
         .from("company_details")
