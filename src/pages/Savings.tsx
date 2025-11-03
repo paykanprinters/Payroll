@@ -28,6 +28,7 @@ import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { useSavingPlansData } from "@/hooks/use-saving-plans-data";
+import { formatCurrency } from "@/lib/utils";
 
 const savingPlanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -121,8 +122,8 @@ const Savings: React.FC = () => {
               <BarChart data={totalSavingsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <YAxis tickFormatter={(value: number) => `R ${formatCurrency(value)}`} style={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number) => `R ${formatCurrency(value as number)}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
                 <Bar dataKey="amount" fill="#8884d8" name="Total Savings" />
               </BarChart>
@@ -276,7 +277,7 @@ const Savings: React.FC = () => {
                 {savingPlans.map((plan) => (
                   <TableRow key={plan.id}><TableCell>{getEmployeeCustomId(plan.employeeId)}</TableCell>
                     <TableCell>{getEmployeeName(plan.employeeId)}</TableCell>
-                    <TableCell>R {plan.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</TableCell>
+                    <TableCell>R {formatCurrency(plan.amount)}</TableCell>
                     <TableCell>{plan.frequency}</TableCell>
                     <TableCell>{plan.startDate}</TableCell>
                     <TableCell>{plan.endDate || "N/A"}</TableCell>

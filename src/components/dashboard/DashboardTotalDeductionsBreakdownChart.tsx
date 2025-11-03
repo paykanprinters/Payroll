@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import { formatCurrency } from "@/lib/utils";
 
 interface DeductionsBreakdownData {
   name: string;
@@ -49,7 +50,7 @@ const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsB
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+            <Tooltip formatter={(value: number) => `R ${formatCurrency(value as number)}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
             <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
           </PieChart>
         </ResponsiveContainer>

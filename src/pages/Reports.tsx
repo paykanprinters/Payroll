@@ -25,6 +25,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, isSameMonth, isSameYear } from "date-fns";
 import { Label } from "@/components/ui/label"; // Added Label import
+import { formatCurrency } from "@/lib/utils";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -189,8 +190,8 @@ const Reports: React.FC = () => {
             <LineChart data={monthlyPayrollTrend}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-              <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-              <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+              <YAxis tickFormatter={(value: number) => `R ${formatCurrency(value)}`} style={{ fontSize: dataVisualsFontSize }} />
+              <Tooltip formatter={(value: number) => `R ${formatCurrency(value as number)}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
               <Legend wrapperStyle={{ fontSize: dataVisualsFontSize }} />
               <Line type="monotone" dataKey="gross" stroke="#8884d8" name="Gross Pay" activeDot={{ r: 8 }} />
               <Line type="monotone" dataKey="net" stroke="#82ca9d" name="Net Pay" />

@@ -75,17 +75,16 @@ export const bankersRound = (value: number, decimals: number = 2): number => {
   const factor = Math.pow(10, decimals);
   const scaled = value * factor;
   const epsilon = 1e-8;
-
-  // Use floor to get the lower integer and detect a 0.5 tie robustly
   const floor = Math.floor(scaled);
   const diff = scaled - floor;
-
-  // If we're at a tie (fraction ~= 0.5), round to the nearest even integer
   if (Math.abs(diff - 0.5) <= epsilon) {
     const even = floor % 2 === 0 ? floor : floor + 1;
     return even / factor;
   }
-
-  // Otherwise, use normal rounding
   return Math.round(scaled) / factor;
+};
+
+// NEW: Format currency string with bankers rounding first
+export const formatCurrency = (value: number, locale: string = 'en-ZA'): string => {
+  return bankersRound(value, 2).toLocaleString(locale, { minimumFractionDigits: 2 });
 };

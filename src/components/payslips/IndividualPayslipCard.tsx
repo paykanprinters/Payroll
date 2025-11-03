@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Separator } from "@/components/ui/separator";
-import { cn, getPrintStyles } from "@/lib/utils";
+import { cn, getPrintStyles, formatCurrency } from "@/lib/utils";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces"; // Import the updated interface
 
 interface IndividualPayslipCardProps {
@@ -147,7 +147,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           payslip.earningsBreakdown.map((item, idx) => (
             <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>
               <span>{item.name}</span>
-              <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+              <span>R {formatCurrency(item.amount)}</span>
             </p>
           ))
         ) : (
@@ -155,7 +155,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         )}
         <p className="font-bold border-t pt-1 flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
           <span>GROSS EARNINGS</span>
-          <span>R {payslip.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+          <span>R {formatCurrency(payslip.grossEarnings)}</span>
         </p>
       </div>
     );
@@ -174,7 +174,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
           payslip.deductionsBreakdown.map((item, idx) => (
             <p key={idx} className="flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.1}px` } : {}}>
               <span>{item.name}</span>
-              <span>R {item.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+              <span>R {formatCurrency(item.amount)}</span>
             </p>
           ))
         ) : (
@@ -182,7 +182,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
         )}
         <p className="font-bold border-t pt-1 flex justify-between" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px`, marginTop: `${baseFontSizePx * 0.5}px`, paddingTop: `${baseFontSizePx * 0.25}px` } : {}}>
           <span>TOTAL DEDUCTIONS</span>
-          <span>R {payslip.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+          <span>R {formatCurrency(payslip.totalDeductions)}</span>
         </p>
       </div>
     );
@@ -210,8 +210,8 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       <div style={isPdfGeneration ? { marginTop: `${baseFontSizePx * 1}px`, paddingTop: `${baseFontSizePx * 0.5}px`, borderTop: '1px dashed #ccc' } : {}} className="mt-4 pt-2 border-t border-dashed">
         <h4 className="font-bold underline" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.1}px`, lineHeight: `${baseFontSizePx * 1.1 * 1.2}px`, marginBottom: `${baseFontSizePx * 0.4}px` } : {}}>YEAR TO DATE (YTD)</h4>
         <div style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 0.9}px`, lineHeight: `${baseFontSizePx * 0.9 * 1.2}px` } : {}}>
-          <p className="flex justify-between"><span>Gross Earnings YTD:</span> <span className="text-right">R {payslip.ytdGrossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></p>
-          <p className="flex justify-between"><span>Total Deductions YTD:</span> <span className="text-right">R {payslip.ytdTotalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></p>
+          <p className="flex justify-between"><span>Gross Earnings YTD:</span> <span className="text-right">R {formatCurrency(payslip.ytdGrossEarnings)}</span></p>
+          <p className="flex justify-between"><span>Total Deductions YTD:</span> <span className="text-right">R {formatCurrency(payslip.ytdTotalDeductions)}</span></p>
         </div>
       </div>
     );
@@ -309,7 +309,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
             {renderParagraph("ID No", employee.idNumber)}
             {renderParagraph("Job Title", employee.jobTitle)}
             {payslipDesignSettings.showHourlyRate && employee.hourlyRate !== undefined && employee.hourlyRate !== null && (
-              renderParagraph("Hourly Rate", `R ${employee.hourlyRate.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`)
+              renderParagraph("Hourly Rate", `R ${formatCurrency(employee.hourlyRate)}`)
             )}
             {renderParagraph("Tax No", employee.taxReferenceNumber)}
           </div>
@@ -341,7 +341,7 @@ const IndividualPayslipCard: React.FC<IndividualPayslipCardProps> = ({
       {/* Net Pay (Always at bottom) */}
       <div style={isPdfGeneration ? { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: `${baseFontSizePx * 1}px`, marginTop: `${baseFontSizePx * 1}px` } : {}} className="flex justify-between items-center pt-2 mt-2">
         <h3 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px`, lineHeight: `${baseFontSizePx * 1.3 * 1.2}px` } : {}}>NET PAY</h3>
-        <h3 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px`, lineHeight: `${baseFontSizePx * 1.3 * 1.2}px` } : {}}>R {payslip.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</h3>
+        <h3 className="font-bold" style={isPdfGeneration ? { fontSize: `${baseFontSizePx * 1.3}px`, lineHeight: `${baseFontSizePx * 1.3 * 1.2}px` } : {}}>R {formatCurrency(payslip.netPay)}</h3>
       </div>
       
       {/* Leave Summary (Moved below Net Pay) */}
