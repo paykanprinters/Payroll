@@ -136,9 +136,28 @@ const calculateDeductions = (
     employeeAge = differenceInYears(new Date(), new Date(emp.dateOfBirth));
   }
 
-  // PAYE (Pay As You Earn)
-  if (payeBrackets && payeBrackets.length > 0 && applyPAYEFlag && emp.payFrequency) { // Ensure payFrequency is available
-    const paye = calculatePAYE(grossEarnings, payeBrackets, taxYearDetails, employeeAge, emp.payFrequency);
+  // FIRST: Compute UIF (employee contribution) so it can be excluded from taxable income
+  let uif = 0;
+  if (uifSdlRates) {
+    const uifRaw = Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap);
+    uif = bankersRound(uifRaw, 2);
+  } else {
+    // Fallback for UIF if rates are not loaded
+    uif = bankersRound(Math.min(grossEarnings * 0.01, 177.12), 2);
+  }
+
+  // Taxable income for PAYE should EXCLUDE employee UIF
+  const taxableIncomeForPAYE = Math.max(0, grossEarnings - uif);
+
+  // PAYE (Pay As You Earn) - computed on taxableIncomeForPAYE
+  if (payeBrackets && payeBrackets.length > 0 && applyPAYEFlag && emp.payFrequency) {
+    const paye = calculatePAYE(
+      taxableIncomeForPAYE,
+      payeBrackets,
+      taxYearDetails,
+      employeeAge,
+      emp.payFrequency
+    );
     if (paye > 0) {
       const roundedPAYE = bankersRound(paye, 2);
       deductionsBreakdown.push({ name: "PAYE", amount: roundedPAYE });
@@ -146,29 +165,20 @@ const calculateDeductions = (
     }
   }
 
-  // UIF (Unemployment Insurance Fund) & SDL (Skills Development Levy)
-  if (uifSdlRates) {
-    const uifRaw = Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap);
-    const uif = bankersRound(uifRaw, 2);
-    deductionsBreakdown.push({ name: "UIF", amount: uif });
-    totalDeductions += uif;
+  // Add UIF to deductions after computing PAYE on taxable income
+  deductionsBreakdown.push({ name: "UIF", amount: uif });
+  totalDeductions += uif;
 
-    if (applySDLFlag) {
-      const sdlRaw = grossEarnings * uifSdlRates.sdl_rate;
-      const sdl = bankersRound(sdlRaw, 2);
-      deductionsBreakdown.push({ name: "SDL", amount: sdl });
-      totalDeductions += sdl;
-    }
-  } else {
-    // Fallback for UIF/SDL if rates are not loaded (should ideally not happen in live mode)
-    const uif = bankersRound(Math.min(grossEarnings * 0.01, 177.12), 2); // Mock UIF cap
-    deductionsBreakdown.push({ name: "UIF", amount: uif });
-    totalDeductions += uif;
-    if (applySDLFlag) {
-      const sdl = bankersRound(grossEarnings * 0.01, 2);
-      deductionsBreakdown.push({ name: "SDL", amount: sdl });
-      totalDeductions += sdl;
-    }
+  // SDL (Skills Development Levy) - typically employer-only; kept here per existing settings flag
+  if (uifSdlRates && applySDLFlag) {
+    const sdlRaw = grossEarnings * uifSdlRates.sdl_rate;
+    const sdl = bankersRound(sdlRaw, 2);
+    deductionsBreakdown.push({ name: "SDL", amount: sdl });
+    totalDeductions += sdl;
+  } else if (!uifSdlRates && applySDLFlag) {
+    const sdl = bankersRound(grossEarnings * 0.01, 2);
+    deductionsBreakdown.push({ name: "SDL", amount: sdl });
+    totalDeductions += sdl;
   }
 
   // Helper to determine if the current pay period is a "full" period for a given frequency
