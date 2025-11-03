@@ -92,10 +92,6 @@ const TaxLiabilities: React.FC = () => {
   const irp5ContentFontSize = form.watch("irp5ContentFontSize");
 
   const handleFetchTaxTables = async () => {
-    if (isMockDataEnabled) {
-      showError("Cannot fetch tax tables from SARS when mock data is enabled.");
-      return;
-    }
     if (!selectedTaxYear) {
       showError("Please select a tax year to fetch tables.");
       return;
@@ -120,9 +116,7 @@ const TaxLiabilities: React.FC = () => {
       } else {
         console.log('Fetch tax tables Edge Function response:', data);
         showSuccess(`Tax tables for ${selectedTaxYear} fetched and applied successfully!`);
-        // Set the active tax year for calculations only after tables are applied
         setActiveTaxYearForCalculations(parseInt(selectedTaxYear, 10));
-        // Force all tax table hooks to re-fetch the just-applied year
         window.dispatchEvent(new Event('taxTablesUpdated'));
       }
     } catch (error: any) {

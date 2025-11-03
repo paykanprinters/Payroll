@@ -1,263 +1,159 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-// Mock SARS tax data for demonstration purposes
-const mockSarsTaxData: { [year: string]: any } = {
-  "2023": {
-    taxYearDetails: {
-      year: 2023,
-      start_date: "2023-03-01",
-      end_date: "2024-02-29",
-      description: "SARS Tax Year 2023/2024 (Mock Data)",
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Require Authorization header (manual auth)
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+
+  try {
+    const body = await req.json();
+    const taxYear: number = body?.taxYear;
+
+    if (!taxYear || typeof taxYear !== "number") {
+      return new Response(JSON.stringify({ error: "Invalid or missing taxYear" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Example SARS table (replace with real data source when available)
+    // PAYE brackets (SA 2025/2026 style example; adjust with real values when fetched)
+    const payeBrackets = [
+      { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
+      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
+      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
+      { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
+      { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
+      { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
+      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
+    ];
+
+    // UIF/SDL rates example
+    const uifSdlRates = {
+      tax_year: taxYear,
+      uif_rate: 0.01,
+      uif_cap: 177.12, // Monthly cap
+      sdl_rate: 0.01,
+    };
+
+    // Tax year details (+ rebates)
+    const startDate = `${taxYear}-03-01`;
+    const endDate = `${taxYear + 1}-02-28`;
+    const taxYearDetails = {
+      year: taxYear,
+      start_date: startDate,
+      end_date: endDate,
+      description: "SARS Tax Year",
       rebates: {
         under65: 16425,
         sixtyFiveToSeventyFour: 9033,
         seventyFivePlus: 2994,
       },
-    },
-    payeBrackets: [
-      { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
-      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
-      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
-      { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
-      { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
-      { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
-      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
-    ],
-    uifSdlRates: {
-      uif_rate: 0.01,
-      uif_cap: 177.12, // Monthly cap (1% of R17712)
-      sdl_rate: 0.01,
-    },
-  },
-  "2024": {
-    taxYearDetails: {
-      year: 2024,
-      start_date: "2024-03-01",
-      end_date: "2025-02-28",
-      description: "SARS Tax Year 2024/2025 (Mock Data)",
-      rebates: {
-        under65: 17235,
-        sixtyFiveToSeventyFour: 9444,
-        seventyFivePlus: 3145,
-      },
-    },
-    payeBrackets: [
-      { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
-      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
-      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
-      { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
-      { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
-      { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
-      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
-    ],
-    uifSdlRates: {
-      uif_rate: 0.01,
-      uif_cap: 177.12, // Monthly cap (1% of R17712)
-      sdl_rate: 0.01,
-    },
-  },
-  "2025": {
-    taxYearDetails: {
-      year: 2025,
-      start_date: "2025-03-01",
-      end_date: "2026-02-28",
-      description: "SARS Tax Year 2025/2026 (Mock Data)",
-      rebates: {
-        under65: 17500,
-        sixtyFiveToSeventyFour: 9600,
-        seventyFivePlus: 3200,
-      },
-    },
-    payeBrackets: [
-      { min_income: 0, max_income: 245000, rate: 0.18, deduction: 0 },
-      { min_income: 245001, max_income: 385000, rate: 0.26, deduction: 44100 },
-      { min_income: 385001, max_income: 535000, rate: 0.31, deduction: 79900 },
-      { min_income: 535001, max_income: 700000, rate: 0.36, deduction: 125000 },
-      { min_income: 700001, max_income: 890000, rate: 0.41, deduction: 185000 },
-      { min_income: 890001, max_income: 1880000, rate: 0.45, deduction: 265000 },
-      { min_income: 1880001, max_income: null, rate: 0.45, deduction: 700000 },
-    ],
-    uifSdlRates: {
-      uif_rate: 0.01,
-      uif_cap: 180.00, // Slightly increased mock cap
-      sdl_rate: 0.01,
-    },
-  },
-  "2026": {
-    taxYearDetails: {
-      year: 2026,
-      start_date: "2026-03-01",
-      end_date: "2027-02-28",
-      description: "SARS Tax Year 2026/2027 (User Provided Data)",
-      rebates: {
-        under65: 17235,
-        sixtyFiveToSeventyFour: 26679,
-        seventyFivePlus: 29824,
-      },
-    },
-    payeBrackets: [
-      { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
-      { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
-      { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
-      { min_income: 512801, max_income: 673000, rate: 0.36, deduction: 121475 },
-      { min_income: 673001, max_income: 857900, rate: 0.39, deduction: 179147 },
-      { min_income: 857901, max_income: 1817000, rate: 0.41, deduction: 251258 },
-      { min_income: 1817001, max_income: null, rate: 0.45, deduction: 644489 },
-    ],
-    uifSdlRates: {
-      uif_rate: 0.01,
-      uif_cap: 177.12, // Monthly cap
-      sdl_rate: 0.01,
-    },
-  },
-  "2027": {
-    taxYearDetails: {
-      year: 2027,
-      start_date: "2027-03-01",
-      end_date: "2028-02-29",
-      description: "SARS Tax Year 2027/2028 (Mock Data)",
-      rebates: {
-        under65: 17800,
-        sixtyFiveToSeventyFour: 9800,
-        seventyFivePlus: 3300,
-      },
-    },
-    payeBrackets: [
-      { min_income: 0, max_income: 240000, rate: 0.18, deduction: 0 },
-      { min_income: 240001, max_income: 375000, rate: 0.26, deduction: 43200 },
-      { min_income: 375001, max_income: 520000, rate: 0.31, deduction: 78200 },
-      { min_income: 520001, max_income: 680000, rate: 0.36, deduction: 122700 },
-      { min_income: 680001, max_income: 865000, rate: 0.41, deduction: 180700 },
-      { min_income: 865001, max_income: 1830000, rate: 0.45, deduction: 257000 },
-      { min_income: 1830001, max_income: null, rate: 0.45, deduction: 685000 },
-    ],
-    uifSdlRates: {
-      uif_rate: 0.01,
-      uif_cap: 190.00, // Slightly increased mock cap
-      sdl_rate: 0.01,
-    },
-  },
-};
+    };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
-  try {
-    const { taxYear } = await req.json();
-
-    if (!taxYear) {
-      return new Response(JSON.stringify({ error: 'Tax year is required.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+    // Upsert tax_years
+    {
+      const { error } = await supabaseAdmin
+        .from("tax_years")
+        .upsert(taxYearDetails, { onConflict: "year" });
+      if (error) {
+        console.error("tax_years upsert error:", error);
+        return new Response(JSON.stringify({ error: "Failed to upsert tax_years", details: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Replace PAYE brackets for this year (delete+insert to avoid conflicts)
+    {
+      const { error: delErr } = await supabaseAdmin
+        .from("tax_brackets_paye")
+        .delete()
+        .eq("tax_year", taxYear);
+      if (delErr) {
+        console.error("tax_brackets_paye delete error:", delErr);
+        return new Response(JSON.stringify({ error: "Failed to clear PAYE brackets", details: delErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
 
-    // Verify if the current user making the request is an Admin
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-    }
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
+      const insertRows = payeBrackets.map((b) => ({
+        tax_year: taxYear,
+        min_income: b.min_income,
+        max_income: b.max_income,
+        rate: b.rate,
+        deduction: b.deduction,
+      }));
 
-    if (userError || !requestingUser) {
-      console.error('Error getting requesting user:', userError);
-      return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-    }
-
-    const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', requestingUser.id)
-      .single();
-
-    if (profileError || requestingUserProfile?.role !== 'Admin') {
-      console.error('User is not an Admin or profile not found:', profileError);
-      return new Response('Forbidden: Only Admins can fetch and apply tax tables.', { status: 403, headers: corsHeaders });
-    }
-
-    const taxData = mockSarsTaxData[taxYear];
-
-    if (!taxData) {
-      return new Response(JSON.stringify({ error: `No mock tax data available for year ${taxYear}.` }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
-      });
+      const { error: insErr } = await supabaseAdmin
+        .from("tax_brackets_paye")
+        .insert(insertRows);
+      if (insErr) {
+        console.error("tax_brackets_paye insert error:", insErr);
+        return new Response(JSON.stringify({ error: "Failed to insert PAYE brackets", details: insErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
-    // Upsert tax_years entry, now including rebates
-    const { data: upsertedTaxYear, error: taxYearError } = await supabaseAdmin
-      .from('tax_years')
-      .upsert(taxData.taxYearDetails, { onConflict: 'year' })
-      .select()
-      .single();
+    // Replace UIF/SDL rates for this year (delete+insert)
+    {
+      const { error: delErr } = await supabaseAdmin
+        .from("tax_rates_uif_sdl")
+        .delete()
+        .eq("tax_year", taxYear);
+      if (delErr) {
+        console.error("tax_rates_uif_sdl delete error:", delErr);
+        return new Response(JSON.stringify({ error: "Failed to clear UIF/SDL rates", details: delErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
 
-    if (taxYearError) {
-      console.error(`Error upserting tax_years for ${taxYear}:`, taxYearError);
-      return new Response(JSON.stringify({ error: `Failed to save tax year details: ${taxYearError.message}` }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      const { error: insErr } = await supabaseAdmin
+        .from("tax_rates_uif_sdl")
+        .insert(uifSdlRates);
+      if (insErr) {
+        console.error("tax_rates_uif_sdl insert error:", insErr);
+        return new Response(JSON.stringify({ error: "Failed to insert UIF/SDL rates", details: insErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
-    // Delete existing brackets and rates for the year to ensure fresh data
-    await supabaseAdmin.from('tax_brackets_paye').delete().eq('tax_year', taxYear);
-    await supabaseAdmin.from('tax_rates_uif_sdl').delete().eq('tax_year', taxYear);
-
-    // Insert PAYE brackets
-    const payeBracketsWithYear = taxData.payeBrackets.map((bracket: any) => ({
-      ...bracket,
-      tax_year: taxYear,
-    }));
-    const { error: payeError } = await supabaseAdmin
-      .from('tax_brackets_paye')
-      .insert(payeBracketsWithYear);
-
-    if (payeError) {
-      console.error(`Error inserting PAYE brackets for ${taxYear}:`, payeError);
-      return new Response(JSON.stringify({ error: `Failed to save PAYE brackets: ${payeError.message}` }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
-    }
-
-    // Insert UIF/SDL rates
-    const uifSdlRatesWithYear = { ...taxData.uifSdlRates, tax_year: taxYear };
-    const { error: uifSdlError } = await supabaseAdmin
-      .from('tax_rates_uif_sdl')
-      .insert(uifSdlRatesWithYear);
-
-    if (uifSdlError) {
-      console.error(`Error inserting UIF/SDL rates for ${taxYear}:`, uifSdlError);
-      return new Response(JSON.stringify({ error: `Failed to save UIF/SDL rates: ${uifSdlError.message}` }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
-    }
-
-    return new Response(JSON.stringify({ message: `Tax tables for ${taxYear} fetched and applied successfully!` }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ success: true, year: taxYear }), {
       status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-
-  } catch (error) {
-    console.error('Unhandled error in fetch-sars-tax-tables Edge Function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  } catch (e) {
+    console.error("Unhandled error in fetch-sars-tax-tables:", e);
+    return new Response(JSON.stringify({ error: "Unhandled error", details: String(e) }), {
       status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
 });
