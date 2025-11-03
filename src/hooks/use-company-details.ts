@@ -33,7 +33,9 @@ const columnToPropertyMap: { [key: string]: keyof MockCompanyDetails | 'updatedA
   logowidth: 'logoWidth',
   logoheight: 'logoHeight',
   logofit: 'logoFit',
-  updated_at: 'updatedAt', // Handles the underscore case
+  updated_at: 'updatedAt', // Handles the underscore case,
+  // NEW mapping for persisted active tax year
+  active_tax_year: 'activeTaxYear',
 };
 
 // Modified conversion function to use the explicit map
@@ -138,6 +140,8 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         logowidth: details.logoWidth,
         logoheight: details.logoHeight,
         logofit: details.logoFit,
+        // NEW: persist active tax year if provided
+        active_tax_year: details.activeTaxYear,
       };
 
       // Filter out undefined values from the payload to avoid issues with Supabase upsert

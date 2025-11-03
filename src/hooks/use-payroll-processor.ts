@@ -38,18 +38,8 @@ export const usePayrollProcessor = () => {
     return localStorage.getItem("isMockDataEnabled") === "true";
   });
 
-  // NEW: State to hold the active tax year for calculations
-  const [activeTaxYearForCalculations, setActiveTaxYearForCalculations] = useState<number>(() => {
-    // Initialize from localStorage if available, otherwise current year
-    const savedYear = localStorage.getItem("activeTaxYearForCalculations");
-    return savedYear ? parseInt(savedYear) : new Date().getFullYear();
-  });
-
-  // Persist activeTaxYearForCalculations to localStorage
-  useEffect(() => {
-    localStorage.setItem("activeTaxYearForCalculations", activeTaxYearForCalculations.toString());
-  }, [activeTaxYearForCalculations]);
-
+  // REMOVE localStorage persistence for active year; use live Supabase instead.
+  const [activeTaxYearForCalculations, setActiveTaxYearState] = useState<number>(new Date().getFullYear());
 
   const mockLoansRef = useRef<string | null>(null);
   const mockSavingPlansRef = useRef<string | null>(null);
@@ -121,7 +111,7 @@ export const usePayrollProcessor = () => {
     }
   }, [isMockDataEnabled]);
 
-  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails, upsertCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   // Pass activeTaxYearForCalculations to useTaxTables
   const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear: activeTaxYearForCalculations });
   const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
@@ -130,6 +120,23 @@ export const usePayrollProcessor = () => {
 
   // Directly use supabaseCompanyDetails, which is now more stable due to deep comparison in useCompanyDetails
   const companyDetails = supabaseCompanyDetails;
+
+  // Sync active tax year from live company details when available
+  useEffect(() => {
+    const liveYear = companyDetails?.activeTaxYear;
+    if (typeof liveYear === "number" && liveYear > 0 && liveYear !== activeTaxYearForCalculations) {
+      setActiveTaxYearState(liveYear);
+    }
+  }, [companyDetails, activeTaxYearForCalculations]);
+
+  // Expose a setter that persists to Supabase (live-first)
+  const setActiveTaxYearForCalculations = useCallback((year: number) => {
+    setActiveTaxYearState(year);
+    // Persist to Supabase when not in mock-only mode
+    if (!isMockDataEnabled) {
+      upsertCompanyDetails({ activeTaxYear: year });
+    }
+  }, [isMockDataEnabled, upsertCompanyDetails]);
 
   const companyNameForEmployeeId = useMemo(() => {
     return companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";

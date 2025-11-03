@@ -145,6 +145,23 @@ serve(async (req) => {
       }
     }
 
+    // NEW: Persist the selected tax year as active in company_details (singleton)
+    {
+      const { error: upsertErr } = await supabaseAdmin
+        .from("company_details")
+        .upsert({
+          id: "00000000-0000-0000-0000-000000000000",
+          active_tax_year: taxYear,
+        }, { onConflict: "id" });
+      if (upsertErr) {
+        console.error("company_details active_tax_year upsert error:", upsertErr);
+        return new Response(JSON.stringify({ error: "Failed to set active tax year", details: upsertErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, year: taxYear }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

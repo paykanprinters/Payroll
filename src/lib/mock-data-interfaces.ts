@@ -41,6 +41,8 @@ export interface MockCompanyDetails {
   companyBankAccountType?: string;
   companyBankSwiftCode?: string;
   companyBankIban?: string;
+  // NEW: active tax year persisted in Supabase
+  activeTaxYear?: number;
 }
 
 export interface MockEmployee {
