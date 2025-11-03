@@ -19,6 +19,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-f
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import { Printer, Download } from "lucide-react";
 import { showError } from "@/utils/toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface CalculatePaycheckDialogProps {
   isOpen: boolean;
@@ -27,19 +28,21 @@ interface CalculatePaycheckDialogProps {
 }
 
 const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpen, onClose, payslipDesignSettings }) => {
-  const { employees, calculateSinglePayslipPreview, companyDetails } = usePayrollProcessor();
+  const { employees, calculateSinglePayslipPreview, companyDetails, taxTables } = usePayrollProcessor();
   const { generatePdf, printPdf } = usePdfGenerator();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [previewPayslip, setPreviewPayslip] = useState<MockPayslip | null>(null);
   const [currentPeriodStart, setCurrentPeriodStart] = useState<Date | null>(null);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<Date | null>(null);
+  const [isTaxTablesMissing, setIsTaxTablesMissing] = useState<boolean>(false);
 
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setSelectedEmployeeId("");
       setPreviewPayslip(null);
+      setIsTaxTablesMissing(false);
       // Determine current period based on today's date for preview
       const today = new Date();
       setCurrentPeriodStart(startOfMonth(today)); // Default to monthly for preview
@@ -50,6 +53,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
   const handleEmployeeSelect = useCallback((employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     setPreviewPayslip(null); // Clear previous preview
+
     const employee = employees.find(emp => emp.id === employeeId);
     if (employee && companyDetails) {
       let periodStart: Date;
@@ -62,8 +66,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
         periodStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday start
         periodEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
       } else if (employee.payFrequency === "Bi-Weekly") {
-        // For bi-weekly, we'll simplify to weekly for mock purposes or define a fixed bi-weekly cycle start
-        // For now, let's treat it as weekly for simplicity in preview
+        // For bi-weekly, we'll simplify to weekly for mock purposes
         periodStart = startOfWeek(new Date(), { weekStartsOn: 1 });
         periodEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
       } else {
@@ -74,10 +77,23 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       setCurrentPeriodStart(periodStart);
       setCurrentPeriodEnd(periodEnd);
 
+      // Guard — do not attempt preview calculation if tax tables aren't loaded
+      const tablesMissing =
+        !taxTables ||
+        !taxTables.payeBrackets ||
+        taxTables.payeBrackets.length === 0;
+
+      if (tablesMissing) {
+        setIsTaxTablesMissing(true);
+        // Do not call calculateSinglePayslipPreview here (avoids toast)
+        return;
+      }
+
+      setIsTaxTablesMissing(false);
       const calculatedPayslip = calculateSinglePayslipPreview(employeeId, periodStart, periodEnd);
       setPreviewPayslip(calculatedPayslip);
     }
-  }, [employees, companyDetails, calculateSinglePayslipPreview]);
+  }, [employees, companyDetails, calculateSinglePayslipPreview, taxTables]);
 
   const handlePrintOrDownload = useCallback(async (action: 'print' | 'download') => {
     if (!previewPayslip || !companyDetails || !currentPeriodStart || !currentPeriodEnd) {
@@ -148,6 +164,16 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
             </Select>
           </div>
 
+          {selectedEmployeeId && isTaxTablesMissing && (
+            <Alert className="bg-amber-50 border-amber-200 text-amber-900">
+              <AlertTitle>Tax tables not loaded</AlertTitle>
+              <AlertDescription>
+                We need PAYE tax tables to generate the payslip preview. Go to Settings → Tax Liabilities to fetch tables,
+                then return here. Print/Download are disabled until tables are available.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {previewPayslip && companyDetails && currentPeriodStart && currentPeriodEnd ? (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold mt-4">
@@ -164,16 +190,16 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
                 />
               </div>
               <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={() => handlePrintOrDownload('print')}>
+                <Button variant="outline" onClick={() => handlePrintOrDownload('print')} disabled={!previewPayslip}>
                   <Printer className="mr-2 h-4 w-4" /> Print Preview
                 </Button>
-                <Button onClick={() => handlePrintOrDownload('download')}>
+                <Button onClick={() => handlePrintOrDownload('download')} disabled={!previewPayslip}>
                   <Download className="mr-2 h-4 w-4" /> Download Preview PDF
                 </Button>
               </div>
             </div>
           ) : (
-            selectedEmployeeId && <p className="text-center text-muted-foreground mt-8">Select an employee to see their paycheck preview.</p>
+            selectedEmployeeId && !isTaxTablesMissing && <p className="text-center text-muted-foreground mt-8">Select an employee to see their paycheck preview.</p>
           )}
         </div>
         <DialogFooter>
