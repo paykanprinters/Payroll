@@ -89,7 +89,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
     }
   }, [isOpen]);
 
-  const autoMapColumns = useCallback((headers: string[]) => {
+  const autoMapColumns = useCallback((headers: string[]): ColumnMappings => {
     const newMappings: ColumnMappings = {};
     [...requiredFields, ...optionalFields].forEach(field => {
       const commonNames = [
@@ -107,6 +107,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       }
     });
     setColumnMappings(prev => ({ ...prev, ...newMappings }));
+    return newMappings;
   }, []);
 
   const validateRow = useCallback((row: ParsedTimesheetRow): ParsedTimesheetRow => {
@@ -313,8 +314,8 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
         const headers = results.meta.fields || [];
         setCsvHeaders(headers);
         setParsedRawData(results.data);
-        autoMapColumns(headers);
-        parseAndValidateData(results.data, columnMappings); // Initial validation
+        const newMappings = autoMapColumns(headers);
+        parseAndValidateData(results.data, { ...columnMappings, ...newMappings }); // Use auto-mapped columns immediately
         setIsParsing(false);
         if (results.errors.length > 0) {
           showError(`CSV parsing completed with ${results.errors.length} errors. Check console for details.`);
@@ -350,7 +351,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
   }, [parsedRawData, parseAndValidateData, columnMappings]);
 
   const allRowsValid = validatedData.length > 0 && validatedData.every(row => row._isValid);
-  const canImport = validatedData.length > 0 && allRowsValid;
+  const canImport = validatedData.some(row => row._isValid);
 
   return {
     file,
