@@ -71,20 +71,23 @@ export const calculatePAYE = (
     }
   }
 
-  // Apply rebates if taxYearDetails and employeeAge are available
-  if (taxYearDetails && taxYearDetails.rebates && employeeAge !== null) {
+  // Apply rebates if taxYearDetails is available.
+  // If age is unknown, default to primary (under-65) rebate to avoid over-taxing.
+  if (taxYearDetails && taxYearDetails.rebates) {
     let totalRebate = 0;
     const rebates = taxYearDetails.rebates;
 
-    if (employeeAge < 65) {
+    if (employeeAge === null) {
+      totalRebate = rebates.under65;
+    } else if (employeeAge < 65) {
       totalRebate = rebates.under65;
     } else if (employeeAge >= 65 && employeeAge < 75) {
       totalRebate = rebates.under65 + rebates.sixtyFiveToSeventyFour;
     } else if (employeeAge >= 75) {
       totalRebate = rebates.under65 + rebates.sixtyFiveToSeventyFour + rebates.seventyFivePlus;
     }
-    
-    console.log(`[calculatePAYE] Applying total rebate: ${totalRebate} based on age ${employeeAge}`);
+
+    console.log(`[calculatePAYE] Applying total rebate: ${totalRebate} (age: ${employeeAge ?? 'unknown'})`);
     annualPAYE = Math.max(0, annualPAYE - totalRebate); // Ensure PAYE doesn't go negative
   }
 
