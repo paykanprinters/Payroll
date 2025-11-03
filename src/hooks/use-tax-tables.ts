@@ -39,13 +39,13 @@ export interface TaxTables {
 // Define mock tax tables for when mock data is enabled
 const mockTaxTables: TaxTables = {
   payeBrackets: [
-    { min_income: 0, max_income: 237100, rate: 0.18, deduction: 0 },
+    { min_income: 1, max_income: 237100, rate: 0.18, deduction: 0 },
     { min_income: 237101, max_income: 370500, rate: 0.26, deduction: 42678 },
     { min_income: 370501, max_income: 512800, rate: 0.31, deduction: 77362 },
-    { min_income: 512801, max_income: 673100, rate: 0.36, deduction: 121424 },
-    { min_income: 673101, max_income: 857900, rate: 0.41, deduction: 179147 },
-    { min_income: 857901, max_income: 1817000, rate: 0.45, deduction: 255073 },
-    { min_income: 1817001, max_income: null, rate: 0.45, deduction: 681403 },
+    { min_income: 512801, max_income: 673000, rate: 0.36, deduction: 121475 },
+    { min_income: 673001, max_income: 857900, rate: 0.39, deduction: 179147 },
+    { min_income: 857901, max_income: 1817000, rate: 0.41, deduction: 251258 },
+    { min_income: 1817001, max_income: null, rate: 0.45, deduction: 644489 },
   ],
   uifSdlRates: {
     uif_rate: 0.01,
