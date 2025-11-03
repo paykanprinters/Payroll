@@ -74,6 +74,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 name: profile.name ?? profile.email,
               });
               setIsAuthenticated(true);
+              // NEW: Redirect authenticated users away from the login page
+              if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                navigate('/dashboard', { replace: true });
+              }
             }
           }
         } else {
@@ -115,11 +119,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("Initial session:", session);
       if (isMounted) {
         if (session) {
-          // If session exists, handleAuthStateChange would have already processed it
-          // or will process it shortly via 'INITIAL_SESSION' event.
-          // We just ensure isLoadingAuth is set correctly.
+          // If session exists, ensure loading is false and redirect to dashboard
           setIsLoadingAuth(false); // Removed conditional check
           console.log("Initial session found, setting isLoadingAuth to false.");
+          // NEW: Redirect if a session already exists
+          navigate('/dashboard', { replace: true });
         } else {
           // No initial session, ensure state is cleared and redirect if needed
           if (isAuthenticated) { // Check current state
