@@ -67,6 +67,7 @@ const MockData: React.FC = () => {
     applySdl: true,
     enableIrp5Export: true, // Enable IRP5 export by default in mock
     irp5ContentFontSize: 12,
+    proRateUifCapByFrequency: true, // NEW: default to enabled in mock to match requested policy
   };
 
   const applyMockData = useCallback(() => {

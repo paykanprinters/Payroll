@@ -8,6 +8,7 @@ export interface UserTaxSettings {
   applySdl: boolean;
   enableIrp5Export: boolean;
   irp5ContentFontSize: number;
+  proRateUifCapByFrequency?: boolean; // NEW: control pro-rated UIF cap
 }
 
 // Helper to convert snake_case to camelCase for Supabase data
@@ -48,6 +49,10 @@ export const fetchUserTaxSettingsFromSupabase = async (userId: string): Promise<
     return null;
   } else if (data) {
     const camelCaseData = convertUserTaxSettingsKeysToCamelCase(data);
+    // Ensure new field has a default when missing
+    if (camelCaseData.proRateUifCapByFrequency === undefined) {
+      camelCaseData.proRateUifCapByFrequency = false;
+    }
     console.log("user-tax-settings-queries: Live user tax settings fetched:", camelCaseData);
     return camelCaseData;
   }

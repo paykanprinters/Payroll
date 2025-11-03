@@ -139,7 +139,20 @@ const calculateDeductions = (
   // FIRST: Compute UIF (employee contribution) so it can be excluded from taxable income
   let uif = 0;
   if (uifSdlRates) {
-    const uifRaw = Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap);
+    const monthlyCap = uifSdlRates.uif_cap;
+    const uifRate = uifSdlRates.uif_rate;
+
+    const getCapForFrequency = (freq: MockEmployee["payFrequency"] | undefined, monthlyCapValue: number) => {
+      if (!freq) return monthlyCapValue;
+      if (freq === "Weekly") return monthlyCapValue / 4.3333;     // ~weeks/month
+      if (freq === "Bi-Weekly") return monthlyCapValue / 2.1667;  // ~biweeks/month
+      return monthlyCapValue; // Monthly or others
+    };
+
+    const shouldProRate = userTaxSettings?.proRateUifCapByFrequency === true;
+    const capToUse = shouldProRate ? getCapForFrequency(emp.payFrequency, monthlyCap) : monthlyCap;
+
+    const uifRaw = Math.min(grossEarnings * uifRate, capToUse);
     uif = bankersRound(uifRaw, 2);
   } else {
     // Fallback for UIF if rates are not loaded

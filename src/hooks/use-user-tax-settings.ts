@@ -19,6 +19,7 @@ const defaultMockSettings: UserTaxSettings = {
   applySdl: true,
   enableIrp5Export: false,
   irp5ContentFontSize: 12,
+  proRateUifCapByFrequency: false, // NEW default
 };
 
 export const useUserTaxSettings = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseUserTaxSettingsProps) => {

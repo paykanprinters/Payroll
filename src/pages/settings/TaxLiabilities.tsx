@@ -29,6 +29,7 @@ const taxLiabilitiesSchema = z.object({
   applySDL: z.boolean().default(false),
   enableIrp5Export: z.boolean().default(false),
   irp5ContentFontSize: z.number().min(MIN_IRP5_FONT_SIZE).max(MAX_IRP5_FONT_SIZE).default(DEFAULT_IRP5_FONT_SIZE),
+  proRateUifCapByFrequency: z.boolean().default(false), // NEW
 });
 
 type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
@@ -55,6 +56,7 @@ const TaxLiabilities: React.FC = () => {
       applySDL: false,
       enableIrp5Export: false,
       irp5ContentFontSize: DEFAULT_IRP5_FONT_SIZE,
+      proRateUifCapByFrequency: false, // NEW default
     },
   });
 
@@ -67,15 +69,16 @@ const TaxLiabilities: React.FC = () => {
         applySDL: userTaxSettings.applySdl,
         enableIrp5Export: userTaxSettings.enableIrp5Export,
         irp5ContentFontSize: userTaxSettings.irp5ContentFontSize,
+        proRateUifCapByFrequency: userTaxSettings.proRateUifCapByFrequency ?? false, // NEW
       });
     } else if (!isLoadingUserTaxSettings) {
-      // If no settings found and not loading, reset to default form values
       form.reset({
         taxYear: activeTaxYearForCalculations.toString(),
         applyPAYE: false,
         applySDL: false,
         enableIrp5Export: false,
         irp5ContentFontSize: DEFAULT_IRP5_FONT_SIZE,
+        proRateUifCapByFrequency: false, // NEW
       });
     }
   }, [userTaxSettings, isLoadingUserTaxSettings, form, activeTaxYearForCalculations]);
@@ -133,8 +136,9 @@ const TaxLiabilities: React.FC = () => {
         id: userTaxSettings?.id,
         applyPaye: data.applyPAYE,
         applySdl: data.applySDL,
-        enableIrp5Export: data.enableIrp5Export, // Ensure this is included
-        irp5ContentFontSize: data.irp5ContentFontSize, // Ensure this is included
+        enableIrp5Export: data.enableIrp5Export,
+        irp5ContentFontSize: data.irp5ContentFontSize,
+        proRateUifCapByFrequency: data.proRateUifCapByFrequency, // NEW
       };
       await saveUserTaxSettings(settingsToSave);
     } else {
@@ -169,6 +173,22 @@ const TaxLiabilities: React.FC = () => {
       await saveUserTaxSettings(settingsToSave);
     } else {
       showError("User not authenticated. Cannot change IRP5 font size settings.");
+    }
+  };
+
+  const handleProRateUifToggleChange = async (checked: boolean) => {
+    if (user?.id) {
+      const settingsToSave: Omit<UserTaxSettings, 'id' | 'userId'> & { id?: string } = {
+        id: userTaxSettings?.id,
+        applyPaye: form.getValues("applyPAYE"),
+        applySdl: form.getValues("applySDL"),
+        enableIrp5Export: form.getValues("enableIrp5Export"),
+        irp5ContentFontSize: form.getValues("irp5ContentFontSize"),
+        proRateUifCapByFrequency: checked,
+      };
+      await saveUserTaxSettings(settingsToSave);
+    } else {
+      showError("User not authenticated. Cannot change UIF cap settings.");
     }
   };
 
@@ -300,6 +320,32 @@ const TaxLiabilities: React.FC = () => {
             <h3 className="font-semibold text-lg mb-2">IRP5 Export Note:</h3>
             <p className="text-sm">
               Enabling this option will make the IRP5 export button visible in the Payslips section. The generated IRP5 is a simplified mock-up for demonstration purposes and does not represent a legally compliant SARS IRP5 certificate. A real IRP5 export requires complex tax calculations and official SARS integration.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>UIF Settings</CardTitle>
+          <CardDescription>
+            Control whether the UIF monthly cap is pro-rated by pay frequency (weekly/bi-weekly).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="proRateUifCapByFrequency">Pro-rate UIF Cap by Pay Frequency</Label>
+            <Switch
+              id="proRateUifCapByFrequency"
+              checked={form.watch("proRateUifCapByFrequency")}
+              onCheckedChange={handleProRateUifToggleChange}
+              disabled={!canManageTaxSettings || isMockDataEnabled}
+            />
+          </div>
+          <div className="mt-8 p-4 border rounded-lg bg-blue-50 text-blue-800">
+            <h3 className="font-semibold text-lg mb-2">UIF Cap Pro‑rating</h3>
+            <p className="text-sm">
+              Weekly cap ≈ monthly cap ÷ 4.333; bi‑weekly cap ≈ monthly cap ÷ 2.1667. Monthly stays unchanged. This affects both UIF and taxable income used for PAYE.
             </p>
           </div>
         </CardContent>
