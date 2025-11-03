@@ -61,6 +61,36 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const hasTriggeredGenerateToDosRef = useRef(false);
   const isGeneratingToDosRef = useRef(false);
 
+  const triggerGenerateToDos = useCallback(async () => {
+    console.log("usePayrollProcessor: triggerGenerateToDos called.");
+    if (isMockDataEnabled) {
+      console.log("usePayrollProcessor: Mock data is enabled, skipping Edge Function call for To-Dos.");
+      return;
+    }
+    if (!isAuthenticated) {
+      console.warn("usePayrollProcessor: Not authenticated, skipping generate-todos Edge Function call.");
+      return;
+    }
+
+    try {
+      console.log("usePayrollProcessor: Attempting to invoke 'generate-todos' Edge Function...");
+      const { data, error } = await supabase.functions.invoke('generate-todos');
+
+      if (error) {
+        console.error('usePayrollProcessor: Error invoking generate-todos Edge Function:', error);
+        showError(`Failed to generate To-Dos: ${error.message}`);
+      } else {
+        console.log('usePayrollProcessor: Generate To-Dos Edge Function response:', data);
+        refetchToDos();
+        showSuccess("To-Dos refreshed successfully!");
+      }
+    } catch (error: any) {
+      console.error('usePayrollProcessor: Unhandled error triggering generate-todos Edge Function:', error);
+      showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
+    }
+  }, [isMockDataEnabled, isAuthenticated, refetchToDos]);
+
+  // ADDED: Define safeTriggerGenerateToDos AFTER triggerGenerateToDos to avoid TDZ
   const safeTriggerGenerateToDos = useCallback(async () => {
     if (isGeneratingToDosRef.current) {
       console.log("usePayrollProcessor: safeTriggerGenerateToDos - already in progress, skipping.");
@@ -188,55 +218,6 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     batchUpsertPayslips,
     isMockDataEnabled,
   );
-
-  const triggerGenerateToDos = useCallback(async () => {
-    console.log("usePayrollProcessor: triggerGenerateToDos called.");
-    if (isMockDataEnabled) {
-      console.log("usePayrollProcessor: Mock data is enabled, skipping Edge Function call for To-Dos.");
-      return;
-    }
-    if (!isAuthenticated) {
-      console.warn("usePayrollProcessor: Not authenticated, skipping generate-todos Edge Function call.");
-      return;
-    }
-
-    try {
-      console.log("usePayrollProcessor: Attempting to invoke 'generate-todos' Edge Function...");
-      const { data, error } = await supabase.functions.invoke('generate-todos');
-
-      if (error) {
-        console.error('usePayrollProcessor: Error invoking generate-todos Edge Function:', error);
-        showError(`Failed to generate To-Dos: ${error.message}`);
-      } else {
-        console.log('usePayrollProcessor: Generate To-Dos Edge Function response:', data);
-        refetchToDos();
-        showSuccess("To-Dos refreshed successfully!");
-      }
-    } catch (error: any) {
-      console.error('usePayrollProcessor: Unhandled error triggering generate-todos Edge Function:', error);
-      showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
-    }
-  }, [isMockDataEnabled, isAuthenticated, refetchToDos]);
-
-  // Wrap addOrUpdateEmployee and deleteEmployee to trigger To-Do generation
-  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
-    console.log("usePayrollProcessor: addOrUpdateEmployee called. Triggering baseAddOrUpdateEmployee.");
-    await baseAddOrUpdateEmployee(employeeData);
-    if (!isMockDataEnabled) {
-      console.log("usePayrollProcessor: Live data mode, calling triggerGenerateToDos after employee update.");
-      triggerGenerateToDos();
-    }
-  }, [baseAddOrUpdateEmployee, isMockDataEnabled, triggerGenerateToDos]);
-
-  const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
-    console.log("usePayrollProcessor: deleteEmployee called. Triggering baseDeleteEmployee.");
-    await baseDeleteEmployee(employeeId, employeeName);
-    if (!isMockDataEnabled) {
-      console.log("usePayrollProcessor: Live data mode, calling triggerGenerateToDos after employee deletion.");
-      triggerGenerateToDos();
-    }
-  }, [baseDeleteEmployee, isMockDataEnabled, triggerGenerateToDos]);
-
 
   useEffect(() => {
     if (silent) return;
