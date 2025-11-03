@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react";
+import OutputConsole from "@/components/debug/OutputConsole";
 import { Outlet, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -62,6 +63,8 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
           <div className="flex-1">
+            {/* Output Console trigger */}
+            <OutputConsole />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
