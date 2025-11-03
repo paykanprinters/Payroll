@@ -60,6 +60,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
 
   const hasTriggeredGenerateToDosRef = useRef(false);
   const isGeneratingToDosRef = useRef(false);
+  // ADDED: Ref to hold refetchToDos once initialized
+  const refetchToDosFnRef = useRef<(() => void) | null>(null);
 
   const triggerGenerateToDos = useCallback(async () => {
     console.log("usePayrollProcessor: triggerGenerateToDos called.");
@@ -81,14 +83,16 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
         showError(`Failed to generate To-Dos: ${error.message}`);
       } else {
         console.log('usePayrollProcessor: Generate To-Dos Edge Function response:', data);
-        refetchToDos();
+        // UPDATED: Use ref to avoid TDZ; only call if initialized
+        refetchToDosFnRef.current?.();
         showSuccess("To-Dos refreshed successfully!");
       }
     } catch (error: any) {
       console.error('usePayrollProcessor: Unhandled error triggering generate-todos Edge Function:', error);
       showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
     }
-  }, [isMockDataEnabled, isAuthenticated, refetchToDos]);
+  // UPDATED: Remove refetchToDos from deps to avoid TDZ
+  }, [isMockDataEnabled, isAuthenticated]);
 
   // Guarded wrapper defined AFTER triggerGenerateToDos
   const safeTriggerGenerateToDos = useCallback(async () => {
@@ -198,6 +202,9 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: mockLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee: baseAddOrUpdateEmployee, isAuthenticated, isLoadingAuth });
+
+  // ADDED: Assign the refetch function to the ref once available
+  refetchToDosFnRef.current = refetchToDos;
 
   // Add this console log to check the type of batchUpsertPayslips
   console.log("usePayrollProcessor: Type of batchUpsertPayslips from usePayslipsData:", typeof batchUpsertPayslips);
