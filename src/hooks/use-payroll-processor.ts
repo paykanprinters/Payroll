@@ -58,6 +58,23 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const [mockPayslips, setMockPayslips] = useState<MockPayslip[]>([]);
   // Removed: mockWorkHoursSettings, mockPayCycleSettings, mockUserTaxSettings
 
+  const hasTriggeredGenerateToDosRef = useRef(false);
+  const isGeneratingToDosRef = useRef(false);
+
+  const safeTriggerGenerateToDos = useCallback(async () => {
+    if (isGeneratingToDosRef.current) {
+      console.log("usePayrollProcessor: safeTriggerGenerateToDos - already in progress, skipping.");
+      return;
+    }
+    isGeneratingToDosRef.current = true;
+    try {
+      await triggerGenerateToDos();
+      hasTriggeredGenerateToDosRef.current = true;
+    } finally {
+      isGeneratingToDosRef.current = false;
+    }
+  }, [triggerGenerateToDos]);
+
   useEffect(() => {
     if (isMockDataEnabled) {
       const currentLoans = localStorage.getItem("mockLoans");
@@ -229,23 +246,23 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
       setIsMockDataEnabled(mockEnabled);
       console.log("usePayrollProcessor: 'allMockDataUpdated' event received. Setting isMockDataEnabled to:", mockEnabled);
       if (!mockEnabled && isAuthenticated && !isLoadingAuth) {
-        console.log("usePayrollProcessor: Mock data disabled, authenticated, and auth loaded. Triggering To-Dos generation.");
-        triggerGenerateToDos();
+        console.log("usePayrollProcessor: Live mode after mock toggle; attempting safe To-Dos generation.");
+        safeTriggerGenerateToDos();
       }
     };
 
     window.addEventListener("allMockDataUpdated", handleMockDataToggleEvent);
 
-    // NEW: Call triggerGenerateToDos on initial load if conditions are met
-    if (!isMockDataEnabled && isAuthenticated && !isLoadingAuth) {
-      console.log("usePayrollProcessor: Initial load - Mock data disabled, authenticated, and auth loaded. Triggering To-Dos generation.");
-      triggerGenerateToDos();
+    // Call generate-todos once on initial load if conditions are met and it hasn't run yet
+    if (!isMockDataEnabled && isAuthenticated && !isLoadingAuth && !hasTriggeredGenerateToDosRef.current) {
+      console.log("usePayrollProcessor: Initial load; attempting safe To-Dos generation.");
+      safeTriggerGenerateToDos();
     }
 
     return () => {
       window.removeEventListener("allMockDataUpdated", handleMockDataToggleEvent);
     };
-  }, [isAuthenticated, isLoadingAuth, triggerGenerateToDos, isMockDataEnabled, silent]);
+  }, [isAuthenticated, isLoadingAuth, isMockDataEnabled, safeTriggerGenerateToDos, silent]);
 
   useEffect(() => {
     if (silent) return;

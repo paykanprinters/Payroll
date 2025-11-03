@@ -26,7 +26,7 @@ const queryClient = new QueryClient();
 
 // Create a wrapper component to handle the dynamic title
 const TitleUpdater = () => {
-  const { companyDetails, isLoadingCompanyDetails } = usePayrollProcessor();
+  const { companyDetails, isLoadingCompanyDetails } = usePayrollProcessor({ silent: true });
 
   React.useEffect(() => {
     const titleElement = document.getElementById("app-title");
