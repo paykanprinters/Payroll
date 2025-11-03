@@ -35,7 +35,7 @@ type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
 
 const TaxLiabilities: React.FC = () => {
   const { user } = useAuth();
-  const { isMockDataEnabled, isAuthenticated, isLoadingAuth, setActiveTaxYearForCalculations } = usePayrollProcessor(); // Get setActiveTaxYearForCalculations
+  const { isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYearForCalculations, setActiveTaxYearForCalculations } = usePayrollProcessor(); // include active year
   const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
   const currentYear = new Date().getFullYear();
@@ -50,7 +50,7 @@ const TaxLiabilities: React.FC = () => {
   const form = useForm<TaxLiabilitiesFormValues>({
     resolver: zodResolver(taxLiabilitiesSchema),
     defaultValues: {
-      taxYear: currentYear.toString(),
+      taxYear: activeTaxYearForCalculations.toString(),
       applyPAYE: false,
       applySDL: false,
       enableIrp5Export: false,
@@ -62,7 +62,7 @@ const TaxLiabilities: React.FC = () => {
   React.useEffect(() => {
     if (userTaxSettings) {
       form.reset({
-        taxYear: form.getValues("taxYear"), // Keep current taxYear selection
+        taxYear: activeTaxYearForCalculations.toString(), // keep in sync with active tax year
         applyPAYE: userTaxSettings.applyPaye,
         applySDL: userTaxSettings.applySdl,
         enableIrp5Export: userTaxSettings.enableIrp5Export,
@@ -71,14 +71,22 @@ const TaxLiabilities: React.FC = () => {
     } else if (!isLoadingUserTaxSettings) {
       // If no settings found and not loading, reset to default form values
       form.reset({
-        taxYear: currentYear.toString(),
+        taxYear: activeTaxYearForCalculations.toString(),
         applyPAYE: false,
         applySDL: false,
         enableIrp5Export: false,
         irp5ContentFontSize: DEFAULT_IRP5_FONT_SIZE,
       });
     }
-  }, [userTaxSettings, isLoadingUserTaxSettings, form, currentYear]);
+  }, [userTaxSettings, isLoadingUserTaxSettings, form, activeTaxYearForCalculations]);
+
+  // Keep Select controlled: update active tax year when the user changes it
+  React.useEffect(() => {
+    const activeStr = activeTaxYearForCalculations.toString();
+    if (form.getValues("taxYear") !== activeStr) {
+      form.setValue("taxYear", activeStr);
+    }
+  }, [activeTaxYearForCalculations, form]);
 
   const selectedTaxYear = form.watch("taxYear");
   const irp5ContentFontSize = form.watch("irp5ContentFontSize");
@@ -185,8 +193,11 @@ const TaxLiabilities: React.FC = () => {
             <div>
               <Label htmlFor="taxYear">Select Tax Year</Label>
               <Select
-                onValueChange={(value) => form.setValue("taxYear", value)}
-                defaultValue={form.getValues("taxYear")}
+                value={selectedTaxYear}
+                onValueChange={(value) => {
+                  form.setValue("taxYear", value);
+                  setActiveTaxYearForCalculations(parseInt(value, 10)); // persist and trigger fetch
+                }}
                 disabled={!canManageTaxSettings || isMockDataEnabled}
               >
                 <SelectTrigger id="taxYear" className="mt-1 w-[180px]">
