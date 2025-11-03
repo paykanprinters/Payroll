@@ -62,6 +62,22 @@ export const getPrintClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined, 
 };
 */
 
+// Helper: Bankers Rounding (round half to even) to given decimals (default 2)
+export const bankersRound = (value: number, decimals = 2): number => {
+  const factor = Math.pow(10, decimals);
+  const n = value * factor;
+  const floor = Math.floor(n);
+  const diff = n - floor;
+
+  // Handle floating point quirks around 0.5 comparisons
+  const epsilon = 1e-10;
+  if (diff > 0.5 + epsilon) return (Math.ceil(n)) / factor;
+  if (diff < 0.5 - epsilon) return (Math.floor(n)) / factor;
+
+  // Exactly halfway: round to even
+  return ((floor % 2 === 0 ? floor : floor + 1)) / factor;
+};
+
 // Helper to generate custom employee ID
 export const generateCustomEmployeeId = (companyName: string, currentMaxNumber: number): string => {
   const prefix = companyName.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || "CMP";

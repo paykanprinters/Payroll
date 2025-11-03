@@ -2,6 +2,7 @@ import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry
 import { TaxTables } from "@/hooks/use-tax-tables"; // Import TaxTables interface
 import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator"; // Import from new location
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
+import { bankersRound } from "@/lib/utils";
 
 /**
  * Generates mock payslips for all employees for all months up to the current month of the current year.
@@ -59,8 +60,8 @@ export const generateMockPayslips = (
                                                   .sort((a, b) => a.payPeriod.localeCompare(b.payPeriod));
       const lastPayslipForEmployee = employeePreviousPayslips.length > 0 ? employeePreviousPayslips[employeePreviousPayslips.length - 1] : null;
 
-      const ytdGrossEarnings = (lastPayslipForEmployee?.ytdGrossEarnings || 0) + payslip.grossEarnings;
-      const ytdTotalDeductions = (lastPayslipForEmployee?.ytdTotalDeductions || 0) + payslip.totalDeductions;
+      const ytdGrossEarnings = bankersRound((lastPayslipForEmployee?.ytdGrossEarnings || 0) + payslip.grossEarnings, 2);
+      const ytdTotalDeductions = bankersRound((lastPayslipForEmployee?.ytdTotalDeductions || 0) + payslip.totalDeductions, 2);
 
       allPayslips.push({
         ...payslip,
