@@ -73,14 +73,19 @@ export const generateCustomEmployeeId = (companyName: string, currentMaxNumber: 
 export const bankersRound = (value: number, decimals: number = 2): number => {
   if (!isFinite(value)) return value;
   const factor = Math.pow(10, decimals);
-  const n = value * factor;
-  const truncated = Math.trunc(n);
-  const frac = n - truncated;
+  const scaled = value * factor;
+  const epsilon = 1e-8;
 
-  // Round-half-to-even
-  if (Math.abs(frac - 0.5) < 1e-10) {
-    const even = truncated % 2 === 0 ? truncated : truncated + (n > 0 ? 1 : -1);
+  // Use floor to get the lower integer and detect a 0.5 tie robustly
+  const floor = Math.floor(scaled);
+  const diff = scaled - floor;
+
+  // If we're at a tie (fraction ~= 0.5), round to the nearest even integer
+  if (Math.abs(diff - 0.5) <= epsilon) {
+    const even = floor % 2 === 0 ? floor : floor + 1;
     return even / factor;
   }
-  return Math.round(n) / factor;
+
+  // Otherwise, use normal rounding
+  return Math.round(scaled) / factor;
 };
