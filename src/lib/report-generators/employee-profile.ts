@@ -1,5 +1,6 @@
 import { MockEmployee, MockCompanyDetails } from "../mock-data-interfaces";
 import { ReportDesignSettings } from "../report-design-interfaces"; // Import ReportDesignSettings
+import { formatCurrency } from "../utils";
 import { format } from "date-fns";
 
 export const generateEmployeeProfileReportContent = (
@@ -78,8 +79,8 @@ export const generateEmployeeProfileReportContent = (
         <div class="grid grid-cols-2 gap-2">
           ${renderField("Payment Mode", employee.paymentMode)}
           ${renderField("Pay Frequency", employee.payFrequency)}
-          ${employee.salary ? renderField("Salary (R)", employee.salary.toLocaleString('en-ZA', { minimumFractionDigits: 2 })) : ""}
-          ${employee.hourlyRate ? renderField("Hourly Rate (R)", employee.hourlyRate.toLocaleString('en-ZA', { minimumFractionDigits: 2 })) : ""}
+          ${employee.salary ? renderField("Salary (R)", formatCurrency(employee.salary)) : ""}
+          ${employee.hourlyRate ? renderField("Hourly Rate (R)", formatCurrency(employee.hourlyRate)) : ""}
           ${renderField("Tax Reference Number", employee.taxReferenceNumber)}
           ${renderField("UIF Number", employee.uifNumber)}
           ${renderField("Bank Name", employee.bankName)}

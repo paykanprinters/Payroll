@@ -1,5 +1,5 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
-import { getEmployeeName } from "../utils"; // Import from shared utils
+import { getEmployeeName, formatCurrency } from "../utils"; // Import from shared utils
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
 export const generatePayrollSummaryReportContent = (
@@ -54,15 +54,15 @@ export const generatePayrollSummaryReportContent = (
       <tbody>
         <tr class="border-b">
           <td class="py-2 px-4">Total Gross Earnings</td>
-          <td class="py-2 px-4 text-right">${totalGross.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+          <td class="py-2 px-4 text-right">${formatCurrency(totalGross)}</td>
         </tr>
         <tr class="border-b">
           <td class="py-2 px-4">Total Deductions</td>
-          <td class="py-2 px-4 text-right">${totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+          <td class="py-2 px-4 text-right">${formatCurrency(totalDeductions)}</td>
         </tr>
         <tr class="border-b">
           <td class="py-2 px-4 font-bold">Total Net Pay</td>
-          <td class="py-2 px-4 text-right font-bold">${totalNet.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+          <td class="py-2 px-4 text-right font-bold">${formatCurrency(totalNet)}</td>
         </tr>
       </tbody>
     </table>
@@ -88,9 +88,9 @@ export const generatePayrollSummaryReportContent = (
     html += `
       <tr class="border-b">
         <td class="py-2 px-4">${period}</td>
-        <td class="py-2 px-4 text-right">${periodGross.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-        <td class="py-2 px-4 text-right">${periodDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-        <td class="py-2 px-4 text-right">${periodNet.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(periodGross)}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(periodDeductions)}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(periodNet)}</td>
       </tr>
     `;
   });

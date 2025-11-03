@@ -1,5 +1,5 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
-import { getEmployeeName } from "../utils"; // Import from shared utils
+import { getEmployeeName, formatCurrency } from "../utils"; // Import from shared utils
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
 export const generateDepartmentalCostReportContent = (
@@ -65,8 +65,8 @@ export const generateDepartmentalCostReportContent = (
     html += `
       <tr class="border-b">
         <td class="py-2 px-4">${department}</td>
-        <td class="py-2 px-4 text-right">${data.gross.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-        <td class="py-2 px-4 text-right">${data.net.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(data.gross)}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(data.net)}</td>
       </tr>
     `;
   });

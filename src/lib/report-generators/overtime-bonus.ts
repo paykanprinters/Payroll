@@ -1,5 +1,5 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
-import { getEmployeeName } from "../utils"; // Import from shared utils
+import { getEmployeeName, formatCurrency } from "../utils"; // Import from shared utils
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
 export const generateOvertimeBonusReportContent = (
@@ -74,8 +74,8 @@ export const generateOvertimeBonusReportContent = (
       <tr class="border-b">
         <td class="py-2 px-4">${data.employeeName}</td>
         <td class="py-2 px-4">${data.payPeriod}</td>
-        <td class="py-2 px-4 text-right">${data.overtime.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-        <td class="py-2 px-4 text-right">${data.bonus.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(data.overtime)}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(data.bonus)}</td>
       </tr>
     `;
   });

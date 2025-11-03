@@ -1,5 +1,5 @@
 import { MockEmployee, MockPayslip } from "../mock-data";
-import { getEmployeeName } from "../utils"; // Import from shared utils
+import { getEmployeeName, formatCurrency } from "../utils"; // Import from shared utils
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
 export const generateBenefitDeductionsReportContent = (
@@ -64,7 +64,7 @@ export const generateBenefitDeductionsReportContent = (
     html += `
       <tr class="border-b">
         <td class="py-2 px-4">${name}</td>
-        <td class="py-2 px-4 text-right">${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-4 text-right">${formatCurrency(amount)}</td>
       </tr>
     `;
   });
