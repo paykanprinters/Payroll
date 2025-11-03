@@ -24,11 +24,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 function Login() {
   // Other code here
   return (
-    <div
-      className="min-h-screen w-full bg-cover bg-center bg-no-repeat relative"
-      style={{ backgroundImage: "url('/graffit.png')" }}
-    >
-      <div className="absolute inset-0 bg-black/35" />
+    <div className="min-h-screen w-full relative bg-gray-100">
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md rounded-xl bg-white/85 backdrop-blur-md shadow-lg p-6">
           <Auth
