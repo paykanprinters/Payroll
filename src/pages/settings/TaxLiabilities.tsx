@@ -120,9 +120,10 @@ const TaxLiabilities: React.FC = () => {
       } else {
         console.log('Fetch tax tables Edge Function response:', data);
         showSuccess(`Tax tables for ${selectedTaxYear} fetched and applied successfully!`);
-        // NEW: Set the active tax year for calculations
-        setActiveTaxYearForCalculations(parseInt(selectedTaxYear));
-        // Removed: window.dispatchEvent(new Event('taxTablesUpdated'));
+        // Set the active tax year for calculations only after tables are applied
+        setActiveTaxYearForCalculations(parseInt(selectedTaxYear, 10));
+        // Force all tax table hooks to re-fetch the just-applied year
+        window.dispatchEvent(new Event('taxTablesUpdated'));
       }
     } catch (error: any) {
       console.error('Error calling fetch-sars-tax-tables Edge Function:', error);
@@ -195,8 +196,8 @@ const TaxLiabilities: React.FC = () => {
               <Select
                 value={selectedTaxYear}
                 onValueChange={(value) => {
+                  // Only update the form's field. We'll set the active year after successful Edge Function apply.
                   form.setValue("taxYear", value);
-                  setActiveTaxYearForCalculations(parseInt(value, 10));
                 }}
                 disabled={!canManageTaxSettings || isMockDataEnabled}
               >
