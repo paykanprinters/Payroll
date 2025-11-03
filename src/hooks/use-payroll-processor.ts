@@ -90,7 +90,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     }
   }, [isMockDataEnabled, isAuthenticated, refetchToDos]);
 
-  // ADDED: Define safeTriggerGenerateToDos AFTER triggerGenerateToDos to avoid TDZ
+  // Guarded wrapper defined AFTER triggerGenerateToDos
   const safeTriggerGenerateToDos = useCallback(async () => {
     if (isGeneratingToDosRef.current) {
       console.log("usePayrollProcessor: safeTriggerGenerateToDos - already in progress, skipping.");
