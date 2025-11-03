@@ -4,6 +4,7 @@ import { TaxTables } from "@/hooks/use-tax-tables";
 import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations";
 import { v4 as uuidv4 } from 'uuid';
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
+import { bankersRound } from "@/lib/utils";
 
 /**
  * Calculates earnings for an employee for a given pay period.
@@ -29,13 +30,10 @@ const calculateEarnings = (
 
   // Determine basic salary based on hourly rate or fixed salary
   if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) {
-    // For hourly employees, basic salary is based on approved regular hours
     basicSalary = totalApprovedRegularHours * emp.hourlyRate;
   } else if (emp.salary !== undefined && emp.salary !== null && emp.salary > 0) {
-    // For salaried employees, use their fixed salary
     basicSalary = emp.salary;
   } else {
-    // Fallback if neither valid salary nor hourly rate is defined
     basicSalary = 0;
   }
 
@@ -75,6 +73,9 @@ const calculateEarnings = (
     }
   }
 
+  // Round basic after adjustments
+  basicSalary = bankersRound(basicSalary, 2);
+
   // Calculate overtime amount
   if (totalApprovedOvertimeHours > 0) {
     let effectiveHourlyRate = 0;
@@ -91,16 +92,18 @@ const calculateEarnings = (
     }
   }
 
-  const earningsBreakdown = [{ name: "Basic Salary", amount: basicSalary }];
+  totalOvertimeAmount = bankersRound(totalOvertimeAmount, 2);
+
+  const earningsBreakdown = [{ name: "Basic Salary", amount: bankersRound(basicSalary, 2) }];
   if (totalOvertimeAmount > 0) {
-    earningsBreakdown.push({ name: "Overtime", amount: totalOvertimeAmount });
+    earningsBreakdown.push({ name: "Overtime", amount: bankersRound(totalOvertimeAmount, 2) });
   }
   // Mock bonus logic, keep as is for now
   if (emp.id === "EMP004" && isSameMonth(payPeriodStart, new Date())) {
-    earningsBreakdown.push({ name: "Bonus", amount: 2000 });
+    earningsBreakdown.push({ name: "Bonus", amount: bankersRound(2000, 2) });
   }
 
-  const grossEarnings = earningsBreakdown.reduce((sum, e) => sum + e.amount, 0);
+  const grossEarnings = bankersRound(earningsBreakdown.reduce((sum, e) => sum + e.amount, 0), 2);
   return { earningsBreakdown, grossEarnings, unpaidLeaveDaysInPeriod };
 };
 
@@ -137,29 +140,29 @@ const calculateDeductions = (
   if (payeBrackets && payeBrackets.length > 0 && applyPAYEFlag && emp.payFrequency) { // Ensure payFrequency is available
     const paye = calculatePAYE(grossEarnings, payeBrackets, taxYearDetails, employeeAge, emp.payFrequency);
     if (paye > 0) {
-      deductionsBreakdown.push({ name: "PAYE", amount: paye });
-      totalDeductions += paye;
+      deductionsBreakdown.push({ name: "PAYE", amount: bankersRound(paye, 2) });
+      totalDeductions += bankersRound(paye, 2);
     }
   }
 
   // UIF (Unemployment Insurance Fund) & SDL (Skills Development Levy)
   if (uifSdlRates) {
-    const uif = Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap);
+    const uif = bankersRound(Math.min(grossEarnings * uifSdlRates.uif_rate, uifSdlRates.uif_cap), 2);
     deductionsBreakdown.push({ name: "UIF", amount: uif });
     totalDeductions += uif;
 
     if (applySDLFlag) {
-      const sdl = grossEarnings * uifSdlRates.sdl_rate;
+      const sdl = bankersRound(grossEarnings * uifSdlRates.sdl_rate, 2);
       deductionsBreakdown.push({ name: "SDL", amount: sdl });
       totalDeductions += sdl;
     }
   } else {
     // Fallback for UIF/SDL if rates are not loaded (should ideally not happen in live mode)
-    const uif = Math.min(grossEarnings * 0.01, 177.12); // Mock UIF cap
+    const uif = bankersRound(Math.min(grossEarnings * 0.01, 177.12), 2);
     deductionsBreakdown.push({ name: "UIF", amount: uif });
     totalDeductions += uif;
     if (applySDLFlag) {
-      const sdl = grossEarnings * 0.01;
+      const sdl = bankersRound(grossEarnings * 0.01, 2);
       deductionsBreakdown.push({ name: "SDL", amount: sdl });
       totalDeductions += sdl;
     }
@@ -220,9 +223,10 @@ const calculateDeductions = (
       // Other frequency mismatches are not handled by this simplified logic, resulting in 0 deduction.
 
       if (deductionAmount > 0) {
+        deductionAmount = bankersRound(deductionAmount, 2);
         deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: deductionAmount });
         totalDeductions += deductionAmount;
-        loan.remainingBalance -= deductionAmount;
+        loan.remainingBalance = bankersRound(loan.remainingBalance - deductionAmount, 2);
         const deductionEntry: LoanDeductionHistoryEntry = {
           date: format(payPeriodEnd, 'yyyy-MM-dd'),
           amount: deductionAmount,
@@ -262,13 +266,17 @@ const calculateDeductions = (
         }
 
         if (deductionAmount > 0) {
+          deductionAmount = bankersRound(deductionAmount, 2);
           deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: deductionAmount });
           totalDeductions += deductionAmount;
         }
       }
     }
   });
-  return { deductionsBreakdown, totalDeductions };
+  totalDeductions = bankersRound(totalDeductions, 2);
+  const netPay = bankersRound(grossEarnings - totalDeductions, 2);
+
+  return { deductionsBreakdown, totalDeductions, netPay };
 };
 
 /**
@@ -368,7 +376,7 @@ export const generatePayslipsForPeriod = (
       payPeriodEnd
     );
 
-    const { deductionsBreakdown, totalDeductions } = calculateDeductions(
+    const { deductionsBreakdown, totalDeductions, netPay } = calculateDeductions(
       emp,
       grossEarnings,
       processingLoans,
@@ -379,8 +387,6 @@ export const generatePayslipsForPeriod = (
       payPeriodEnd,
       payPeriodString
     );
-
-    const netPay = grossEarnings - totalDeductions;
 
     const leaveSummary = calculateLeaveSummary(
       emp,

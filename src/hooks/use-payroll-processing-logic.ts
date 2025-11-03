@@ -19,6 +19,7 @@ import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-ge
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
+import { bankersRound } from "@/lib/utils";
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
@@ -83,8 +84,8 @@ export const usePayrollProcessingLogic = (
 
         return {
           ...newPayslip,
-          ytdGrossEarnings: (lastPayslipForEmployee?.ytdGrossEarnings || 0) + newPayslip.grossEarnings,
-          ytdTotalDeductions: (lastPayslipForEmployee?.ytdTotalDeductions || 0) + newPayslip.totalDeductions,
+          ytdGrossEarnings: bankersRound((lastPayslipForEmployee?.ytdGrossEarnings || 0) + newPayslip.grossEarnings, 2),
+          ytdTotalDeductions: bankersRound((lastPayslipForEmployee?.ytdTotalDeductions || 0) + newPayslip.totalDeductions, 2),
         };
       });
 
@@ -181,8 +182,8 @@ export const usePayrollProcessingLogic = (
         const employeePayslips = payslips.filter(p => p.employeeId === employeeId);
         const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
 
-        previewPayslip.ytdGrossEarnings = (lastPayslipForEmployee?.ytdGrossEarnings || 0) + previewPayslip.grossEarnings;
-        previewPayslip.ytdTotalDeductions = (lastPayslipForEmployee?.ytdTotalDeductions || 0) + previewPayslip.totalDeductions;
+        previewPayslip.ytdGrossEarnings = bankersRound((lastPayslipForEmployee?.ytdGrossEarnings || 0) + previewPayslip.grossEarnings, 2);
+        previewPayslip.ytdTotalDeductions = bankersRound((lastPayslipForEmployee?.ytdTotalDeductions || 0) + previewPayslip.totalDeductions, 2);
 
         return previewPayslip;
       }

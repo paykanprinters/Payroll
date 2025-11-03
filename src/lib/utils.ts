@@ -69,3 +69,18 @@ export const generateCustomEmployeeId = (companyName: string, currentMaxNumber: 
   const paddedNumber = String(nextNumber).padStart(3, '0');
   return `${prefix}${paddedNumber}`;
 };
+
+export const bankersRound = (value: number, decimals: number = 2): number => {
+  if (!isFinite(value)) return value;
+  const factor = Math.pow(10, decimals);
+  const n = value * factor;
+  const truncated = Math.trunc(n);
+  const frac = n - truncated;
+
+  // Round-half-to-even
+  if (Math.abs(frac - 0.5) < 1e-10) {
+    const even = truncated % 2 === 0 ? truncated : truncated + (n > 0 ? 1 : -1);
+    return even / factor;
+  }
+  return Math.round(n) / factor;
+};

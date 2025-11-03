@@ -1,5 +1,6 @@
 import { eachDayOfInterval, isWeekend, format, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, getDay, getDate, setDate, setDay } from "date-fns";
 import { TaxTables } from "@/hooks/use-tax-tables"; // Import TaxTables interface
+import { bankersRound } from "@/lib/utils";
 
 export const calculateWorkingDays = (start: Date, end: Date): number => {
   let count = 0;
@@ -92,7 +93,7 @@ export const calculatePAYE = (
   const periodPAYE = annualPAYE / deAnnualizationFactor;
   console.log(`[calculatePAYE] Annual PAYE (after rebates): ${annualPAYE}, Period PAYE: ${periodPAYE}`);
   console.log(`[calculatePAYE] END - Returning periodPAYE: ${periodPAYE}`);
-  return periodPAYE;
+  return bankersRound(periodPAYE, 2);
 };
 
 /**
