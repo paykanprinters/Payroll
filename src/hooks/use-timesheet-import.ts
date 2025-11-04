@@ -350,7 +350,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
   }, [parsedRawData, parseAndValidateData, columnMappings]);
 
   const allRowsValid = validatedData.length > 0 && validatedData.every(row => row._isValid);
-  const canImport = validatedData.length > 0 && allRowsValid;
+  const canImport = validatedData.some(row => row._isValid);
 
   return {
     file,
