@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Initial state is true, as we're loading auth
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Use a ref to track the previous isLoadingAuth state to avoid logging on every render
   const prevIsLoadingAuthRef = useRef(true);
@@ -74,8 +75,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 name: profile.name ?? profile.email,
               });
               setIsAuthenticated(true);
-              // NEW: Redirect authenticated users away from the login page
-              if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+              // Redirect only if user is on login or root
+              const onAuthPages = location.pathname === '/login' || location.pathname === '/';
+              if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && onAuthPages) {
                 navigate('/dashboard', { replace: true });
               }
             }
@@ -85,9 +87,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (isMounted) {
             setUser(null);
             setIsAuthenticated(false);
-            if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-              console.log("Redirecting to /login due to SIGNED_OUT or no initial session.");
-              navigate('/login', { replace: true });
+            if (event === 'SIGNED_OUT') {
+              console.log("Redirecting to /login due to SIGNED_OUT.");
+              if (location.pathname !== '/login') navigate('/login', { replace: true });
             }
           }
         }
@@ -119,11 +121,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("Initial session:", session);
       if (isMounted) {
         if (session) {
-          // If session exists, ensure loading is false and redirect to dashboard
-          setIsLoadingAuth(false); // Removed conditional check
-          console.log("Initial session found, setting isLoadingAuth to false.");
-          // NEW: Redirect if a session already exists
-          navigate('/dashboard', { replace: true });
+          // If session exists, just finish loading; only redirect if on login/root
+          setIsLoadingAuth(false);
+          console.log("Initial session found, setting isLoadingAuth to false (no forced redirect).");
+          const onAuthPages = location.pathname === '/login' || location.pathname === '/';
+          if (onAuthPages) {
+            navigate('/dashboard', { replace: true });
+          }
         } else {
           // No initial session, ensure state is cleared and redirect if needed
           if (isAuthenticated) { // Check current state
@@ -131,9 +135,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(null);
             console.log("No initial session, clearing auth state.");
           }
-          setIsLoadingAuth(false); // Removed conditional check
-          console.log("No initial session, setting isLoadingAuth to false.");
-          // handleAuthStateChange with 'INITIAL_SESSION' event will handle the redirect
+          setIsLoadingAuth(false);
+          console.log("No initial session, setting isLoadingAuth to false (no forced redirect; ProtectedRoute will handle).");
         }
       }
       console.log("AuthContext: Initial check complete. isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
