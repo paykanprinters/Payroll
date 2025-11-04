@@ -19,6 +19,7 @@ import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-ge
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
+import { PayrollSavingsEntry } from "@/lib/savings-types";
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
@@ -29,11 +30,13 @@ export const usePayrollProcessingLogic = (
   timesheets: TimesheetEntry[],
   taxTables: TaxTables | null,
   userTaxSettings: UserTaxSettings | null, // New parameter for user tax settings
+  payrollSavingsEntries: PayrollSavingsEntry[] | null, // New: transactional savings entries
   setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>, // For mock data
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
   updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>,
   batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>, // New prop for live data
+  recordSavingsPayment: (planId: string, amount: number) => Promise<void>, // New: persist savings payments
   isMockDataEnabled: boolean, // New prop to determine data source
 ) => {
 
@@ -69,7 +72,8 @@ export const usePayrollProcessingLogic = (
         periodStart,
         periodEnd,
         taxTables,
-        userTaxSettings // Pass user tax settings
+        userTaxSettings, // Pass user tax settings
+        payrollSavingsEntries // Pass savings entries
       );
 
       if (newPayslips.length === 0) {
@@ -122,6 +126,25 @@ export const usePayrollProcessingLogic = (
         await updateSavingPlan(plan);
       }
 
+      // 2b. Persist savings payments (live mode only)
+      if (!isMockDataEnabled) {
+        const { savingPaymentsToRecord } = generatePayslipsForPeriod(
+          employees,
+          loans,
+          savingPlans,
+          leaveRecords,
+          timesheets,
+          periodStart,
+          periodEnd,
+          taxTables!,
+          userTaxSettings,
+          payrollSavingsEntries
+        );
+        for (const payment of savingPaymentsToRecord) {
+          await recordSavingsPayment(payment.planId, payment.amount);
+        }
+      }
+
       // 3. Lock timesheets for the processed period
       const timesheetUpdatePromises = timesheets.map(async (ts) => {
         const tsDate = parseISO(ts.date);
@@ -137,7 +160,7 @@ export const usePayrollProcessingLogic = (
 
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -172,7 +195,8 @@ export const usePayrollProcessingLogic = (
         periodStart,
         periodEnd,
         taxTables,
-        userTaxSettings // Pass user tax settings
+        userTaxSettings, // Pass user tax settings
+        payrollSavingsEntries
       );
 
       if (previewPayslips.length > 0) {
@@ -188,7 +212,7 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, isMockDataEnabled]
   );
 
   return {

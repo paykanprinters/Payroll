@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useLoansData } from "./use-loans-data";
 import { useSavingPlansData } from "./use-saving-plans-data";
+import usePayrollSavingsEntries from "./use-payroll-savings-entries";
 import { useLeaveData } from "./use-leave-data";
 import { useTimesheetData } from "./use-timesheet-data";
 import { useToDosData } from "./use-todos-data";
@@ -199,6 +200,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: mockLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: mockSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { payrollSavingsEntries, isLoadingPayrollSavingsEntries, recordSavingsPayment, refetchPayrollSavingsEntries } = usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: mockLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee: baseAddOrUpdateEmployee, isAuthenticated, isLoadingAuth });
@@ -218,11 +220,13 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     timesheets,
     taxTables,
     userTaxSettings,
+    payrollSavingsEntries,
     setPayslips,
     updateLoan,
     updateSavingPlan,
     updateTimesheetStatus,
     batchUpsertPayslips,
+    recordSavingsPayment,
     isMockDataEnabled,
   );
 
@@ -322,6 +326,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     isLoadingTimesheets,
     isLoadingToDos,
     isLoadingPayslips,
+    isLoadingPayrollSavingsEntries,
     runPayrollProcess,
     calculateSinglePayslipPreview,
     triggerGenerateToDos,
@@ -341,6 +346,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     isAuthenticated,
     isLoadingAuth,
     refetchPayslips,
+    refetchPayrollSavingsEntries,
     activeTaxYearForCalculations,
     setActiveTaxYearForCalculations,
   };

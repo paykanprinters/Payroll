@@ -1,5 +1,6 @@
 import { eachDayOfInterval, isWeekend, format, isSameMonth, isSameYear, parseISO, isWithinInterval, differenceInYears } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
+import { PayrollSavingsEntry } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { calculatePAYE, calculateWorkingDays } from "@/lib/payroll-calculations";
 import { v4 as uuidv4 } from 'uuid';
@@ -120,10 +121,12 @@ const calculateDeductions = (
   userTaxSettings: UserTaxSettings | null, // New parameter for user tax settings
   payPeriodStart: Date,
   payPeriodEnd: Date,
-  payPeriodString: string
+  payPeriodString: string,
+  payrollSavingsEntries: PayrollSavingsEntry[] | null
 ) => {
   let totalDeductions = 0;
   const deductionsBreakdown: { name: string; amount: number }[] = [];
+  const savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] = [];
 
   const applyPAYEFlag = userTaxSettings?.applyPaye ?? true;
   const applySDLFlag = userTaxSettings?.applySdl ?? true;
@@ -268,7 +271,7 @@ const calculateDeductions = (
     }
   });
 
-  // Process Savings Deductions (similar logic to loans)
+  // Process Savings Deductions (prefer payrollSavingsEntries when provided)
   processingSavingPlans.forEach(plan => {
     // Check if saving plan is for this employee, active, and its start date is within or before the pay period end
     if (plan.employeeId === emp.id && plan.status === "active" && new Date(plan.startDate) <= payPeriodEnd) {
@@ -277,30 +280,44 @@ const calculateDeductions = (
         let deductionAmount = 0;
         const employeePayFrequency = emp.payFrequency;
 
+        // Determine base amount from entry override/original unless entries missing
+        const entryForPlan = payrollSavingsEntries?.find(e => e.planId === plan.id && e.employeeId === emp.id) || null;
+        const isPaused = entryForPlan?.paused === true;
+        const baseAmount = entryForPlan ? (entryForPlan.overrideAmount ?? entryForPlan.originalAmount) : plan.amount;
+        
+        if (isPaused) {
+          // Skip deduction if paused
+          return;
+        }
+
         if (plan.frequency === employeePayFrequency?.toLowerCase()) {
           if (isFullPeriod(employeePayFrequency, payPeriodStart, payPeriodEnd)) {
-            deductionAmount = plan.amount;
+            deductionAmount = baseAmount;
           }
         } else if (employeePayFrequency === "Monthly" && plan.frequency === "weekly") {
           if (isFullPeriod("Monthly", payPeriodStart, payPeriodEnd)) {
-            deductionAmount = plan.amount * 4;
+            deductionAmount = baseAmount * 4;
           }
         } else if (employeePayFrequency === "Bi-Weekly" && plan.frequency === "weekly") {
-            if (isFullPeriod("Bi-Weekly", payPeriodStart, payPeriodEnd)) {
-                deductionAmount = plan.amount * 2;
-            }
+          if (isFullPeriod("Bi-Weekly", payPeriodStart, payPeriodEnd)) {
+            deductionAmount = baseAmount * 2;
+          }
         }
 
         if (deductionAmount > 0) {
           const roundedSavings = bankersRound(deductionAmount, 2);
           deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: roundedSavings });
           totalDeductions += roundedSavings;
+          // Record payment later if we have entries (live mode)
+          if (entryForPlan) {
+            savingPaymentsToRecord.push({ planId: plan.id, employeeId: emp.id, amount: roundedSavings });
+          }
         }
       }
     }
   });
   totalDeductions = bankersRound(totalDeductions, 2);
-  return { deductionsBreakdown, totalDeductions };
+  return { deductionsBreakdown, totalDeductions, savingPaymentsToRecord };
 };
 
 /**
@@ -361,6 +378,7 @@ const calculateLeaveSummary = (
  * @param payPeriodEnd The end date of the target pay period (Date object).
  * @param taxTables The fetched tax tables (PAYE brackets, UIF/SDL rates, taxYearDetails).
  * @param userTaxSettings The user-specific tax settings (apply PAYE/SDL flags).
+ * @param payrollSavingsEntries The payroll savings entries (optional, for live mode).
  * @returns An object containing an array of generated MockPayslips for the period,
  *          and the updated loans and saving plans data.
  */
@@ -373,11 +391,13 @@ export const generatePayslipsForPeriod = (
   payPeriodStart: Date,
   payPeriodEnd: Date,
   taxTables: TaxTables,
-  userTaxSettings: UserTaxSettings | null
-): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[] } => {
+  userTaxSettings: UserTaxSettings | null,
+  payrollSavingsEntries: PayrollSavingsEntry[] | null
+): { payslips: MockPayslip[]; updatedLoans: Loan[]; updatedSavingPlans: SavingPlan[]; savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] } => {
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
   const payDateString = format(payPeriodEnd, "dd/MM/yyyy");
+  const savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] = [];
 
   // Create deep copies of loans and saving plans to modify during this run
   const processingLoans: Loan[] = JSON.parse(JSON.stringify(initialLoans));
@@ -400,7 +420,7 @@ export const generatePayslipsForPeriod = (
       payPeriodEnd
     );
 
-    const { deductionsBreakdown, totalDeductions } = calculateDeductions(
+    const { deductionsBreakdown, totalDeductions, savingPaymentsToRecord: empSavingPayments } = calculateDeductions(
       emp,
       grossEarnings,
       processingLoans,
@@ -409,8 +429,14 @@ export const generatePayslipsForPeriod = (
       userTaxSettings,
       payPeriodStart,
       payPeriodEnd,
-      payPeriodString
+      payPeriodString,
+      payrollSavingsEntries
     );
+
+    // Accumulate payments for later persistence
+    if (empSavingPayments.length > 0) {
+      savingPaymentsToRecord.push(...empSavingPayments);
+    }
 
     const netPay = bankersRound(grossEarnings - totalDeductions, 2);
 
@@ -437,5 +463,5 @@ export const generatePayslipsForPeriod = (
       ytdTotalDeductions: 0, // YTD will be calculated externally
     });
   });
-  return { payslips: payslipsForPeriod, updatedLoans: processingLoans, updatedSavingPlans: processingSavingPlans };
+  return { payslips: payslipsForPeriod, updatedLoans: processingLoans, updatedSavingPlans: processingSavingPlans, savingPaymentsToRecord };
 };
