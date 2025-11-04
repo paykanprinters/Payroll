@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces";
+import SavingsPlanManagerDialog from "@/components/savings/SavingsPlanManagerDialog";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { useSavingPlansData } from "@/hooks/use-saving-plans-data";
 
@@ -62,6 +63,14 @@ const Savings: React.FC = () => {
       endDate: "",
     },
   });
+
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<SavingPlan | null>(null);
+
+  const openManager = (plan: SavingPlan) => {
+    setSelectedPlan(plan);
+    setManagerOpen(true);
+  };
 
   useEffect(() => {
     if (savingPlans.length > 0) {
@@ -109,6 +118,13 @@ const Savings: React.FC = () => {
       <p className="text-lg text-muted-foreground">
         Manage employee savings deductions from their salaries.
       </p>
+
+      <SavingsPlanManagerDialog
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        plan={selectedPlan}
+        employeeName={selectedPlan ? getEmployeeName(selectedPlan.employeeId) : ""}
+      />
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
@@ -270,17 +286,32 @@ const Savings: React.FC = () => {
           {savingPlans.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Employee ID</TableHead><TableHead>Employee Name</TableHead><TableHead>Amount</TableHead><TableHead>Frequency</TableHead><TableHead>Start Date</TableHead><TableHead>End Date</TableHead><TableHead>Status</TableHead></TableRow>
+                <TableRow>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Employee Name</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Frequency</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>End Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {savingPlans.map((plan) => (
-                  <TableRow key={plan.id}><TableCell>{getEmployeeCustomId(plan.employeeId)}</TableCell>
+                  <TableRow key={plan.id}>
+                    <TableCell>{getEmployeeCustomId(plan.employeeId)}</TableCell>
                     <TableCell>{getEmployeeName(plan.employeeId)}</TableCell>
                     <TableCell>R {plan.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</TableCell>
                     <TableCell>{plan.frequency}</TableCell>
                     <TableCell>{plan.startDate}</TableCell>
                     <TableCell>{plan.endDate || "N/A"}</TableCell>
                     <TableCell>{plan.status}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="secondary" size="sm" onClick={() => openManager(plan)}>
+                        Manage
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
