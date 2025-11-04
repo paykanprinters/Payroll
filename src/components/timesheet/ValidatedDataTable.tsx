@@ -20,7 +20,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({ validatedData, 
 
   return (
     <>
-      <ScrollArea className="border rounded-md flex-grow">
+      <ScrollArea className="border rounded-md w-full h-[40vh] md:h-[55vh]">
         <Table>
           <TableHeader>
             <TableRow><TableHead>Status</TableHead><TableHead>Personal ID (from CSV)</TableHead><TableHead>Employee Name (Resolved)</TableHead><TableHead>Date</TableHead><TableHead>Time In</TableHead><TableHead>Tea Break</TableHead><TableHead>Lunch Break</TableHead><TableHead>Time Out</TableHead></TableRow>
