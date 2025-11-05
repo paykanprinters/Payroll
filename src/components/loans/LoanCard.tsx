@@ -91,7 +91,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, getEmployeeName, getEmployeeC
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-lg font-semibold">{getEmployeeName(loan.employeeId)} ({getEmployeeCustomId(loan.employeeId)})</CardTitle>
+          <CardTitle className="text-lg font-semibold">{getEmployeeName(loan.employeeId)}</CardTitle>
           {getStatusBadge(loan.status)}
           {loan.paused && <Badge variant="destructive" className="bg-yellow-500 text-yellow-900">Paused</Badge>}
         </div>
