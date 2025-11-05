@@ -253,7 +253,7 @@ const calculateDeductions = (
 
       if (deductionAmount > 0) {
         const roundedLoanDeduction = bankersRound(deductionAmount, 2);
-        deductionsBreakdown.push({ name: `Loan Repayment (${loan.id})`, amount: roundedLoanDeduction });
+        deductionsBreakdown.push({ name: `Loan Repayment`, amount: roundedLoanDeduction });
         totalDeductions += roundedLoanDeduction;
         loan.remainingBalance -= roundedLoanDeduction;
         const deductionEntry: LoanDeductionHistoryEntry = {
@@ -306,7 +306,7 @@ const calculateDeductions = (
 
         if (deductionAmount > 0) {
           const roundedSavings = bankersRound(deductionAmount, 2);
-          deductionsBreakdown.push({ name: `Savings (${plan.id})`, amount: roundedSavings });
+          deductionsBreakdown.push({ name: `Savings`, amount: roundedSavings });
           totalDeductions += roundedSavings;
           // Record payment later if we have entries (live mode)
           if (entryForPlan) {
