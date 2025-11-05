@@ -50,7 +50,8 @@ export const generateMockPayslips = (
       payPeriodStart,
       payPeriodEnd,
       taxTables,
-      userTaxSettings // Pass user tax settings
+      userTaxSettings, // Pass user tax settings
+      null // No payroll savings entries in mock generation
     );
 
     // Now, process the payslips generated for this month to calculate YTD values

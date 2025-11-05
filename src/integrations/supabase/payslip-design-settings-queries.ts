@@ -48,6 +48,16 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
 
 function toDomain(row: DbRow): PayslipDesignSettings {
   if (!row) return DEFAULT_SETTINGS;
+
+  // Coerce section_order to the strict union and fallback if empty/invalid
+  const coercedSectionOrder =
+    Array.isArray(row.section_order)
+      ? (row.section_order.filter((s): s is "Earnings" | "Deductions" => s === "Earnings" || s === "Deductions"))
+      : DEFAULT_SETTINGS.sectionOrder;
+
+  const finalSectionOrder =
+    coercedSectionOrder.length > 0 ? coercedSectionOrder : DEFAULT_SETTINGS.sectionOrder;
+
   return {
     showCompanyLogo: row.show_company_logo ?? DEFAULT_SETTINGS.showCompanyLogo,
     showCompanyDetails: row.show_company_details ?? DEFAULT_SETTINGS.showCompanyDetails,
@@ -58,7 +68,7 @@ function toDomain(row: DbRow): PayslipDesignSettings {
     showBankDetails: row.show_bank_details ?? DEFAULT_SETTINGS.showBankDetails,
     showYTD: row.show_ytd ?? DEFAULT_SETTINGS.showYTD,
     showHourlyRate: row.show_hourly_rate ?? DEFAULT_SETTINGS.showHourlyRate,
-    sectionOrder: row.section_order ?? DEFAULT_SETTINGS.sectionOrder,
+    sectionOrder: finalSectionOrder, // FIXED: strict union type
     layoutSize: (row.layout_size as "A4" | "A5" | "Letter") ?? DEFAULT_SETTINGS.layoutSize,
     earningsDeductionsLayout: (row.earnings_deductions_layout as "deductions-left-earnings-right" | "earnings-left-deductions-right") ?? DEFAULT_SETTINGS.earningsDeductionsLayout,
     payslipLogoUrl: row.payslip_logo_url ?? DEFAULT_SETTINGS.payslipLogoUrl,

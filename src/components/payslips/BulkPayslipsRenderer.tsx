@@ -1,19 +1,28 @@
 "use client";
 
 import React from "react";
-import { MockPayslip } from "@/lib/mock-data-interfaces";
+import { MockPayslip, PayslipDesignSettings, MockCompanyDetails, MockEmployee } from "@/lib/mock-data-interfaces";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 interface Props {
   payslips: MockPayslip[];
   getEmployeeName: (id: string) => string;
+  // Additional props used by callers (kept optional for flexibility)
+  payslipDesignSettings?: PayslipDesignSettings;
+  companyDetails?: MockCompanyDetails | null;
+  employees?: MockEmployee[];
+  onReadyForPdf?: () => void;
 }
 
 const currency = (n: number) =>
   `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const BulkPayslipsRenderer: React.FC<Props> = ({ payslips, getEmployeeName }) => {
+const BulkPayslipsRenderer: React.FC<Props> = ({ payslips, getEmployeeName, onReadyForPdf }) => {
+  React.useEffect(() => {
+    if (onReadyForPdf) onReadyForPdf();
+  }, [onReadyForPdf]);
+
   return (
     <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
       {payslips.map((p) => (

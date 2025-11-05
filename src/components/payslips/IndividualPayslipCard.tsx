@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -19,6 +19,7 @@ interface Props {
   employees: MockEmployee[];
   getEmployeeName: (id: string) => string;
   isPdfGeneration?: boolean;
+  onReadyForPdf?: () => void;
 }
 
 const currency = (n: number) =>
@@ -40,7 +41,15 @@ const IndividualPayslipCard: React.FC<Props> = ({
   employees,
   getEmployeeName,
   isPdfGeneration = false,
+  onReadyForPdf,
 }) => {
+  // Notify PDF generator when ready
+  React.useEffect(() => {
+    if (isPdfGeneration && onReadyForPdf) {
+      onReadyForPdf();
+    }
+  }, [isPdfGeneration, onReadyForPdf]);
+
   const employee = employees.find((e) => e.id === payslip.employeeId);
   const employeeName = employee
     ? `${employee.firstName} ${employee.lastName}`
