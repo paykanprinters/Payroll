@@ -33,6 +33,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Use a ref to track the previous isLoadingAuth state to avoid logging on every render
   const prevIsLoadingAuthRef = useRef(true);
 
+  // Helper: refresh session and sync auth state (used on focus/visibility and as a fallback)
+  const refreshSession = React.useCallback(async () => {
+    console.log("AuthContext: refreshSession invoked.");
+    setIsLoadingAuth(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile, error } = await supabase
+          .from('users')
+          .select('id, email, name, role')
+          .eq('id', session.user.id)
+          .single();
+        if (!error && profile) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
+            name: profile.name ?? profile.email,
+          });
+          setIsAuthenticated(true);
+        } else {
+          console.warn("AuthContext: refreshSession could not fetch profile; clearing auth.");
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        console.log("AuthContext: refreshSession found no session; clearing auth.");
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true; // Flag to prevent state updates on unmounted component
     
@@ -158,6 +193,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("AuthContext: Auth listener unsubscribed.");
     };
   }, [navigate]); // Removed isLoadingAuth, isAuthenticated from dependencies
+
+  // New: Re-check session when tab becomes visible/focused and add a safety to avoid infinite loading
+  useEffect(() => {
+    const onFocus = () => {
+      console.log("AuthContext: Window focus detected; refreshing session.");
+      refreshSession();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("AuthContext: Tab visible; refreshing session.");
+        refreshSession();
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Safety: if loading persists unusually long, force a refresh
+    let safetyTimer: number | undefined;
+    if (isLoadingAuth) {
+      safetyTimer = window.setTimeout(() => {
+        console.warn("AuthContext: Safety timer triggered; forcing session refresh to break loading loop.");
+        refreshSession();
+      }, 8000);
+    }
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (safetyTimer) window.clearTimeout(safetyTimer);
+    };
+  }, [isLoadingAuth, refreshSession]);
 
   // Log when isLoadingAuth changes
   useEffect(() => {
