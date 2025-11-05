@@ -12,6 +12,7 @@ import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } 
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { showError } from "@/utils/toast";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 
 const defaultPayslipSettings: PayslipDesignSettings = {
   showCompanyLogo: true,
@@ -42,15 +43,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 
 const PayslipOverviewPage: React.FC = () => {
   const { employees, payslips, companyDetails, isLoadingCompanyDetails, isLoadingEmployees, isLoadingPayslips } = usePayrollProcessor();
-  const [payslipDesignSettings, setPayslipDesignSettings] = useState<PayslipDesignSettings>(() => {
-    try {
-      const savedSettings = localStorage.getItem("payslipDesignSettings");
-      return savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
-    } catch (e) {
-      console.error("Failed to parse payslip design settings from localStorage, using defaults.", e);
-      return defaultPayslipSettings;
-    }
-  });
+  const { settings: payslipDesignSettings } = usePayslipDesignSettings();
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
   const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
@@ -82,16 +75,6 @@ const PayslipOverviewPage: React.FC = () => {
     }
   }, [payslips, employees]);
 
-  const loadPayslipDesignSettings = useCallback(() => {
-    try {
-      const savedSettings = localStorage.getItem("payslipDesignSettings");
-      setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings);
-    } catch (e) {
-      console.error("Failed to parse payslip design settings from localStorage during update, using defaults.", e);
-      setPayslipDesignSettings(defaultPayslipSettings);
-    }
-  }, []);
-
   const loadReportDesignSettings = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     if (savedReportDesignSettings) {
@@ -104,14 +87,10 @@ const PayslipOverviewPage: React.FC = () => {
 
   useEffect(() => {
     loadPayslipsAndEmployees();
-    loadPayslipDesignSettings();
     loadReportDesignSettings();
 
     const handleMockDataUpdate = () => {
       loadPayslipsAndEmployees();
-    };
-    const handlePayslipDesignUpdate = () => {
-      loadPayslipDesignSettings();
     };
     const handleReportDesignUpdate = () => {
       loadReportDesignSettings();
@@ -120,17 +99,15 @@ const PayslipOverviewPage: React.FC = () => {
     window.addEventListener('allMockDataUpdated', handleMockDataUpdate);
     window.addEventListener('payslipsUpdated', handleMockDataUpdate); // Listen for specific payslip updates
     window.addEventListener('employeesUpdated', handleMockDataUpdate); // Listen for specific employee updates
-    window.addEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
     window.addEventListener('reportDesignUpdated', handleReportDesignUpdate);
 
     return () => {
       window.removeEventListener('allMockDataUpdated', handleMockDataUpdate);
       window.removeEventListener('payslipsUpdated', handleMockDataUpdate);
       window.removeEventListener('employeesUpdated', handleMockDataUpdate);
-      window.removeEventListener('payslipDesignUpdated', handlePayslipDesignUpdate);
       window.removeEventListener('reportDesignUpdated', handleReportDesignUpdate);
     };
-  }, [loadPayslipsAndEmployees, loadPayslipDesignSettings, loadReportDesignSettings]);
+  }, [loadPayslipsAndEmployees, loadReportDesignSettings]);
 
   React.useEffect(() => {
     console.log("PayslipOverviewPage useEffect: Running...");

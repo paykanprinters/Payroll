@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2 } from "lucide-react";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format } from "date-fns";
+import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 
 // Import new modular components
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -47,35 +48,8 @@ const Dashboard: React.FC = () => {
   const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
 
-  // Payslip design settings for CalculatePaycheckDialog
-  const [payslipDesignSettings, setPayslipDesignSettings] = useState<any>(() => {
-    try {
-      const savedSettings = localStorage.getItem("payslipDesignSettings");
-      return savedSettings ? JSON.parse(savedSettings) : {}; // Default to empty object if not found
-    } catch (e) {
-      console.error("Failed to parse payslip design settings from localStorage, using empty object.", e);
-      return {};
-    }
-  });
-
-  // Effect to load payslip design settings
-  useEffect(() => {
-    const loadPayslipDesignSettings = () => {
-      try {
-        const savedSettings = localStorage.getItem("payslipDesignSettings");
-        setPayslipDesignSettings(savedSettings ? JSON.parse(savedSettings) : {});
-      } catch (e) {
-        console.error("Failed to parse payslip design settings from localStorage during update, using empty object.", e);
-        setPayslipDesignSettings({});
-      }
-    };
-
-    loadPayslipDesignSettings();
-    window.addEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
-    return () => {
-      window.removeEventListener('payslipDesignUpdated', loadPayslipDesignSettings);
-    };
-  }, []);
+  // Live payslip design settings from Supabase
+  const { settings: payslipDesignSettings, isLoading: isLoadingPayslipDesignSettings } = usePayslipDesignSettings();
 
   const loadDashboardData = React.useCallback(() => {
     setEmployeeCount(employees.length);
@@ -178,7 +152,7 @@ const Dashboard: React.FC = () => {
     };
   }, [loadDashboardData, companyDetails]);
 
-  if (isLoadingSettings || !visibleWidgets || isLoadingPayCycleSettings) {
+  if (isLoadingSettings || !visibleWidgets || isLoadingPayCycleSettings || isLoadingPayslipDesignSettings) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

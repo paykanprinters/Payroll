@@ -246,7 +246,7 @@ const IndividualPayslipCard: React.FC<Props> = ({
 
   return (
     <Card className="w-full">
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-4 text-center items-center">
         <CardTitle className="text-xl">
           Payslip {employeeName ? `• ${employeeName}` : ""} — {payslip.payPeriod}
         </CardTitle>

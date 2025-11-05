@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { showSuccess } from "@/utils/toast";
 import { PayslipDesignSettings, MockPayslip, MockCompanyDetails, MockEmployee } from "@/lib/mock-data-interfaces"; // Import the updated interface
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard
+import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 
 // Import new modular components
 import PayslipLayoutOptions from "@/components/settings/payslip-design/PayslipLayoutOptions";
@@ -37,18 +38,12 @@ const defaultPayslipSettings: PayslipDesignSettings = {
 type SectionName = "Earnings" | "Deductions"; // Only Earnings and Deductions are orderable
 
 const PayslipDesign: React.FC = () => {
-  const [settings, setSettings] = useState<PayslipDesignSettings>(() => {
-    const savedSettings = localStorage.getItem("payslipDesignSettings");
-    const initial = savedSettings ? JSON.parse(savedSettings) : defaultPayslipSettings;
-    // Ensure new fields are initialized if not present in saved settings
-    return {
-      ...initial,
-      payslipLogoUrl: localStorage.getItem('payslipDesignLogoUrl') || initial.payslipLogoUrl || '',
-      payslipLogoWidth: parseFloat(localStorage.getItem('payslipDesignLogoWidth') || initial.payslipLogoWidth?.toString() || '100'),
-      payslipLogoHeight: parseFloat(localStorage.getItem('payslipDesignLogoHeight') || initial.payslipLogoHeight?.toString() || '50'),
-      payslipLogoFit: (localStorage.getItem('payslipDesignLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || initial.payslipLogoFit || 'contain',
-    };
-  });
+  const { settings: liveSettings, setSettings: setLiveSettings, isLoading, save } = usePayslipDesignSettings();
+  const [settings, setSettings] = useState<PayslipDesignSettings>(defaultPayslipSettings);
+
+  useEffect(() => {
+    setSettings(liveSettings);
+  }, [liveSettings]);
 
   // Handlers for state changes
   const handleToggleChange = (key: keyof PayslipDesignSettings, checked: boolean) => {
@@ -85,7 +80,6 @@ const PayslipDesign: React.FC = () => {
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         setSettings(prev => ({ ...prev, payslipLogoUrl: dataUrl }));
-        localStorage.setItem('payslipDesignLogoUrl', dataUrl);
         showSuccess("Payslip logo uploaded successfully!");
       };
       reader.readAsDataURL(file);
@@ -94,38 +88,24 @@ const PayslipDesign: React.FC = () => {
 
   const handleRemovePayslipLogo = () => {
     setSettings(prev => ({ ...prev, payslipLogoUrl: '', payslipLogoWidth: 100, payslipLogoHeight: 50, payslipLogoFit: 'contain' }));
-    localStorage.removeItem('payslipDesignLogoUrl');
-    localStorage.removeItem('payslipDesignLogoWidth');
-    localStorage.removeItem('payslipDesignLogoHeight');
-    localStorage.removeItem('payslipDesignLogoFit');
     showSuccess("Payslip logo removed successfully!");
   };
 
   const handlePayslipLogoWidthChange = (value: number[]) => {
     setSettings(prev => ({ ...prev, payslipLogoWidth: value[0] }));
-    localStorage.setItem('payslipDesignLogoWidth', value[0].toString());
   };
 
   const handlePayslipLogoHeightChange = (value: number[]) => {
     setSettings(prev => ({ ...prev, payslipLogoHeight: value[0] }));
-    localStorage.setItem('payslipDesignLogoHeight', value[0].toString());
   };
 
   const handlePayslipLogoFitChange = (value: "contain" | "cover" | "fill" | "none" | "scale-down") => {
     setSettings(prev => ({ ...prev, payslipLogoFit: value }));
-    localStorage.setItem('payslipDesignLogoFit', value);
   };
 
-  const handleSaveSettings = () => {
-    localStorage.setItem("payslipDesignSettings", JSON.stringify(settings));
-    // Also save individual logo settings to ensure they persist even if the main settings object is not fully reloaded
-    localStorage.setItem('payslipDesignLogoUrl', settings.payslipLogoUrl || '');
-    localStorage.setItem('payslipDesignLogoWidth', settings.payslipLogoWidth?.toString() || '100');
-    localStorage.setItem('payslipDesignLogoHeight', settings.payslipLogoHeight?.toString() || '50');
-    localStorage.setItem('payslipDesignLogoFit', settings.payslipLogoFit || 'contain');
-
-    showSuccess("Payslip design settings saved!");
-    window.dispatchEvent(new Event('payslipDesignUpdated'));
+  const handleSaveSettings = async () => {
+    // Persist to Supabase (live)
+    await save(settings);
   };
 
   // Mock data for IndividualPayslipCard preview
@@ -273,7 +253,7 @@ const PayslipDesign: React.FC = () => {
               onPayslipLogoFitChange={handlePayslipLogoFitChange}
             />
 
-            <Button onClick={handleSaveSettings} className="w-full">
+            <Button onClick={handleSaveSettings} className="w-full" disabled={isLoading}>
               Save Payslip Design
             </Button>
           </div>
