@@ -24,9 +24,13 @@ const BulkPayslipsRenderer: React.FC<Props> = ({ payslips, getEmployeeName, onRe
   }, [onReadyForPdf]);
 
   return (
-    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
+    <div className="flex flex-col gap-6">
       {payslips.map((p) => (
-        <Card key={p.id} className="w-full">
+        <Card
+          key={p.id}
+          className="w-full print:break-after-page break-inside-avoid"
+          style={{ pageBreakAfter: "always" }}
+        >
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">
               {getEmployeeName(p.employeeId)} — {p.payPeriod}
