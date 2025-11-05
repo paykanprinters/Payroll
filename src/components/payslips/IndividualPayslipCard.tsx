@@ -34,6 +34,10 @@ function maskAccount(num?: string) {
   return `•••• ${last4}`;
 }
 
+// Add a helper to strip trailing UUIDs in parentheses from labels
+const cleanLabel = (label: string) =>
+  label.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)\s*$/i, "");
+
 const IndividualPayslipCard: React.FC<Props> = ({
   payslip,
   payslipDesignSettings,
@@ -197,7 +201,7 @@ const IndividualPayslipCard: React.FC<Props> = ({
         {showEarningsBreakdown ? (
           payslip.earningsBreakdown.map((e, idx) => (
             <div key={`${e.name}-${idx}`} className="flex items-center justify-between">
-              <span className="text-sm">{e.name}</span>
+              <span className="text-sm">{cleanLabel(e.name)}</span>
               <span className="text-sm font-medium">{currency(e.amount)}</span>
             </div>
           ))
@@ -223,7 +227,7 @@ const IndividualPayslipCard: React.FC<Props> = ({
           payslip.deductionsBreakdown.length > 0 ? (
             payslip.deductionsBreakdown.map((d, idx) => (
               <div key={`${d.name}-${idx}`} className="flex items-center justify-between">
-                <span className="text-sm">{d.name}</span>
+                <span className="text-sm">{cleanLabel(d.name)}</span>
                 <span className="text-sm font-medium">{currency(d.amount)}</span>
               </div>
             ))

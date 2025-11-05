@@ -51,6 +51,9 @@ const PayslipOverviewPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
 
+  const cleanLabel = (label: string) =>
+    label.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)\s*$/i, "");
+
   const loadPayslipsAndEmployees = useCallback(() => {
     if (payslips.length > 0) {
       const totalGross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
@@ -62,7 +65,8 @@ const PayslipOverviewPage: React.FC = () => {
       const deductionsMap = new Map<string, number>();
       payslips.forEach(payslip => {
         payslip.deductionsBreakdown.forEach(deduction => {
-          deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
+          const label = cleanLabel(deduction.name);
+          deductionsMap.set(label, (deductionsMap.get(label) || 0) + deduction.amount);
         });
       });
       setDeductionsBreakdownData(
