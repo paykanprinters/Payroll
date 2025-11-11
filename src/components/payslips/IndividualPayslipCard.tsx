@@ -257,9 +257,23 @@ const IndividualPayslipCard: React.FC<Props> = ({
   const stackedBoxes =
     stacked.map((s) => (s === "Earnings" ? EarningsBox : DeductionsBox));
 
+  // NEW: classes that force desktop layout during PDF generation
+  const headerGridClasses = isPdfGeneration
+    ? "grid grid-cols-2 gap-6"
+    : "grid grid-cols-1 md:grid-cols-2 gap-6";
+
+  const edGridClasses = isPdfGeneration
+    ? "grid grid-cols-2 gap-6"
+    : "hidden md:grid grid-cols-1 md:grid-cols-2 gap-6";
+
+  const edStackedClasses = isPdfGeneration
+    ? "hidden"
+    : "md:hidden space-y-6";
+
   return (
     <Card className="w-full"
-      style={isPdfGeneration ? { border: 'none', boxShadow: 'none' } : undefined}
+      // Keep original card styling; just prevent splitting across pages during PDF generation
+      style={isPdfGeneration ? { pageBreakInside: 'avoid' } : undefined}
     >
       <CardHeader className="pb-4 text-center items-center">
         <CardTitle className="text-xl">
@@ -271,7 +285,7 @@ const IndividualPayslipCard: React.FC<Props> = ({
       <CardContent className="space-y-6">
         {/* Header: Employee (left) and Company (right) */}
         {(showEmployeeDetails || showBankDetails || showCompanyDetails || (showCompanyLogo && logoSrc)) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={headerGridClasses}>
             {/* Employee block on the left */}
             <div>{renderEmployeeBlock()}</div>
             {/* Company block on the right */}
@@ -280,11 +294,11 @@ const IndividualPayslipCard: React.FC<Props> = ({
         )}
 
         {/* Earnings / Deductions */}
-        <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={edGridClasses}>
           <div>{leftBox}</div>
           <div>{rightBox}</div>
         </div>
-        <div className="md:hidden space-y-6">
+        <div className={edStackedClasses}>
           {stackedBoxes.map((box, idx) => (
             <div key={idx}>{box}</div>
           ))}

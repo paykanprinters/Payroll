@@ -40,21 +40,23 @@ const BulkPayslipsRenderer: React.FC<Props> = ({
   return (
     <div className="flex flex-col gap-6">
       {payslips.map((p) => (
-        <div
-          key={p.id}
-          className="w-full print:break-after-page break-inside-avoid"
-          style={{ pageBreakAfter: "always" }}
-        >
-          <IndividualPayslipCard
-            payslip={p}
-            payslipDesignSettings={settings}
-            companyDetails={company}
-            employees={people}
-            getEmployeeName={getEmployeeName}
-            isPdfGeneration={!!isPdfGeneration}
-            // Avoid passing onReadyForPdf to each card to prevent multiple triggers
-          />
-        </div>
+        <React.Fragment key={p.id}>
+          <div
+            className="w-full"
+            style={{ pageBreakAfter: "always", pageBreakInside: "avoid" }}
+          >
+            <IndividualPayslipCard
+              payslip={p}
+              payslipDesignSettings={settings}
+              companyDetails={company}
+              employees={people}
+              getEmployeeName={getEmployeeName}
+              isPdfGeneration={!!isPdfGeneration}
+            />
+          </div>
+          {/* Explicit html2pdf page break marker */}
+          <div className="html2pdf__page-break" />
+        </React.Fragment>
       ))}
     </div>
   );
