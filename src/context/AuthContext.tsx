@@ -33,6 +33,7 @@ const AuthContext = createContext<AuthContextValue>({
   isAuthenticated: false,
   isLoadingAuth: true,
 });
+AuthContext.displayName = "AuthContext";
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -191,7 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       authListener.subscription.unsubscribe();
       console.log("AuthContext: Unsubscribed auth listener.");
     };
-  }, [fetchProfile, navigate, location.pathname]);
+  }, [fetchProfile, navigate]);
 
   useEffect(() => {
     const focusHandler = () => {
@@ -239,5 +240,3 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-export default AuthContext;
