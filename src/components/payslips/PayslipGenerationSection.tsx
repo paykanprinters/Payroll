@@ -176,6 +176,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         getEmployeeName={getEmployeeName}
         isPdfGeneration={true}
         onReadyForPdf={onReadyForPdf}
+        payslipDesignSettings={payslipDesignSettings}
       />
     );
 
@@ -269,6 +270,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         getEmployeeName={getEmployeeName}
         isPdfGeneration={true}
         onReadyForPdf={onReadyForPdf}
+        payslipDesignSettings={payslipDesignSettings}
       />
     );
 

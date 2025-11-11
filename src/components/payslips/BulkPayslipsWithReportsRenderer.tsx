@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MockPayslip, MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { MockPayslip, MockEmployee, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import BulkPayslipsRenderer from "./BulkPayslipsRenderer";
@@ -23,6 +23,7 @@ interface Props {
   getEmployeeName: (id: string) => string;
   isPdfGeneration?: boolean;
   onReadyForPdf?: () => void;
+  payslipDesignSettings: PayslipDesignSettings;
 }
 
 const BulkPayslipsWithReportsRenderer: React.FC<Props> = ({
@@ -36,6 +37,7 @@ const BulkPayslipsWithReportsRenderer: React.FC<Props> = ({
   getEmployeeName,
   isPdfGeneration = true,
   onReadyForPdf,
+  payslipDesignSettings,
 }) => {
   // Exclude cash payment employees for the two report sections
   const nonCashEmployees = React.useMemo(
@@ -80,7 +82,7 @@ const BulkPayslipsWithReportsRenderer: React.FC<Props> = ({
       <BulkPayslipsRenderer
         payslips={payslips}
         getEmployeeName={getEmployeeName}
-        payslipDesignSettings={undefined}
+        payslipDesignSettings={payslipDesignSettings}
         companyDetails={companyDetails}
         employees={employees}
         isPdfGeneration={isPdfGeneration}
