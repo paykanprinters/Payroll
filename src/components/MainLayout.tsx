@@ -18,16 +18,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-// import { useToDosData } from "@/hooks/use-todos-data"; // Removed redundant import
 
-interface MainLayoutProps {
-}
+interface MainLayoutProps {}
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
-  // Destructure pendingCount directly from usePayrollProcessor
   const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, pendingCount } = usePayrollProcessor();
-  // const { pendingCount, markToDoAsDone } = useToDosData(initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee); // Removed redundant call
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
@@ -36,7 +32,23 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"
     : "md:grid-cols-[240px_1fr] lg:grid-cols-[240px_1fr]";
 
-  if (isLoadingAuth || isLoadingCompanyDetails) {
+  // Update the title element without mounting another payroll hook elsewhere
+  React.useEffect(() => {
+    const titleElement = document.getElementById("app-title");
+    if (titleElement) {
+      if (companyDetails?.companyLegalName || companyDetails?.companyTradingName) {
+        titleElement.innerText =
+          companyDetails.companyLegalName ||
+          companyDetails.companyTradingName ||
+          "Payroll App";
+      } else {
+        titleElement.innerText = "Payroll App";
+      }
+    }
+  }, [companyDetails]);
+
+  // Only block on auth loading; allow layout to render while company details load
+  if (isLoadingAuth) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -61,8 +73,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
       )}
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
-          <div className="flex-1">
-          </div>
+          <div className="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-auto flex items-center justify-center space-x-2 py-1">
@@ -101,6 +112,13 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           </DropdownMenu>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          {/* Render content even if company details are loading; pages can gate their own content */}
+          {isLoadingCompanyDetails && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading company data…</span>
+            </div>
+          )}
           <Outlet />
         </main>
         <MadeWithDyad />

@@ -47,6 +47,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const prevIsLoadingAuthRef = useRef<boolean>(true);
   const mountedRef = useRef<boolean>(false);
 
+  // Debounce/guard refresh cycles
+  const isRefreshingRef = useRef<boolean>(false);
+  const lastRefreshTsRef = useRef<number>(0);
+
   const fetchProfile = useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
       .from("users")
@@ -66,28 +70,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    console.log("AuthContext: refreshSession invoked.");
+    // Debounce rapid focus/visibility changes (2s window) and prevent concurrent refreshes
+    const now = Date.now();
+    if (isRefreshingRef.current) {
+      console.log("AuthContext: refreshSession skipped (already refreshing).");
+      return;
+    }
+    if (now - lastRefreshTsRef.current < 2000) {
+      console.log("AuthContext: refreshSession skipped (debounced).");
+      return;
+    }
+
+    isRefreshingRef.current = true;
     setIsLoadingAuth(true);
+    console.log("AuthContext: refreshSession invoked.");
 
-    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    if (session) {
-      const authUser = await fetchProfile(session.user.id);
-      if (authUser) {
-        setUser(authUser);
-        setIsAuthenticated(true);
+      if (session) {
+        const authUser = await fetchProfile(session.user.id);
+        if (authUser) {
+          setUser(authUser);
+          setIsAuthenticated(true);
+        } else {
+          console.warn("AuthContext: Profile missing; clearing auth.");
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } else {
-        console.warn("AuthContext: Profile missing; clearing auth.");
+        console.log("AuthContext: No session; clearing auth.");
         setUser(null);
         setIsAuthenticated(false);
       }
-    } else {
-      console.log("AuthContext: No session; clearing auth.");
-      setUser(null);
-      setIsAuthenticated(false);
+    } finally {
+      setIsLoadingAuth(false);
+      isRefreshingRef.current = false;
+      lastRefreshTsRef.current = Date.now();
     }
-
-    setIsLoadingAuth(false);
   }, [fetchProfile]);
 
   useEffect(() => {

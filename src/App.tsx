@@ -19,30 +19,9 @@ import ToDosPage from "./pages/ToDosPage";
 import Login from "./pages/Login";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import React from "react"; // Ensure React is imported for the component
-import { usePayrollProcessor } from "./hooks/use-payroll-processor"; // Import usePayrollProcessor
+import React from "react";
 
 const queryClient = new QueryClient();
-
-// Create a wrapper component to handle the dynamic title
-const TitleUpdater = () => {
-  const { companyDetails, isLoadingCompanyDetails } = usePayrollProcessor({ silent: true });
-
-  React.useEffect(() => {
-    const titleElement = document.getElementById("app-title");
-    if (titleElement) {
-      if (isLoadingCompanyDetails) {
-        titleElement.innerText = "Loading...";
-      } else if (companyDetails?.companyLegalName || companyDetails?.companyTradingName) {
-        titleElement.innerText = companyDetails.companyLegalName || companyDetails.companyTradingName || "Payroll App";
-      } else {
-        titleElement.innerText = "Payroll App";
-      }
-    }
-  }, [companyDetails, isLoadingCompanyDetails]);
-
-  return null; // This component doesn't render anything visible
-};
 
 const App = () => {
   console.log("App.tsx: Initial localStorage.isMockDataEnabled:", localStorage.getItem("isMockDataEnabled"));
@@ -53,11 +32,8 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <TitleUpdater /> {/* Render TitleUpdater inside AuthProvider */}
             <Routes>
               <Route path="/login" element={<Login />} />
-
-              {/* Protected Routes wrapped by MainLayout */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Dashboard />} />
@@ -72,7 +48,6 @@ const App = () => {
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/settings/*" element={<Settings />} />
-                  {/* Catch-all for 404 within protected routes */}
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Route>
