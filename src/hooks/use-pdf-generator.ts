@@ -124,6 +124,11 @@ export const usePdfGenerator = () => {
         page-break-after: avoid;
         page-break-before: avoid;
       }
+      /* Force page breaks where needed by components */
+      .html2pdf__page-break {
+        break-before: page;
+        page-break-before: always;
+      }
     `;
     iframeDoc.head.appendChild(style);
 
@@ -164,9 +169,16 @@ export const usePdfGenerator = () => {
       const html2pdfOptions = {
         margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
         filename: options.filename,
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
-        jsPDF: { unit: 'mm', format: options.format || 'a4', orientation: options.orientation || 'portrait' as 'portrait' }
+        image: { type: 'jpeg' as 'jpeg', quality: 0.92 },
+        html2canvas: {
+          scale: 1,                 // reduce scale to prevent huge canvas
+          logging: false,
+          letterRendering: true,
+          useCORS: true,
+          windowWidth: (pdfRoot as HTMLElement).scrollWidth,
+        },
+        pagebreak: { mode: ['css', 'legacy'] as any },
+        jsPDF: { unit: 'mm', format: options.format || 'a4', orientation: (options.orientation || 'portrait') as 'portrait' }
       };
 
       const pdf = await html2pdf().from(pdfRoot).set(html2pdfOptions).toPdf().get('pdf');
@@ -358,9 +370,16 @@ export const usePdfGenerator = () => {
       const html2pdfOptions = {
         margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
         filename: options.filename,
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true, media: 'screen', useCORS: true },
-        jsPDF: { unit: 'mm', format: options.format || 'a4', orientation: options.orientation || 'portrait' as 'portrait' }
+        image: { type: 'jpeg' as 'jpeg', quality: 0.92 },
+        html2canvas: {
+          scale: 1,                 // reduce scale to prevent huge canvas
+          logging: false,
+          letterRendering: true,
+          useCORS: true,
+          windowWidth: (pdfRoot as HTMLElement).scrollWidth,
+        },
+        pagebreak: { mode: ['css', 'legacy'] as any },
+        jsPDF: { unit: 'mm', format: options.format || 'a4', orientation: (options.orientation || 'portrait') as 'portrait' }
       };
 
       const pdf = await html2pdf().from(pdfRoot).set(html2pdfOptions).toPdf().get('pdf');

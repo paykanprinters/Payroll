@@ -71,6 +71,7 @@ const BulkPayslipsWithReportsRenderer: React.FC<Props> = ({
         reportDesignSettings={reportDesignSettings}
         isPdfGeneration={isPdfGeneration}
       />
+      <div className="html2pdf__page-break" />
       <ReportContentWrapper
         reportTitle={`Employee Payslip Report (${mode === "monthly" ? "Monthly" : "Weekly"})`}
         reportContent={employeePayslipHtml}
@@ -79,6 +80,7 @@ const BulkPayslipsWithReportsRenderer: React.FC<Props> = ({
         isPdfGeneration={isPdfGeneration}
         onReadyForPdf={onReadyForPdf}
       />
+      <div className="html2pdf__page-break" />
       <BulkPayslipsRenderer
         payslips={payslips}
         getEmployeeName={getEmployeeName}
