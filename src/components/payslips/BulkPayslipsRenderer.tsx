@@ -13,12 +13,13 @@ interface Props {
   companyDetails?: MockCompanyDetails | null;
   employees?: MockEmployee[];
   onReadyForPdf?: () => void;
+  isPdfGeneration?: boolean; // NEW: indicate PDF generation context
 }
 
 const currency = (n: number) =>
   `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const BulkPayslipsRenderer: React.FC<Props> = ({ payslips, getEmployeeName, onReadyForPdf }) => {
+const BulkPayslipsRenderer: React.FC<Props> = ({ payslips, getEmployeeName, onReadyForPdf, isPdfGeneration }) => {
   React.useEffect(() => {
     if (onReadyForPdf) onReadyForPdf();
   }, [onReadyForPdf]);
@@ -29,7 +30,10 @@ const BulkPayslipsRenderer: React.FC<Props> = ({ payslips, getEmployeeName, onRe
         <Card
           key={p.id}
           className="w-full print:break-after-page break-inside-avoid"
-          style={{ pageBreakAfter: "always" }}
+          style={{
+            pageBreakAfter: "always",
+            ...(isPdfGeneration ? { border: 'none', boxShadow: 'none' } : {}),
+          }}
         >
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">

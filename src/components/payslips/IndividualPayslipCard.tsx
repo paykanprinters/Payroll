@@ -258,7 +258,9 @@ const IndividualPayslipCard: React.FC<Props> = ({
     stacked.map((s) => (s === "Earnings" ? EarningsBox : DeductionsBox));
 
   return (
-    <Card className="w-full">
+    <Card className="w-full"
+      style={isPdfGeneration ? { border: 'none', boxShadow: 'none' } : undefined}
+    >
       <CardHeader className="pb-4 text-center items-center">
         <CardTitle className="text-xl">
           Payslip {employeeName ? `• ${employeeName}` : ""} — {payslip.payPeriod}

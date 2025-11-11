@@ -127,6 +127,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         employees={allEmployees}
         getEmployeeName={getEmployeeName}
         onReadyForPdf={onReadyForPdf}
+        isPdfGeneration={true} // ensure CSS border removed during PDF
       />
     );
 
@@ -194,6 +195,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         employees={allEmployees}
         getEmployeeName={getEmployeeName}
         onReadyForPdf={onReadyForPdf}
+        isPdfGeneration={true} // ensure CSS border removed during PDF
       />
     );
 
