@@ -80,41 +80,40 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         console.error("useCompanyDetails: Supabase fetchCompanyDetails error:", error);
         if (error.code === "PGRST116") {
           console.info("useCompanyDetails: No company details found in database (expected for initial setup). Setting companyDetails to null.");
-          if (companyDetails !== null) setCompanyDetails(null); // Only update if different
+          setCompanyDetails(prev => (prev !== null ? null : prev));
           setError(null);
         } else {
           console.error("useCompanyDetails: Error fetching company details:", error);
           setError(error);
-          if (companyDetails !== null) setCompanyDetails(null); // Only update if different
+          setCompanyDetails(prev => (prev !== null ? null : prev));
           showError(`Failed to load company details: ${error.message}`);
         }
       } else {
-        const camelCaseData = convertKeysToCamelCase(data); // This line correctly converts data
+        const camelCaseData = convertKeysToCamelCase(data);
         console.log("useCompanyDetails: Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
-        // Perform deep comparison to prevent unnecessary state updates
-        if (JSON.stringify(camelCaseData) !== JSON.stringify(companyDetails)) {
-          setCompanyDetails(camelCaseData); // This line should set the state with the fetched data
-        }
+        // Use functional update with deep compare to avoid unnecessary rerenders
+        setCompanyDetails(prev => {
+          const changed = JSON.stringify(prev) !== JSON.stringify(camelCaseData);
+          return changed ? camelCaseData : prev;
+        });
       }
     } catch (err: any) {
       console.error("useCompanyDetails: Unhandled error in fetchCompanyDetails:", err);
       setError(err);
-      if (companyDetails !== null) setCompanyDetails(null); // Only update if different
+      setCompanyDetails(prev => (prev !== null ? null : prev));
       showError('An unexpected error occurred while loading company details.');
     } finally {
       setIsLoading(false);
     }
-  }, [companyDetails]); // Dependency on companyDetails for deep comparison
+  }, []); // STABILIZED: no dependency on companyDetails
 
   const upsertCompanyDetails = useCallback(
     async (details: Partial<MockCompanyDetails>) => {
       setIsLoading(true);
       setError(null);
 
-      // Explicitly map the incoming details to ensure correct casing for Supabase
-      // All column names in Supabase schema are lowercase.
       const payload = {
-        id: '00000000-0000-0000-0000-000000000000', // Always include the fixed ID for upsert
+        id: '00000000-0000-0000-0000-000000000000',
         companylegalname: details.companyLegalName,
         companytradingname: details.companyTradingName,
         companyregistrationnumber: details.companyRegistrationNumber,
@@ -135,16 +134,14 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         accountholdername: details.accountholdername,
         accountnumber: details.accountNumber,
         branchcode: details.branchCode,
-        accounttype: details.accountType, // Corrected: accounttype to accountType
+        accounttype: details.accountType,
         logourl: details.logoUrl,
         logowidth: details.logoWidth,
         logoheight: details.logoHeight,
         logofit: details.logoFit,
-        // NEW: persist active tax year if provided
         active_tax_year: details.activeTaxYear,
       };
 
-      // Filter out undefined values from the payload to avoid issues with Supabase upsert
       const cleanedPayload = Object.fromEntries(
         Object.entries(payload).filter(([, value]) => value !== undefined)
       );
@@ -161,24 +158,24 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         showError(`Failed to save company details: ${error.message}`);
         setError(error);
       } else {
-        const camelCaseData = convertKeysToCamelCase(data && data.length > 0 ? data[0] : null); // Convert to camelCase
+        const camelCaseData = convertKeysToCamelCase(data && data.length > 0 ? data[0] : null);
         console.log("useCompanyDetails: Supabase upsertCompanyDetails success. Data (camelCase):", camelCaseData);
-        // Perform deep comparison to prevent unnecessary state updates
-        if (JSON.stringify(camelCaseData) !== JSON.stringify(companyDetails)) {
-          setCompanyDetails(camelCaseData);
-        }
+        setCompanyDetails(prev => {
+          const changed = JSON.stringify(prev) !== JSON.stringify(camelCaseData);
+          return changed ? camelCaseData : prev;
+        });
         showSuccess("Company details saved successfully!");
         window.dispatchEvent(new Event("companyDetailsUpdated"));
       }
       setIsLoading(false);
       return { data, error };
     },
-    [companyDetails] // Dependency on companyDetails for deep comparison
+    [] // STABILIZED: remove dependency on companyDetails
   );
 
   useEffect(() => {
     if (isLoadingAuth) {
-      setIsLoading(true); // Keep loading true while auth is loading
+      setIsLoading(true);
       return;
     }
 
@@ -225,11 +222,10 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
       }
       setIsLoading(false);
     } else {
-      // Not mock data, so attempt to fetch live data.
-      // This should happen whether authenticated or not, as company details are public.
+      // Live mode: fetch once per auth/mock-state change
       fetchCompanyDetails();
     }
-  }, [isMockDataEnabled, isLoadingAuth, fetchCompanyDetails, companyDetails, isAuthenticated]); // Added companyDetails to dependencies for mock data comparison
+  }, [isMockDataEnabled, isLoadingAuth, isAuthenticated]); // REMOVED companyDetails and fetchCompanyDetails from deps
 
   return { companyDetails, isLoading, error, upsertCompanyDetails, refetchCompanyDetails: fetchCompanyDetails };
 };
