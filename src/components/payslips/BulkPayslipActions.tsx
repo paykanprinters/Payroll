@@ -18,8 +18,10 @@ interface BulkPayslipActionsProps {
   setSelectedPayPeriodDate: (date: Date | undefined) => void;
   bulkGenerationMode: "monthly" | "weekly";
   setBulkGenerationMode: (mode: "monthly" | "weekly") => void;
-  onPrintAll: (action: 'print' | 'download', mode: "monthly" | "weekly") => void;
-  onDownloadAll: (action: 'print' | 'download', mode: "monthly" | "weekly") => void;
+  onPrintAll: (action: 'print' | 'download', mode: "monthly" | "weekly", auditLevel: "minimal" | "standard" | "detailed") => void;
+  onDownloadAll: (action: 'print' | 'download', mode: "monthly" | "weekly", auditLevel: "minimal" | "standard" | "detailed") => void;
+  auditLevel: "minimal" | "standard" | "detailed";
+  setAuditLevel: (level: "minimal" | "standard" | "detailed") => void;
 }
 
 const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
@@ -30,6 +32,8 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
   setBulkGenerationMode,
   onPrintAll,
   onDownloadAll,
+  auditLevel,
+  setAuditLevel,
 }) => {
   return (
     <>
@@ -77,6 +81,21 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           </SelectContent>
         </Select>
       </div>
+      <div>
+        <Label htmlFor="audit-level-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Audit Level (for report sections)
+        </Label>
+        <Select onValueChange={(value) => setAuditLevel(value as "minimal" | "standard" | "detailed")} value={auditLevel}>
+          <SelectTrigger id="audit-level-select" className="mt-1">
+            <SelectValue placeholder="Select level" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="minimal">Minimal</SelectItem>
+            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="detailed">Detailed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="w-full" variant="outline" disabled={!selectedPayPeriodDate || payslips.length === 0}>
@@ -84,10 +103,10 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onPrintAll('print', bulkGenerationMode)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
+          <DropdownMenuItem onClick={() => onPrintAll('print', bulkGenerationMode, auditLevel)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
             <Printer className="mr-2 h-4 w-4" /> Print All Payslips
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onDownloadAll('download', bulkGenerationMode)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
+          <DropdownMenuItem onClick={() => onDownloadAll('download', bulkGenerationMode, auditLevel)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
             <Download className="mr-2 h-4 w-4" /> Download All Payslips PDF
           </DropdownMenuItem>
         </DropdownMenuContent>
