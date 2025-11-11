@@ -1,303 +1,223 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { showSuccess, showError } from '@/utils/toast';
-import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  ReactNode,
+} from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
 
-interface AuthUser {
+type UserRole = "Admin" | "Manager" | "Staff" | "Viewer";
+
+export interface AuthUser {
   id: string;
   email: string;
-  role: 'Admin' | 'Manager' | 'Staff' | 'Viewer';
+  role: UserRole;
   name: string;
 }
 
-interface AuthContextType {
+interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
   isLoadingAuth: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  isAuthenticated: false,
+  isLoadingAuth: true,
+});
+
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Initial state is true, as we're loading auth
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
+
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Use a ref to track the previous isLoadingAuth state to avoid logging on every render
-  const prevIsLoadingAuthRef = useRef(true);
+  const prevIsLoadingAuthRef = useRef<boolean>(true);
+  const mountedRef = useRef<boolean>(false);
 
-  // Helper: refresh session and sync auth state (used on focus/visibility and as a fallback)
-  const refreshSession = React.useCallback(async () => {
+  const fetchProfile = useCallback(async (userId: string) => {
+    const { data: profile, error } = await supabase
+      .from("users")
+      .select("id, email, name, role")
+      .eq("id", userId)
+      .single();
+
+    if (error || !profile) return null;
+
+    const authUser: AuthUser = {
+      id: profile.id,
+      email: profile.email,
+      role: (profile.role || "Staff") as UserRole,
+      name: profile.name ?? profile.email,
+    };
+    return authUser;
+  }, []);
+
+  const refreshSession = useCallback(async () => {
     console.log("AuthContext: refreshSession invoked.");
     setIsLoadingAuth(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile, error } = await supabase
-          .from('users')
-          .select('id, email, name, role')
-          .eq('id', session.user.id)
-          .single();
-        if (!error && profile) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
-            name: profile.name ?? profile.email,
-          });
-          setIsAuthenticated(true);
-        } else {
-          console.warn("AuthContext: refreshSession could not fetch profile; clearing auth.");
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session) {
+      const authUser = await fetchProfile(session.user.id);
+      if (authUser) {
+        setUser(authUser);
+        setIsAuthenticated(true);
       } else {
-        console.log("AuthContext: refreshSession found no session; clearing auth.");
+        console.warn("AuthContext: Profile missing; clearing auth.");
         setUser(null);
         setIsAuthenticated(false);
       }
-    } finally {
-      setIsLoadingAuth(false);
+    } else {
+      console.log("AuthContext: No session; clearing auth.");
+      setUser(null);
+      setIsAuthenticated(false);
     }
-  }, []);
+
+    setIsLoadingAuth(false);
+  }, [fetchProfile]);
 
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates on unmounted component
-    
+    mountedRef.current = true;
+
     const handleAuthStateChange = async (event: string, session: any | null) => {
-      console.groupCollapsed(`AuthContext: handleAuthStateChange - Event: ${event}`);
-      console.log("Raw session:", session);
-      console.log("Current isMounted:", isMounted);
-      console.log("Current isLoadingAuth (before processing):", isLoadingAuth); // Log current state
-
-      if (!isMounted) {
-        console.log("Component unmounted, skipping state update.");
-        console.groupEnd();
-        return;
-      }
-
+      console.groupCollapsed(`AuthContext: onAuthStateChange event: ${event}`);
       try {
         if (session) {
-          console.log("Session found, fetching user profile...");
-          const { data: profile, error } = await supabase
-            .from('users')
-            .select('id, email, name, role')
-            .eq('id', session.user.id)
-            .single();
+          const authUser = await fetchProfile(session.user.id);
+          if (authUser) {
+            setUser(authUser);
+            setIsAuthenticated(true);
 
-          if (error) {
-            console.error('Error fetching user profile:', error);
-            if (isMounted) {
-              setUser(null);
-              setIsAuthenticated(false);
-              showError('Failed to load user profile. Please try logging in again.');
-              navigate('/login', { replace: true });
+            const onAuthPages = location.pathname === "/login" || location.pathname === "/";
+            if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && onAuthPages) {
+              navigate("/dashboard", { replace: true });
             }
-          } else if (profile) {
-            console.log("User profile fetched:", profile);
-            if (isMounted) {
-              setUser({
-                id: profile.id,
-                email: profile.email,
-                role: profile.role as 'Admin' | 'Manager' | 'Staff' | 'Viewer',
-                name: profile.name ?? profile.email,
-              });
-              setIsAuthenticated(true);
-              // Redirect only if user is on login or root
-              const onAuthPages = location.pathname === '/login' || location.pathname === '/';
-              if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && onAuthPages) {
-                navigate('/dashboard', { replace: true });
-              }
-            }
-          }
-        } else {
-          console.log("No session found.");
-          if (isMounted) {
+          } else {
             setUser(null);
             setIsAuthenticated(false);
-            if (event === 'SIGNED_OUT') {
-              console.log("Redirecting to /login due to SIGNED_OUT.");
-              if (location.pathname !== '/login') navigate('/login', { replace: true });
-            }
+            showError("Failed to load user profile. Please try logging in again.");
+            if (location.pathname !== "/login") navigate("/login", { replace: true });
+          }
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+          if (event === "SIGNED_OUT" && location.pathname !== "/login") {
+            navigate("/login", { replace: true });
           }
         }
       } catch (err) {
-        console.error("Unhandled error in onAuthStateChange listener:", err);
-        if (isMounted) {
-          showError('An unexpected error occurred during authentication state change.');
-          setUser(null);
-          setIsAuthenticated(false);
-          navigate('/login', { replace: true });
-        }
+        console.error("AuthContext: Error handling auth change:", err);
+        setUser(null);
+        setIsAuthenticated(false);
+        showError("Authentication error occurred.");
+        if (location.pathname !== "/login") navigate("/login", { replace: true });
       } finally {
-        if (isMounted) {
-          // Always set isLoadingAuth to false once the auth state change has been processed
-          // This is the most reliable place to ensure loading is false after any auth event.
-          setIsLoadingAuth(false); // Removed conditional check
-          console.log("AuthContext: Setting isLoadingAuth to false in finally block of onAuthStateChange.");
-        }
+        setIsLoadingAuth(false);
       }
-      console.log("AuthContext: handleAuthStateChange finished. isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
       console.groupEnd();
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    // Initial session check (runs once on mount)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.groupCollapsed("AuthContext: Initial session check.");
-      console.log("Initial session:", session);
-      if (isMounted) {
+    supabase.auth
+      .getSession()
+      .then(async ({ data: { session } }) => {
         if (session) {
-          // If session exists, just finish loading; only redirect if on login/root
-          setIsLoadingAuth(false);
-          console.log("Initial session found, setting isLoadingAuth to false (no forced redirect).");
-          const onAuthPages = location.pathname === '/login' || location.pathname === '/';
-          if (onAuthPages) {
-            navigate('/dashboard', { replace: true });
+          const authUser = await fetchProfile(session.user.id);
+          if (authUser) {
+            setUser(authUser);
+            setIsAuthenticated(true);
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
           }
         } else {
-          // No initial session, ensure state is cleared and redirect if needed
-          if (isAuthenticated) { // Check current state
-            setIsAuthenticated(false);
-            setUser(null);
-            console.log("No initial session, clearing auth state.");
-          }
-          setIsLoadingAuth(false);
-          console.log("No initial session, setting isLoadingAuth to false (no forced redirect; ProtectedRoute will handle).");
+          setUser(null);
+          setIsAuthenticated(false);
         }
-      }
-      console.log("AuthContext: Initial check complete. isAuthenticated:", isAuthenticated, "user:", user, "isLoadingAuth:", isLoadingAuth);
-      console.groupEnd();
-    }).catch(err => {
-      console.error("AuthContext: Error during initial getSession:", err);
-      if (isMounted) {
+
+        setIsLoadingAuth(false);
+
+        const onAuthPages = location.pathname === "/login" || location.pathname === "/";
+        if (session && onAuthPages) {
+          navigate("/dashboard", { replace: true });
+        }
+      })
+      .catch((err) => {
+        console.error("AuthContext: Initial session error:", err);
         setIsLoadingAuth(false);
         setIsAuthenticated(false);
         setUser(null);
-        showError('Failed to check initial session. Please try logging in.');
-        navigate('/login', { replace: true });
-      }
-    });
+        showError("Failed to check session. Please log in.");
+        if (location.pathname !== "/login") navigate("/login", { replace: true });
+      });
 
     return () => {
-      isMounted = false; // Cleanup: component is unmounted
+      mountedRef.current = false;
       authListener.subscription.unsubscribe();
-      console.log("AuthContext: Auth listener unsubscribed.");
+      console.log("AuthContext: Unsubscribed auth listener.");
     };
-  }, [navigate]); // Removed isLoadingAuth, isAuthenticated from dependencies
+  }, [fetchProfile, navigate, location.pathname]);
 
-  // New: Re-check session when tab becomes visible/focused and add a safety to avoid infinite loading
   useEffect(() => {
-    const onFocus = () => {
-      console.log("AuthContext: Window focus detected; refreshing session.");
+    const focusHandler = () => {
+      console.log("AuthContext: Window focus; refreshing session.");
       refreshSession();
     };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+    const visibilityHandler = () => {
+      if (document.visibilityState === "visible") {
         console.log("AuthContext: Tab visible; refreshing session.");
         refreshSession();
       }
     };
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener("focus", focusHandler);
+    document.addEventListener("visibilitychange", visibilityHandler);
 
-    // Safety: if loading persists unusually long, force a refresh
     let safetyTimer: number | undefined;
     if (isLoadingAuth) {
       safetyTimer = window.setTimeout(() => {
-        console.warn("AuthContext: Safety timer triggered; forcing session refresh to break loading loop.");
+        console.warn("AuthContext: Safety timer triggered; forcing session refresh.");
         refreshSession();
       }, 8000);
     }
 
     return () => {
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener("focus", focusHandler);
+      document.removeEventListener("visibilitychange", visibilityHandler);
       if (safetyTimer) window.clearTimeout(safetyTimer);
     };
   }, [isLoadingAuth, refreshSession]);
 
-  // Log when isLoadingAuth changes
   useEffect(() => {
     if (prevIsLoadingAuthRef.current !== isLoadingAuth) {
-      console.log(`AuthContext: isLoadingAuth changed from ${prevIsLoadingAuthRef.current} to ${isLoadingAuth}.`);
+      console.log(
+        `AuthContext: isLoadingAuth changed from ${prevIsLoadingAuthRef.current} to ${isLoadingAuth}`
+      );
       prevIsLoadingAuthRef.current = isLoadingAuth;
     }
   }, [isLoadingAuth]);
 
-
-  const login = async (email: string, password: string) => {
-    console.log("AuthContext: Attempting login...");
-    setIsLoadingAuth(true); // Set loading true during login attempt
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error("AuthContext: Login error:", error);
-        showError(error.message);
-        setIsLoadingAuth(false); // Explicitly set to false on error
-        throw error;
-      }
-
-      if (data.user) {
-        console.log("AuthContext: Login successful for user:", data.user.id);
-        showSuccess('Login successful! Redirecting...');
-        // The onAuthStateChange listener will handle setting isAuthenticated and isLoadingAuth to false.
-      }
-    } catch (err) {
-      console.error("AuthContext: Unhandled error during login:", err);
-      // Error toast handled by AuthContext
-      setIsLoadingAuth(false); // Ensure loading is false even for unhandled errors
-    }
-    // No finally block for isLoadingAuth here, as it's handled in catch or onAuthStateChange.
-    console.log("AuthContext: Login function finished execution.");
+  const value: AuthContextValue = {
+    user,
+    isAuthenticated,
+    isLoadingAuth,
   };
 
-  const logout = async () => {
-    console.log("AuthContext: Attempting logout...");
-    setIsLoadingAuth(true); // Set loading true during logout attempt
-    try {
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.error("AuthContext: Logout error:", error);
-        showError(error.message);
-        setIsLoadingAuth(false); // Explicitly set to false on error
-        throw error;
-      }
-      console.log("AuthContext: Logout successful.");
-      showSuccess('Logged out successfully.');
-      // The onAuthStateChange listener will handle setting isAuthenticated and isLoadingAuth to false.
-    } catch (err) {
-      console.error("AuthContext: Unhandled error during logout:", err);
-      setIsLoadingAuth(false); // Ensure loading is false even for unhandled errors
-    }
-    // No finally block for isLoadingAuth here, as it's handled in catch or onAuthStateChange.
-    console.log("AuthContext: Logout function finished execution.");
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, isLoadingAuth }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export default AuthContext;
