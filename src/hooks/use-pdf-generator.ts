@@ -30,6 +30,19 @@ export const usePdfGenerator = () => {
     }
   };
 
+  // Helper: convert mm to CSS px (approx 96dpi => 3.7795 px per mm)
+  const mmToPx = (mm: number) => Math.round(mm * 3.7795);
+
+  // Compute page width (mm) and inner content width (page width - 2 * margin)
+  const getPageWidthMm = (format: 'a4' | 'letter' | 'a5' | undefined, orientation: 'portrait' | 'landscape' | undefined) => {
+    let widthMm = 210; // A4 portrait default
+    let heightMm = 297;
+    if (format === 'letter') { widthMm = 215.9; heightMm = 279.4; }
+    if (format === 'a5') { widthMm = 148; heightMm = 210; }
+    const isLandscape = orientation === 'landscape';
+    return isLandscape ? heightMm : widthMm;
+  };
+
   const generatePdf = useCallback(async (
     renderComponent: (props: RenderComponentProps) => React.ReactElement,
     options: PdfOptions,
@@ -69,6 +82,9 @@ export const usePdfGenerator = () => {
     // Inject custom CSS for PDF styling
     const style = iframeDoc.createElement('style');
     const minHeight = getMinHeightForFormat(options.format);
+    const pageWidthMm = getPageWidthMm(options.format, options.orientation);
+    const contentMarginMm = 10; // matches html2pdf margin
+    const contentWidthMm = pageWidthMm - contentMarginMm * 2;
     style.textContent = `
       @page {
         margin: 0;
@@ -78,40 +94,40 @@ export const usePdfGenerator = () => {
         padding: 0;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        background: #fff;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.35;
       }
       #pdf-root {
         background-color: white;
       }
-      #pdf-root > div { /* The root element rendered by the component */
+      #pdf-root > div {
         box-sizing: border-box;
-        /* Removed default border here. Components should apply their own if needed. */
-        /* Removed default padding here. Components should apply their own if needed. */
-        min-height: ${minHeight}; /* Dynamic min-height for page content */
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: stretch;
+        width: ${contentWidthMm}mm;           /* exact content width */
+        margin: 0 auto;                        /* center on page */
+        padding: ${contentMarginMm}mm;         /* internal padding to match margins */
+        display: block;                        /* avoid flex artifacts */
       }
       #pdf-root table {
         width: 100%;
         border-collapse: collapse;
-        page-break-inside: auto; /* Allow tables to break across pages */
+        page-break-inside: auto;
       }
       #pdf-root table thead {
-        display: table-header-group; /* Repeat table headers on new pages */
+        display: table-header-group;
       }
       #pdf-root table tr {
-        page-break-inside: auto; /* Allow table rows to break across pages */
+        page-break-inside: auto;
         page-break-before: auto;
         page-break-after: auto;
       }
       #pdf-root table th, #pdf-root table td {
-        padding: 8px; /* Consistent padding for cells */
-        border-bottom: 1px solid #eee; /* Light border for rows */
-        vertical-align: top; /* Align content to top */
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        vertical-align: top;
       }
       #pdf-root table tr.border-b:last-child td {
-        border-bottom: none; /* Remove bottom border for last row if it has border-b class */
+        border-bottom: none;
       }
       #pdf-root h1, #pdf-root h2, #pdf-root h3, #pdf-root h4, #pdf-root h5, #pdf-root h6 {
         page-break-after: avoid;
@@ -124,7 +140,6 @@ export const usePdfGenerator = () => {
         page-break-after: avoid;
         page-break-before: avoid;
       }
-      /* Force page breaks where needed by components */
       .html2pdf__page-break {
         break-before: page;
         page-break-before: always;
@@ -171,11 +186,12 @@ export const usePdfGenerator = () => {
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.92 },
         html2canvas: {
-          scale: 1,                 // reduce scale to prevent huge canvas
+          scale: 2,                 // restore crispness without exceeding canvas size
           logging: false,
-          letterRendering: true,
+          letterRendering: false,   // avoid letter-by-letter rendering artifacts
           useCORS: true,
-          windowWidth: (pdfRoot as HTMLElement).scrollWidth,
+          windowWidth: mmToPx(contentWidthMm), // align viewport to exact page width
+          scrollY: 0,
         },
         pagebreak: { mode: ['css', 'legacy'] as any },
         jsPDF: { unit: 'mm', format: options.format || 'a4', orientation: (options.orientation || 'portrait') as 'portrait' }
@@ -275,6 +291,9 @@ export const usePdfGenerator = () => {
     // Inject custom CSS for PDF styling
     const style = iframeDoc.createElement('style');
     const minHeight = getMinHeightForFormat(options.format);
+    const pageWidthMm = getPageWidthMm(options.format, options.orientation);
+    const contentMarginMm = 10;
+    const contentWidthMm = pageWidthMm - contentMarginMm * 2;
     style.textContent = `
       @page {
         margin: 0;
@@ -284,52 +303,26 @@ export const usePdfGenerator = () => {
         padding: 0;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        background: #fff;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.35;
       }
-      #pdf-root {
-        background-color: white;
-      }
-      #pdf-root > div { /* The root element rendered by the component */
+      #pdf-root { background-color: white; }
+      #pdf-root > div {
         box-sizing: border-box;
-        /* Removed default border here. Components should apply their own if needed. */
-        padding: 10mm; /* Internal padding for content */
-        min-height: ${minHeight}; /* Dynamic min-height for page content */
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: stretch;
+        width: ${contentWidthMm}mm;
+        margin: 0 auto;
+        padding: ${contentMarginMm}mm;       /* explicit internal padding */
+        display: block;
       }
-      #pdf-root table {
-        width: 100%;
-        border-collapse: collapse;
-        page-break-inside: auto; /* Allow tables to break across pages */
-      }
-      #pdf-root table thead {
-        display: table-header-group; /* Repeat table headers on new pages */
-      }
-      #pdf-root table tr {
-        page-break-inside: auto; /* Allow table rows to break across pages */
-        page-break-before: auto;
-        page-break-after: auto;
-      }
-      #pdf-root table th, #pdf-root table td {
-        padding: 8px; /* Consistent padding for cells */
-        border-bottom: 1px solid #eee; /* Light border for rows */
-        vertical-align: top; /* Align content to top */
-      }
-      #pdf-root table tr.border-b:last-child td {
-        border-bottom: none; /* Remove bottom border for last row if it has border-b class */
-      }
-      #pdf-root h1, #pdf-root h2, #pdf-root h3, #pdf-root h4, #pdf-root h5, #pdf-root h6 {
-        page-break-after: avoid;
-        page-break-inside: avoid;
-      }
-      #pdf-root p {
-        page-break-inside: avoid;
-      }
-      #pdf-root hr {
-        page-break-after: avoid;
-        page-break-before: avoid;
-      }
+      #pdf-root table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+      #pdf-root table thead { display: table-header-group; }
+      #pdf-root table tr { page-break-inside: auto; page-break-before: auto; page-break-after: auto; }
+      #pdf-root table th, #pdf-root table td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+      #pdf-root table tr.border-b:last-child td { border-bottom: none; }
+      #pdf-root h1, #pdf-root h2, #pdf-root h3, #pdf-root h4, #pdf-root h5, #pdf-root h6 { page-break-after: avoid; page-break-inside: avoid; }
+      #pdf-root p { page-break-inside: avoid; }
+      #pdf-root hr { page-break-after: avoid; page-break-before: avoid; }
     `;
     iframeDoc.head.appendChild(style);
 
@@ -368,15 +361,16 @@ export const usePdfGenerator = () => {
       clearTimeout(timeoutId);
 
       const html2pdfOptions = {
-        margin: [10, 10, 10, 10] as [number, number, number, number], // Set 10mm margin for the PDF page
+        margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: options.filename,
         image: { type: 'jpeg' as 'jpeg', quality: 0.92 },
         html2canvas: {
-          scale: 1,                 // reduce scale to prevent huge canvas
+          scale: 2,
           logging: false,
-          letterRendering: true,
+          letterRendering: false,
           useCORS: true,
-          windowWidth: (pdfRoot as HTMLElement).scrollWidth,
+          windowWidth: mmToPx(contentWidthMm),
+          scrollY: 0,
         },
         pagebreak: { mode: ['css', 'legacy'] as any },
         jsPDF: { unit: 'mm', format: options.format || 'a4', orientation: (options.orientation || 'portrait') as 'portrait' }
