@@ -42,7 +42,7 @@ const BulkPayslipsRenderer: React.FC<Props> = ({
       {payslips.map((p) => (
         <React.Fragment key={p.id}>
           <div
-            className="w-full"
+            className="w-full pdf-page"
             style={{ pageBreakAfter: "always", pageBreakInside: "avoid" }}
           >
             <IndividualPayslipCard

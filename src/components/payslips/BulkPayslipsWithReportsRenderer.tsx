@@ -39,7 +39,6 @@ const BulkPayslipsWithReportsRenderer: React.FC<Props> = ({
   onReadyForPdf,
   payslipDesignSettings,
 }) => {
-  // Exclude cash payment employees for the two report sections
   const nonCashEmployees = React.useMemo(
     () => employees.filter((e) => e.paymentMode !== "Cash"),
     [employees]
@@ -61,25 +60,28 @@ const BulkPayslipsWithReportsRenderer: React.FC<Props> = ({
     return generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, selectedDate, mode, auditLevel);
   }, [payslipsForReports, nonCashEmployees, selectedDate, mode, auditLevel]);
 
-  // Pass onReadyForPdf to the second report wrapper to ensure images (logo) are loaded before PDF capture.
   return (
     <div className="flex flex-col gap-6">
-      <ReportContentWrapper
-        reportTitle={`Payroll Summary Report (${mode === "monthly" ? "Monthly" : "Weekly"})`}
-        reportContent={payrollSummaryHtml}
-        companyDetails={companyDetails}
-        reportDesignSettings={reportDesignSettings}
-        isPdfGeneration={isPdfGeneration}
-      />
+      <div className="pdf-page">
+        <ReportContentWrapper
+          reportTitle={`Payroll Summary Report (${mode === "monthly" ? "Monthly" : "Weekly"})`}
+          reportContent={payrollSummaryHtml}
+          companyDetails={companyDetails}
+          reportDesignSettings={reportDesignSettings}
+          isPdfGeneration={isPdfGeneration}
+        />
+      </div>
       <div className="html2pdf__page-break" />
-      <ReportContentWrapper
-        reportTitle={`Employee Payslip Report (${mode === "monthly" ? "Monthly" : "Weekly"})`}
-        reportContent={employeePayslipHtml}
-        companyDetails={companyDetails}
-        reportDesignSettings={reportDesignSettings}
-        isPdfGeneration={isPdfGeneration}
-        onReadyForPdf={onReadyForPdf}
-      />
+      <div className="pdf-page">
+        <ReportContentWrapper
+          reportTitle={`Employee Payslip Report (${mode === "monthly" ? "Monthly" : "Weekly"})`}
+          reportContent={employeePayslipHtml}
+          companyDetails={companyDetails}
+          reportDesignSettings={reportDesignSettings}
+          isPdfGeneration={isPdfGeneration}
+          onReadyForPdf={onReadyForPdf}
+        />
+      </div>
       <div className="html2pdf__page-break" />
       <BulkPayslipsRenderer
         payslips={payslips}
