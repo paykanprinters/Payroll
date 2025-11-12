@@ -65,3 +65,18 @@ export const upsertSavingPlanToSupabase = async (savingPlanData: SavingPlan): Pr
     return null;
   }
 };
+
+export const deleteSavingPlanFromSupabase = async (id: string): Promise<boolean> => {
+  console.log("saving-queries: Deleting saving plan with id:", id);
+  const { error } = await supabase
+    .from('saving_plans')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("saving-queries: Error deleting saving plan:", error);
+    showError(`Failed to delete saving plan: ${error.message}`);
+    return false;
+  }
+  return true;
+};

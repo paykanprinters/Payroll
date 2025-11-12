@@ -3,12 +3,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { SavingPlan, MockEmployee } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast"; // Import toast functions
+import { logAuditEvent } from "@/utils/audit";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
 import {
   fetchSavingPlansFromSupabase,
   upsertSavingPlanToSupabase,
-} from "@/integrations/supabase/saving-queries"; // Import new Supabase query functions
+  deleteSavingPlanFromSupabase,
+} from "@/integrations/supabase/saving-queries";
 
 // Helper to convert snake_case to camelCase for Supabase data
 const convertSavingPlanKeysToCamelCase = (obj: any): SavingPlan => {
@@ -164,12 +166,44 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
     }
   }, [isMockDataEnabled, upsertLiveSavingPlan]);
 
+  const deleteSavingPlan = useCallback(async (plan: SavingPlan) => {
+    const toastId = showLoading("Deleting savings plan...") as string;
+    setIsLoadingSavingPlans(true);
+    try {
+      const employeeName = getEmployeeName(plan.employeeId);
+      const employeeCustomId = getEmployeeCustomId(plan.employeeId);
+      const actionText = `Deleted savings plan for ${employeeName} (${employeeCustomId}) amount R ${plan.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })} ${plan.frequency}`;
+
+      if (isMockDataEnabled) {
+        setSavingPlans(prev => {
+          const updated = prev.filter(p => p.id !== plan.id);
+          localStorage.setItem("mockSavingPlans", JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('savingPlansUpdated', { detail: updated }));
+          return updated;
+        });
+        showSuccess("Savings plan deleted successfully!");
+        await logAuditEvent(actionText);
+      } else {
+        const ok = await deleteSavingPlanFromSupabase(plan.id);
+        if (ok) {
+          setSavingPlans(prev => prev.filter(p => p.id !== plan.id));
+          showSuccess("Savings plan deleted successfully!");
+          await logAuditEvent(actionText);
+        }
+      }
+    } finally {
+      dismissToast(toastId);
+      setIsLoadingSavingPlans(false);
+    }
+  }, [isMockDataEnabled, getEmployeeName, getEmployeeCustomId]);
+
   return {
     savingPlans,
     getEmployeeName,
     getEmployeeCustomId,
     addSavingPlan,
     updateSavingPlan,
+    deleteSavingPlan,
     isLoadingSavingPlans,
   };
 };

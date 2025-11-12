@@ -7,6 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,7 +58,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"
 
 const Savings: React.FC = () => {
   const { employees, savingPlans: initialSavingPlans, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
-  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan } = useSavingPlansData({ initialSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan, deleteSavingPlan } = useSavingPlansData({ initialSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   const [totalSavingsData, setTotalSavingsData] = useState<{ name: string; amount: number }[]>([]);
@@ -308,9 +319,30 @@ const Savings: React.FC = () => {
                     <TableCell>{plan.endDate || "N/A"}</TableCell>
                     <TableCell>{plan.status}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="secondary" size="sm" onClick={() => openManager(plan)}>
-                        Manage
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => openManager(plan)}>
+                          Manage
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete savings plan?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the savings plan for {getEmployeeName(plan.employeeId)} ({getEmployeeCustomId(plan.employeeId)}).
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteSavingPlan(plan)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

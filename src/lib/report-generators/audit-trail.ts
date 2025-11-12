@@ -1,6 +1,7 @@
 import { MockEmployee } from "../mock-data"; // Keep import for consistency, though not directly used here
 import { getEmployeeName } from "../utils"; // Keep import for consistency
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { getAuditEvents } from "@/utils/audit";
 
 export const generateAuditTrailReportContent = (
   selectedDate: Date | undefined,
@@ -17,7 +18,9 @@ export const generateAuditTrailReportContent = (
     { timestamp: "2023-12-15 16:00:00", user: "HR Manager", action: "Reviewed employee performance" },
   ];
 
-  let filteredAuditEvents = mockAuditEvents;
+  const loggedEvents = getAuditEvents();
+  const combinedAuditEvents = [...mockAuditEvents, ...loggedEvents];
+  let filteredAuditEvents = combinedAuditEvents;
   let reportPeriodDescription = "All Periods";
 
   if (selectedDate) {
