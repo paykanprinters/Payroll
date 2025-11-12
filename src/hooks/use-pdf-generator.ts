@@ -171,14 +171,15 @@ const cleanup = (iframe: HTMLIFrameElement, root: ReactDOM.Root | null) => {
 const getHtml2PdfOptions = (
   contentWidthMm: number,
   contentMarginMm: number,
-  options: PdfOptions
+  options: PdfOptions,
+  scaleOverride?: number
 ) => {
   return {
     margin: [contentMarginMm, contentMarginMm, contentMarginMm, contentMarginMm] as [number, number, number, number],
     filename: options.filename,
     image: { type: "jpeg" as "jpeg", quality: 0.92 },
     html2canvas: {
-      scale: 2,
+      scale: scaleOverride ?? 2,
       logging: false,
       useCORS: true,
       windowWidth: mmToPx(contentWidthMm),
@@ -262,7 +263,7 @@ const renderBulkAsPages = async (
     // Dynamically lower scale for very tall pages to avoid exceeding browser canvas limits
     const blockHeightPx = block.offsetHeight;
     const baseScale = 2;
-    const MAX_CANVAS_DIM = 16384; // safety cap for max canvas dimension
+    const MAX_CANVAS_DIM = 4096; // conservative safety cap for max canvas dimension
     const dynamicScale = Math.min(baseScale, MAX_CANVAS_DIM / Math.max(blockHeightPx, viewportWidthPx));
 
     const canvas = await html2canvas(block, {
@@ -333,19 +334,27 @@ export const usePdfGenerator = () => {
           const bulkPdf = await renderBulkAsPages(iframeDoc, dims, options);
 
           if (bulkPdf) {
-            // Return the jsPDF instance for callers that need it
+            drawBordersForAllPages(bulkPdf, options.documentType);
+            bulkPdf.save(options.filename);
+            showSuccess(`${options.filename} PDF downloaded successfully!`);
             dismissToast(toastId);
             cleanup(iframe, root);
-            return bulkPdf;
+            return;
           }
 
           // Fallback to html2pdf if no explicit page blocks are found
-          const pdf = await html2pdf().from(iframeDoc.getElementById("pdf-root")).set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options)).toPdf().get("pdf");
+          const pdf = await html2pdf()
+            .from(iframeDoc.getElementById("pdf-root"))
+            .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options, 1))
+            .toPdf()
+            .get("pdf");
 
           drawBordersForAllPages(pdf, options.documentType);
+          pdf.save(options.filename);
+          showSuccess(`${options.filename} PDF downloaded successfully!`);
           dismissToast(toastId);
           cleanup(iframe, root);
-          return pdf;
+          return;
         }
 
         // Non-bulk path
@@ -403,15 +412,23 @@ export const usePdfGenerator = () => {
           clearTimeout(timeoutId);
         }
 
-        const pdf = await html2pdf()
-          .from(iframeDoc.getElementById("pdf-root"))
-          .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options))
-          .toPdf()
-          .get("pdf");
+        const bulkPdf = await renderBulkAsPages(iframeDoc, dims, options);
 
-        drawBordersForAllPages(pdf, options.documentType);
-        pdf.output("dataurlnewwindow");
-        showSuccess(`${options.filename} sent to printer.`);
+        if (bulkPdf) {
+          drawBordersForAllPages(bulkPdf, options.documentType);
+          bulkPdf.output("dataurlnewwindow");
+          showSuccess(`${options.filename} sent to printer.`);
+        } else {
+          const pdf = await html2pdf()
+            .from(iframeDoc.getElementById("pdf-root"))
+            .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options, 1))
+            .toPdf()
+            .get("pdf");
+
+          drawBordersForAllPages(pdf, options.documentType);
+          pdf.output("dataurlnewwindow");
+          showSuccess(`${options.filename} sent to printer.`);
+        }
       } catch (error: any) {
         showError(`Error preparing ${options.filename} for printing: ${error.message || "Unknown error"}`);
         console.error(`html2pdf print error for ${options.filename}:`, error);
