@@ -1,14 +1,17 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeHtml } from "@/utils/sanitize-html";
 
 export async function saveGeneratedReport(reportTitle: string, contentHtml: string): Promise<boolean> {
+  const sanitizedHtml = sanitizeHtml(contentHtml);
+
   const { error } = await supabase
     .from("generated_reports")
     .insert({
       report_title: reportTitle,
       report_type: "bulk-payslips-report",
-      content_html: contentHtml,
+      content_html: sanitizedHtml,
       generated_at: new Date().toISOString(),
     });
 

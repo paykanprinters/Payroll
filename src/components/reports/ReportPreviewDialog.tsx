@@ -24,6 +24,7 @@ import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 import { saveReportToSupabase } from "@/integrations/supabase/report-queries"; // New import
 import { useAuth } from "@/context/AuthContext"; // Import useAuth
+import { sanitizeHtml } from "@/utils/sanitize-html"; // Sanitize rendered HTML
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -77,6 +78,9 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   };
 
   const { generatePdf, printPdf } = usePdfGenerator(); // Use the hook
+
+  // Sanitize report content before rendering
+  const sanitizedReportContent = React.useMemo(() => sanitizeHtml(reportContent), [reportContent]);
 
   const handlePrintOrDownload = async (action: 'print' | 'download') => {
     const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
@@ -176,7 +180,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
 
             {/* Report Content */}
             <div
-              dangerouslySetInnerHTML={{ __html: reportContent }}
+              dangerouslySetInnerHTML={{ __html: sanitizedReportContent }}
               style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }}
             />
           </div>

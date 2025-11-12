@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { sanitizeHtml } from "@/utils/sanitize-html";
 
 interface GeneratedReportPayload {
   user_id: string;
@@ -10,9 +11,15 @@ interface GeneratedReportPayload {
 
 export const saveReportToSupabase = async (report: GeneratedReportPayload): Promise<boolean> => {
   console.log("report-queries: Saving report to Supabase:", report.report_title);
+
+  const sanitizedPayload: GeneratedReportPayload = {
+    ...report,
+    content_html: sanitizeHtml(report.content_html),
+  };
+
   const { error } = await supabase
     .from('generated_reports')
-    .insert(report);
+    .insert(sanitizedPayload);
 
   if (error) {
     console.error("report-queries: Error saving report to Supabase:", error);
