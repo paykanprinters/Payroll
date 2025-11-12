@@ -26,7 +26,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     // User is authenticated but not authorized for this route
-    return <Navigate to="/dashboard" replace />; // Or a dedicated /unauthorized page
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <Outlet />;

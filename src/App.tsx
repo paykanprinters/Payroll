@@ -17,6 +17,7 @@ import Timesheet from "./pages/Timesheet";
 import NotFound from "./pages/NotFound";
 import ToDosPage from "./pages/ToDosPage";
 import Login from "./pages/Login";
+import Unauthorized from "./pages/Unauthorized";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React from "react";
@@ -34,6 +35,7 @@ const App = () => {
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Dashboard />} />
