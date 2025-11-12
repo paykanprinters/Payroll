@@ -152,7 +152,10 @@ export const useTimesheetData = ({
     const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
       data,
       employee,
-      { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+      {
+        breakDurationMinutes: workHoursSettings?.breakDurationMinutes,
+        overtimeThresholdHours: workHoursSettings?.overtimeThresholdHours
+      }
     );
     const formattedDate = format(data.date, "yyyy-MM-dd");
 
@@ -254,7 +257,10 @@ export const useTimesheetData = ({
           const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
             data,
             employee,
-            { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+            {
+              breakDurationMinutes: workHoursSettings?.breakDurationMinutes,
+              overtimeThresholdHours: workHoursSettings?.overtimeThresholdHours
+            }
           );
           const formattedDate = format(data.date, "yyyy-MM-dd");
           const mapKey = `${data.employeeId}-${formattedDate}`;

@@ -24,7 +24,7 @@ export const calculateTimeDifferenceInHours = (start: string, end: string): numb
 export const calculateTimesheetMetrics = (
   data: TimesheetFormValues | ImportableTimesheetEntry,
   employee?: MockEmployee,
-  opts?: { breakDurationMinutes?: number }
+  opts?: { breakDurationMinutes?: number; overtimeThresholdHours?: number }
 ) => {
   const standardDailyHours = employee?.standardDailyHours || 8; // Default to 8 hours
 
@@ -44,14 +44,23 @@ export const calculateTimesheetMetrics = (
     const teaDuration = calculateTimeDifferenceInHours(data.teaStart || "", data.teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours(data.lunchStart || "", data.lunchEnd || "");
 
-    // If no explicit tea/lunch captured, enforce configured break duration (unpaid)
+    // Captured breaks take precedence; if none captured, enforce configured fallback break (unpaid)
+    const capturedBreakHours = teaDuration + lunchDuration;
     const fallbackBreakHours =
-      teaDuration === 0 && lunchDuration === 0 && (opts?.breakDurationMinutes ?? 0) > 0
+      capturedBreakHours === 0 && (opts?.breakDurationMinutes ?? 0) > 0
         ? (opts!.breakDurationMinutes as number) / 60
         : 0;
 
-    totalWorkHours = Math.max(0, totalShiftDuration - teaDuration - lunchDuration - fallbackBreakHours);
-    overtimeHours = Math.max(0, totalWorkHours - standardDailyHours);
+    const breakHoursToSubtract = capturedBreakHours > 0 ? capturedBreakHours : fallbackBreakHours;
+
+    totalWorkHours = Math.max(0, totalShiftDuration - breakHoursToSubtract);
+
+    // Use configured overtime threshold if present; otherwise employee standard daily hours
+    const thresholdHours = typeof opts?.overtimeThresholdHours === "number" && opts!.overtimeThresholdHours! > 0
+      ? (opts!.overtimeThresholdHours as number)
+      : standardDailyHours;
+
+    overtimeHours = Math.max(0, totalWorkHours - thresholdHours);
 
     // Late Arrival / Early Departure (simplified logic)
     const expectedTimeIn = parse("09:00", 'HH:mm', new Date());
