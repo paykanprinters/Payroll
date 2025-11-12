@@ -7,6 +7,7 @@ import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, CalendarDays } from "lucide-react";
+import TimesheetDebugLogger from "@/components/timesheet/TimesheetDebugLogger";
 import InlineImportSection from "@/components/timesheet/InlineImportSection";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import { ImportableTimesheetEntry, TimesheetFormValues } from "@/lib/timesheet-types"; // Import from lib/timesheet-types
@@ -46,6 +47,7 @@ const Timesheet: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      <TimesheetDebugLogger />
       <h1 className="text-3xl font-bold">Timesheet Management</h1>
       <p className="text-lg text-muted-foreground">
         Accurately track employee working hours, breaks, and calculate payroll-related metrics.

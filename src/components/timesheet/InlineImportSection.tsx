@@ -2,7 +2,6 @@
 
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -84,16 +83,16 @@ const InlineImportSection: React.FC<InlineImportSectionProps> = ({ employees, on
           <Label htmlFor="timesheet-file" className="sr-only">
             Upload CSV
           </Label>
-          <Input
+          <input
             id="timesheet-file"
             type="file"
             accept=".csv"
             onChange={(e) => {
               console.info("[InlineImportSection] File input onChange fired");
               e.stopPropagation();
-              handleFileChange(e);
+              handleFileChange(e as unknown as React.ChangeEvent<HTMLInputElement>);
             }}
-            className="flex-1"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
           />
           <Button type="button" onClick={() => {
             console.info("[InlineImportSection] Parse button clicked", { hasFile: !!file });
