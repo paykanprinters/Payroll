@@ -7,7 +7,7 @@ import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, CalendarDays } from "lucide-react";
-import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
+import InlineImportSection from "@/components/timesheet/InlineImportSection";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import { ImportableTimesheetEntry, TimesheetFormValues } from "@/lib/timesheet-types"; // Import from lib/timesheet-types
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
@@ -29,7 +29,7 @@ const Timesheet: React.FC = () => {
     addTimesheetBatch,
   } = useTimesheetData({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
+  // Use inline importer instead of dialog to ensure stable upload behavior
   const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = React.useState(false);
   const [selectedEmployeeIdForWeeklyEditor, setSelectedEmployeeIdForWeeklyEditor] = React.useState<string>("");
   const [selectedDateForWeeklyEditor, setSelectedDateForWeeklyEditor] = React.useState<string>("");
@@ -51,11 +51,8 @@ const Timesheet: React.FC = () => {
         Accurately track employee working hours, breaks, and calculate payroll-related metrics.
       </p>
 
-      <div className="flex justify-end gap-2">
-        <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
-          <UploadCloud className="mr-2 h-4 w-4" /> Import Clock Times
-        </Button>
-      </div>
+      {/* Inline importer (CSV upload + parse + mapping + import) */}
+      <InlineImportSection employees={employees} onImport={handleImportTimesheets} />
 
       <Card>
         <CardHeader>
@@ -95,12 +92,7 @@ const Timesheet: React.FC = () => {
         </ul>
       </div>
 
-      <ImportTimesheetDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportTimesheets}
-        employees={employees}
-      />
+      {/* Dialog importer removed for reliability; using inline importer above */}
 
       {isWeeklyEditorOpen && (
         <WeeklyTimesheetEditorDialog
