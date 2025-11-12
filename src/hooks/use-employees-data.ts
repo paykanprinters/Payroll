@@ -107,10 +107,22 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         }
       }
 
+      // Enforce exclusivity: if salary is set, clear hourly; if hourly is set, clear salary
+      const exclusivePayload: EmployeeFormValues = { ...employeeData };
+      if (exclusivePayload.salary !== undefined && exclusivePayload.salary > 0) {
+        exclusivePayload.hourlyRate = undefined;
+      } else if (exclusivePayload.hourlyRate !== undefined && exclusivePayload.hourlyRate > 0) {
+        exclusivePayload.salary = undefined;
+      }
+
+      // Include nulls for cleared fields so Supabase actually clears the column
       const payloadWithCustomId = {
-        ...employeeData,
+        ...exclusivePayload,
         customEmployeeId: customEmployeeIdToUse,
-      };
+        salary: exclusivePayload.salary ?? null,
+        hourlyRate: exclusivePayload.hourlyRate ?? null,
+      } as any;
+
       const snakeCasePayload = convertEmployeeKeysToSnakeCase(payloadWithCustomId);
       console.log("useEmployeesData: Upserting live employee with payload:", snakeCasePayload);
 
@@ -198,8 +210,15 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
             customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
           }
 
+          // Enforce exclusivity for mock update as well
+          const sanitized = { ...employeeData };
+          if (sanitized.salary !== undefined && sanitized.salary > 0) {
+            sanitized.hourlyRate = undefined;
+          } else if (sanitized.hourlyRate !== undefined && sanitized.hourlyRate > 0) {
+            sanitized.salary = undefined;
+          }
           updatedEmployees = prevEmployees.map(emp =>
-            emp.id === employeeData.id ? { ...emp, ...employeeData, customEmployeeId: customEmployeeIdToUse } : emp
+            emp.id === employeeData.id ? { ...emp, ...sanitized, customEmployeeId: customEmployeeIdToUse } : emp
           );
           showSuccess("Mock employee updated successfully!");
         } else {
@@ -210,16 +229,24 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
           }, 0);
           const newCustomEmployeeId = generateCustomEmployeeId(companyName, currentMaxNumber);
 
+          // Enforce exclusivity for mock creation
+          const sanitized = { ...employeeData };
+          if (sanitized.salary !== undefined && sanitized.salary > 0) {
+            sanitized.hourlyRate = undefined;
+          } else if (sanitized.hourlyRate !== undefined && sanitized.hourlyRate > 0) {
+            sanitized.salary = undefined;
+          }
+
           const newEmployee: MockEmployee = {
-            ...employeeData,
+            ...sanitized,
             id: newId,
             customEmployeeId: newCustomEmployeeId,
-            standardDailyHours: employeeData.standardDailyHours || 8,
-            firstName: employeeData.firstName,
-            lastName: employeeData.lastName,
-            email: employeeData.email,
-            jobTitle: employeeData.jobTitle,
-            startDate: employeeData.startDate,
+            standardDailyHours: sanitized.standardDailyHours || 8,
+            firstName: sanitized.firstName,
+            lastName: sanitized.lastName,
+            email: sanitized.email,
+            jobTitle: sanitized.jobTitle,
+            startDate: sanitized.startDate,
           };
           updatedEmployees = [...prevEmployees, newEmployee];
           showSuccess("Mock employee added successfully!");

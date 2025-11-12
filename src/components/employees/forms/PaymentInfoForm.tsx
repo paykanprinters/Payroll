@@ -10,6 +10,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const PaymentInfoForm: React.FC = () => {
   const { register, control, setValue, watch, formState: { errors } } = useFormContext();
 
+  // Enforce Salary vs Hourly Rate exclusivity in the form
+  const salaryValue = watch("salary");
+  const hourlyRateValue = watch("hourlyRate");
+
+  React.useEffect(() => {
+    // If Salary is provided, clear Hourly Rate
+    if (salaryValue !== undefined && salaryValue !== null && Number(salaryValue) > 0) {
+      setValue("hourlyRate", "", { shouldValidate: true, shouldDirty: true });
+    }
+  }, [salaryValue, setValue]);
+
+  React.useEffect(() => {
+    // If Hourly Rate is provided, clear Salary
+    if (hourlyRateValue !== undefined && hourlyRateValue !== null && Number(hourlyRateValue) > 0) {
+      setValue("salary", "", { shouldValidate: true, shouldDirty: true });
+    }
+  }, [hourlyRateValue, setValue]);
+
   return (
     <Card>
       <CardHeader>
