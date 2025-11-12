@@ -12,21 +12,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, XCircle } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
-import { XCircle } from "lucide-react"; // Import XCircle for the error message
-import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea for error list
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Import Card components
-import { ImportableTimesheetEntry } from "@/lib/timesheet-types"; // Import the new type from lib/timesheet-types
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (timesheets: ImportableTimesheetEntry[]) => void; // Use the new type
+  onImport: (timesheets: ImportableTimesheetEntry[]) => void;
   employees: MockEmployee[];
 }
 
@@ -37,7 +36,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     columnMappings,
     parsedRawData,
     validatedData,
-    aggregationErrors, // Get aggregation errors
+    aggregationErrors,
     isParsing,
     allRowsValid,
     canImport,
@@ -45,18 +44,19 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     handleParseFile,
     handleColumnMappingChange,
     handleRevalidate,
+    reset,
   } = useTimesheetImport(employees, isOpen);
 
   const handleImportData = () => {
-    const validEntries = validatedData.filter(row => row._isValid);
+    const validEntries = validatedData.filter((row) => row._isValid);
     if (validEntries.length === 0) {
       showError("No valid timesheet entries to import.");
       return;
     }
 
-    const timesheetsToImport: ImportableTimesheetEntry[] = validEntries.map(row => ({
+    const timesheetsToImport: ImportableTimesheetEntry[] = validEntries.map((row) => ({
       employeeId: row.employeeId,
-      date: new Date(row.date), // Convert date string to Date object here
+      date: new Date(row.date),
       timeIn: row.timeIn,
       teaStart: row.teaStart,
       teaEnd: row.teaEnd,
@@ -65,26 +65,29 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       timeOut: row.timeOut,
     }));
 
-    console.log("ImportTimesheetDialog: Attempting to import these entries:", timesheetsToImport);
-    onImport(timesheetsToImport); // Call the prop function
+    onImport(timesheetsToImport);
     showSuccess(`${timesheetsToImport.length} timesheet entries imported successfully!`);
+    reset();
+    onClose();
+  };
+
+  const handleCancel = () => {
+    reset();
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      // Ignore automatic close attempts (outside interactions, file picker focus return).
-      // We only close via explicit actions: Cancel button or after import.
-      if (open) return;
-    }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Ignore automatic close attempts from Radix (file picker focus, outside clicks)
+        if (!open) return;
+      }}
+    >
       <DialogContent
         className="sm:max-w-[900px] max-h-[90vh] flex flex-col"
-        onInteractOutside={(e) => {
-          // Prevent the dialog from closing when clicking outside, or when OS file picker returns focus
-          e.preventDefault();
-        }}
+        onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
-          // Don't allow closing with Escape while parsing
           if (isParsing) e.preventDefault();
         }}
         onPointerDownOutside={(e) => {
@@ -93,10 +96,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             e.preventDefault();
           }
         }}
-        onCloseAutoFocus={(e) => {
-          // Prevent focus management from causing unintended closes or navigation
-          e.preventDefault();
-        }}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>Import Clock Times</DialogTitle>
@@ -107,9 +107,9 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             <span className="font-semibold text-blue-600">Note:</span> "Time Out" must be strictly later than "Time In".
           </DialogDescription>
         </DialogHeader>
-        
-        {/* Fixed content area: File upload and column mapping */}
-        <div className="flex flex-col gap-4 py-4"> {/* Removed flex-grow from this div */}
+
+        {/* File upload and column mapping */}
+        <div className="flex flex-col gap-4 py-4">
           <div className="flex items-center space-x-2">
             <Label htmlFor="timesheet-file" className="sr-only">
               Upload CSV
@@ -145,9 +145,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           <Card className="border-red-500 bg-red-50 text-red-800">
             <CardHeader>
               <CardTitle className="text-lg">Aggregation Errors ({aggregationErrors.length})</CardTitle>
-              <CardDescription>
-                The following entries could not be processed into daily timesheets.
-              </CardDescription>
+              <CardDescription>The following entries could not be processed into daily timesheets.</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-40 w-full rounded-md border p-4 bg-white text-gray-900">
@@ -164,22 +162,20 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           </Card>
         )}
 
-        {/* Scrollable content area: Validated data table */}
+        {/* Validated data table */}
         {validatedData.length > 0 && (
-          <ValidatedDataTable
-            validatedData={validatedData}
-            employees={employees}
-            allRowsValid={allRowsValid}
-          />
+          <ValidatedDataTable validatedData={validatedData} employees={employees} allRowsValid={allRowsValid} />
         )}
-        
+
         {/* Error message, always visible if present */}
         {validatedData.length > 0 && !allRowsValid && (
-          <p className="text-sm text-red-500 mt-2">Some rows contain errors and will not be imported. Hover over <XCircle className="inline h-3 w-3" /> for details.</p>
+          <p className="text-sm text-red-500 mt-2">
+            Some rows contain errors and will not be imported. Hover over <XCircle className="inline h-3 w-3" /> for details.
+          </p>
         )}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button type="button" onClick={handleImportData} disabled={!canImport}>

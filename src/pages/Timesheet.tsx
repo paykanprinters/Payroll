@@ -13,7 +13,7 @@ import { ImportableTimesheetEntry, TimesheetFormValues } from "@/lib/timesheet-t
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const Timesheet: React.FC = () => {
-  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
+  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets, isAuthenticated, isLoadingAuth } = usePayrollProcessor({ silent: true });
 
   const {
     timesheets,
