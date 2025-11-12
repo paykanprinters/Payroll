@@ -122,18 +122,25 @@ export const updateTimesheetStatusInSupabase = async (timesheetId: string, newSt
 };
 
 export const batchUpsertTimesheetsToSupabase = async (timesheetsToUpsert: TimesheetEntry[]): Promise<boolean> => {
+  // Convert to snake_case before sending to edge function
   const snakeCasePayloads = timesheetsToUpsert.map(convertTimesheetKeysToSnakeCase);
-  const { error } = await supabase
-    .from('timesheets')
-    .upsert(snakeCasePayloads, { onConflict: 'id' });
+
+  const { data, error } = await supabase.functions.invoke('batch-upsert-timesheets', {
+    body: { timesheets: snakeCasePayloads },
+  });
 
   if (error) {
-    console.error("timesheet-queries: Error batch upserting live timesheets:", error);
+    console.error("timesheet-queries: Error batch upserting via edge function:", error);
     showError(`Failed to import timesheets: ${error.message}`);
     return false;
-  } else {
+  }
+
+  if (data && typeof data.insertedOrUpdated === 'number') {
     return true;
   }
+
+  console.warn("timesheet-queries: Edge function responded without count; assuming success.");
+  return true;
 };
 
 export const fetchExistingTimesheetsForBatch = async (employeeIds: string[], dates: string[]): Promise<TimesheetEntry[]> => {

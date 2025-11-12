@@ -87,7 +87,7 @@ export const useToDosData = (
       setPendingCount(0);
       setIsLoadingToDos(false);
     }
-  }, [initialToDos, isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveToDos, employees]);
+  }, [initialToDos, isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveToDos]);
 
   const getEmployeeCustomId = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
