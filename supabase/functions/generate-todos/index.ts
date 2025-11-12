@@ -2,11 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { format, isPast, subMonths, isBefore, isWithinInterval, parseISO } from "https://esm.sh/date-fns@2.30.0";
 
-const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? '';
-const corsHeaders = {
-  'Access-Control-Allow-Origin': allowedOrigin,
+const getCorsHeaders = (origin: string | null) => ({
+  'Access-Control-Allow-Origin': origin || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+});
 
 // Define fields to check for incompleteness and generate To-Dos
 // IMPORTANT: These keys must match the snake_case column names in the Supabase 'employees' table
@@ -17,14 +16,10 @@ const fieldsToFlag = [
 
 serve(async (req) => {
   console.log('generate-todos: Function started processing request.');
+  const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  const origin = req.headers.get('Origin');
-  if (!allowedOrigin || origin !== allowedOrigin) {
-    console.error('generate-todos: Forbidden origin', origin);
-    return new Response(JSON.stringify({ error: 'Forbidden origin' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
