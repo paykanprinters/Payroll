@@ -157,7 +157,7 @@ export const generatePayrollSummaryReportContent = (
     `;
     filteredPayslips.forEach(p => {
       const emp = employees.find(e => e.id === p.employeeId);
-      const name = emp ? `${emp.firstName} ${emp.lastName}` : p.employeeId;
+      const name = emp ? `${emp.firstName} ${emp.lastName}` : "Unknown Employee";
       html += `
         <tr class="border-b">
           <td class="py-2 px-4">${name}</td>

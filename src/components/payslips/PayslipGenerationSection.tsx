@@ -183,6 +183,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     const options = {
       filename: `all-${mode}-payslips-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`,
       format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
+      orientation: 'portrait',
       documentType: 'payslip' as const,
     };
 
@@ -277,6 +278,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     const options = {
       filename: `all-payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`,
       format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
+      orientation: 'portrait',
       documentType: 'payslip' as const,
     };
 
