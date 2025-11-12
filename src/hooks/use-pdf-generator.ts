@@ -71,8 +71,15 @@ const computeDimensions = (options: PdfOptions) => {
 
 /* ---------- Styles and iframe helpers ---------- */
 
-const buildStyles = (contentWidthMm: number, contentMarginMm: number) => `
-  @page { margin: 0; }
+const buildStyles = (
+  contentWidthMm: number,
+  contentMarginMm: number,
+  format: "a4" | "letter" | "a5" = "a4",
+  orientation: "portrait" | "landscape" = "portrait"
+) => {
+  const cssFormat = format === "letter" ? "Letter" : format.toUpperCase();
+  return `
+  @page { size: ${cssFormat} ${orientation}; margin: 0; }
   body {
     margin: 0;
     padding: 0;
@@ -101,6 +108,7 @@ const buildStyles = (contentWidthMm: number, contentMarginMm: number) => `
   .html2pdf__page-break { break-before: page; page-break-before: always; }
   .pdf-page { page-break-inside: avoid; }
 `;
+}
 
 const createHiddenIframe = () => {
   const iframe = document.createElement("iframe");
@@ -319,7 +327,15 @@ export const usePdfGenerator = () => {
         initIframeDocument(iframeDoc, "PDF Content");
 
         const dims = computeDimensions(options);
-        injectPrintStyles(iframeDoc, buildStyles(dims.contentWidthMm, dims.contentMarginMm));
+        injectPrintStyles(
+          iframeDoc,
+          buildStyles(
+            dims.contentWidthMm,
+            dims.contentMarginMm,
+            options.format || "a4",
+            options.orientation || "portrait"
+          )
+        );
 
         const { root, readyPromise, timeoutId } = mountReactInIframe(iframeDoc, renderComponent);
 
@@ -402,7 +418,15 @@ export const usePdfGenerator = () => {
         initIframeDocument(iframeDoc, "Print Content");
 
         const dims = computeDimensions(options);
-        injectPrintStyles(iframeDoc, buildStyles(dims.contentWidthMm, dims.contentMarginMm));
+        injectPrintStyles(
+          iframeDoc,
+          buildStyles(
+            dims.contentWidthMm,
+            dims.contentMarginMm,
+            options.format || "a4",
+            options.orientation || "portrait"
+          )
+        );
 
         const { root, readyPromise, timeoutId } = mountReactInIframe(iframeDoc, renderComponent);
 
