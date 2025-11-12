@@ -43,19 +43,19 @@ export const calculateTimesheetMetrics = (
 
   if (!timeIn || !timeOut) {
     absent = true;
+    console.debug("[TimesheetMetrics] Absent entry detected", { timeIn, timeOut });
   } else {
     const totalShiftDuration = calculateTimeDifferenceInHours(timeIn, timeOut);
     const teaDuration = calculateTimeDifferenceInHours(data.teaStart || "", data.teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours(data.lunchStart || "", data.lunchEnd || "");
 
-    // Strict rule: subtract at least the configured unpaid break; if captured breaks exceed it, subtract the larger.
-    const configuredBreakHours = (opts?.breakDurationMinutes ?? 0) > 0 ? (opts!.breakDurationMinutes as number) / 60 : 0;
+    const configuredBreakHours =
+      (opts?.breakDurationMinutes ?? 0) > 0 ? (opts!.breakDurationMinutes as number) / 60 : 0;
     const capturedBreakHours = teaDuration + lunchDuration;
     const breakHoursToSubtract = Math.max(configuredBreakHours, capturedBreakHours);
 
     totalWorkHours = Math.max(0, totalShiftDuration - breakHoursToSubtract);
 
-    // Threshold for overtime: configured overtimeThresholdHours if given and > 0, else employee standard hours
     const thresholdHours =
       typeof opts?.overtimeThresholdHours === "number" && (opts!.overtimeThresholdHours as number) > 0
         ? (opts!.overtimeThresholdHours as number)
@@ -75,6 +75,35 @@ export const calculateTimesheetMetrics = (
     if (isBefore(actualTimeOut, expectedTimeOut)) {
       earlyDeparture = true;
     }
+
+    // Debug snapshot for this calculation
+    console.debug("[TimesheetMetrics] Calculation snapshot", {
+      inputs: {
+        timeIn,
+        timeOut,
+        teaStart: (data as any).teaStart || null,
+        teaEnd: (data as any).teaEnd || null,
+        lunchStart: (data as any).lunchStart || null,
+        lunchEnd: (data as any).lunchEnd || null,
+        breakDurationMinutes: opts?.breakDurationMinutes ?? 0,
+        overtimeThresholdHours: opts?.overtimeThresholdHours ?? null,
+        standardDailyHours,
+      },
+      computed: {
+        totalShiftDuration,
+        teaDuration,
+        lunchDuration,
+        configuredBreakHours,
+        capturedBreakHours,
+        breakHoursToSubtract,
+        totalWorkHours,
+        thresholdHours,
+        overtimeHours,
+        lateArrival,
+        earlyDeparture,
+        absent,
+      },
+    });
   }
 
   return { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent };
