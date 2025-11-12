@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,11 @@ interface InlineImportSectionProps {
 }
 
 const InlineImportSection: React.FC<InlineImportSectionProps> = ({ employees, onImport }) => {
+  useEffect(() => {
+    console.info("[InlineImportSection] Mounted");
+    return () => console.info("[InlineImportSection] Unmounted");
+  }, []);
+
   const {
     file,
     csvHeaders,
@@ -38,6 +43,10 @@ const InlineImportSection: React.FC<InlineImportSectionProps> = ({ employees, on
   } = useTimesheetImport(employees, true);
 
   const handleImportData = () => {
+    console.info("[InlineImportSection] Import button clicked", {
+      validatedRows: validatedData.length,
+      canImport,
+    });
     const validEntries = validatedData.filter((row) => row._isValid);
     if (validEntries.length === 0) {
       showError("No valid timesheet entries to import.");
@@ -55,6 +64,7 @@ const InlineImportSection: React.FC<InlineImportSectionProps> = ({ employees, on
       timeOut: row.timeOut,
     }));
 
+    console.info("[InlineImportSection] Import payload prepared", { count: timesheetsToImport.length });
     onImport(timesheetsToImport);
     showSuccess(`${timesheetsToImport.length} timesheet entries imported successfully!`);
     reset();
@@ -79,12 +89,16 @@ const InlineImportSection: React.FC<InlineImportSectionProps> = ({ employees, on
             type="file"
             accept=".csv"
             onChange={(e) => {
+              console.info("[InlineImportSection] File input onChange fired");
               e.stopPropagation();
               handleFileChange(e);
             }}
             className="flex-1"
           />
-          <Button type="button" onClick={handleParseFile} disabled={!file || isParsing}>
+          <Button type="button" onClick={() => {
+            console.info("[InlineImportSection] Parse button clicked", { hasFile: !!file });
+            handleParseFile();
+          }} disabled={!file || isParsing}>
             <UploadCloud className="mr-2 h-4 w-4" /> {isParsing ? "Parsing..." : "Parse File"}
           </Button>
         </div>
@@ -93,8 +107,14 @@ const InlineImportSection: React.FC<InlineImportSectionProps> = ({ employees, on
         <ColumnMappingSection
           csvHeaders={csvHeaders}
           columnMappings={columnMappings}
-          onColumnMappingChange={handleColumnMappingChange}
-          onRevalidate={handleRevalidate}
+          onColumnMappingChange={(key, value) => {
+            console.info("[InlineImportSection] Mapping change", { key, value });
+            handleColumnMappingChange(key, value);
+          }}
+          onRevalidate={() => {
+            console.info("[InlineImportSection] Revalidate clicked");
+            handleRevalidate();
+          }}
           parsedRawDataLength={parsedRawData.length}
         />
 
@@ -134,7 +154,10 @@ const InlineImportSection: React.FC<InlineImportSectionProps> = ({ employees, on
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={reset}>
+          <Button type="button" variant="outline" onClick={() => {
+            console.info("[InlineImportSection] Clear clicked");
+            reset();
+          }}>
             Clear
           </Button>
           <Button type="button" onClick={handleImportData} disabled={!canImport}>

@@ -6,7 +6,9 @@ import { format, parse, isValid, isAfter, min, max } from "date-fns";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 
-// Define fields for mapping from CSV. 'timeIn' and 'timeOut' are derived by aggregation.
+// DEBUG: Hook init
+console.info("[TimesheetImport] Hook module loaded");
+
 export const requiredFields = [
   { key: "personalId", label: "Personal ID (from Report)" },
   { key: "combinedDateTime", label: "Date And Time (from Report)" },
@@ -22,15 +24,15 @@ export const optionalFields = [
 export type ColumnMappings = { [key: string]: string | undefined };
 
 export interface ParsedTimesheetRow {
-  employeeId: string; // internal employee.id
-  csvPersonalId: string; // Personal ID from CSV
-  date: string; // YYYY-MM-DD
-  timeIn: string; // HH:mm
+  employeeId: string;
+  csvPersonalId: string;
+  date: string;
+  timeIn: string;
   teaStart?: string;
   teaEnd?: string;
   lunchStart?: string;
   lunchEnd?: string;
-  timeOut: string; // HH:mm
+  timeOut: string;
   _isValid: boolean;
   _errors: string[];
 }
@@ -42,7 +44,6 @@ export interface AggregationError {
   error: string;
 }
 
-// Helper to extract date and time parts from a combined string (e.g., "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DD HH:mm")
 const extractDateAndTimeParts = (value: string) => {
   const dateTimeRegex = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/;
   const match = value.match(dateTimeRegex);
@@ -190,13 +191,11 @@ const aggregateClockTimes = (
       if (punches.length > 0) {
         const earliestPunch = min(punches);
         const latestPunch = max(punches);
-
         const timeIn = format(earliestPunch, "HH:mm");
         const timeOut = format(latestPunch, "HH:mm");
 
         const employeePersonalId = employees.find((e) => e.id === employeeId)?.personalId;
 
-        // Optional fields: pick a sample row for the same employee/date (assumed consistent per day)
         const sampleRowForOptionalFields = data.find((r) => {
           const rowPersonalId = currentMappings.personalId ? String(r[currentMappings.personalId] || "").trim() : "";
           const rowCombinedDateTime = currentMappings.combinedDateTime ? String(r[currentMappings.combinedDateTime] || "").trim() : "";
@@ -234,6 +233,12 @@ const aggregateClockTimes = (
         });
       }
     });
+  });
+
+  // DEBUG: aggregation summary
+  console.debug("[TimesheetImport] Aggregation summary", {
+    rowsAggregated: aggregatedRows.length,
+    errorsCount: currentAggregationErrors.length,
   });
 
   return { aggregatedRows, errors: currentAggregationErrors };
@@ -280,12 +285,19 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
         newMappings[field.key] = foundHeader.trim();
       }
     });
+    console.info("[TimesheetImport] Auto-mapped columns", newMappings);
     setColumnMappings((prev) => ({ ...prev, ...newMappings }));
   }, []);
 
   const { aggregatedRows, aggregationErrors, validatedData } = useMemo(() => {
     const { aggregatedRows, errors } = aggregateClockTimes(parsedRawData, columnMappings, employees);
-    const validated = aggregatedRows.map((row) => validateRow({ ...row, _isValid: true, _errors: [] } as ParsedTimesheetRow));
+    const validated = aggregatedRows.map((row) =>
+      validateRow({ ...row, _isValid: true, _errors: [] } as ParsedTimesheetRow)
+    );
+    console.debug("[TimesheetImport] Validation summary", {
+      validatedCount: validated.length,
+      allValid: validated.every((r) => r._isValid),
+    });
     return { aggregatedRows, aggregationErrors: errors, validatedData: validated };
   }, [parsedRawData, columnMappings, employees]);
 
@@ -294,9 +306,14 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] || null;
+    console.info("[TimesheetImport] File input change", {
+      filesLength: event.target.files?.length || 0,
+      fileName: selectedFile?.name,
+      fileType: selectedFile?.type,
+      fileSize: selectedFile?.size,
+    });
     setFile(selectedFile);
     if (!selectedFile) {
-      // Clear state if user clears selection
       setCsvHeaders([]);
       setParsedRawData([]);
       showError("Please select a CSV file to import.");
@@ -308,11 +325,17 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
       showError("Please select a CSV file to import.");
       return;
     }
+    console.info("[TimesheetImport] Starting parse of file", { name: file.name, type: file.type, size: file.size });
     setIsParsing(true);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
+        console.info("[TimesheetImport] Parse complete", {
+          headers: results.meta.fields || [],
+          rows: results.data?.length || 0,
+          errors: results.errors?.length || 0,
+        });
         const headers = results.meta.fields || [];
         setCsvHeaders(headers);
         setParsedRawData(results.data);
@@ -338,12 +361,18 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
   }, [file, autoMapColumns]);
 
   const handleColumnMappingChange = useCallback((key: string, value: string) => {
+    console.info("[TimesheetImport] Column mapping change", { key, value });
     setColumnMappings((prev) => {
       return { ...prev, [key]: value === "none" ? undefined : value };
     });
   }, []);
 
   const handleRevalidate = useCallback(() => {
+    console.info("[TimesheetImport] Manual revalidate triggered", {
+      parsedRows: parsedRawData.length,
+      aggregationErrors: aggregationErrors.length,
+      canImport,
+    });
     if (parsedRawData.length === 0) {
       showError("No data parsed yet. Please upload and parse a file first.");
       return;
@@ -358,6 +387,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
   }, [parsedRawData, aggregationErrors, canImport]);
 
   const reset = useCallback(() => {
+    console.info("[TimesheetImport] Reset called — clearing importer state");
     setFile(null);
     setCsvHeaders([]);
     setParsedRawData([]);
