@@ -22,7 +22,7 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 interface MainLayoutProps {}
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
-  const { isAuthenticated, logout, user, isLoadingAuth } = useAuth();
+  const { isAuthenticated, signOut, user, isLoadingAuth } = useAuth();
   const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, pendingCount } = usePayrollProcessor();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
@@ -104,7 +104,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
                 <span>Account Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
+              <DropdownMenuItem onClick={signOut}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

@@ -180,7 +180,6 @@ const getHtml2PdfOptions = (
     html2canvas: {
       scale: 2,
       logging: false,
-      letterRendering: false,
       useCORS: true,
       windowWidth: mmToPx(contentWidthMm),
       scrollY: 0,
@@ -199,7 +198,7 @@ const drawBordersForAllPages = (pdf: jsPDF, documentType: PdfOptions["documentTy
   const borderColor = "#000000";
   const borderWidth = 0.5;
 
-  const pageCount = pdf.internal.getNumberOfPages();
+  const pageCount = pdf.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     pdf.setPage(i);
     const pageW = pdf.internal.pageSize.getWidth();
@@ -263,7 +262,6 @@ const renderBulkAsPages = async (
     const canvas = await html2canvas(block, {
       scale: 2,
       logging: false,
-      letterRendering: false,
       useCORS: true,
       windowWidth: viewportWidthPx,
       scrollY: 0,
