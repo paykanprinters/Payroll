@@ -73,13 +73,9 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        if (isParsing) {
-          showError("Please wait for the file parsing to complete before closing.");
-          return;
-        }
-        onClose();
-      }
+      // Ignore automatic close attempts (outside interactions, file picker focus return).
+      // We only close via explicit actions: Cancel button or after import.
+      if (open) return;
     }}>
       <DialogContent
         className="sm:max-w-[900px] max-h-[90vh] flex flex-col"
