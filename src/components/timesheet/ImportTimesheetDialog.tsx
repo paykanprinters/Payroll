@@ -93,6 +93,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
             e.preventDefault();
           }
         }}
+        onCloseAutoFocus={(e) => {
+          // Prevent focus management from causing unintended closes or navigation
+          e.preventDefault();
+        }}
       >
         <DialogHeader>
           <DialogTitle>Import Clock Times</DialogTitle>
@@ -114,12 +118,15 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
               id="timesheet-file"
               type="file"
               accept=".csv"
-              onChange={handleFileChange}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleFileChange(e);
+              }}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
               className="flex-1"
             />
-            <Button onClick={handleParseFile} disabled={!file || isParsing}>
+            <Button type="button" onClick={handleParseFile} disabled={!file || isParsing}>
               <UploadCloud className="mr-2 h-4 w-4" /> {isParsing ? "Parsing..." : "Parse File"}
             </Button>
           </div>
@@ -172,10 +179,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-          Cancel
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
           </Button>
-          <Button onClick={handleImportData} disabled={!canImport}>
+          <Button type="button" onClick={handleImportData} disabled={!canImport}>
             Import Valid Entries
           </Button>
         </DialogFooter>
