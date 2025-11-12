@@ -81,8 +81,16 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         onClose();
       }
     }}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-[900px] max-h-[90vh] flex flex-col"
+        onInteractOutside={(e) => {
+          // Prevent the dialog from closing when clicking outside, or when OS file picker returns focus
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          // Don't allow closing with Escape while parsing
+          if (isParsing) e.preventDefault();
+        }}
         onPointerDownOutside={(e) => {
           const target = e.target as HTMLElement;
           if (target.closest("[data-radix-popper-content]") || target.closest(".radix-select-content")) {
@@ -111,6 +119,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
               type="file"
               accept=".csv"
               onChange={handleFileChange}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
               className="flex-1"
             />
             <Button onClick={handleParseFile} disabled={!file || isParsing}>
