@@ -122,24 +122,19 @@ export const updateTimesheetStatusInSupabase = async (timesheetId: string, newSt
 };
 
 export const batchUpsertTimesheetsToSupabase = async (timesheetsToUpsert: TimesheetEntry[]): Promise<boolean> => {
-  // Convert to snake_case before sending to edge function
+  // Convert to snake_case and upsert directly to respect existing RLS policies
   const snakeCasePayloads = timesheetsToUpsert.map(convertTimesheetKeysToSnakeCase);
 
-  const { data, error } = await supabase.functions.invoke('batch-upsert-timesheets', {
-    body: { timesheets: snakeCasePayloads },
-  });
+  const { error } = await supabase
+    .from('timesheets')
+    .upsert(snakeCasePayloads, { onConflict: 'id' });
 
   if (error) {
-    console.error("timesheet-queries: Error batch upserting via edge function:", error);
+    console.error("timesheet-queries: Error batch upserting live timesheets:", error);
     showError(`Failed to import timesheets: ${error.message}`);
     return false;
   }
 
-  if (data && typeof data.insertedOrUpdated === 'number') {
-    return true;
-  }
-
-  console.warn("timesheet-queries: Edge function responded without count; assuming success.");
   return true;
 };
 
