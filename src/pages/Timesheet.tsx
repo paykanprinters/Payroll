@@ -14,7 +14,7 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const Timesheet: React.FC = () => {
   // Use silent mode to avoid global side effects (e.g., To-Dos refresh) during imports
-  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets, isAuthenticated, isLoadingAuth } = usePayrollProcessor({ silent: true });
+  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets, isAuthenticated, isLoadingAuth, workHoursSettings } = usePayrollProcessor({ silent: true });
 
   const {
     timesheets,
@@ -28,7 +28,7 @@ const Timesheet: React.FC = () => {
     cancelEditing,
     isLeaveDay,
     addTimesheetBatch,
-  } = useTimesheetData({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  } = useTimesheetData({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth, workHoursSettings });
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
   const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = React.useState(false);

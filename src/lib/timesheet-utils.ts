@@ -23,7 +23,8 @@ export const calculateTimeDifferenceInHours = (start: string, end: string): numb
  */
 export const calculateTimesheetMetrics = (
   data: TimesheetFormValues | ImportableTimesheetEntry,
-  employee?: MockEmployee
+  employee?: MockEmployee,
+  opts?: { breakDurationMinutes?: number }
 ) => {
   const standardDailyHours = employee?.standardDailyHours || 8; // Default to 8 hours
 
@@ -43,7 +44,13 @@ export const calculateTimesheetMetrics = (
     const teaDuration = calculateTimeDifferenceInHours(data.teaStart || "", data.teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours(data.lunchStart || "", data.lunchEnd || "");
 
-    totalWorkHours = totalShiftDuration - teaDuration - lunchDuration;
+    // If no explicit tea/lunch captured, enforce configured break duration (unpaid)
+    const fallbackBreakHours =
+      teaDuration === 0 && lunchDuration === 0 && (opts?.breakDurationMinutes ?? 0) > 0
+        ? (opts!.breakDurationMinutes as number) / 60
+        : 0;
+
+    totalWorkHours = Math.max(0, totalShiftDuration - teaDuration - lunchDuration - fallbackBreakHours);
     overtimeHours = Math.max(0, totalWorkHours - standardDailyHours);
 
     // Late Arrival / Early Departure (simplified logic)

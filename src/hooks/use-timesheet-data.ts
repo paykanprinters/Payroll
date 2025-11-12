@@ -15,6 +15,7 @@ import {
   batchUpsertTimesheetsToSupabase,
   fetchExistingTimesheetsForBatch,
 } from "@/integrations/supabase/timesheet-queries"; // Import new Supabase query functions
+import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 
 interface UseTimesheetDataProps {
   initialTimesheets: TimesheetEntry[];
@@ -23,9 +24,18 @@ interface UseTimesheetDataProps {
   isMockDataEnabled: boolean;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
+  workHoursSettings?: WorkHoursSettings | null;
 }
 
-export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseTimesheetDataProps) => {
+export const useTimesheetData = ({
+  initialTimesheets,
+  employees,
+  leaveRecords,
+  isMockDataEnabled,
+  isAuthenticated,
+  isLoadingAuth,
+  workHoursSettings,
+}: UseTimesheetDataProps) => {
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]); // Initialize as empty
   const [isEditing, setIsEditing] = useState(false);
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetEntry | null>(null);
@@ -139,7 +149,11 @@ export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, i
       return;
     }
 
-    const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(data, employee);
+    const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
+      data,
+      employee,
+      { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+    );
     const formattedDate = format(data.date, "yyyy-MM-dd");
 
     const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
@@ -215,7 +229,7 @@ export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, i
     }
     setIsEditing(false);
     setEditingTimesheet(null);
-  }, [employees, isEditing, editingTimesheet, calculateTimesheetMetrics, isMockDataEnabled, timesheets, upsertLiveTimesheet]);
+  }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, workHoursSettings]);
 
   const addTimesheetBatch = useCallback(async (newEntries: ImportableTimesheetEntry[]) => {
     if (newEntries.length === 0) {
@@ -237,7 +251,11 @@ export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, i
             return;
           }
 
-          const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(data, employee);
+          const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
+            data,
+            employee,
+            { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+          );
           const formattedDate = format(data.date, "yyyy-MM-dd");
           const mapKey = `${data.employeeId}-${formattedDate}`;
 
@@ -299,7 +317,11 @@ export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, i
           return;
         }
 
-        const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(data, employee);
+        const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
+          data,
+          employee,
+          { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+        );
         const formattedDate = format(data.date, "yyyy-MM-dd");
         const mapKey = `${data.employeeId}-${formattedDate}`;
 
@@ -344,8 +366,7 @@ export const useTimesheetData = ({ initialTimesheets, employees, leaveRecords, i
         }
       }
     }
-  }, [employees, calculateTimesheetMetrics, isMockDataEnabled, fetchLiveTimesheets, timesheets]);
-
+  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, workHoursSettings]);
 
   const deleteTimesheet = useCallback(async (id: string) => {
     if (isMockDataEnabled) {
