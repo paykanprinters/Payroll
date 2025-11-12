@@ -32,29 +32,32 @@ function Login() {
   const [logoFit, setLogoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
 
   React.useEffect(() => {
-    // Public read policy exists for company_details, so this can run without auth
-    supabase
-      .from("company_details")
-      .select("companylegalname, companytradingname, logourl, logowidth, logoheight, logofit")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) {
-          console.warn("Login: Could not load company details:", error.message);
-          return;
-        }
-        if (data) {
-          const name = data.companylegalname ?? data.companytradingname ?? "Your Company";
-          setCompanyName(name);
-          if (data.logourl) setLogoUrl(data.logourl);
-          if (typeof data.logowidth === "number") setLogoWidth(data.logowidth);
-          if (typeof data.logoheight === "number") setLogoHeight(data.logoheight);
-          if (typeof data.logofit === "string") {
-            const fit = data.logofit as "contain" | "cover" | "fill" | "none" | "scale-down";
-            setLogoFit(fit);
-          }
-        }
-      });
+    const loadBranding = async () => {
+      const { data, error } = await supabase.functions.invoke("get-branding");
+
+      if (error) {
+        console.warn("Login: Could not load branding:", error.message);
+        return;
+      }
+
+      if (data) {
+        const name: string = (data.companyName as string) ?? "Your Company";
+        setCompanyName(name);
+
+        const url = data.logoUrl as string | null;
+        if (url) setLogoUrl(url);
+
+        const w = data.logoWidth as number | null;
+        const h = data.logoHeight as number | null;
+        if (typeof w === "number") setLogoWidth(w);
+        if (typeof h === "number") setLogoHeight(h);
+
+        const fit = (data.logoFit as "contain" | "cover" | "fill" | "none" | "scale-down") ?? "contain";
+        setLogoFit(fit);
+      }
+    };
+
+    loadBranding();
   }, []);
 
   return (
