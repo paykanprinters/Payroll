@@ -1,6 +1,6 @@
 import { format, parse, isBefore, isAfter, eachDayOfInterval, isWeekend } from "date-fns";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
-import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types"; // Import types from new file
+import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types";
 
 /**
  * Calculates the time difference between two HH:mm time strings in hours.
@@ -8,8 +8,8 @@ import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-t
  */
 export const calculateTimeDifferenceInHours = (start: string, end: string): number => {
   if (!start || !end) return 0;
-  const startDate = parse(start, 'HH:mm', new Date());
-  const endDate = parse(end, 'HH:mm', new Date());
+  const startDate = parse(start, "HH:mm", new Date());
+  const endDate = parse(end, "HH:mm", new Date());
   if (isBefore(endDate, startDate)) {
     // If end time is before start time, assume it's on the next day for calculation
     endDate.setDate(endDate.getDate() + 1);
@@ -20,6 +20,10 @@ export const calculateTimeDifferenceInHours = (start: string, end: string): numb
 
 /**
  * Calculates various metrics for a timesheet entry.
+ * - Always subtract at least the configured unpaid break (breakDurationMinutes)
+ *   and if captured tea/lunch breaks are longer, subtract the larger amount.
+ * - Overtime is computed from net paid hours using overtimeThresholdHours when provided,
+ *   otherwise falling back to employee.standardDailyHours (default 8).
  */
 export const calculateTimesheetMetrics = (
   data: TimesheetFormValues | ImportableTimesheetEntry,
@@ -44,33 +48,30 @@ export const calculateTimesheetMetrics = (
     const teaDuration = calculateTimeDifferenceInHours(data.teaStart || "", data.teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours(data.lunchStart || "", data.lunchEnd || "");
 
-    // Captured breaks take precedence; if none captured, enforce configured fallback break (unpaid)
+    // Strict rule: subtract at least the configured unpaid break; if captured breaks exceed it, subtract the larger.
+    const configuredBreakHours = (opts?.breakDurationMinutes ?? 0) > 0 ? (opts!.breakDurationMinutes as number) / 60 : 0;
     const capturedBreakHours = teaDuration + lunchDuration;
-    const fallbackBreakHours =
-      capturedBreakHours === 0 && (opts?.breakDurationMinutes ?? 0) > 0
-        ? (opts!.breakDurationMinutes as number) / 60
-        : 0;
-
-    const breakHoursToSubtract = capturedBreakHours > 0 ? capturedBreakHours : fallbackBreakHours;
+    const breakHoursToSubtract = Math.max(configuredBreakHours, capturedBreakHours);
 
     totalWorkHours = Math.max(0, totalShiftDuration - breakHoursToSubtract);
 
-    // Use configured overtime threshold if present; otherwise employee standard daily hours
-    const thresholdHours = typeof opts?.overtimeThresholdHours === "number" && opts!.overtimeThresholdHours! > 0
-      ? (opts!.overtimeThresholdHours as number)
-      : standardDailyHours;
+    // Threshold for overtime: configured overtimeThresholdHours if given and > 0, else employee standard hours
+    const thresholdHours =
+      typeof opts?.overtimeThresholdHours === "number" && (opts!.overtimeThresholdHours as number) > 0
+        ? (opts!.overtimeThresholdHours as number)
+        : standardDailyHours;
 
     overtimeHours = Math.max(0, totalWorkHours - thresholdHours);
 
     // Late Arrival / Early Departure (simplified logic)
-    const expectedTimeIn = parse("09:00", 'HH:mm', new Date());
-    const actualTimeIn = parse(timeIn, 'HH:mm', new Date());
+    const expectedTimeIn = parse("09:00", "HH:mm", new Date());
+    const actualTimeIn = parse(timeIn, "HH:mm", new Date());
     if (isAfter(actualTimeIn, expectedTimeIn)) {
       lateArrival = true;
     }
 
-    const expectedTimeOut = parse("17:00", 'HH:mm', new Date());
-    const actualTimeOut = parse(timeOut, 'HH:mm', new Date());
+    const expectedTimeOut = parse("17:00", "HH:mm", new Date());
+    const actualTimeOut = parse(timeOut, "HH:mm", new Date());
     if (isBefore(actualTimeOut, expectedTimeOut)) {
       earlyDeparture = true;
     }
