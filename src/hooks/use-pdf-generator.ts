@@ -259,8 +259,14 @@ const renderBulkAsPages = async (
   for (let i = 0; i < pageBlocks.length; i++) {
     const block = pageBlocks[i];
 
+    // Dynamically lower scale for very tall pages to avoid exceeding browser canvas limits
+    const blockHeightPx = block.offsetHeight;
+    const baseScale = 2;
+    const MAX_CANVAS_DIM = 16384; // safety cap for max canvas dimension
+    const dynamicScale = Math.min(baseScale, MAX_CANVAS_DIM / Math.max(blockHeightPx, viewportWidthPx));
+
     const canvas = await html2canvas(block, {
-      scale: 2,
+      scale: dynamicScale,
       logging: false,
       useCORS: true,
       windowWidth: viewportWidthPx,

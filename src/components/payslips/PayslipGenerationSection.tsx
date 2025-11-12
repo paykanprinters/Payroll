@@ -110,7 +110,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     };
 
     if (action === 'download') {
-      await generatePdf(renderComponent, options);
+      await generatePdf(renderComponent, options, true);
     } else {
       await printPdf(renderComponent, options);
     }
@@ -187,7 +187,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     };
 
     if (action === 'download') {
-      await generatePdf(renderComponent, options);
+      await generatePdf(renderComponent, options, true);
       showSuccess(`All ${mode} payslips with prepended reports downloaded successfully!`);
     } else {
       await printPdf(renderComponent, options);
@@ -281,7 +281,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     };
 
     if (action === 'download') {
-      await generatePdf(renderComponent, options);
+      await generatePdf(renderComponent, options, true);
       showSuccess(`All payslips for the current period downloaded successfully!`);
     } else {
       await printPdf(renderComponent, options);
