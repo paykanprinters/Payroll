@@ -18,15 +18,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MainLayoutProps {}
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
-  const { isAuthenticated, signOut, user, isLoadingAuth } = useAuth();
+  const { isAuthenticated, user, isLoadingAuth } = useAuth();
   const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, pendingCount } = usePayrollProcessor();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
 
   const gridColsClass = isCollapsed
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"
@@ -104,7 +109,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
                 <span>Account Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut}>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
