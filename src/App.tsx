@@ -47,7 +47,9 @@ const App = () => {
                   <Route path="/vacation-absence" element={<VacationAbsence />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/reports" element={<Reports />} />
-                  <Route path="/settings/*" element={<Settings />} />
+                  <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
+                    <Route path="/settings/*" element={<Settings />} />
+                  </Route>
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Route>

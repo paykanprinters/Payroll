@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? '*';
+const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? '';
 const corsHeaders = {
   'Access-Control-Allow-Origin': allowedOrigin,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -33,7 +33,7 @@ serve(async (req) => {
   }
 
   const origin = req.headers.get('Origin');
-  if (allowedOrigin !== '*' && origin !== allowedOrigin) {
+  if (!allowedOrigin || origin !== allowedOrigin) {
     return new Response(JSON.stringify({ error: 'Forbidden origin' }), { status: 403, headers: corsHeaders });
   }
 
@@ -159,7 +159,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Unhandled error:', error);
-    return new Response(JSON.stringify({ error: error.message ?? 'Unknown error' }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

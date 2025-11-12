@@ -2,8 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { format, isPast, subMonths, isBefore, isWithinInterval, parseISO } from "https://esm.sh/date-fns@2.30.0";
 
+const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? '';
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': allowedOrigin,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -11,16 +12,19 @@ const corsHeaders = {
 // IMPORTANT: These keys must match the snake_case column names in the Supabase 'employees' table
 const fieldsToFlag = [
   { key: "personal_id", label: "Personal ID (Clock-in)", level: "critical" },
-  { key: "id_number", label: "National ID Number", level: "critical" },
   { key: "phone_number", label: "Mobile Number", level: "warning" },
-  { key: "tax_reference_number", label: "Tax Reference Number", level: "critical" },
-  { key: "iban_number", label: "Bank Account Number", level: "critical" },
 ];
 
 serve(async (req) => {
   console.log('generate-todos: Function started processing request.');
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const origin = req.headers.get('Origin');
+  if (!allowedOrigin || origin !== allowedOrigin) {
+    console.error('generate-todos: Forbidden origin', origin);
+    return new Response(JSON.stringify({ error: 'Forbidden origin' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
@@ -59,7 +63,7 @@ serve(async (req) => {
     // Fetch all necessary data from Supabase
     const { data: employees, error: employeesError } = await supabaseAdmin
       .from('employees')
-      .select('id, first_name, last_name, personal_id, id_number, phone_number, tax_reference_number, iban_number, ignored_incomplete_fields');
+      .select('id, first_name, last_name, personal_id, phone_number, ignored_incomplete_fields');
     if (employeesError) throw employeesError;
     console.log(`generate-todos: Fetched ${employees.length} employees.`);
 
@@ -416,7 +420,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('generate-todos: Unhandled error in Edge Function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
