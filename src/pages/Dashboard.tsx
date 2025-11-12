@@ -152,7 +152,7 @@ const Dashboard: React.FC = () => {
     };
   }, [loadDashboardData, companyDetails]);
 
-  if (isLoadingSettings || !visibleWidgets || isLoadingPayCycleSettings || isLoadingPayslipDesignSettings) {
+  if (isLoadingSettings || !visibleWidgets || isLoadingPayslipDesignSettings) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -171,6 +171,19 @@ const Dashboard: React.FC = () => {
         />
       )}
 
+      {visibleWidgets.payrollRunCard && (
+        <PayrollRunCard
+          employees={employees}
+          companyDetails={companyDetails}
+          payCycleType={payCycleSettings?.payCycleType ?? 'Weekly'}
+          cutOffDay={payCycleSettings?.cutOffDay ?? 5}
+          payDayOffset={payCycleSettings?.payDayOffset ?? 0}
+          runPayrollProcess={runPayrollProcess}
+          calculateSinglePayslipPreview={calculateSinglePayslipPreview}
+          payslipDesignSettings={payslipDesignSettings}
+        />
+      )}
+
       {visibleWidgets.toDoListCard && <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />}
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
@@ -183,18 +196,6 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
-      {visibleWidgets.payrollRunCard && payCycleSettings && (
-        <PayrollRunCard
-          employees={employees}
-          companyDetails={companyDetails}
-          payCycleType={payCycleSettings.payCycleType}
-          cutOffDay={payCycleSettings.cutOffDay}
-          payDayOffset={payCycleSettings.payDayOffset}
-          runPayrollProcess={runPayrollProcess}
-          calculateSinglePayslipPreview={calculateSinglePayslipPreview}
-          payslipDesignSettings={payslipDesignSettings}
-        />
-      )}
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         {visibleWidgets.employeeJobTitleDistributionChart && (
