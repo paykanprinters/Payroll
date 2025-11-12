@@ -6,14 +6,14 @@ import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button";
-import { UploadCloud, CalendarDays } from "lucide-react";
-import TimesheetDebugLogger from "@/components/timesheet/TimesheetDebugLogger";
-import InlineImportSection from "@/components/timesheet/InlineImportSection";
+import { UploadCloud } from "lucide-react";
+import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
-import { ImportableTimesheetEntry, TimesheetFormValues } from "@/lib/timesheet-types"; // Import from lib/timesheet-types
+import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const Timesheet: React.FC = () => {
+  // Use silent mode to avoid global side effects (e.g., To-Dos refresh) during imports
   const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets, isAuthenticated, isLoadingAuth } = usePayrollProcessor({ silent: true });
 
   const {
@@ -30,7 +30,7 @@ const Timesheet: React.FC = () => {
     addTimesheetBatch,
   } = useTimesheetData({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-  // Use inline importer instead of dialog to ensure stable upload behavior
+  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
   const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = React.useState(false);
   const [selectedEmployeeIdForWeeklyEditor, setSelectedEmployeeIdForWeeklyEditor] = React.useState<string>("");
   const [selectedDateForWeeklyEditor, setSelectedDateForWeeklyEditor] = React.useState<string>("");
@@ -47,15 +47,19 @@ const Timesheet: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <TimesheetDebugLogger />
       <h1 className="text-3xl font-bold">Timesheet Management</h1>
       <p className="text-lg text-muted-foreground">
         Accurately track employee working hours, breaks, and calculate payroll-related metrics.
       </p>
 
-      {/* Inline importer (CSV upload + parse + mapping + import) */}
-      <InlineImportSection employees={employees} onImport={handleImportTimesheets} />
+      {/* Modal trigger */}
+      <div className="flex justify-end gap-2">
+        <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
+          <UploadCloud className="mr-2 h-4 w-4" /> Import Clock Times
+        </Button>
+      </div>
 
+      {/* Timesheet entry form */}
       <Card>
         <CardHeader>
           <CardTitle>{isEditing ? "Edit Timesheet Entry" : "Record Daily Time"}</CardTitle>
@@ -75,6 +79,7 @@ const Timesheet: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Timesheet table */}
       <TimesheetTable
         timesheets={timesheets}
         employees={employees}
@@ -84,18 +89,26 @@ const Timesheet: React.FC = () => {
         onEmployeeClick={handleEmployeeClick}
       />
 
+      {/* Module notes */}
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Timesheet Module Notes:</h3>
         <ul className="list-disc list-inside text-sm space-y-1">
-          <li>**Automated Calculations**: Total work hours, overtime, late/early flags, and absenteeism are calculated dynamically based on entered times.</li>
-          <li>**Approval Workflow**: Timesheets can transition through Draft, Submitted, Approved, and Locked states. Only Draft and Submitted entries are editable.</li>
-          <li>**Integration Points**: In a full system, this module would feed data directly into the payroll engine for accurate salary and overtime calculations. It would also check against the leave module for approved absences.</li>
-          <li>**Mock Data**: All data is currently stored in your browser's local storage. Enable mock data in settings to populate initial entries.</li>
+          <li>Automated Calculations: Total work hours, overtime, late/early flags, and absenteeism are calculated dynamically based on entered times.</li>
+          <li>Approval Workflow: Timesheets can transition through Draft, Submitted, Approved, and Locked states. Only Draft and Submitted entries are editable.</li>
+          <li>Integration Points: In a full system, this module would feed data directly into the payroll engine for accurate salary and overtime calculations. It would also check against the leave module for approved absences.</li>
+          <li>Mock Data: All data is currently stored in your browser's local storage. Enable mock data in settings to populate initial entries.</li>
         </ul>
       </div>
 
-      {/* Dialog importer removed for reliability; using inline importer above */}
+      {/* Import dialog modal */}
+      <ImportTimesheetDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImport={handleImportTimesheets}
+        employees={employees}
+      />
 
+      {/* Weekly editor modal */}
       {isWeeklyEditorOpen && (
         <WeeklyTimesheetEditorDialog
           isOpen={isWeeklyEditorOpen}
