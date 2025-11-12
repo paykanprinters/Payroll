@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+import { format, parse, isWithinInterval, startOfWeek, endOfWeek } from "date-fns";
 import { MockEmployee, TimesheetEntry, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { v4 as uuidv4 } from 'uuid';
-import { calculateTimesheetMetrics, isLeaveDay } from "@/lib/timesheet-utils";
-import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types"; // Import types from new file
+import { calculateTimesheetMetrics, isLeaveDay, computeWeeklyIncrementalOvertimeForEntry } from "@/lib/timesheet-utils";
+import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import {
   fetchTimesheetsFromSupabase,
   upsertTimesheetToSupabase,
@@ -14,7 +14,7 @@ import {
   updateTimesheetStatusInSupabase,
   batchUpsertTimesheetsToSupabase,
   fetchExistingTimesheetsForBatch,
-} from "@/integrations/supabase/timesheet-queries"; // Import new Supabase query functions
+} from "@/integrations/supabase/timesheet-queries";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 
 interface UseTimesheetDataProps {
@@ -36,12 +36,15 @@ export const useTimesheetData = ({
   isLoadingAuth,
   workHoursSettings,
 }: UseTimesheetDataProps) => {
-  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]); // Initialize as empty
+  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetEntry | null>(null);
   const [isLoadingTimesheets, setIsLoadingTimesheets] = useState(true);
 
-  // --- Live Timesheet Data Management (Supabase) ---
+  const weeklyThreshold = (workHoursSettings?.overtimeThresholdHours && workHoursSettings.overtimeThresholdHours > 0)
+    ? workHoursSettings.overtimeThresholdHours
+    : 45; // default 45h per your requirement
+
   const fetchLiveTimesheets = useCallback(async () => {
     setIsLoadingTimesheets(true);
     try {
@@ -69,7 +72,7 @@ export const useTimesheetData = ({
         showSuccess("Timesheet saved successfully!");
       } else {
         showError("Timesheet saved, but data could not be retrieved. Please refresh.");
-        fetchLiveTimesheets(); // Refetch to ensure consistency
+        fetchLiveTimesheets();
       }
     } finally {
       dismissToast(toastId);
@@ -102,7 +105,7 @@ export const useTimesheetData = ({
         showSuccess(`Timesheet status updated to ${newStatus}!`);
       } else {
         showError("Timesheet status updated, but data could not be retrieved. Please refresh.");
-        fetchLiveTimesheets(); // Refetch to ensure consistency
+        fetchLiveTimesheets();
       }
     } finally {
       dismissToast(toastId);
@@ -110,21 +113,17 @@ export const useTimesheetData = ({
     }
   }, [fetchLiveTimesheets]);
 
-  // Effect to load data based on mockDataEnabled status
   useEffect(() => {
     if (isLoadingAuth) {
-      setIsLoadingTimesheets(true); // Keep loading true while auth is loading
+      setIsLoadingTimesheets(true);
       return;
     }
-
     if (isMockDataEnabled) {
-      // Set mock data directly. The initialTimesheets prop is now a stable reference from usePayrollProcessor.
       setTimesheets(initialTimesheets);
       setIsLoadingTimesheets(false);
     } else if (isAuthenticated) {
       fetchLiveTimesheets();
     } else {
-      // Not mock data, not authenticated, and auth is done loading
       setTimesheets([]);
       setIsLoadingTimesheets(false);
     }
@@ -141,40 +140,46 @@ export const useTimesheetData = ({
   }, [employees]);
 
   const addOrUpdateTimesheet = useCallback(async (data: TimesheetFormValues) => {
-    console.log("addOrUpdateTimesheet: Received data:", data);
     const employee = employees.find(emp => emp.id === data.employeeId);
     if (!employee) {
-      console.error("addOrUpdateTimesheet: Employee not found for ID:", data.employeeId);
       showError("Employee not found. Cannot add/update timesheet.");
       return;
     }
 
-    const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
+    // 1) Compute net paid hours (strict break subtraction)
+    const { totalWorkHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
       data,
       employee,
-      {
-        breakDurationMinutes: workHoursSettings?.breakDurationMinutes,
-        overtimeThresholdHours: workHoursSettings?.overtimeThresholdHours
-      }
+      { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
     );
     const formattedDate = format(data.date, "yyyy-MM-dd");
+
+    // 2) Compute incremental weekly overtime allocated to THIS entry
+    const entryOvertime = computeWeeklyIncrementalOvertimeForEntry(
+      data.employeeId,
+      formattedDate,
+      parseFloat(totalWorkHours.toFixed(2)),
+      timesheets,
+      weeklyThreshold,
+      editingTimesheet?.id ?? undefined
+    );
 
     const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
       employeeId: data.employeeId,
       date: formattedDate,
       timeIn: data.timeIn,
-      teaStart: data.teaStart || undefined,
-      teaEnd: data.teaEnd || undefined,
-      lunchStart: data.lunchStart || undefined,
-      lunchEnd: data.lunchEnd || undefined,
+      teaStart: (data as any).teaStart || undefined,
+      teaEnd: (data as any).teaEnd || undefined,
+      lunchStart: (data as any).lunchStart || undefined,
+      lunchEnd: (data as any).lunchEnd || undefined,
       timeOut: data.timeOut,
       totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
-      overtimeHours: parseFloat(overtimeHours.toFixed(2)),
-      lateArrival: lateArrival,
-      earlyDeparture: earlyDeparture,
-      absent: absent,
-      status: "Draft", // Default status for new entries
-      auditLog: [], // Initialize auditLog
+      overtimeHours: parseFloat(entryOvertime.toFixed(2)),
+      lateArrival,
+      earlyDeparture,
+      absent,
+      status: "Draft",
+      auditLog: [],
     };
 
     if (isMockDataEnabled) {
@@ -189,15 +194,14 @@ export const useTimesheetData = ({
           );
           showSuccess("Timesheet updated successfully!");
         } else {
-          const existingTimesheetIndex = prevTimesheets.findIndex(
+          const existingIndex = prevTimesheets.findIndex(
             (ts) => ts.employeeId === data.employeeId && ts.date === formattedDate
           );
-
-          if (existingTimesheetIndex !== -1) {
-            const existingTs = prevTimesheets[existingTimesheetIndex];
+          if (existingIndex !== -1) {
+            const existingTs = prevTimesheets[existingIndex];
             const updatedAuditLog = [...(existingTs.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
             updatedTimesheets = prevTimesheets.map((ts, index) =>
-              index === existingTimesheetIndex
+              index === existingIndex
                 ? { ...ts, ...baseTimesheet, id: ts.id, auditLog: updatedAuditLog }
                 : ts
             );
@@ -214,16 +218,16 @@ export const useTimesheetData = ({
         return updatedTimesheets;
       });
     } else {
-      // Live data: upsert to Supabase
+      // Live
       let timesheetToUpsert: TimesheetEntry;
       if (isEditing && editingTimesheet) {
         const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: "Updated", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
         timesheetToUpsert = { ...editingTimesheet, ...baseTimesheet, auditLog: updatedAuditLog };
       } else {
-        const existingTimesheet = timesheets.find(ts => ts.employeeId === data.employeeId && ts.date === formattedDate);
-        if (existingTimesheet) {
-          const updatedAuditLog = [...(existingTimesheet.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
-          timesheetToUpsert = { ...existingTimesheet, ...baseTimesheet, auditLog: updatedAuditLog };
+        const existing = timesheets.find(ts => ts.employeeId === data.employeeId && ts.date === formattedDate);
+        if (existing) {
+          const updatedAuditLog = [...(existing.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
+          timesheetToUpsert = { ...existing, ...baseTimesheet, auditLog: updatedAuditLog };
         } else {
           timesheetToUpsert = { ...baseTimesheet, id: uuidv4(), auditLog: [{ action: "Created", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }] };
         }
@@ -232,80 +236,100 @@ export const useTimesheetData = ({
     }
     setIsEditing(false);
     setEditingTimesheet(null);
-  }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, workHoursSettings]);
+  }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, workHoursSettings, weeklyThreshold]);
 
   const addTimesheetBatch = useCallback(async (newEntries: ImportableTimesheetEntry[]) => {
-    if (newEntries.length === 0) {
-      return;
+    if (newEntries.length === 0) return;
+
+    // Group by employee + weekStart
+    const groups = new Map<string, ImportableTimesheetEntry[]>();
+    for (const e of newEntries) {
+      const d = format(e.date, "yyyy-MM-dd");
+      const weekStart = format(startOfWeek(e.date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+      const key = `${e.employeeId}__${weekStart}`;
+      const arr = groups.get(key) || [];
+      arr.push(e);
+      groups.set(key, arr);
     }
 
+    const buildBase = (e: ImportableTimesheetEntry, employee: MockEmployee, entryHours: number, entryOvertime: number): Omit<TimesheetEntry, 'id'> => ({
+      employeeId: e.employeeId,
+      date: format(e.date, "yyyy-MM-dd"),
+      timeIn: e.timeIn,
+      teaStart: (e as any).teaStart || undefined,
+      teaEnd: (e as any).teaEnd || undefined,
+      lunchStart: (e as any).lunchStart || undefined,
+      lunchEnd: (e as any).lunchEnd || undefined,
+      timeOut: e.timeOut,
+      totalWorkHours: parseFloat(entryHours.toFixed(2)),
+      overtimeHours: parseFloat(entryOvertime.toFixed(2)),
+      lateArrival: false,
+      earlyDeparture: false,
+      absent: false,
+      status: "Submitted",
+      auditLog: [],
+    });
+
     if (isMockDataEnabled) {
-      setTimesheets(prevTimesheets => {
-        const timesheetMap = new Map<string, TimesheetEntry>();
+      setTimesheets(prev => {
+        const map = new Map<string, TimesheetEntry>();
+        prev.forEach(ts => map.set(`${ts.employeeId}-${ts.date}`, ts));
 
-        prevTimesheets.forEach(ts => {
-          timesheetMap.set(`${ts.employeeId}-${ts.date}`, ts);
-        });
+        // For each group, precompute prior hours from existing timesheets in that week excluding dates in this group
+        for (const [key, arr] of groups) {
+          arr.sort((a, b) => a.date.getTime() - b.date.getTime());
+          const [empId, weekStart] = key.split("__");
+          const weekStartDate = parse(weekStart, "yyyy-MM-dd", new Date());
+          const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 1 });
 
-        newEntries.forEach(data => {
-          const employee = employees.find(emp => emp.id === data.employeeId);
-          if (!employee) {
-            console.warn(`Employee not found for ID: ${data.employeeId}. Skipping timesheet entry for ${format(data.date, "yyyy-MM-dd")}.`);
-            return;
+          const datesInGroup = new Set(arr.map(e => format(e.date, "yyyy-MM-dd")));
+
+          let priorHours = 0;
+          for (const ts of prev) {
+            if (ts.employeeId !== empId) continue;
+            const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
+            if (!isWithinInterval(tsDate, { start: weekStartDate, end: weekEndDate })) continue;
+            if (datesInGroup.has(ts.date)) continue; // to be replaced
+            priorHours += ts.totalWorkHours || 0;
           }
 
-          const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
-            data,
-            employee,
-            {
-              breakDurationMinutes: workHoursSettings?.breakDurationMinutes,
-              overtimeThresholdHours: workHoursSettings?.overtimeThresholdHours
+          for (const e of arr) {
+            const employee = employees.find(emp => emp.id === e.employeeId);
+            if (!employee) continue;
+
+            const { totalWorkHours } = calculateTimesheetMetrics(
+              e,
+              employee,
+              { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+            );
+
+            // incremental overtime for this entry given current priorHours
+            const overtimeBefore = Math.max(0, priorHours - weeklyThreshold);
+            const overtimeAfter = Math.max(0, priorHours + totalWorkHours - weeklyThreshold);
+            const entryOvertime = Math.min(totalWorkHours, Math.max(0, overtimeAfter - overtimeBefore));
+            priorHours += totalWorkHours;
+
+            const key2 = `${e.employeeId}-${format(e.date, "yyyy-MM-dd")}`;
+            const existing = map.get(key2);
+            if (existing) {
+              const updatedAuditLog = [...(existing.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
+              map.set(key2, { ...existing, ...buildBase(e, employee, totalWorkHours, entryOvertime), id: existing.id, auditLog: updatedAuditLog });
+            } else {
+              const newId = `TS-${e.employeeId}-${format(e.date, "yyyy-MM-dd")}-${Date.now()}`;
+              const newAuditLog = [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
+              map.set(key2, { ...buildBase(e, employee, totalWorkHours, entryOvertime), id: newId, auditLog: newAuditLog });
             }
-          );
-          const formattedDate = format(data.date, "yyyy-MM-dd");
-          const mapKey = `${data.employeeId}-${formattedDate}`;
-
-          const existingEntry = timesheetMap.get(mapKey);
-
-          const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
-            employeeId: data.employeeId,
-            date: formattedDate,
-            timeIn: data.timeIn,
-            teaStart: data.teaStart || undefined,
-            teaEnd: data.teaEnd || undefined,
-            lunchStart: data.lunchStart || undefined,
-            lunchEnd: data.lunchEnd || undefined,
-            timeOut: data.timeOut,
-            totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
-            overtimeHours: parseFloat(overtimeHours.toFixed(2)),
-            lateArrival: lateArrival,
-            earlyDeparture: earlyDeparture,
-            absent: absent,
-            status: existingEntry?.status || "Submitted",
-            auditLog: [],
-          };
-
-          if (existingEntry) {
-            const updatedAuditLog = [...(existingEntry.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
-            timesheetMap.set(mapKey, { ...existingEntry, ...baseTimesheet, auditLog: updatedAuditLog });
-          } else {
-            const newId = `TS-${data.employeeId}-${formattedDate}-${Date.now()}`;
-            const newAuditLog = [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
-            timesheetMap.set(mapKey, { ...baseTimesheet, id: newId, auditLog: newAuditLog });
           }
-        });
+        }
 
-        const finalTimesheets = Array.from(timesheetMap.values());
-        localStorage.setItem("mockTimesheets", JSON.stringify(finalTimesheets));
-        window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: finalTimesheets }));
-        return finalTimesheets;
+        const finalTs = Array.from(map.values());
+        localStorage.setItem("mockTimesheets", JSON.stringify(finalTs));
+        window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: finalTs }));
+        return finalTs;
       });
     } else {
-      // Live data: batch upsert to Supabase
-      const timesheetsToUpsert: TimesheetEntry[] = [];
-      const existingTimesheetsMap = new Map<string, TimesheetEntry>(); // Key: employeeId-date
-
-      // Fetch existing timesheets for the employees/dates in the batch to determine if it's an update or insert
+      // Live mode
+      const existingTimesheetsMap = new Map<string, TimesheetEntry>();
       const employeeIdsInBatch = Array.from(new Set(newEntries.map(e => e.employeeId)));
       const datesInBatch = Array.from(new Set(newEntries.map(e => format(e.date, "yyyy-MM-dd"))));
 
@@ -316,63 +340,84 @@ export const useTimesheetData = ({
         });
       }
 
-      newEntries.forEach(data => {
-        const employee = employees.find(emp => emp.id === data.employeeId);
-        if (!employee) {
-          console.warn(`Employee not found for ID: ${data.employeeId}. Skipping timesheet entry for ${format(data.date, "yyyy-MM-dd")}.`);
-          return;
+      const toUpsert: TimesheetEntry[] = [];
+
+      for (const [key, arr] of groups) {
+        arr.sort((a, b) => a.date.getTime() - b.date.getTime());
+        const [empId, weekStart] = key.split("__");
+        const weekStartDate = parse(weekStart, "yyyy-MM-dd", new Date());
+        const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 1 });
+        const datesInGroup = new Set(arr.map(e => format(e.date, "yyyy-MM-dd")));
+
+        // Sum prior hours from live existing timesheets excluding the batch dates to replace
+        let priorHours = 0;
+        // We also need all other timesheets already stored in this hook state (timesheets) that are not in this batch
+        const allKnown = timesheets;
+        for (const ts of allKnown) {
+          if (ts.employeeId !== empId) continue;
+          const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
+          if (!isWithinInterval(tsDate, { start: weekStartDate, end: weekEndDate })) continue;
+          if (datesInGroup.has(ts.date)) continue;
+          priorHours += ts.totalWorkHours || 0;
         }
 
-        const { totalWorkHours, overtimeHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
-          data,
-          employee,
-          { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
-        );
-        const formattedDate = format(data.date, "yyyy-MM-dd");
-        const mapKey = `${data.employeeId}-${formattedDate}`;
+        for (const e of arr) {
+          const employee = employees.find(emp => emp.id === e.employeeId);
+          if (!employee) continue;
 
-        const existingEntry = existingTimesheetsMap.get(mapKey);
+          const { totalWorkHours } = calculateTimesheetMetrics(
+            e,
+            employee,
+            { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+          );
 
-        const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
-          employeeId: data.employeeId,
-          date: formattedDate,
-          timeIn: data.timeIn,
-          teaStart: data.teaStart || undefined,
-          teaEnd: data.teaEnd || undefined,
-          lunchStart: data.lunchStart || undefined,
-          lunchEnd: data.lunchEnd || undefined,
-          timeOut: data.timeOut,
-          totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
-          overtimeHours: parseFloat(overtimeHours.toFixed(2)),
-          lateArrival: lateArrival,
-          earlyDeparture: earlyDeparture,
-          absent: absent,
-          status: existingEntry?.status || "Submitted",
-          auditLog: [],
-        };
+          const overtimeBefore = Math.max(0, priorHours - weeklyThreshold);
+          const overtimeAfter = Math.max(0, priorHours + totalWorkHours - weeklyThreshold);
+          const entryOvertime = Math.min(totalWorkHours, Math.max(0, overtimeAfter - overtimeBefore));
+          priorHours += totalWorkHours;
 
-        if (existingEntry) {
-          const updatedAuditLog = [...(existingEntry.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
-          timesheetsToUpsert.push({ ...existingEntry, ...baseTimesheet, auditLog: updatedAuditLog });
-        } else {
-          timesheetsToUpsert.push({ ...baseTimesheet, id: uuidv4(), auditLog: [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
+          const base = {
+            employeeId: e.employeeId,
+            date: format(e.date, "yyyy-MM-dd"),
+            timeIn: e.timeIn,
+            teaStart: (e as any).teaStart || undefined,
+            teaEnd: (e as any).teaEnd || undefined,
+            lunchStart: (e as any).lunchStart || undefined,
+            lunchEnd: (e as any).lunchEnd || undefined,
+            timeOut: e.timeOut,
+            totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
+            overtimeHours: parseFloat(entryOvertime.toFixed(2)),
+            lateArrival: false,
+            earlyDeparture: false,
+            absent: false,
+            status: "Submitted",
+            auditLog: [],
+          } as Omit<TimesheetEntry, 'id'>;
+
+          const key2 = `${e.employeeId}-${format(e.date, "yyyy-MM-dd")}`;
+          const existing = existingTimesheetsMap.get(key2);
+          if (existing) {
+            toUpsert.push({ ...existing, ...base, auditLog: [...(existing.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
+          } else {
+            toUpsert.push({ ...base, id: uuidv4(), auditLog: [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
+          }
         }
-      });
+      }
 
-      if (timesheetsToUpsert.length > 0) {
-        const toastId = showLoading(`Importing ${timesheetsToUpsert.length} timesheet entries...`) as string;
+      if (toUpsert.length > 0) {
+        const toastId = showLoading(`Importing ${toUpsert.length} timesheet entries...`) as string;
         try {
-          const success = await batchUpsertTimesheetsToSupabase(timesheetsToUpsert);
+          const success = await batchUpsertTimesheetsToSupabase(toUpsert);
           if (success) {
-            showSuccess(`${timesheetsToUpsert.length} timesheet entries imported successfully!`);
-            fetchLiveTimesheets(); // Re-fetch all to update state
+            showSuccess(`${toUpsert.length} timesheet entries imported successfully!`);
+            fetchLiveTimesheets();
           }
         } finally {
           dismissToast(toastId);
         }
       }
     }
-  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, workHoursSettings]);
+  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, workHoursSettings, weeklyThreshold]);
 
   const deleteTimesheet = useCallback(async (id: string) => {
     if (isMockDataEnabled) {
@@ -426,7 +471,6 @@ export const useTimesheetData = ({
     setEditingTimesheet(null);
   }, []);
 
-  // Use the external isLeaveDay utility
   const checkIsLeaveDay = useCallback((employeeId: string, date: Date) => {
     return isLeaveDay(employeeId, date, leaveRecords);
   }, [leaveRecords]);
@@ -437,13 +481,13 @@ export const useTimesheetData = ({
     editingTimesheet,
     getEmployeeName,
     getEmployeeCustomId,
-    calculateTimesheetMetrics, // Still exposed for other components if needed
+    calculateTimesheetMetrics,
     addOrUpdateTimesheet,
     deleteTimesheet,
     updateTimesheetStatus,
     startEditing,
     cancelEditing,
-    isLeaveDay: checkIsLeaveDay, // Expose the wrapped utility function
+    isLeaveDay: checkIsLeaveDay,
     addTimesheetBatch,
     isLoadingTimesheets,
   };
