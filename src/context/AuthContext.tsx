@@ -70,21 +70,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return authUser;
   }, []);
 
-  const refreshSession = useCallback(async () => {
-    // Debounce rapid focus/visibility changes (2s window) and prevent concurrent refreshes
+  const refreshSession = useCallback(async (opts?: { silent?: boolean; force?: boolean }) => {
+    // Throttle rapid focus/visibility changes and prevent concurrent refreshes
     const now = Date.now();
+    const silent = !!opts?.silent;
+    const force = !!opts?.force;
+    const MIN_REFRESH_INTERVAL_MS = 60000;
+
     if (isRefreshingRef.current) {
       console.log("AuthContext: refreshSession skipped (already refreshing).");
       return;
     }
-    if (now - lastRefreshTsRef.current < 2000) {
-      console.log("AuthContext: refreshSession skipped (debounced).");
+    if (!force && now - lastRefreshTsRef.current < MIN_REFRESH_INTERVAL_MS) {
+      console.log("AuthContext: refreshSession skipped (throttled).");
       return;
     }
 
     isRefreshingRef.current = true;
-    setIsLoadingAuth(true);
-    console.log("AuthContext: refreshSession invoked.");
+    if (!silent) setIsLoadingAuth(true);
+    console.log("AuthContext: refreshSession invoked.", { silent, force });
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -105,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(false);
       }
     } finally {
-      setIsLoadingAuth(false);
+      if (!silent) setIsLoadingAuth(false);
       isRefreshingRef.current = false;
       lastRefreshTsRef.current = Date.now();
     }
@@ -196,13 +200,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const focusHandler = () => {
-      console.log("AuthContext: Window focus; refreshing session.");
-      refreshSession();
+      console.log("AuthContext: Window focus; refreshing session silently.");
+      refreshSession({ silent: true });
     };
     const visibilityHandler = () => {
       if (document.visibilityState === "visible") {
-        console.log("AuthContext: Tab visible; refreshing session.");
-        refreshSession();
+        console.log("AuthContext: Tab visible; refreshing session silently.");
+        refreshSession({ silent: true });
       }
     };
     window.addEventListener("focus", focusHandler);
@@ -212,7 +216,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (isLoadingAuth) {
       safetyTimer = window.setTimeout(() => {
         console.warn("AuthContext: Safety timer triggered; forcing session refresh.");
-        refreshSession();
+        refreshSession({ force: true });
       }, 8000);
     }
 
