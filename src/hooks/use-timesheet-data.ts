@@ -409,7 +409,7 @@ export const useTimesheetData = ({
         try {
           const success = await batchUpsertTimesheetsToSupabase(toUpsert);
           if (success) {
-            showSuccess(`${toUpsert.length) } timesheet entries imported successfully!`);
+            showSuccess(`${toUpsert.length} timesheet entries imported successfully!`);
             fetchLiveTimesheets();
           }
         } finally {
