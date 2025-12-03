@@ -41,17 +41,17 @@ const calculateEarnings = (
     basicSalary = 0;
   }
 
-  // Handle unpaid leave deductions from basic salary for salaried employees only
-  if ((emp.salary !== undefined && emp.salary !== null && emp.salary > 0) && basicSalary > 0) {
+  // Handle unpaid leave deductions from basic salary
+  if (basicSalary > 0) {
     const employeeUnpaidLeave = leaveRecords.filter(rec =>
       rec.employeeId === emp.id &&
       rec.leaveType === "Unpaid Leave" &&
       // Check if leave period overlaps with the pay period
       (isWithinInterval(new Date(rec.startDate), { start: payPeriodStart, end: payPeriodEnd }) ||
-       isWithinInterval(new Date(rec.endDate), { start: payPeriodStart, end: payPeriodEnd }) ||
-       (new Date(rec.startDate) < payPeriodStart && new Date(rec.endDate) > payPeriodEnd))
+      isWithinInterval(new Date(rec.endDate), { start: payPeriodStart, end: payPeriodEnd }) ||
+      (new Date(rec.startDate) < payPeriodStart && new Date(rec.endDate) > payPeriodEnd))
     );
-
+    
     employeeUnpaidLeave.forEach(rec => {
       const leaveStart = new Date(rec.startDate);
       const leaveEnd = new Date(rec.endDate);
@@ -62,8 +62,15 @@ const calculateEarnings = (
     });
 
     if (unpaidLeaveDaysInPeriod > 0) {
-      // For monthly salaried employees, assume 20 working days in a month for daily rate
-      const dailyRate = emp.payFrequency === "Monthly" ? (emp.salary as number) / 20 : 0;
+      let dailyRate = 0;
+      if (emp.salary && emp.payFrequency === "Monthly" && emp.salary > 0) {
+        // For monthly salaried employees, assume 20 working days in a month for daily rate
+        dailyRate = emp.salary / 20;
+      } else if (emp.hourlyRate && emp.hourlyRate > 0 && emp.standardDailyHours !== undefined && emp.standardDailyHours !== null && emp.standardDailyHours > 0) {
+        // For hourly employees, daily rate is hourly rate * standard daily hours
+        dailyRate = emp.hourlyRate * emp.standardDailyHours;
+      }
+      
       if (dailyRate > 0) {
         basicSalary -= dailyRate * unpaidLeaveDaysInPeriod;
       }

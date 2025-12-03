@@ -36,6 +36,7 @@ const workHoursSchema = z.object({
     (val) => (val === "" || val === undefined || isNaN(Number(val))) ? undefined : Number(val),
     z.number().min(0, "Overtime threshold cannot be negative").max(168, "Overtime threshold cannot exceed 168 hours").optional()
   ),
+  paidLunch: z.boolean().default(false),
 }).superRefine((data, ctx) => {
   const startTimeInMinutes = timeToMinutes(data.dailyStartTime);
   const endTimeInMinutes = timeToMinutes(data.dailyEndTime);
@@ -91,6 +92,7 @@ const WorkHours: React.FC = () => {
       breakDurationMinutes: 60,
       workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       overtimeThresholdHours: 40,
+	  paidLunch: false,
     },
   });
 
@@ -145,6 +147,8 @@ const WorkHours: React.FC = () => {
   const fridayStartTime = form.watch("fridayStartTime");
   const fridayEndTime = form.watch("fridayEndTime");
   const breakDurationMinutes = form.watch("breakDurationMinutes");
+  const paidLunch = form.watch("paidLunch");
+  
 
   const isFridaySelected = selectedWorkDays.includes("Friday");
   const canEdit = user?.role === 'Admin'; // Only Admin can edit settings
@@ -154,13 +158,13 @@ const WorkHours: React.FC = () => {
 
     const breakDurationHours = (breakDurationMinutes || 0) / 60;
 
-    const defaultDailyWorkMinutes = (timeToMinutes(dailyEndTime) - timeToMinutes(dailyStartTime)) - (breakDurationHours * 60);
+    const defaultDailyWorkMinutes = (timeToMinutes(dailyEndTime) - timeToMinutes(dailyStartTime)) - (paidLunch ? 0 : breakDurationHours * 60);
     const defaultDailyWorkHours = Math.max(0, defaultDailyWorkMinutes / 60);
 
     let totalHours = 0;
     selectedWorkDays.forEach(day => {
       if (day === "Friday" && isFridaySelected && fridayStartTime && fridayEndTime) {
-        const fridayWorkMinutes = (timeToMinutes(fridayEndTime) - timeToMinutes(fridayStartTime)) - (breakDurationHours * 60);
+        const fridayWorkMinutes = (timeToMinutes(fridayEndTime) - timeToMinutes(fridayStartTime)) - (paidLunch ? 0 : breakDurationHours * 60);
         totalHours += Math.max(0, fridayWorkMinutes / 60);
       } else {
         totalHours += defaultDailyWorkHours;
@@ -303,7 +307,7 @@ const WorkHours: React.FC = () => {
               <Input
                 id="overtimeThresholdHours"
                 type="number"
-                step="1"
+                step="0.01"
                 {...form.register("overtimeThresholdHours", { valueAsNumber: true })}
                 className="mt-1"
                 disabled={!canEdit}
@@ -316,6 +320,14 @@ const WorkHours: React.FC = () => {
               </p>
             </div>
           </div>
+		  <div className="flex items-center space-x-2">
+  <Checkbox
+    id="paidLunch"
+    {...form.register("paidLunch")}
+    disabled={!canEdit}
+  />
+  <Label htmlFor="paidLunch">Lunch is paid</Label>
+</div>
 
           <Button type="submit" disabled={!canEdit}>Save Work Hours Settings</Button>
         </form>
