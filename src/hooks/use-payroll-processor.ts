@@ -13,7 +13,6 @@ import {
 import { useCompanyDetails } from "./use-company-details";
 import { useTaxTables } from "./use-tax-tables";
 import { usePayrollProcessingLogic } from "./use-payroll-processing-logic";
-import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useLoansData } from "./use-loans-data";
@@ -40,7 +39,6 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     return localStorage.getItem("isMockDataEnabled") === "true";
   });
 
-  // REMOVE localStorage persistence for active year; use live Supabase instead.
   const [activeTaxYearForCalculations, setActiveTaxYearState] = useState<number>(new Date().getFullYear());
 
   const mockLoansRef = useRef<string | null>(null);
@@ -49,7 +47,6 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const mockTimesheetsRef = useRef<string | null>(null);
   const mockToDosRef = useRef<string | null>(null);
   const mockPayslipsRef = useRef<string | null>(null);
-  // Removed: mockWorkHoursSettingsRef, mockPayCycleSettingsRef, mockUserTaxSettingsRef
 
   const [mockLoans, setMockLoans] = useState<Loan[]>([]);
   const [mockSavingPlans, setMockSavingPlans] = useState<SavingPlan[]>([]);
@@ -57,50 +54,30 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const [mockTimesheets, setMockTimesheets] = useState<TimesheetEntry[]>([]);
   const [mockToDos, setMockToDos] = useState<ToDoEntry[]>([]);
   const [mockPayslips, setMockPayslips] = useState<MockPayslip[]>([]);
-  // Removed: mockWorkHoursSettings, mockPayCycleSettings, mockUserTaxSettings
 
   const hasTriggeredGenerateToDosRef = useRef(false);
   const isGeneratingToDosRef = useRef(false);
-  // ADDED: Ref to hold refetchToDos once initialized
   const refetchToDosFnRef = useRef<(() => void) | null>(null);
 
   const triggerGenerateToDos = useCallback(async () => {
-    console.log("usePayrollProcessor: triggerGenerateToDos called.");
-    if (isMockDataEnabled) {
-      console.log("usePayrollProcessor: Mock data is enabled, skipping Edge Function call for To-Dos.");
-      return;
-    }
-    if (!isAuthenticated) {
-      console.warn("usePayrollProcessor: Not authenticated, skipping generate-todos Edge Function call.");
-      return;
-    }
+    if (isMockDataEnabled) return;
+    if (!isAuthenticated) return;
 
     try {
-      console.log("usePayrollProcessor: Attempting to invoke 'generate-todos' Edge Function...");
       const { data, error } = await supabase.functions.invoke('generate-todos');
-
       if (error) {
-        console.error('usePayrollProcessor: Error invoking generate-todos Edge Function:', error);
         showError(`Failed to generate To-Dos: ${error.message}`);
       } else {
-        console.log('usePayrollProcessor: Generate To-Dos Edge Function response:', data);
-        // UPDATED: Use ref to avoid TDZ; only call if initialized
         refetchToDosFnRef.current?.();
         showSuccess("To-Dos refreshed successfully!");
       }
     } catch (error: any) {
-      console.error('usePayrollProcessor: Unhandled error triggering generate-todos Edge Function:', error);
       showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
     }
-  // UPDATED: Remove refetchToDos from deps to avoid TDZ
   }, [isMockDataEnabled, isAuthenticated]);
 
-  // Guarded wrapper defined AFTER triggerGenerateToDos
   const safeTriggerGenerateToDos = useCallback(async () => {
-    if (isGeneratingToDosRef.current) {
-      console.log("usePayrollProcessor: safeTriggerGenerateToDos - already in progress, skipping.");
-      return;
-    }
+    if (isGeneratingToDosRef.current) return;
     isGeneratingToDosRef.current = true;
     try {
       await triggerGenerateToDos();
@@ -165,16 +142,13 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   }, [isMockDataEnabled]);
 
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails, upsertCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  // Pass activeTaxYearForCalculations to useTaxTables
   const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear: activeTaxYearForCalculations });
   const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { payCycleSettings, isLoadingPayCycleSettings, savePayCycleSettings, refetchPayCycleSettings } = usePayCycleSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings, refetchUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-  // Directly use supabaseCompanyDetails, which is now more stable due to deep comparison in useCompanyDetails
   const companyDetails = supabaseCompanyDetails;
 
-  // Sync active tax year from live company details when available
   useEffect(() => {
     const liveYear = companyDetails?.activeTaxYear;
     if (typeof liveYear === "number" && liveYear > 0 && liveYear !== activeTaxYearForCalculations) {
@@ -182,10 +156,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     }
   }, [companyDetails, activeTaxYearForCalculations]);
 
-  // Expose a setter that persists to Supabase (live-first)
   const setActiveTaxYearForCalculations = useCallback((year: number) => {
     setActiveTaxYearState(year);
-    // Persist to Supabase when not in mock-only mode
     if (!isMockDataEnabled) {
       upsertCompanyDetails({ activeTaxYear: year });
     }
@@ -202,14 +174,10 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: mockSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { payrollSavingsEntries, isLoadingPayrollSavingsEntries, recordSavingsPayment, refetchPayrollSavingsEntries } = usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: mockLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth, workHoursSettings });
   const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee: baseAddOrUpdateEmployee, isAuthenticated, isLoadingAuth });
 
-  // ADDED: Assign the refetch function to the ref once available
   refetchToDosFnRef.current = refetchToDos;
-
-  // Add this console log to check the type of batchUpsertPayslips
-  console.log("usePayrollProcessor: Type of batchUpsertPayslips from usePayslipsData:", typeof batchUpsertPayslips);
 
   const { runPayrollProcess, calculateSinglePayslipPreview } = usePayrollProcessingLogic(
     employees,
@@ -221,6 +189,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     taxTables,
     userTaxSettings,
     payrollSavingsEntries,
+    workHoursSettings || null,
     setPayslips,
     updateLoan,
     updateSavingPlan,
@@ -236,18 +205,14 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     const handleMockDataToggleEvent = () => {
       const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
       setIsMockDataEnabled(mockEnabled);
-      console.log("usePayrollProcessor: 'allMockDataUpdated' event received. Setting isMockDataEnabled to:", mockEnabled);
       if (!mockEnabled && isAuthenticated && !isLoadingAuth) {
-        console.log("usePayrollProcessor: Live mode after mock toggle; attempting safe To-Dos generation.");
         safeTriggerGenerateToDos();
       }
     };
 
     window.addEventListener("allMockDataUpdated", handleMockDataToggleEvent);
 
-    // Call generate-todos once on initial load if conditions are met and it hasn't run yet
     if (!isMockDataEnabled && isAuthenticated && !isLoadingAuth && !hasTriggeredGenerateToDosRef.current) {
-      console.log("usePayrollProcessor: Initial load; attempting safe To-Dos generation.");
       safeTriggerGenerateToDos();
     }
 
@@ -295,7 +260,6 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     };
   }, [isMockDataEnabled, silent]);
 
-
   return {
     employees,
     addOrUpdateEmployee: baseAddOrUpdateEmployee,
@@ -312,11 +276,11 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     isMockDataEnabled,
     taxTables,
     isLoadingTaxTables,
-    workHoursSettings, // Directly expose from hook
+    workHoursSettings,
     isLoadingWorkHoursSettings,
-    payCycleSettings, // Directly expose from hook
+    payCycleSettings,
     isLoadingPayCycleSettings,
-    userTaxSettings, // Directly expose from hook
+    userTaxSettings,
     isLoadingUserTaxSettings,
     isLoadingEmployees,
     isMutatingEmployee,

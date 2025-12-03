@@ -1,4 +1,4 @@
-import { format, parse, isBefore, isAfter, eachDayOfInterval, isWeekend, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import { format, parse, isBefore, isAfter, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { MockEmployee, LeaveEntry, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types";
 
@@ -11,63 +11,74 @@ export const calculateTimeDifferenceInHours = (start: string, end: string): numb
   const startDate = parse(start, "HH:mm", new Date());
   const endDate = parse(end, "HH:mm", new Date());
   if (isBefore(endDate, startDate)) {
-    // If end time is before start time, assume it's on the next day for calculation
     endDate.setDate(endDate.getDate() + 1);
   }
   const diffMs = endDate.getTime() - startDate.getTime();
-  return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+  return diffMs / (1000 * 60 * 60);
+};
+
+type MetricOpts = {
+  breakDurationMinutes?: number;
+  paidLunch?: boolean;
+  dailyStartTime?: string;
+  dailyEndTime?: string;
+  fridayStartTime?: string;
+  fridayEndTime?: string;
+  overtimeThresholdHours?: number;
 };
 
 /**
- * Calculates various metrics for a timesheet entry.
- * - Always subtract at least the configured unpaid break (breakDurationMinutes)
- *   and if captured tea/lunch breaks are longer, subtract the larger amount.
- * - Overtime here is not used for storage; we compute it weekly elsewhere.
+ * Calculates metrics for a single timesheet entry.
+ * - Break subtraction respects paidLunch: if paidLunch is true, do not subtract breaks.
+ * - Uses configured start/end (with Friday override) to flag late/early.
  */
 export const calculateTimesheetMetrics = (
   data: TimesheetFormValues | ImportableTimesheetEntry,
-  employee?: MockEmployee,
-  opts?: { breakDurationMinutes?: number; overtimeThresholdHours?: number }
+  _employee?: MockEmployee,
+  opts?: MetricOpts
 ) => {
-  const standardDailyHours = employee?.standardDailyHours || 8; // Default to 8 hours
+  const entryDate: Date | null =
+    (data as any).date ? new Date((data as any).date) : null;
+
+  const defaultStart = opts?.dailyStartTime || "09:00";
+  const defaultEnd = opts?.dailyEndTime || "17:00";
+  const isFriday = entryDate ? entryDate.getDay() === 5 : false;
+
+  const expectedStart = isFriday && opts?.fridayStartTime ? opts.fridayStartTime : defaultStart;
+  const expectedEnd = isFriday && opts?.fridayEndTime ? opts.fridayEndTime : defaultEnd;
 
   let totalWorkHours = 0;
-  let overtimeHours = 0; // Not authoritative (weekly allocation is used), kept for compatibility
+  let overtimeHours = 0; // weekly authority elsewhere
   let lateArrival = false;
   let earlyDeparture = false;
   let absent = false;
 
-  const timeIn = data.timeIn;
-  const timeOut = data.timeOut;
+  const timeIn = (data as any).timeIn;
+  const timeOut = (data as any).timeOut;
 
   if (!timeIn || !timeOut) {
     absent = true;
-    // console.debug("[TimesheetMetrics] Absent", { timeIn, timeOut });
   } else {
     const totalShiftDuration = calculateTimeDifferenceInHours(timeIn, timeOut);
     const teaDuration = calculateTimeDifferenceInHours((data as any).teaStart || "", (data as any).teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours((data as any).lunchStart || "", (data as any).lunchEnd || "");
 
-    const configuredBreakHours =
-      (opts?.breakDurationMinutes ?? 0) > 0 ? (opts!.breakDurationMinutes as number) / 60 : 0;
-    const capturedBreakHours = teaDuration + lunchDuration;
-    const breakHoursToSubtract = Math.max(configuredBreakHours, capturedBreakHours);
+    const configuredBreakHours = (opts?.breakDurationMinutes ?? 0) / 60;
+
+    // If lunch is paid, do not subtract captured or configured breaks
+    const capturedBreakHours = opts?.paidLunch ? 0 : (teaDuration + lunchDuration);
+    const configuredBreakToSubtract = opts?.paidLunch ? 0 : configuredBreakHours;
+
+    const breakHoursToSubtract = Math.max(configuredBreakToSubtract, capturedBreakHours);
 
     totalWorkHours = Math.max(0, totalShiftDuration - breakHoursToSubtract);
 
-    // Daily overtimeHours is not authoritative now (weekly threshold is used). Keep 0 by default or compute daily if needed:
-    // const thresholdHours = typeof opts?.overtimeThresholdHours === "number" && (opts!.overtimeThresholdHours as number) > 0
-    //   ? (opts!.overtimeThresholdHours as number)
-    //   : standardDailyHours;
-    // overtimeHours = Math.max(0, totalWorkHours - thresholdHours);
-
-    // Late Arrival / Early Departure (simplified logic)
-    const expectedTimeIn = parse("09:00", "HH:mm", new Date());
+    const expectedTimeIn = parse(expectedStart, "HH:mm", new Date());
     const actualTimeIn = parse(timeIn, "HH:mm", new Date());
     if (isAfter(actualTimeIn, expectedTimeIn)) {
       lateArrival = true;
     }
-    const expectedTimeOut = parse("17:00", "HH:mm", new Date());
+    const expectedTimeOut = parse(expectedEnd, "HH:mm", new Date());
     const actualTimeOut = parse(timeOut, "HH:mm", new Date());
     if (isBefore(actualTimeOut, expectedTimeOut)) {
       earlyDeparture = true;
@@ -88,12 +99,7 @@ export const getWeekBounds = (date: Date) => {
 
 /**
  * Compute incremental overtime for ONE entry under a weekly threshold.
- * We allocate only the portion above the threshold to this entry.
- *
- * entryHours: paid hours for the entry (already net of breaks)
- * timesheets: all existing timesheets (used to sum prior hours in the same week)
- * weeklyThreshold: e.g., 45
- * excludeId: optionally exclude a specific id (e.g., when editing existing entry)
+ * For display only; payroll recomputes weekly totals authoritatively.
  */
 export const computeWeeklyIncrementalOvertimeForEntry = (
   employeeId: string,
@@ -106,15 +112,12 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
   const entryDate = parse(entryDateISO, "yyyy-MM-dd", new Date());
   const { start, end } = getWeekBounds(entryDate);
 
-  // Sum prior hours in same week for this employee (excluding the current id if editing)
   let priorHours = 0;
   for (const ts of timesheets) {
     if (ts.employeeId !== employeeId) continue;
     const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
     if (!isWithinInterval(tsDate, { start, end })) continue;
     if (excludeId && ts.id === excludeId) continue;
-    // Count all hours for the week; for allocating incremental overtime to this entry we
-    // assume other entries are "prior" or will be re-allocated on their own update/import.
     priorHours += ts.totalWorkHours || 0;
   }
 
@@ -122,7 +125,6 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
   const overtimeAfter = Math.max(0, priorHours + entryHours - weeklyThreshold);
   const incremental = Math.max(0, overtimeAfter - overtimeBefore);
 
-  // Cap by this entry's hours
   return Math.min(incremental, entryHours);
 };
 

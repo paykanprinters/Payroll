@@ -43,7 +43,7 @@ export const useTimesheetData = ({
 
   const weeklyThreshold = (workHoursSettings?.overtimeThresholdHours && workHoursSettings.overtimeThresholdHours > 0)
     ? workHoursSettings.overtimeThresholdHours
-    : 45; // default 45h per your requirement
+    : 45;
 
   const fetchLiveTimesheets = useCallback(async () => {
     setIsLoadingTimesheets(true);
@@ -139,6 +139,16 @@ export const useTimesheetData = ({
     return employee ? employee.customEmployeeId : "N/A";
   }, [employees]);
 
+  const currentMetricOpts = useCallback(() => ({
+    breakDurationMinutes: workHoursSettings?.breakDurationMinutes,
+    paidLunch: workHoursSettings?.paidLunch,
+    dailyStartTime: workHoursSettings?.dailyStartTime,
+    dailyEndTime: workHoursSettings?.dailyEndTime,
+    fridayStartTime: workHoursSettings?.fridayStartTime,
+    fridayEndTime: workHoursSettings?.fridayEndTime,
+    overtimeThresholdHours: workHoursSettings?.overtimeThresholdHours,
+  }), [workHoursSettings]);
+
   const addOrUpdateTimesheet = useCallback(async (data: TimesheetFormValues) => {
     const employee = employees.find(emp => emp.id === data.employeeId);
     if (!employee) {
@@ -146,15 +156,13 @@ export const useTimesheetData = ({
       return;
     }
 
-    // 1) Compute net paid hours (strict break subtraction)
     const { totalWorkHours, lateArrival, earlyDeparture, absent } = calculateTimesheetMetrics(
       data,
       employee,
-      { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+      currentMetricOpts()
     );
     const formattedDate = format(data.date, "yyyy-MM-dd");
 
-    // 2) Compute incremental weekly overtime allocated to THIS entry
     const entryOvertime = computeWeeklyIncrementalOvertimeForEntry(
       data.employeeId,
       formattedDate,
@@ -218,7 +226,6 @@ export const useTimesheetData = ({
         return updatedTimesheets;
       });
     } else {
-      // Live
       let timesheetToUpsert: TimesheetEntry;
       if (isEditing && editingTimesheet) {
         const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: "Updated", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
@@ -236,15 +243,13 @@ export const useTimesheetData = ({
     }
     setIsEditing(false);
     setEditingTimesheet(null);
-  }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, workHoursSettings, weeklyThreshold]);
+  }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, weeklyThreshold, currentMetricOpts]);
 
   const addTimesheetBatch = useCallback(async (newEntries: ImportableTimesheetEntry[]) => {
     if (newEntries.length === 0) return;
 
-    // Group by employee + weekStart
     const groups = new Map<string, ImportableTimesheetEntry[]>();
     for (const e of newEntries) {
-      const d = format(e.date, "yyyy-MM-dd");
       const weekStart = format(startOfWeek(e.date, { weekStartsOn: 1 }), "yyyy-MM-dd");
       const key = `${e.employeeId}__${weekStart}`;
       const arr = groups.get(key) || [];
@@ -252,7 +257,7 @@ export const useTimesheetData = ({
       groups.set(key, arr);
     }
 
-    const buildBase = (e: ImportableTimesheetEntry, employee: MockEmployee, entryHours: number, entryOvertime: number): Omit<TimesheetEntry, 'id'> => ({
+    const buildBase = (e: ImportableTimesheetEntry, _employee: MockEmployee, entryHours: number, entryOvertime: number): Omit<TimesheetEntry, 'id'> => ({
       employeeId: e.employeeId,
       date: format(e.date, "yyyy-MM-dd"),
       timeIn: e.timeIn,
@@ -275,7 +280,6 @@ export const useTimesheetData = ({
         const map = new Map<string, TimesheetEntry>();
         prev.forEach(ts => map.set(`${ts.employeeId}-${ts.date}`, ts));
 
-        // For each group, precompute prior hours from existing timesheets in that week excluding dates in this group
         for (const [key, arr] of groups) {
           arr.sort((a, b) => a.date.getTime() - b.date.getTime());
           const [empId, weekStart] = key.split("__");
@@ -289,7 +293,7 @@ export const useTimesheetData = ({
             if (ts.employeeId !== empId) continue;
             const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
             if (!isWithinInterval(tsDate, { start: weekStartDate, end: weekEndDate })) continue;
-            if (datesInGroup.has(ts.date)) continue; // to be replaced
+            if (datesInGroup.has(ts.date)) continue;
             priorHours += ts.totalWorkHours || 0;
           }
 
@@ -300,10 +304,9 @@ export const useTimesheetData = ({
             const { totalWorkHours } = calculateTimesheetMetrics(
               e,
               employee,
-              { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+              currentMetricOpts()
             );
 
-            // incremental overtime for this entry given current priorHours
             const overtimeBefore = Math.max(0, priorHours - weeklyThreshold);
             const overtimeAfter = Math.max(0, priorHours + totalWorkHours - weeklyThreshold);
             const entryOvertime = Math.min(totalWorkHours, Math.max(0, overtimeAfter - overtimeBefore));
@@ -328,7 +331,6 @@ export const useTimesheetData = ({
         return finalTs;
       });
     } else {
-      // Live mode
       const existingTimesheetsMap = new Map<string, TimesheetEntry>();
       const employeeIdsInBatch = Array.from(new Set(newEntries.map(e => e.employeeId)));
       const datesInBatch = Array.from(new Set(newEntries.map(e => format(e.date, "yyyy-MM-dd"))));
@@ -349,9 +351,7 @@ export const useTimesheetData = ({
         const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 1 });
         const datesInGroup = new Set(arr.map(e => format(e.date, "yyyy-MM-dd")));
 
-        // Sum prior hours from live existing timesheets excluding the batch dates to replace
         let priorHours = 0;
-        // We also need all other timesheets already stored in this hook state (timesheets) that are not in this batch
         const allKnown = timesheets;
         for (const ts of allKnown) {
           if (ts.employeeId !== empId) continue;
@@ -368,7 +368,7 @@ export const useTimesheetData = ({
           const { totalWorkHours } = calculateTimesheetMetrics(
             e,
             employee,
-            { breakDurationMinutes: workHoursSettings?.breakDurationMinutes }
+            currentMetricOpts()
           );
 
           const overtimeBefore = Math.max(0, priorHours - weeklyThreshold);
@@ -409,7 +409,7 @@ export const useTimesheetData = ({
         try {
           const success = await batchUpsertTimesheetsToSupabase(toUpsert);
           if (success) {
-            showSuccess(`${toUpsert.length} timesheet entries imported successfully!`);
+            showSuccess(`${toUpsert.length) } timesheet entries imported successfully!`);
             fetchLiveTimesheets();
           }
         } finally {
@@ -417,7 +417,7 @@ export const useTimesheetData = ({
         }
       }
     }
-  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, workHoursSettings, weeklyThreshold]);
+  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, workHoursSettings, weeklyThreshold, currentMetricOpts]);
 
   const deleteTimesheet = useCallback(async (id: string) => {
     if (isMockDataEnabled) {

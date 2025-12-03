@@ -11,17 +11,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
-import { useWorkHoursSettings, WorkHoursSettings } from "@/hooks/use-work-hours-settings"; // Import WorkHoursSettings
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor for isMockDataEnabled
-import { useAuth } from "@/context/AuthContext"; // Import useAuth for permissions
+import { useWorkHoursSettings, WorkHoursSettings } from "@/hooks/use-work-hours-settings";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { useAuth } from "@/context/AuthContext";
 
-// Helper to convert "HH:mm" to minutes from midnight
 const timeToMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
 };
 
-// Define the schema for form validation
 const workHoursSchema = z.object({
   dailyStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").min(1, "Start time is required"),
   dailyEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)").min(1, "End time is required"),
@@ -92,11 +90,10 @@ const WorkHours: React.FC = () => {
       breakDurationMinutes: 60,
       workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       overtimeThresholdHours: 40,
-	  paidLunch: false,
+      paidLunch: false,
     },
   });
 
-  // Load settings from hook into form
   useEffect(() => {
     if (workHoursSettings) {
       form.reset({
@@ -107,9 +104,9 @@ const WorkHours: React.FC = () => {
         breakDurationMinutes: workHoursSettings.breakDurationMinutes || 0,
         workDays: workHoursSettings.workDays || [],
         overtimeThresholdHours: workHoursSettings.overtimeThresholdHours || 0,
+        paidLunch: workHoursSettings.paidLunch ?? false,
       });
     } else if (!isLoadingWorkHoursSettings) {
-      // If no settings found and not loading, reset to default form values
       form.reset({
         dailyStartTime: "09:00",
         dailyEndTime: "17:00",
@@ -118,6 +115,7 @@ const WorkHours: React.FC = () => {
         breakDurationMinutes: 60,
         workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         overtimeThresholdHours: 40,
+        paidLunch: false,
       });
     }
   }, [workHoursSettings, isLoadingWorkHoursSettings, form]);
@@ -125,7 +123,7 @@ const WorkHours: React.FC = () => {
   const onSubmit = async (data: WorkHoursFormValues) => {
     if (user?.id) {
       const settingsToSave: Omit<WorkHoursSettings, 'id' | 'userId'> & { id?: string } = {
-        id: workHoursSettings?.id, // Pass existing ID for update
+        id: workHoursSettings?.id,
         dailyStartTime: data.dailyStartTime,
         dailyEndTime: data.dailyEndTime,
         fridayStartTime: data.fridayStartTime || undefined,
@@ -133,9 +131,10 @@ const WorkHours: React.FC = () => {
         breakDurationMinutes: data.breakDurationMinutes || undefined,
         workDays: data.workDays,
         overtimeThresholdHours: data.overtimeThresholdHours || undefined,
+        paidLunch: data.paidLunch ?? false,
       };
       await saveWorkHoursSettings(settingsToSave);
-      window.dispatchEvent(new Event('workHoursSettingsUpdated')); // Notify other components
+      window.dispatchEvent(new Event('workHoursSettingsUpdated'));
     } else {
       showError("User not authenticated. Cannot save settings.");
     }
@@ -148,10 +147,9 @@ const WorkHours: React.FC = () => {
   const fridayEndTime = form.watch("fridayEndTime");
   const breakDurationMinutes = form.watch("breakDurationMinutes");
   const paidLunch = form.watch("paidLunch");
-  
 
   const isFridaySelected = selectedWorkDays.includes("Friday");
-  const canEdit = user?.role === 'Admin'; // Only Admin can edit settings
+  const canEdit = user?.role === 'Admin';
 
   const weeklyTotalHours = useMemo(() => {
     if (!dailyStartTime || !dailyEndTime || !selectedWorkDays) return 0;
@@ -172,7 +170,7 @@ const WorkHours: React.FC = () => {
     });
     
     return totalHours;
-  }, [dailyStartTime, dailyEndTime, fridayStartTime, fridayEndTime, breakDurationMinutes, selectedWorkDays, isFridaySelected]);
+  }, [dailyStartTime, dailyEndTime, fridayStartTime, fridayEndTime, breakDurationMinutes, selectedWorkDays, isFridaySelected, paidLunch]);
 
   return (
     <Card>
@@ -184,32 +182,19 @@ const WorkHours: React.FC = () => {
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          {/* Daily Hours */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Daily Schedule (Monday - Thursday, Saturday - Sunday)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="dailyStartTime">Daily Start Time</Label>
-                <Input
-                  id="dailyStartTime"
-                  type="time"
-                  {...form.register("dailyStartTime")}
-                  className="mt-1"
-                  disabled={!canEdit}
-                />
+                <Input id="dailyStartTime" type="time" {...form.register("dailyStartTime")} className="mt-1" disabled={!canEdit} />
                 {form.formState.errors.dailyStartTime && (
                   <p className="text-red-500 text-sm mt-1">{form.formState.errors.dailyStartTime.message}</p>
                 )}
               </div>
               <div>
                 <Label htmlFor="dailyEndTime">Daily End Time</Label>
-                <Input
-                  id="dailyEndTime"
-                  type="time"
-                  {...form.register("dailyEndTime")}
-                  className="mt-1"
-                  disabled={!canEdit}
-                />
+                <Input id="dailyEndTime" type="time" {...form.register("dailyEndTime")} className="mt-1" disabled={!canEdit} />
                 {form.formState.errors.dailyEndTime && (
                   <p className="text-red-500 text-sm mt-1">{form.formState.errors.dailyEndTime.message}</p>
                 )}
@@ -217,21 +202,13 @@ const WorkHours: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="breakDurationMinutes">Break Duration (Minutes)</Label>
-              <Input
-                id="breakDurationMinutes"
-                type="number"
-                step="1"
-                {...form.register("breakDurationMinutes", { valueAsNumber: true })}
-                className="mt-1"
-                disabled={!canEdit}
-              />
+              <Input id="breakDurationMinutes" type="number" step="1" {...form.register("breakDurationMinutes", { valueAsNumber: true })} className="mt-1" disabled={!canEdit} />
               {form.formState.errors.breakDurationMinutes && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.breakDurationMinutes.message}</p>
               )}
             </div>
           </div>
 
-          {/* Friday Specific Hours */}
           {isFridaySelected && (
             <div className="space-y-4 border-t pt-4">
               <h3 className="text-lg font-semibold">Friday Schedule (Optional)</h3>
@@ -241,26 +218,14 @@ const WorkHours: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="fridayStartTime">Friday Start Time</Label>
-                  <Input
-                    id="fridayStartTime"
-                    type="time"
-                    {...form.register("fridayStartTime")}
-                    className="mt-1"
-                    disabled={!canEdit}
-                  />
+                  <Input id="fridayStartTime" type="time" {...form.register("fridayStartTime")} className="mt-1" disabled={!canEdit} />
                   {form.formState.errors.fridayStartTime && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors.fridayStartTime.message}</p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="fridayEndTime">Friday End Time</Label>
-                  <Input
-                    id="fridayEndTime"
-                    type="time"
-                    {...form.register("fridayEndTime")}
-                    className="mt-1"
-                    disabled={!canEdit}
-                  />
+                  <Input id="fridayEndTime" type="time" {...form.register("fridayEndTime")} className="mt-1" disabled={!canEdit} />
                   {form.formState.errors.fridayEndTime && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors.fridayEndTime.message}</p>
                   )}
@@ -269,7 +234,6 @@ const WorkHours: React.FC = () => {
             </div>
           )}
 
-          {/* Work Days */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Work Days</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -295,7 +259,6 @@ const WorkHours: React.FC = () => {
             )}
           </div>
 
-          {/* Weekly Summary & Overtime */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Weekly Summary & Overtime</h3>
             <div className="flex items-center justify-between p-3 bg-muted rounded-md">
@@ -304,14 +267,7 @@ const WorkHours: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="overtimeThresholdHours">Overtime Threshold (Weekly Hours)</Label>
-              <Input
-                id="overtimeThresholdHours"
-                type="number"
-                step="0.01"
-                {...form.register("overtimeThresholdHours", { valueAsNumber: true })}
-                className="mt-1"
-                disabled={!canEdit}
-              />
+              <Input id="overtimeThresholdHours" type="number" step="0.01" {...form.register("overtimeThresholdHours", { valueAsNumber: true })} className="mt-1" disabled={!canEdit} />
               {form.formState.errors.overtimeThresholdHours && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.overtimeThresholdHours.message}</p>
               )}
@@ -320,14 +276,11 @@ const WorkHours: React.FC = () => {
               </p>
             </div>
           </div>
-		  <div className="flex items-center space-x-2">
-  <Checkbox
-    id="paidLunch"
-    {...form.register("paidLunch")}
-    disabled={!canEdit}
-  />
-  <Label htmlFor="paidLunch">Lunch is paid</Label>
-</div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox id="paidLunch" {...form.register("paidLunch")} disabled={!canEdit} />
+            <Label htmlFor="paidLunch">Lunch is paid</Label>
+          </div>
 
           <Button type="submit" disabled={!canEdit}>Save Work Hours Settings</Button>
         </form>

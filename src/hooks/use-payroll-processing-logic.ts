@@ -13,13 +13,13 @@ import {
   SavingPlan,
   LeaveEntry,
   TimesheetEntry,
-  LoanDeductionHistoryEntry,
 } from "@/lib/mock-data-interfaces";
-import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator"; // Import from new location
+import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator";
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
-import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // New import
+import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
+import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
@@ -29,15 +29,16 @@ export const usePayrollProcessingLogic = (
   leaveRecords: LeaveEntry[],
   timesheets: TimesheetEntry[],
   taxTables: TaxTables | null,
-  userTaxSettings: UserTaxSettings | null, // New parameter for user tax settings
-  payrollSavingsEntries: PayrollSavingsEntry[] | null, // New: transactional savings entries
-  setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>, // For mock data
+  userTaxSettings: UserTaxSettings | null,
+  payrollSavingsEntries: PayrollSavingsEntry[] | null,
+  workHoursSettings: WorkHoursSettings | null,
+  setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>,
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
   updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>,
-  batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>, // New prop for live data
-  recordSavingsPayment: (planId: string, amount: number) => Promise<void>, // New: persist savings payments
-  isMockDataEnabled: boolean, // New prop to determine data source
+  batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>,
+  recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
+  isMockDataEnabled: boolean,
 ) => {
 
   const runPayrollProcess = useCallback(
@@ -55,15 +56,7 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
-      console.log(`[usePayrollProcessingLogic] runPayrollProcess called. isMockDataEnabled: ${isMockDataEnabled}`);
-      console.log("[usePayrollProcessingLogic] Period Start:", format(periodStart, 'yyyy-MM-dd'));
-      console.log("[usePayrollProcessingLogic] Period End:", format(periodEnd, 'yyyy-MM-dd'));
-      console.log("[usePayrollProcessingLogic] Tax Tables received:", taxTables);
-      console.log("[usePayrollProcessingLogic] User Tax Settings received:", userTaxSettings);
-      console.log("[usePayrollProcessingLogic] runPayrollProcess: Number of employees to process:", employees.length);
-
-
-      const { payslips: newPayslips, updatedLoans, updatedSavingPlans } = generatePayslipsForPeriod(
+      const { payslips: newPayslips, updatedLoans, updatedSavingPlans, savingPaymentsToRecord } = generatePayslipsForPeriod(
         employees,
         loans,
         savingPlans,
@@ -72,8 +65,9 @@ export const usePayrollProcessingLogic = (
         periodStart,
         periodEnd,
         taxTables,
-        userTaxSettings, // Pass user tax settings
-        payrollSavingsEntries // Pass savings entries
+        userTaxSettings,
+        payrollSavingsEntries,
+        workHoursSettings
       );
 
       if (newPayslips.length === 0) {
@@ -92,7 +86,6 @@ export const usePayrollProcessingLogic = (
         };
       });
 
-      // 1. Persist Payslips
       if (isMockDataEnabled) {
         const updatedAllPayslips = [...payslips];
         updatedPayslipsWithYTD.forEach(newPayslip => {
@@ -115,10 +108,8 @@ export const usePayrollProcessingLogic = (
           showError("Failed to save payslips to database.");
           return;
         }
-        // refetchPayslips will be called by usePayslipsData after batchUpsertPayslips
       }
 
-      // 2. Update loans and saving plans
       for (const loan of updatedLoans) {
         await updateLoan(loan);
       }
@@ -126,26 +117,12 @@ export const usePayrollProcessingLogic = (
         await updateSavingPlan(plan);
       }
 
-      // 2b. Persist savings payments (live mode only)
       if (!isMockDataEnabled) {
-        const { savingPaymentsToRecord } = generatePayslipsForPeriod(
-          employees,
-          loans,
-          savingPlans,
-          leaveRecords,
-          timesheets,
-          periodStart,
-          periodEnd,
-          taxTables!,
-          userTaxSettings,
-          payrollSavingsEntries
-        );
         for (const payment of savingPaymentsToRecord) {
           await recordSavingsPayment(payment.planId, payment.amount);
         }
       }
 
-      // 3. Lock timesheets for the processed period
       const timesheetUpdatePromises = timesheets.map(async (ts) => {
         const tsDate = parseISO(ts.date);
         if (
@@ -160,7 +137,7 @@ export const usePayrollProcessingLogic = (
 
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -179,13 +156,6 @@ export const usePayrollProcessingLogic = (
         return null;
       }
 
-      console.log(`[usePayrollProcessingLogic] calculateSinglePayslipPreview called. isMockDataEnabled: ${isMockDataEnabled}`);
-      console.log("[usePayrollProcessingLogic] Employee ID:", employeeId);
-      console.log("[usePayrollProcessingLogic] Period Start:", format(periodStart, 'yyyy-MM-dd'));
-      console.log("[usePayrollProcessingLogic] Period End:", format(periodEnd, 'yyyy-MM-dd'));
-      console.log("[usePayrollProcessingLogic] Tax Tables received for preview:", taxTables);
-      console.log("[usePayrollProcessingLogic] User Tax Settings received for preview:", userTaxSettings);
-
       const { payslips: previewPayslips } = generatePayslipsForPeriod(
         [employee],
         loans,
@@ -195,8 +165,9 @@ export const usePayrollProcessingLogic = (
         periodStart,
         periodEnd,
         taxTables,
-        userTaxSettings, // Pass user tax settings
-        payrollSavingsEntries
+        userTaxSettings,
+        payrollSavingsEntries,
+        workHoursSettings
       );
 
       if (previewPayslips.length > 0) {
@@ -212,7 +183,7 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, isMockDataEnabled]
   );
 
   return {
