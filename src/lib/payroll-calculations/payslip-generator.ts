@@ -24,10 +24,20 @@ const calculateEarnings = (
   // Aggregate regular and overtime hours from approved timesheets
   let totalApprovedRegularHours = 0;
   let totalApprovedOvertimeHours = 0;
-  approvedTimesheetsForPeriod.forEach(ts => {
-    totalApprovedRegularHours += (ts.totalWorkHours - ts.overtimeHours);
-    totalApprovedOvertimeHours += ts.overtimeHours;
-  });
+
+  if ((emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) && emp.payFrequency === "Weekly") {
+    // Weekly employees: allocate overtime on a weekly basis to avoid daily overtime inflation
+    const weeklyThreshold = 45; // default weekly threshold
+    const totalHours = approvedTimesheetsForPeriod.reduce((sum, ts) => sum + (ts.totalWorkHours || 0), 0);
+    totalApprovedOvertimeHours = Math.max(0, totalHours - weeklyThreshold);
+    totalApprovedRegularHours = Math.max(0, totalHours - totalApprovedOvertimeHours);
+  } else {
+    // For non-weekly or salaried flows, respect the stored per-entry overtime split
+    approvedTimesheetsForPeriod.forEach(ts => {
+      totalApprovedRegularHours += (ts.totalWorkHours - ts.overtimeHours);
+      totalApprovedOvertimeHours += ts.overtimeHours;
+    });
+  }
 
   // Determine basic salary based on hourly rate or fixed salary
   if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) {
