@@ -69,8 +69,22 @@ const getWeeklyThreshold = (settings?: WorkHoursSettings | null): number => {
   return typeof t === "number" && t > 0 ? t : 45;
 };
 
+const dayNameToIndex = (name: string): number | null => {
+  switch (name.toLowerCase()) {
+    case "sunday": return 0;
+    case "monday": return 1;
+    case "tuesday": return 2;
+    case "wednesday": return 3;
+    case "thursday": return 4;
+    case "friday": return 5;
+    case "saturday": return 6;
+    default: return null;
+  }
+};
+
 /**
  * Calculate earnings from timesheets using weekly threshold for overtime.
+ * Additionally, any hours on non-scheduled work days (not in Work Days) are treated as overtime outright.
  */
 const calculateEarnings = (
   emp: MockEmployee,
@@ -83,16 +97,36 @@ const calculateEarnings = (
   const threshold = getWeeklyThreshold(workHoursSettings);
   const hourly = deriveHourlyRate(emp, workHoursSettings);
 
-  // Sum weekly hours from period (Mon–Sun), recompute overtime per week
-  const weeklyHours = new Map<string, number>();
+  // Determine scheduled work days from settings; default to Mon–Fri if not specified
+  const scheduledDaysNames = (workHoursSettings?.workDays && workHoursSettings.workDays.length > 0)
+    ? workHoursSettings.workDays
+    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const scheduledDayIndices = new Set(
+    scheduledDaysNames
+      .map(dayNameToIndex)
+      .filter((n): n is number => n !== null)
+  );
+
+  // Sum weekly hours for scheduled days only; treat non-scheduled days as immediate overtime
+  const weeklyHours = new Map<string, number>(); // Mon–Sun grouped hours for scheduled days
+  let outOfScheduleOvertimeHours = 0;
+
   for (const ts of approvedTimesheetsForPeriod) {
     const d = parseISO(ts.date);
-    const weekStart = startOfWeek(d, { weekStartsOn: 1 });
-    const key = format(weekStart, "yyyy-MM-dd");
-    const prev = weeklyHours.get(key) || 0;
-    weeklyHours.set(key, prev + (ts.totalWorkHours || 0));
+    const dow = d.getDay(); // 0 = Sun ... 6 = Sat
+    const hours = ts.totalWorkHours || 0;
+
+    if (scheduledDayIndices.has(dow)) {
+      const weekStart = startOfWeek(d, { weekStartsOn: 1 });
+      const key = format(weekStart, "yyyy-MM-dd");
+      const prev = weeklyHours.get(key) || 0;
+      weeklyHours.set(key, prev + hours);
+    } else {
+      outOfScheduleOvertimeHours += hours;
+    }
   }
 
+  // Regular vs overtime split for scheduled days
   let regularHours = 0;
   let overtimeHours = 0;
   weeklyHours.forEach(total => {
@@ -100,6 +134,10 @@ const calculateEarnings = (
     overtimeHours += Math.max(0, total - threshold);
   });
 
+  // Add all out-of-schedule hours as overtime
+  overtimeHours += outOfScheduleOvertimeHours;
+
+  // Calculate base pay and overtime pay
   let basicSalary = 0;
   if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) {
     // Hourly employees: pay from hours
