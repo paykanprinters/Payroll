@@ -7,7 +7,9 @@ import { CalendarIcon, Printer, Download } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -35,6 +37,32 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
   auditLevel,
   setAuditLevel,
 }) => {
+  const { payCycleSettings } = usePayrollProcessor({ silent: true });
+
+  const periodHint = React.useMemo(() => {
+    if (!selectedPayPeriodDate) return null;
+
+    const cutOffDay = payCycleSettings?.cutOffDay ?? 2; // Default Tuesday
+    const payDayOffset = payCycleSettings?.payDayOffset ?? 0;
+    const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const cutOffName = dayNames[cutOffDay === 7 ? 0 : cutOffDay];
+
+    if (bulkGenerationMode === "weekly") {
+      const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
+        selectedPayPeriodDate,
+        "Weekly",
+        cutOffDay,
+        payDayOffset
+      );
+      return `Window: ${format(payPeriodStart, "yyyy-MM-dd")} → ${format(payPeriodEnd, "yyyy-MM-dd")} (cut-off: ${cutOffName})`;
+    }
+
+    // Monthly
+    const start = startOfMonth(selectedPayPeriodDate);
+    const end = endOfMonth(selectedPayPeriodDate);
+    return `Window: ${format(start, "yyyy-MM-dd")} → ${format(end, "yyyy-MM-dd")}`;
+  }, [selectedPayPeriodDate, bulkGenerationMode, payCycleSettings]);
+
   return (
     <>
       <div>
@@ -66,6 +94,9 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
             />
           </PopoverContent>
         </Popover>
+        {periodHint && (
+          <p className="text-xs text-muted-foreground mt-2">{periodHint}</p>
+        )}
       </div>
       <div>
         <Label htmlFor="bulk-mode-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
