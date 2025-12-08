@@ -3,8 +3,10 @@
 import React, { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
-import { format, isSameMonth, isSameYear, isSameWeek, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { format, isSameMonth, isSameYear, startOfMonth, endOfMonth } from "date-fns";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
+import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import IndividualPayslipCard from "./IndividualPayslipCard";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import IndividualPayslipActions from "./IndividualPayslipActions";
@@ -48,6 +50,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const [auditLevel, setAuditLevel] = React.useState<"minimal" | "standard" | "detailed">("standard");
 
   const { generatePdf, printPdf } = usePdfGenerator();
+  const { payCycleSettings } = usePayrollProcessor();
 
   const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
     defaultReportPaperSize: "A4",
@@ -122,17 +125,28 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       return;
     }
 
+    const settings = payCycleSettings ? {
+      payCycleType: payCycleSettings.payCycleType,
+      cutOffDay: payCycleSettings.cutOffDay,
+      payDayOffset: payCycleSettings.payDayOffset,
+    } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
+
     const payslipsForPeriod = payslips.filter(p => {
       const employee = allEmployees.find(emp => emp.id === p.employeeId);
       if (!employee) return false;
 
       const [startPeriodStr] = p.payPeriod.split(' - ');
-      const payslipDate = new Date(startPeriodStr);
-
       if (mode === "monthly" && employee.payFrequency === "Monthly") {
-        return isSameMonth(payslipDate, selectedPayPeriodDate) && isSameYear(payslipDate, selectedPayPeriodDate);
+        const payslipStartDate = new Date(startPeriodStr);
+        return isSameMonth(payslipStartDate, selectedPayPeriodDate) && isSameYear(payslipStartDate, selectedPayPeriodDate);
       } else if (mode === "weekly" && (employee.payFrequency === "Weekly" || employee.payFrequency === "Bi-Weekly")) {
-        return isSameWeek(payslipDate, selectedPayPeriodDate, { weekStartsOn: 1 }) && isSameYear(payslipDate, selectedPayPeriodDate);
+        const { payPeriodStart } = calculatePayPeriodDetails(
+          selectedPayPeriodDate,
+          employee.payFrequency === "Bi-Weekly" ? "Bi-Weekly" : "Weekly",
+          settings.cutOffDay,
+          settings.payDayOffset
+        );
+        return startPeriodStr === format(payPeriodStart, "yyyy-MM-dd");
       }
       return false;
     });
@@ -205,19 +219,29 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     const today = new Date();
     const payslipsForCurrentPeriod: MockPayslip[] = [];
 
+    const settings = payCycleSettings ? {
+      payCycleType: payCycleSettings.payCycleType,
+      cutOffDay: payCycleSettings.cutOffDay,
+      payDayOffset: payCycleSettings.payDayOffset,
+    } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
+
     allEmployees.forEach(employee => {
       let periodStart: Date;
       let periodEnd: Date;
-      let periodFormat: string;
+      const periodFormat = "yyyy-MM-dd";
 
       if (employee.payFrequency === "Monthly") {
         periodStart = startOfMonth(today);
         periodEnd = endOfMonth(today);
-        periodFormat = "yyyy-MM-dd";
       } else if (employee.payFrequency === "Weekly" || employee.payFrequency === "Bi-Weekly") {
-        periodStart = startOfWeek(today, { weekStartsOn: 1 });
-        periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-        periodFormat = "yyyy-MM-dd";
+        const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
+          today,
+          employee.payFrequency === "Bi-Weekly" ? "Bi-Weekly" : "Weekly",
+          settings.cutOffDay,
+          settings.payDayOffset
+        );
+        periodStart = payPeriodStart;
+        periodEnd = payPeriodEnd;
       } else {
         return;
       }
@@ -306,16 +330,26 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     const today = new Date();
     let periodStart: Date;
     let periodEnd: Date;
-    let periodFormat: string;
+    const periodFormat = "yyyy-MM-dd";
 
     if (employee.payFrequency === "Monthly") {
       periodStart = startOfMonth(today);
       periodEnd = endOfMonth(today);
-      periodFormat = "yyyy-MM-dd";
     } else if (employee.payFrequency === "Weekly" || employee.payFrequency === "Bi-Weekly") {
-      periodStart = startOfWeek(today, { weekStartsOn: 1 });
-      periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-      periodFormat = "yyyy-MM-dd";
+      const settings = payCycleSettings ? {
+        payCycleType: payCycleSettings.payCycleType,
+        cutOffDay: payCycleSettings.cutOffDay,
+        payDayOffset: payCycleSettings.payDayOffset,
+      } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
+
+      const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
+        today,
+        employee.payFrequency === "Bi-Weekly" ? "Bi-Weekly" : "Weekly",
+        settings.cutOffDay,
+        settings.payDayOffset
+      );
+      periodStart = payPeriodStart;
+      periodEnd = payPeriodEnd;
     } else {
       showError(`Employee ${employee.firstName} ${employee.lastName} has an unsupported pay frequency: ${employee.payFrequency}.`);
       return;
@@ -333,7 +367,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     } else {
       showError(`No payslip found for ${employee.firstName} ${employee.lastName} for the current period (${targetPayPeriodString}).`);
     }
-  }, [selectedEmployeeId, allEmployees, payslips, setSelectedPayslipId]);
+  }, [selectedEmployeeId, allEmployees, payslips, setSelectedPayslipId, payCycleSettings]);
 
 
   return (
