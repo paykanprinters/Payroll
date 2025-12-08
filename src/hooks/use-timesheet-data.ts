@@ -43,7 +43,7 @@ export const useTimesheetData = ({
 
   const weeklyThreshold = (workHoursSettings?.overtimeThresholdHours && workHoursSettings.overtimeThresholdHours > 0)
     ? workHoursSettings.overtimeThresholdHours
-    : 45;
+    : 41.25;
 
   const fetchLiveTimesheets = useCallback(async () => {
     setIsLoadingTimesheets(true);

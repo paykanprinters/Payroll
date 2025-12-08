@@ -66,7 +66,7 @@ const deriveHourlyRate = (emp: MockEmployee, settings?: WorkHoursSettings | null
 
 const getWeeklyThreshold = (settings?: WorkHoursSettings | null): number => {
   const t = settings?.overtimeThresholdHours;
-  return typeof t === "number" && t > 0 ? t : 45;
+  return typeof t === "number" && t > 0 ? t : 41.25;
 };
 
 const dayNameToIndex = (name: string): number | null => {
@@ -84,8 +84,12 @@ const dayNameToIndex = (name: string): number | null => {
 
 /**
  * Calculate earnings from timesheets using per-period threshold for overtime.
- * - Scheduled work days count toward the period threshold (e.g., 41.25 for 1 week).
- * - Any hours on non-scheduled days (not in Work Days) are treated fully as overtime.
+ * Strictly split total paid hours within the pay period into:
+ * - Regular hours up to the threshold (e.g., 41.25 for weekly)
+ * - Overtime hours for any balance above the threshold
+ * Notes:
+ * - Paid hours come from timesheets (totalWorkHours) which already deduct unpaid breaks.
+ * - No special-casing for non-scheduled days; all paid hours count toward the threshold.
  */
 const calculateEarnings = (
   emp: MockEmployee,
@@ -98,30 +102,11 @@ const calculateEarnings = (
   const weeklyThreshold = getWeeklyThreshold(workHoursSettings);
   const hourly = deriveHourlyRate(emp, workHoursSettings);
 
-  // Determine scheduled work days from settings; default to Mon–Fri if not specified
-  const scheduledDaysNames = (workHoursSettings?.workDays && workHoursSettings.workDays.length > 0)
-    ? workHoursSettings.workDays
-    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-  const scheduledDayIndices = new Set(
-    scheduledDaysNames
-      .map(dayNameToIndex)
-      .filter((n): n is number => n !== null)
+  // Sum all paid hours inside the pay period (breaks already deducted in totalWorkHours)
+  const totalPaidHours = approvedTimesheetsForPeriod.reduce(
+    (sum, ts) => sum + (ts.totalWorkHours || 0),
+    0
   );
-
-  // Sum total scheduled vs out-of-schedule hours inside the pay period
-  let scheduledTotalHours = 0;
-  let outOfScheduleOvertimeHours = 0;
-
-  for (const ts of approvedTimesheetsForPeriod) {
-    const d = parseISO(ts.date);
-    const dow = d.getDay(); // 0 = Sun ... 6 = Sat
-    const hours = ts.totalWorkHours || 0;
-    if (scheduledDayIndices.has(dow)) {
-      scheduledTotalHours += hours;
-    } else {
-      outOfScheduleOvertimeHours += hours;
-    }
-  }
 
   // Compute per-period overtime threshold based on employee pay frequency
   let thresholdForPeriod = weeklyThreshold;
@@ -133,9 +118,9 @@ const calculateEarnings = (
     thresholdForPeriod = weeklyThreshold * approxWeeks;
   } // Weekly uses weeklyThreshold directly
 
-  // Split scheduled hours by the period threshold; add all non-scheduled hours to overtime
-  const regularHours = Math.min(scheduledTotalHours, thresholdForPeriod);
-  let overtimeHours = Math.max(0, scheduledTotalHours - thresholdForPeriod) + outOfScheduleOvertimeHours;
+  // Split hours by the period threshold
+  const regularHours = Math.min(totalPaidHours, thresholdForPeriod);
+  const overtimeHours = Math.max(0, totalPaidHours - thresholdForPeriod);
 
   // Calculate base pay and overtime pay
   let basicSalary = 0;
