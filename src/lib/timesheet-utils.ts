@@ -1,4 +1,4 @@
-import { format, parse, isBefore, isAfter, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import { format, parse, isBefore, isAfter, addWeeks, subWeeks, addDays, setDay, isWithinInterval } from "date-fns";
 import { MockEmployee, LeaveEntry, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types";
 
@@ -91,9 +91,11 @@ export const calculateTimesheetMetrics = (
 /**
  * Helper: get start and end of the week (Mon–Sun) for a given date.
  */
-export const getWeekBounds = (date: Date) => {
-  const start = startOfWeek(date, { weekStartsOn: 1 });
-  const end = endOfWeek(date, { weekStartsOn: 1 });
+export const getWeeklyPeriodContaining = (date: Date, cutOffDay: number) => {
+  const targetDayOfWeek = cutOffDay === 7 ? 0 : cutOffDay;
+  let candidateCutOff = setDay(date, targetDayOfWeek, { weekStartsOn: 1 });
+  const end = candidateCutOff < date ? addWeeks(candidateCutOff, 1) : candidateCutOff;
+  const start = addDays(subWeeks(end, 1), 1);
   return { start, end };
 };
 
@@ -107,10 +109,11 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
   entryHours: number,
   timesheets: TimesheetEntry[],
   weeklyThreshold: number,
+  cutOffDay: number,
   excludeId?: string
 ): number => {
   const entryDate = parse(entryDateISO, "yyyy-MM-dd", new Date());
-  const { start, end } = getWeekBounds(entryDate);
+  const { start, end } = getWeeklyPeriodContaining(entryDate, cutOffDay);
 
   let priorHours = 0;
   for (const ts of timesheets) {

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format, parse, isWithinInterval, startOfWeek, endOfWeek } from "date-fns";
+import { format, parse, isWithinInterval, addDays } from "date-fns";
 import { MockEmployee, TimesheetEntry, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { v4 as uuidv4 } from 'uuid';
-import { calculateTimesheetMetrics, isLeaveDay, computeWeeklyIncrementalOvertimeForEntry } from "@/lib/timesheet-utils";
+import { calculateTimesheetMetrics, isLeaveDay, computeWeeklyIncrementalOvertimeForEntry, getWeeklyPeriodContaining } from "@/lib/timesheet-utils";
 import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import {
   fetchTimesheetsFromSupabase,
@@ -16,6 +16,7 @@ import {
   fetchExistingTimesheetsForBatch,
 } from "@/integrations/supabase/timesheet-queries";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
+import { usePayCycleSettings } from "@/hooks/use-pay-cycle-settings";
 
 interface UseTimesheetDataProps {
   initialTimesheets: TimesheetEntry[];
@@ -44,6 +45,9 @@ export const useTimesheetData = ({
   const weeklyThreshold = (workHoursSettings?.overtimeThresholdHours && workHoursSettings.overtimeThresholdHours > 0)
     ? workHoursSettings.overtimeThresholdHours
     : 41.25;
+
+  const { payCycleSettings } = usePayCycleSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const cutOffDay = payCycleSettings?.cutOffDay ?? 2;
 
   const fetchLiveTimesheets = useCallback(async () => {
     setIsLoadingTimesheets(true);
@@ -169,6 +173,7 @@ export const useTimesheetData = ({
       parseFloat(totalWorkHours.toFixed(2)),
       timesheets,
       weeklyThreshold,
+      cutOffDay,
       editingTimesheet?.id ?? undefined
     );
 
@@ -250,7 +255,8 @@ export const useTimesheetData = ({
 
     const groups = new Map<string, ImportableTimesheetEntry[]>();
     for (const e of newEntries) {
-      const weekStart = format(startOfWeek(e.date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+      const { start: periodStart } = getWeeklyPeriodContaining(e.date, cutOffDay);
+      const weekStart = format(periodStart, "yyyy-MM-dd");
       const key = `${e.employeeId}__${weekStart}`;
       const arr = groups.get(key) || [];
       arr.push(e);
@@ -284,7 +290,7 @@ export const useTimesheetData = ({
           arr.sort((a, b) => a.date.getTime() - b.date.getTime());
           const [empId, weekStart] = key.split("__");
           const weekStartDate = parse(weekStart, "yyyy-MM-dd", new Date());
-          const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 1 });
+          const weekEndDate = addDays(weekStartDate, 6);
 
           const datesInGroup = new Set(arr.map(e => format(e.date, "yyyy-MM-dd")));
 
@@ -348,7 +354,7 @@ export const useTimesheetData = ({
         arr.sort((a, b) => a.date.getTime() - b.date.getTime());
         const [empId, weekStart] = key.split("__");
         const weekStartDate = parse(weekStart, "yyyy-MM-dd", new Date());
-        const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 1 });
+        const weekEndDate = addDays(weekStartDate, 6);
         const datesInGroup = new Set(arr.map(e => format(e.date, "yyyy-MM-dd")));
 
         let priorHours = 0;
