@@ -102,13 +102,29 @@ const calculateEarnings = (
   const weeklyThreshold = getWeeklyThreshold(workHoursSettings);
   const hourly = deriveHourlyRate(emp, workHoursSettings);
 
-  // Sum all paid hours inside the pay period (breaks already deducted in totalWorkHours)
-  const totalPaidHours = approvedTimesheetsForPeriod.reduce(
-    (sum, ts) => sum + (ts.totalWorkHours || 0),
-    0
-  );
+  // Split hours into normal working-day hours vs weekend premium hours (non-working Sat/Sun)
+  const workDaysSet = new Set((workHoursSettings?.workDays || []).map(d => d.toLowerCase()));
+  let normalPaidHours = 0;
+  let saturdayPremiumHours = 0;
+  let sundayPremiumHours = 0;
 
-  // Compute per-period overtime threshold based on employee pay frequency
+  approvedTimesheetsForPeriod.forEach(ts => {
+    const tsDate = parseISO(ts.date);
+    const dayIdx = tsDate.getDay(); // 0=Sun,6=Sat
+    const isSatNonWork = dayIdx === 6 && !workDaysSet.has("saturday");
+    const isSunNonWork = dayIdx === 0 && !workDaysSet.has("sunday");
+    const hours = ts.totalWorkHours || 0;
+
+    if (isSatNonWork) {
+      saturdayPremiumHours += hours;
+    } else if (isSunNonWork) {
+      sundayPremiumHours += hours;
+    } else {
+      normalPaidHours += hours;
+    }
+  });
+
+  // Compute per-period overtime threshold based on employee pay frequency, applied ONLY to normal paid hours
   let thresholdForPeriod = weeklyThreshold;
   if (emp.payFrequency === "Bi-Weekly") {
     thresholdForPeriod = weeklyThreshold * 2;
@@ -118,9 +134,9 @@ const calculateEarnings = (
     thresholdForPeriod = weeklyThreshold * approxWeeks;
   } // Weekly uses weeklyThreshold directly
 
-  // Split hours by the period threshold
-  const regularHours = Math.min(totalPaidHours, thresholdForPeriod);
-  const overtimeHours = Math.max(0, totalPaidHours - thresholdForPeriod);
+  // Split normal hours by the period threshold; weekend premium hours are separate
+  const regularHours = Math.min(normalPaidHours, thresholdForPeriod);
+  const overtimeHours = Math.max(0, normalPaidHours - thresholdForPeriod);
 
   // Calculate base pay and overtime pay
   let basicSalary = 0;
@@ -168,13 +184,23 @@ const calculateEarnings = (
   const roundedBasic = bankersRound(basicSalary, 2);
   const roundedOvertime = bankersRound(totalOvertimeAmount, 2);
 
+  // Weekend premium overtime amounts (exclude from weekly threshold)
+  const saturdayPremiumAmount = bankersRound((hourly > 0 ? saturdayPremiumHours * hourly * 1.5 : 0), 2);
+  const sundayPremiumAmount = bankersRound((hourly > 0 ? sundayPremiumHours * hourly * 2.0 : 0), 2);
+
   // Make hours visible on earnings lines for clarity
   const earningsBreakdown = [{
     name: (emp.hourlyRate || (emp.salary && emp.payFrequency !== "Monthly")) ? `Regular Hours (${regularHours.toFixed(2)}h)` : "Basic Salary",
     amount: roundedBasic
   }];
   if (roundedOvertime > 0) {
-    earningsBreakdown.push({ name: `Overtime (${overtimeHours.toFixed(2)}h)`, amount: roundedOvertime });
+    earningsBreakdown.push({ name: `Overtime (${overtimeHours.toFixed(2)}h @1.5x)`, amount: roundedOvertime });
+  }
+  if (saturdayPremiumHours > 0) {
+    earningsBreakdown.push({ name: `Weekend Overtime (Sat ${saturdayPremiumHours.toFixed(2)}h @1.5x)`, amount: saturdayPremiumAmount });
+  }
+  if (sundayPremiumHours > 0) {
+    earningsBreakdown.push({ name: `Weekend Overtime (Sun ${sundayPremiumHours.toFixed(2)}h @2.0x)`, amount: sundayPremiumAmount });
   }
   // Mock bonus example remains
   if (emp.id === "EMP004" && isSameMonth(payPeriodStart, new Date())) {

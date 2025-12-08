@@ -110,17 +110,37 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
   timesheets: TimesheetEntry[],
   weeklyThreshold: number,
   cutOffDay: number,
+  workDays: string[],
   excludeId?: string
 ): number => {
   const entryDate = parse(entryDateISO, "yyyy-MM-dd", new Date());
   const { start, end } = getWeeklyPeriodContaining(entryDate, cutOffDay);
 
+  const workDaysSet = new Set((workDays || []).map(d => d.toLowerCase()));
+  const dayIndex = entryDate.getDay(); // 0=Sun, 6=Sat
+  const isSaturdayNonWorking = dayIndex === 6 && !workDaysSet.has("saturday");
+  const isSundayNonWorking = dayIndex === 0 && !workDaysSet.has("sunday");
+
+  // If entry falls on a non-working weekend day, all hours are overtime for that entry.
+  if (isSaturdayNonWorking || isSundayNonWorking) {
+    return Math.min(entryHours, entryHours);
+  }
+
+  // Otherwise, compute incremental weekly overtime based on hours worked on working days only.
   let priorHours = 0;
   for (const ts of timesheets) {
     if (ts.employeeId !== employeeId) continue;
     const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
     if (!isWithinInterval(tsDate, { start, end })) continue;
     if (excludeId && ts.id === excludeId) continue;
+
+    const idx = tsDate.getDay();
+    const isSatNonWork = idx === 6 && !workDaysSet.has("saturday");
+    const isSunNonWork = idx === 0 && !workDaysSet.has("sunday");
+
+    // Exclude non-working weekend hours from priorHours so they don't affect weekly threshold
+    if (isSatNonWork || isSunNonWork) continue;
+
     priorHours += ts.totalWorkHours || 0;
   }
 
