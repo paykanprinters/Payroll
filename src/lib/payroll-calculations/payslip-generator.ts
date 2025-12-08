@@ -124,37 +124,38 @@ const calculateEarnings = (
 
   // Calculate base pay and overtime pay
   let basicSalary = 0;
-  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) {
-    // Hourly employees: pay from regular hours
+
+  // For hourly AND non-monthly salaried, pay regular hours from timesheets (regularHours × hourly).
+  if (
+    (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) ||
+    (emp.salary !== undefined && emp.salary !== null && emp.salary > 0 && emp.payFrequency !== "Monthly")
+  ) {
     basicSalary = regularHours * hourly;
   } else if (emp.salary !== undefined && emp.salary !== null && emp.salary > 0) {
-    // Salaried base
+    // Monthly salaried base (lump sum), minus unpaid leave if applicable
     basicSalary = emp.salary;
 
-    // Unpaid leave deduction (Monthly salary only)
-    if (emp.payFrequency === "Monthly") {
-      let unpaidLeaveDaysInPeriod = 0;
-      const employeeUnpaidLeave = leaveRecords.filter(rec =>
-        rec.employeeId === emp.id &&
-        rec.leaveType === "Unpaid Leave" &&
-        (
-          isWithinInterval(new Date(rec.startDate), { start: payPeriodStart, end: payPeriodEnd }) ||
-          isWithinInterval(new Date(rec.endDate), { start: payPeriodStart, end: payPeriodEnd }) ||
-          (new Date(rec.startDate) < payPeriodStart && new Date(rec.endDate) > payPeriodEnd)
-        )
-      );
-      employeeUnpaidLeave.forEach(rec => {
-        const leaveStart = new Date(rec.startDate);
-        const leaveEnd = new Date(rec.endDate);
-        const overlapStart = leaveStart > payPeriodStart ? leaveStart : payPeriodStart;
-        const overlapEnd = leaveEnd < payPeriodEnd ? leaveEnd : payPeriodEnd;
-        unpaidLeaveDaysInPeriod += calculateWorkingDays(overlapStart, overlapEnd);
-      });
+    let unpaidLeaveDaysInPeriod = 0;
+    const employeeUnpaidLeave = leaveRecords.filter(rec =>
+      rec.employeeId === emp.id &&
+      rec.leaveType === "Unpaid Leave" &&
+      (
+        isWithinInterval(new Date(rec.startDate), { start: payPeriodStart, end: payPeriodEnd }) ||
+        isWithinInterval(new Date(rec.endDate), { start: payPeriodStart, end: payPeriodEnd }) ||
+        (new Date(rec.startDate) < payPeriodStart && new Date(rec.endDate) > payPeriodEnd)
+      )
+    );
+    employeeUnpaidLeave.forEach(rec => {
+      const leaveStart = new Date(rec.startDate);
+      const leaveEnd = new Date(rec.endDate);
+      const overlapStart = leaveStart > payPeriodStart ? leaveStart : payPeriodStart;
+      const overlapEnd = leaveEnd < payPeriodEnd ? leaveEnd : payPeriodEnd;
+      unpaidLeaveDaysInPeriod += calculateWorkingDays(overlapStart, overlapEnd);
+    });
 
-      if (unpaidLeaveDaysInPeriod > 0) {
-        const dailyRate = (emp.salary as number) / 20; // Approximate working days
-        basicSalary -= dailyRate * unpaidLeaveDaysInPeriod;
-      }
+    if (unpaidLeaveDaysInPeriod > 0) {
+      const dailyRate = (emp.salary as number) / 20; // Approximate working days
+      basicSalary -= dailyRate * unpaidLeaveDaysInPeriod;
     }
   }
 
@@ -167,9 +168,13 @@ const calculateEarnings = (
   const roundedBasic = bankersRound(basicSalary, 2);
   const roundedOvertime = bankersRound(totalOvertimeAmount, 2);
 
-  const earningsBreakdown = [{ name: emp.hourlyRate ? "Regular Hours" : "Basic Salary", amount: roundedBasic }];
+  // Make hours visible on earnings lines for clarity
+  const earningsBreakdown = [{
+    name: (emp.hourlyRate || (emp.salary && emp.payFrequency !== "Monthly")) ? `Regular Hours (${regularHours.toFixed(2)}h)` : "Basic Salary",
+    amount: roundedBasic
+  }];
   if (roundedOvertime > 0) {
-    earningsBreakdown.push({ name: "Overtime", amount: roundedOvertime });
+    earningsBreakdown.push({ name: `Overtime (${overtimeHours.toFixed(2)}h)`, amount: roundedOvertime });
   }
   // Mock bonus example remains
   if (emp.id === "EMP004" && isSameMonth(payPeriodStart, new Date())) {
