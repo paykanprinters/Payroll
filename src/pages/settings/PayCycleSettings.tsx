@@ -34,7 +34,7 @@ const PayCycleSettingsPage: React.FC = () => {
     resolver: zodResolver(payCycleSchema),
     defaultValues: {
       payCycleType: "Weekly",
-      cutOffDay: 5, // Friday
+      cutOffDay: 2, // Tuesday
       payDayOffset: 0,
     },
   });

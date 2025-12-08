@@ -19,6 +19,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-f
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import { Printer, Download } from "lucide-react";
 import { showError } from "@/utils/toast";
+import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface CalculatePaycheckDialogProps {
@@ -28,7 +29,7 @@ interface CalculatePaycheckDialogProps {
 }
 
 const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpen, onClose, payslipDesignSettings }) => {
-  const { employees, calculateSinglePayslipPreview, companyDetails, taxTables } = usePayrollProcessor();
+  const { employees, calculateSinglePayslipPreview, companyDetails, taxTables, payCycleSettings } = usePayrollProcessor();
   const { generatePdf, printPdf } = usePdfGenerator();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
@@ -43,10 +44,21 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       setSelectedEmployeeId("");
       setPreviewPayslip(null);
       setIsTaxTablesMissing(false);
-      // Determine current period based on today's date for preview
+      // Determine current period based on configured pay cycle for preview
       const today = new Date();
-      setCurrentPeriodStart(startOfMonth(today)); // Default to monthly for preview
-      setCurrentPeriodEnd(endOfMonth(today));
+      const settings = payCycleSettings ? {
+        payCycleType: payCycleSettings.payCycleType,
+        cutOffDay: payCycleSettings.cutOffDay,
+        payDayOffset: payCycleSettings.payDayOffset,
+      } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
+      const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
+        today,
+        settings.payCycleType,
+        settings.cutOffDay,
+        settings.payDayOffset
+      );
+      setCurrentPeriodStart(payPeriodStart);
+      setCurrentPeriodEnd(payPeriodEnd);
     }
   }, [isOpen]);
 
@@ -56,26 +68,27 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
 
     const employee = employees.find(emp => emp.id === employeeId);
     if (employee && companyDetails) {
-      let periodStart: Date;
-      let periodEnd: Date;
+    let periodStart: Date;
+    let periodEnd: Date;
 
-      if (employee.payFrequency === "Monthly") {
-        periodStart = startOfMonth(new Date());
-        periodEnd = endOfMonth(new Date());
-      } else if (employee.payFrequency === "Weekly") {
-        periodStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday start
-        periodEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-      } else if (employee.payFrequency === "Bi-Weekly") {
-        // For bi-weekly, we'll simplify to weekly for mock purposes
-        periodStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-        periodEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-      } else {
-        showError(`Unsupported pay frequency for employee ${employee.firstName} ${employee.lastName}.`);
-        return;
-      }
+    const today = new Date();
+    const settings = payCycleSettings ? {
+      payCycleType: payCycleSettings.payCycleType,
+      cutOffDay: payCycleSettings.cutOffDay,
+      payDayOffset: payCycleSettings.payDayOffset,
+    } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
 
-      setCurrentPeriodStart(periodStart);
-      setCurrentPeriodEnd(periodEnd);
+    const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
+      today,
+      settings.payCycleType,
+      settings.cutOffDay,
+      settings.payDayOffset
+    );
+    periodStart = payPeriodStart;
+    periodEnd = payPeriodEnd;
+
+    setCurrentPeriodStart(periodStart);
+    setCurrentPeriodEnd(periodEnd);
 
       // Guard — do not attempt preview calculation if tax tables aren't loaded
       const tablesMissing =
@@ -93,7 +106,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       const calculatedPayslip = calculateSinglePayslipPreview(employeeId, periodStart, periodEnd);
       setPreviewPayslip(calculatedPayslip);
     }
-  }, [employees, companyDetails, calculateSinglePayslipPreview, taxTables]);
+  }, [employees, companyDetails, calculateSinglePayslipPreview, taxTables, payCycleSettings]);
 
   const handlePrintOrDownload = useCallback(async (action: 'print' | 'download') => {
     if (!previewPayslip || !companyDetails || !currentPeriodStart || !currentPeriodEnd) {

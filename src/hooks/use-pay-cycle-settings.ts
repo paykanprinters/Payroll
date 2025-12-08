@@ -17,7 +17,7 @@ interface UsePayCycleSettingsProps {
 const defaultMockSettings: PayCycleSettings = {
   userId: 'mock-user',
   payCycleType: "Weekly",
-  cutOffDay: 5, // Friday
+  cutOffDay: 2, // Tuesday (1=Mon, 7=Sun)
   payDayOffset: 0, // Pay on cut-off day
 };
 
