@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { format, startOfWeek, eachDayOfInterval, parse, addDays } from "date-fns";
+import { format, eachDayOfInterval, parse, addDays } from "date-fns";
+import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/lib/timesheet-types"; // Import from new types file
 import { showSuccess, showError } from "@/utils/toast";
@@ -46,16 +48,24 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
   const employeeName = getEmployeeName(employeeId);
   const employeeCustomId = employee?.customEmployeeId || "N/A"; // Get custom ID
 
-  const currentWeekStart = useMemo(() => {
-    return startOfWeek(parse(initialDateInWeek, "yyyy-MM-dd", new Date()), { weekStartsOn: 1 }); // Week starts on Monday
-  }, [initialDateInWeek]);
+  const { payCycleSettings } = usePayrollProcessor({ silent: true });
+  const currentWeeklyPeriod = useMemo(() => {
+    const refDate = parse(initialDateInWeek, "yyyy-MM-dd", new Date());
+    const settings = payCycleSettings ? {
+      payCycleType: payCycleSettings.payCycleType,
+      cutOffDay: payCycleSettings.cutOffDay,
+      payDayOffset: payCycleSettings.payDayOffset,
+    } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
+    return calculatePayPeriodDetails(refDate, "Weekly", settings.cutOffDay, settings.payDayOffset);
+  }, [initialDateInWeek, payCycleSettings]);
 
   const weekDays = useMemo(() => {
+    const start = currentWeeklyPeriod.payPeriodStart;
     return eachDayOfInterval({
-      start: currentWeekStart,
-      end: addDays(currentWeekStart, 6), // Corrected: use addDays here
+      start,
+      end: addDays(start, 6),
     }).map(date => format(date, "yyyy-MM-dd"));
-  }, [currentWeekStart]);
+  }, [currentWeeklyPeriod]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -63,7 +73,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
         <DialogHeader>
           <DialogTitle>Weekly Timesheet for {employeeName} ({employeeCustomId})</DialogTitle> {/* Display custom ID */}
           <DialogDescription>
-            Edit clock times for the week of {format(currentWeekStart, "PPP")}.
+            Edit clock times for the week of {format(currentWeeklyPeriod.payPeriodStart, "PPP")} – {format(currentWeeklyPeriod.payPeriodEnd, "PPP")} (cut-off: Tuesday).
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow h-0 min-h-0 pr-4">
