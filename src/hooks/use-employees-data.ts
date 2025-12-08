@@ -12,10 +12,21 @@ import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
 const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
   const newObj: any = {};
   for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+
+    // Explicitly map DB columns to expected form fields
+    if (key === 'iban_number') {
+      newObj['accountNumber'] = obj[key];
+      continue;
     }
+    if (key === 'routing_swift_code') {
+      newObj['branchCode'] = obj[key];
+      continue;
+    }
+
+    // Generic snake_case -> camelCase
+    const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+    newObj[camelKey] = obj[key];
   }
   return newObj as MockEmployee;
 };

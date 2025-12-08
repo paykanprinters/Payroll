@@ -22,9 +22,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
-import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { generateCustomEmployeeId } from "@/lib/utils";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 import BasicInfoForm from "./forms/BasicInfoForm";
 import PersonalDetailsForm from "./forms/PersonalDetailsForm";
@@ -77,8 +77,8 @@ const employeeSchema = z.object({
   uifNumber: z.string().optional(),
   bankName: z.string().optional(),
   bankAccountHolder: z.string().optional(),
-  ibanNumber: z.string().optional(),
-  routingSwiftCode: z.string().optional(),
+  accountNumber: z.string().optional(),
+  branchCode: z.string().optional(),
   bankAccountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
 
   dateOfBirth: z.preprocess(
@@ -99,7 +99,7 @@ const employeeSchema = z.object({
   paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
   payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(),
   standardDailyHours: z.number().min(1).max(24).optional(),
-  ignoredIncompleteFields: z.array(z.string()).optional(), // Added this line
+  ignoredIncompleteFields: z.array(z.string()).optional(),
 }).superRefine((data, ctx) => {
   if (!data.salary && !data.hourlyRate) {
     ctx.addIssue({
@@ -130,23 +130,28 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   onSave,
   initialEmployee,
 }) => {
-  const { employees: allEmployees, companyDetails } = usePayrollProcessor(); // Get all employees and company details
+  const { employees: allEmployees, companyDetails } = usePayrollProcessor();
   const companyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
 
   const formMethods = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
     defaultValues: initialEmployee ? {
       ...initialEmployee,
-      customEmployeeId: initialEmployee.customEmployeeId || "", // Ensure it's a string
-      originCountry: initialEmployee.originCountry || "", // Ensure it's a string
-      employmentType: initialEmployee.employmentType || undefined, // Ensure it's a string
-      gender: initialEmployee.gender || undefined, // Ensure it's a string
-      payFrequency: initialEmployee.payFrequency || undefined, // Ensure it's a string
-      paymentMode: initialEmployee.paymentMode || "Bank Transfer", // Ensure it's a string
-      bankAccountType: initialEmployee.bankAccountType || "Cheque", // Ensure it's a string
-      portalAccess: initialEmployee.portalAccess ?? false, // Ensure boolean
-      standardDailyHours: initialEmployee.standardDailyHours ?? 8, // Ensure number
-      ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [], // Ensure array
+      customEmployeeId: initialEmployee.customEmployeeId || "",
+      originCountry: initialEmployee.originCountry || "",
+      employmentType: initialEmployee.employmentType || undefined,
+      gender: initialEmployee.gender || undefined,
+      payFrequency: initialEmployee.payFrequency || undefined,
+      paymentMode: initialEmployee.paymentMode || "Bank Transfer",
+      bankAccountType: initialEmployee.bankAccountType || "Cheque",
+      portalAccess: initialEmployee.portalAccess ?? false,
+      standardDailyHours: initialEmployee.standardDailyHours ?? 8,
+      ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [],
+      // Ensure bank fields align with the form
+      bankName: initialEmployee.bankName || "",
+      bankAccountHolder: initialEmployee.bankAccountHolder || "",
+      accountNumber: initialEmployee.accountNumber || "",
+      branchCode: initialEmployee.branchCode || "",
     } : {
       firstName: "",
       lastName: "",
@@ -170,8 +175,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       uifNumber: "",
       bankName: "",
       bankAccountHolder: "",
-      ibanNumber: "",
-      routingSwiftCode: "",
+      accountNumber: "",
+      branchCode: "",
       bankAccountType: "Cheque",
       dateOfBirth: "",
       gender: undefined,
@@ -185,8 +190,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       paymentMode: "Bank Transfer",
       payFrequency: undefined,
       standardDailyHours: 8,
-      customEmployeeId: "", // Will be generated in useEffect
-      ignoredIncompleteFields: [], // Initialize as empty array
+      customEmployeeId: "",
+      ignoredIncompleteFields: [],
     },
   });
 
@@ -195,9 +200,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       let customEmployeeIdToUse = initialEmployee.customEmployeeId || "";
 
       if (!customEmployeeIdToUse) {
-        // If existing employee is missing customEmployeeId, generate one
         const currentMaxNumber = allEmployees.reduce((max, emp) => {
-          // Exclude the current employee from max number calculation if their ID is present
           if (emp.id === initialEmployee.id) return max;
           const match = emp.customEmployeeId?.match(/\d+$/);
           return match ? Math.max(max, parseInt(match[0])) : max;
@@ -207,19 +210,23 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
       formMethods.reset({
         ...initialEmployee,
-        customEmployeeId: customEmployeeIdToUse, // Set the generated or existing ID
-        originCountry: initialEmployee.originCountry || "", // Ensure it's a string
-        employmentType: initialEmployee.employmentType || undefined, // Ensure it's a string
-        gender: initialEmployee.gender || undefined, // Ensure it's a string
-        payFrequency: initialEmployee.payFrequency || undefined, // Ensure it's a string
-        paymentMode: initialEmployee.paymentMode || "Bank Transfer", // Ensure it's a string
-        bankAccountType: initialEmployee.bankAccountType || "Cheque", // Ensure it's a string
-        portalAccess: initialEmployee.portalAccess ?? false, // Ensure boolean
-        standardDailyHours: initialEmployee.standardDailyHours ?? 8, // Ensure number
-        ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [], // Ensure array
+        customEmployeeId: customEmployeeIdToUse,
+        originCountry: initialEmployee.originCountry || "",
+        employmentType: initialEmployee.employmentType || undefined,
+        gender: initialEmployee.gender || undefined,
+        payFrequency: initialEmployee.payFrequency || undefined,
+        paymentMode: initialEmployee.paymentMode || "Bank Transfer",
+        bankAccountType: initialEmployee.bankAccountType || "Cheque",
+        portalAccess: initialEmployee.portalAccess ?? false,
+        standardDailyHours: initialEmployee.standardDailyHours ?? 8,
+        ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [],
+        // Bank fields aligned
+        bankName: initialEmployee.bankName || "",
+        bankAccountHolder: initialEmployee.bankAccountHolder || "",
+        accountNumber: initialEmployee.accountNumber || "",
+        branchCode: initialEmployee.branchCode || "",
       });
     } else {
-      // For new employees, generate customEmployeeId
       const currentMaxNumber = allEmployees.reduce((max, emp) => {
         const match = emp.customEmployeeId?.match(/\d+$/);
         return match ? Math.max(max, parseInt(match[0])) : max;
@@ -249,8 +256,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         uifNumber: "",
         bankName: "",
         bankAccountHolder: "",
-        ibanNumber: "",
-        routingSwiftCode: "",
+        accountNumber: "",
+        branchCode: "",
         bankAccountType: "Cheque",
         dateOfBirth: "",
         gender: undefined,
@@ -264,8 +271,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         paymentMode: "Bank Transfer",
         payFrequency: undefined,
         standardDailyHours: 8,
-        customEmployeeId: newCustomEmployeeId, // Set the generated ID here
-        ignoredIncompleteFields: [], // Initialize as empty array
+        customEmployeeId: newCustomEmployeeId,
+        ignoredIncompleteFields: [],
       });
     }
   }, [initialEmployee, formMethods, allEmployees, companyName]);
