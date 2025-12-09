@@ -29,17 +29,48 @@ export async function getMyPayslip(id: string) {
   return data
 }
 
-// New: full fetch (keep as-is for admin-only contexts if used)
+// Admin-aware fetch: admins see all; non-admins see their own if permitted by RLS.
 export async function fetchPayslipsFromSupabase() {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id ?? null
+
+  // Detect admin via secure RPC
+  let isAdmin = false
+  try {
+    const { data: adminFlag } = await supabase.rpc("is_admin")
+    isAdmin = Boolean(adminFlag)
+  } catch (e) {
+    // If RPC fails, default to non-admin behavior
+    isAdmin = false
+  }
+
+  if (isAdmin) {
+    const { data, error } = await supabase
+      .from("payslips")
+      .select("*")
+      .order("pay_date", { ascending: false })
+    if (error) {
+      console.warn("fetchPayslipsFromSupabase (admin) error:", error)
+      return []
+    }
+    return data ?? []
+  }
+
+  // Non-admin: show only the current user's payslips
+  if (!uid) return []
   const { data, error } = await supabase
     .from("payslips")
     .select("*")
-    .order("pay_date", { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+    .eq("employee_id", uid)
+    .order("pay_date", { ascending: false })
+  if (error) {
+    console.warn("fetchPayslipsFromSupabase (user) error:", error)
+    return []
+  }
+  return data ?? []
 }
 
-// New: upsert single payslip
+// Upsert single payslip
 export async function upsertPayslipToSupabase(payslip: any) {
   const { data, error } = await supabase
     .from("payslips")
@@ -50,7 +81,7 @@ export async function upsertPayslipToSupabase(payslip: any) {
   return data;
 }
 
-// New: batch upsert
+// Batch upsert
 export async function batchUpsertPayslipsToSupabase(payslips: any[]) {
   if (!Array.isArray(payslips) || payslips.length === 0) return true;
   const { error } = await supabase
@@ -58,4 +89,3 @@ export async function batchUpsertPayslipsToSupabase(payslips: any[]) {
     .upsert(payslips, { onConflict: "id" });
   if (error) throw error;
   return true;
-}
