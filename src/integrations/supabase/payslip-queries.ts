@@ -23,3 +23,34 @@ export async function getMyPayslip(id: string) {
   if (error) throw error
   return data
 }
+
+// New: full fetch
+export async function fetchPayslipsFromSupabase() {
+  const { data, error } = await supabase
+    .from("payslips")
+    .select("*")
+    .order("pay_date", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// New: upsert single payslip
+export async function upsertPayslipToSupabase(payslip: any) {
+  const { data, error } = await supabase
+    .from("payslips")
+    .upsert(payslip, { onConflict: "id" })
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+// New: batch upsert
+export async function batchUpsertPayslipsToSupabase(payslips: any[]) {
+  if (!Array.isArray(payslips) || payslips.length === 0) return true;
+  const { error } = await supabase
+    .from("payslips")
+    .upsert(payslips, { onConflict: "id" });
+  if (error) throw error;
+  return true;
+}

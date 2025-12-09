@@ -5,15 +5,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 
 type Props = {
-  open: boolean
-  onOpenChange: (v: boolean) => void
-  title: string
-  html: string
-}
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
+  title?: string;
+  html?: string;
+  // Legacy/alternate
+  isOpen?: boolean;
+  onClose?: () => void;
+  reportTitle?: string;
+  reportContent?: string;
+  documentType?: "payslip" | "report";
+};
 
-export default function ReportPreviewDialog({ open, onOpenChange, title, html }: Props) {
+export default function ReportPreviewDialog(props: Props) {
+  const open = props.open ?? props.isOpen ?? false;
+  const handleOpenChange = (v: boolean) => {
+    if (props.onOpenChange) props.onOpenChange(v);
+    if (!v && props.onClose) props.onClose();
+  };
+  const title = props.title ?? props.reportTitle ?? "Preview";
+  const html = props.html ?? props.reportContent ?? "";
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -23,5 +37,5 @@ export default function ReportPreviewDialog({ open, onOpenChange, title, html }:
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

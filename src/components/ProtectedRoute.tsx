@@ -1,11 +1,16 @@
 "use client";
 
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { loading, isAuthenticated } = useAuth();
+type ProtectedRouteProps = {
+  children?: React.ReactNode;
+  allowedRoles?: string[];
+};
+
+export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+  const { loading, isAuthenticated, role } = useAuth();
 
   if (loading) {
     return <div className="p-4 text-sm text-muted-foreground">Checking session…</div>;
@@ -15,5 +20,14 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  if (allowedRoles && allowedRoles.length > 0) {
+    const ok = role ? allowedRoles.includes(role) : false;
+    if (!ok) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+  }
+
+  // Support both wrapper and nested routes
+  if (children) return <>{children}</>;
+  return <Outlet />;
 }

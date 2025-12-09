@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
-import { Database } from "../lib/mock-data-interfaces" // if not present, remove this typing
 import { useToast } from "@/components/ui/use-toast"
 
 type Todo = {
@@ -48,3 +47,5 @@ export function useTodosData() {
 
   return { todos, loading }
 }
+
+export { useTodosData as useToDosData }

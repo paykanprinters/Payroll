@@ -50,3 +50,19 @@ export async function getMyReport(id: string) {
   if (error) throw error
   return data as GeneratedReport
 }
+
+// New: simple checksum for report content de-duplication or caching
+export function computeChecksum(input: string): string {
+  let hash = 0;
+  if (!input) return "0";
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0; // convert to 32-bit int
+  }
+  return Math.abs(hash).toString(16);
+}
+
+// New: alias matching prior usage
+export async function saveGeneratedReport(input: Omit<GeneratedReport, "id" | "generated_at">) {
+  return insertGeneratedReport(input);
+}

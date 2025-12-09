@@ -5,14 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTodosData } from "@/hooks/use-todos-data";
 
+type Props = {
+  toDos?: any[];
+  pendingCount?: number;
+  markToDoAsDone?: (id: string) => void;
+};
+
 const levelColor: Record<string, string> = {
   info: "bg-blue-100 text-blue-700",
   warning: "bg-yellow-100 text-yellow-700",
   critical: "bg-red-100 text-red-700",
 };
 
-export default function ToDoList() {
+export default function ToDoList(props: Props = {}) {
   const { todos, loading } = useTodosData();
+  const items = props.toDos ?? todos;
 
   return (
     <Card className="w-full">
@@ -20,12 +27,12 @@ export default function ToDoList() {
         <CardTitle>To-dos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {loading ? (
+        {loading && !props.toDos ? (
           <div className="text-sm text-muted-foreground">Loading...</div>
-        ) : todos.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="text-sm text-muted-foreground">No to-dos.</div>
         ) : (
-          todos.map((t) => (
+          items.map((t) => (
             <div key={t.id} className="flex items-start justify-between rounded-md border p-3">
               <div className="pr-3">
                 <div className="font-medium">{t.message}</div>

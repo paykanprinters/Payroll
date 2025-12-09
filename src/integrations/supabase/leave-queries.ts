@@ -12,3 +12,24 @@ export async function listMyLeaveRecords() {
   if (error) throw error
   return data
 }
+
+// New: fetch full leave records (admin or own, per RLS)
+export async function fetchLeaveRecordsFromSupabase() {
+  const { data, error } = await supabase
+    .from("leave_records")
+    .select("*")
+    .order("start_date", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+// New: upsert leave record
+export async function upsertLeaveRecordToSupabase(record: any) {
+  const { data, error } = await supabase
+    .from("leave_records")
+    .upsert(record, { onConflict: "id" })
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
