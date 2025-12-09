@@ -54,7 +54,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
       const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
         today,
-        settings.payCycleType as "Monthly" | "Weekly" | "Bi-Weekly",
+        settings.payCycleType,
         settings.cutOffDay,
         settings.payDayOffset
       );
@@ -81,7 +81,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
 
     const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
       today,
-      settings.payCycleType as "Monthly" | "Weekly" | "Bi-Weekly",
+      settings.payCycleType,
       settings.cutOffDay,
       settings.payDayOffset
     );

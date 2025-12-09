@@ -1,33 +1,35 @@
 "use client";
 
-import React from "react";
-import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { Loader2 } from 'lucide-react'; // Import Loader2 icon
 
-type ProtectedRouteProps = {
-  children?: React.ReactNode;
-  allowedRoles?: string[];
-};
+interface ProtectedRouteProps {
+  allowedRoles?: ('Admin' | 'Manager' | 'Staff' | 'Viewer')[];
+}
 
-export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { loading, isAuthenticated, role } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+  const { isAuthenticated, user, isLoadingAuth } = useAuth();
 
-  if (loading) {
-    return <div className="p-4 text-sm text-muted-foreground">Checking session…</div>;
+  if (isLoadingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    const ok = role ? allowedRoles.includes(role) : false;
-    if (!ok) {
-      return <Navigate to="/unauthorized" replace />;
-    }
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // User is authenticated but not authorized for this route
+    return <Navigate to="/unauthorized" replace />;
   }
 
-  // Support both wrapper and nested routes
-  if (children) return <>{children}</>;
   return <Outlet />;
-}
+};
+
+export default ProtectedRoute;

@@ -7,15 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, Info, ArrowRight, ListTodo } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { ToDoEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-
-type LevelType = "critical" | "warning" | "info" | string;
 
 const ToDosPage: React.FC = () => {
   const { toDos, markToDoAsDone } = usePayrollProcessor();
 
-  const pendingToDos = toDos.filter((todo: any) => (todo.status ?? (todo as any).status) === "pending");
-  const completedToDos = toDos.filter((todo: any) => (todo.status ?? (todo as any).status) === "done");
+  const pendingToDos = toDos.filter(todo => todo.status === "pending");
+  const completedToDos = toDos.filter(todo => todo.status === "done");
 
   useEffect(() => {
     console.log("ToDosPage: Rendered. Full To-Dos array:", toDos);
@@ -23,7 +22,7 @@ const ToDosPage: React.FC = () => {
     console.log("ToDosPage: Rendered. Pending Count (from filter):", pendingToDos.length);
   }, [toDos, pendingToDos]);
 
-  const getLevelBadge = (level: LevelType) => {
+  const getLevelBadge = (level: ToDoEntry["level"]) => {
     switch (level) {
       case "critical":
         return <Badge variant="destructive" className="bg-red-500 text-white">Critical</Badge>;
@@ -36,7 +35,7 @@ const ToDosPage: React.FC = () => {
     }
   };
 
-  const getLevelIcon = (level: LevelType) => {
+  const getLevelIcon = (level: ToDoEntry["level"]) => {
     switch (level) {
       case "critical":
         return <AlertTriangle className="h-4 w-4 text-red-500" />;
@@ -47,28 +46,6 @@ const ToDosPage: React.FC = () => {
       default:
         return null;
     }
-  };
-
-  const getRelatedField = (todo: any): string | null => {
-    const rf = todo.relatedField ?? todo.related_field ?? null;
-    return rf ? String(rf) : null;
-  };
-
-  const getActionUrl = (todo: any): string | null => {
-    const url = todo.actionUrl ?? todo.action_url ?? null;
-    return url ? String(url) : null;
-  };
-
-  const getLevel = (todo: any): LevelType => {
-    return (todo.level as LevelType) ?? "info";
-  };
-
-  const getModule = (todo: any): string => {
-    return String(todo.module ?? "");
-  };
-
-  const getMessage = (todo: any): string => {
-    return String(todo.message ?? "");
   };
 
   return (
@@ -97,40 +74,35 @@ const ToDosPage: React.FC = () => {
         <CardContent>
           {pendingToDos.length > 0 ? (
             <div className="space-y-4">
-              {pendingToDos.map((todo: any) => {
-                const level = getLevel(todo);
-                const actionUrl = getActionUrl(todo);
-                const relatedField = getRelatedField(todo);
-                return (
-                  <div key={todo.id} className="flex items-start justify-between p-3 border rounded-md bg-muted/50">
-                    <div className="flex items-center gap-3 flex-1">
-                      {getLevelIcon(level)}
-                      <div>
-                        <p className="font-medium text-sm">{getMessage(todo)}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                          {getLevelBadge(level)}
-                          <span>Module: {getModule(todo)}</span>
-                          {relatedField && (
-                            <span className="ml-2">Field: {relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
-                          )}
-                        </div>
+              {pendingToDos.map((todo) => (
+                <div key={todo.id} className="flex items-start justify-between p-3 border rounded-md bg-muted/50">
+                  <div className="flex items-center gap-3 flex-1">
+                    {getLevelIcon(todo.level)}
+                    <div>
+                      <p className="font-medium text-sm">{todo.message}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                        {getLevelBadge(todo.level)}
+                        <span>Module: {todo.module}</span>
+                        {todo.relatedField && (
+                          <span className="ml-2">Field: {todo.relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-4">
-                      {actionUrl && (
-                        <Button asChild variant="outline" size="sm">
-                          <Link to={actionUrl}>
-                            Go <ArrowRight className="ml-1 h-3 w-3" />
-                          </Link>
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={() => markToDoAsDone(todo.id)} title="Mark as Done">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      </Button>
-                    </div>
                   </div>
-                );
-              })}
+                  <div className="flex items-center gap-2 ml-4">
+                    {todo.actionUrl && (
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={todo.actionUrl}>
+                          Go <ArrowRight className="ml-1 h-3 w-3" />
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => markToDoAsDone(todo.id)} title="Mark as Done">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
@@ -159,25 +131,22 @@ const ToDosPage: React.FC = () => {
         <CardContent>
           {completedToDos.length > 0 ? (
             <div className="space-y-4">
-              {completedToDos.map((todo: any) => {
-                const relatedField = getRelatedField(todo);
-                return (
-                  <div key={todo.id} className="flex items-start justify-between p-3 border rounded-md bg-green-50/50 text-muted-foreground">
-                    <div className="flex items-center gap-3 flex-1">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="font-medium text-sm line-through">{getMessage(todo)}</p>
-                        <div className="flex items-center gap-2 text-xs mt-1">
-                          <span>Module: {getModule(todo)}</span>
-                          {relatedField && (
-                            <span className="ml-2">Field: {relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
-                          )}
-                        </div>
+              {completedToDos.map((todo) => (
+                <div key={todo.id} className="flex items-start justify-between p-3 border rounded-md bg-green-50/50 text-muted-foreground">
+                  <div className="flex items-center gap-3 flex-1">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <div>
+                      <p className="font-medium text-sm line-through">{todo.message}</p>
+                      <div className="flex items-center gap-2 text-xs mt-1">
+                        <span>Module: {todo.module}</span>
+                        {todo.relatedField && (
+                          <span className="ml-2">Field: {todo.relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">

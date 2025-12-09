@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { sanitizeHTML as sanitizeHtml } from "@/utils/sanitize-html";
+import { sanitizeHtml } from "@/utils/sanitize-html";
 
 interface GeneratedReportPayload {
   user_id: string;

@@ -1,130 +1,203 @@
-import { useEffect, useState, useCallback } from "react"
-import { createClient } from "@supabase/supabase-js"
-import { useToast } from "@/components/ui/use-toast"
+"use client";
 
-type Todo = {
-  id: string
-  message: string
-  level: string
-  module: string
-  action_url: string | null
-  status: string
-  assigned_user_id: string | null
-  employee_id: string | null
-  created_at: string | null
-  updated_at: string | null
-}
+import React, { useState, useEffect, useCallback } from "react";
+import { ToDoEntry, MockEmployee } from "@/lib/mock-data-interfaces"; // Import MockEmployee
+import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; // Import EmployeeFormValues
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-type Options = {
-  initialToDos?: Todo[];
-  isMockDataEnabled?: boolean;
-  isAuthenticated?: boolean;
-  isLoadingAuth?: boolean;
+// Helper to convert snake_case to camelCase for Supabase ToDo data
+const convertToDoKeysToCamelCase = (obj: any): ToDoEntry => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+      newObj[camelKey] = obj[key];
+    }
+  }
+  return newObj as ToDoEntry;
 };
 
-type ToDoEntryMock = {
-  id: string;
-  message: string;
-  level: "critical" | "warning" | "info" | string;
-  module: string;
-  actionUrl?: string | null;
-  status: "pending" | "done" | string;
-  assignedTo?: string | null;
-  employeeId?: string | null;
-  relatedField?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-};
-
-function toSnake(todo: ToDoEntryMock): Todo {
-  return {
-    id: todo.id,
-    message: todo.message,
-    level: todo.level as string,
-    module: todo.module,
-    action_url: todo.actionUrl ?? null,
-    status: todo.status as string,
-    assigned_user_id: todo.assignedTo ?? null,
-    employee_id: todo.employeeId ?? null,
-    created_at: todo.createdAt ?? null,
-    updated_at: todo.updatedAt ?? null,
-  };
+interface UseToDosDataProps {
+  initialToDos: ToDoEntry[];
+  isMockDataEnabled: boolean;
+  employees: MockEmployee[];
+  addOrUpdateEmployee: (employee: EmployeeFormValues) => Promise<void>;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
 }
 
-export function useTodosData(opts?: Options) {
-  const { toast } = useToast()
-  const [todos, setTodos] = useState<Todo[]>([])
-  const [loading, setLoading] = useState(true)
+export const useToDosData = (
+  { initialToDos, isMockDataEnabled, employees, addOrUpdateEmployee, isAuthenticated, isLoadingAuth }: UseToDosDataProps
+) => {
+  const [toDos, setToDos] = useState<ToDoEntry[]>([]); // Initialize as empty, will fetch from Supabase or localStorage
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const [isLoadingToDos, setIsLoadingToDos] = useState<boolean>(true);
 
-  const fetchTodos = useCallback(async () => {
-    if (opts?.isMockDataEnabled) {
-      const stored = localStorage.getItem("mockToDos");
-      const parsed: any[] = stored ? JSON.parse(stored) : (opts.initialToDos ?? []);
-      // Normalize camelCase mock entries to snake_case Todo shape
-      const normalized: Todo[] = parsed.map((t: any) =>
-        "actionUrl" in t || "employeeId" in t ? toSnake(t as ToDoEntryMock) : (t as Todo)
-      );
-      setTodos(normalized);
-      setLoading(false);
-      return;
+  const fetchLiveToDos = useCallback(async () => {
+    setIsLoadingToDos(true);
+    try {
+      console.log("useToDosData: Fetching live To-Dos from Supabase...");
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("useToDosData: Error fetching live To-Dos:", error);
+        showError("Failed to load live To-Dos.");
+        setToDos([]);
+      } else {
+        const camelCaseData = data.map(convertToDoKeysToCamelCase);
+        console.log("useToDosData: Live To-Dos fetched (camelCaseData):", camelCaseData); // ADDED THIS LOG
+        setToDos(camelCaseData);
+        setPendingCount(camelCaseData.filter(todo => todo.status === "pending").length);
+      }
+    } catch (err) {
+      console.error("useToDosData: Unhandled error fetching live To-Dos:", err);
+      showError("An unexpected error occurred while loading live To-Dos.");
+      setToDos([]);
+    } finally {
+      dismissToast("loading-todos"); // Dismiss any loading toast
+      setIsLoadingToDos(false);
+      console.log("useToDosData: fetchLiveToDos finished. isLoadingToDos set to false.");
     }
-    if (opts?.isLoadingAuth) {
-      setLoading(true);
-      return;
-    }
-    if (!opts?.isAuthenticated) {
-      setTodos([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true)
-    const { data, error } = await supabase
-      .from("todos")
-      .select("id,message,level,module,action_url,status,assigned_user_id,employee_id,created_at,updated_at")
-      .order("created_at", { ascending: false })
-    if (error) {
-      toast({ title: "Failed to load todos", description: error.message, variant: "destructive" })
-    } else {
-      setTodos((data as unknown as Todo[]) ?? [])
-    }
-    setLoading(false)
-  }, [opts?.isMockDataEnabled, opts?.isAuthenticated, opts?.isLoadingAuth, opts?.initialToDos, toast])
+  }, []);
 
   useEffect(() => {
-    fetchTodos()
-  }, [fetchTodos])
-
-  const markToDoAsDone = useCallback(async (id: string) => {
-    if (opts?.isMockDataEnabled) {
-      setTodos(prev => {
-        const updated = prev.map(t => t.id === id ? { ...t, status: "done" } : t);
-        localStorage.setItem("mockToDos", JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: updated }));
-        return updated;
-      });
+    console.log("useToDosData: useEffect triggered. isMockDataEnabled:", isMockDataEnabled, "isAuthenticated:", isAuthenticated, "isLoadingAuth:", isLoadingAuth);
+    console.log("useToDosData: Current initialToDos length:", initialToDos.length, "employees length:", employees.length);
+    if (isLoadingAuth) {
+      setIsLoadingToDos(true); // Keep loading true while auth is loading
       return;
     }
-    const { error } = await supabase.from("todos").update({ status: "done" }).eq("id", id);
-    if (error) {
-      toast({ title: "Failed to update To-Do", description: error.message, variant: "destructive" })
+
+    if (isMockDataEnabled) {
+      console.log("useToDosData: Mock data enabled. Setting To-Dos from initialToDos.");
+      setToDos(initialToDos);
+      setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
+      setIsLoadingToDos(false);
+    } else if (isAuthenticated) {
+      console.log("useToDosData: Live data enabled and authenticated. Calling fetchLiveToDos.");
+      fetchLiveToDos();
     } else {
-      setTodos(prev => prev.map(t => t.id === id ? { ...t, status: "done" } : t))
-      window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: todos }));
+      // Not mock data, not authenticated, and auth is done loading
+      console.log("useToDosData: Live data enabled but not authenticated. Clearing To-Dos.");
+      setToDos([]);
+      setPendingCount(0);
+      setIsLoadingToDos(false);
     }
-  }, [opts?.isMockDataEnabled, toast, todos])
+  }, [initialToDos, isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveToDos]);
 
-  const refetchToDos = useCallback(() => {
-    fetchTodos();
-  }, [fetchTodos])
+  const getEmployeeCustomId = useCallback((employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    return employee ? employee.customEmployeeId : "N/A";
+  }, [employees]);
 
-  const pendingCount = todos.filter(t => t.status === "pending").length;
+  const markToDoAsDone = useCallback(async (id: string) => {
+    const todoToMark = toDos.find(todo => todo.id === id);
 
-  return { todos, toDos: todos, loading, isLoadingToDos: loading, pendingCount, markToDoAsDone, refetchToDos }
-}
+    if (!todoToMark) {
+      showError("To-Do not found.");
+      return;
+    }
 
+    if (isMockDataEnabled) {
+      console.log("useToDosData: Mock data enabled. Marking To-Do as done locally.");
+      // Mock data handling
+      if (todoToMark.employeeId && todoToMark.relatedField) {
+        const employee = employees.find(emp => emp.id === todoToMark.employeeId);
+        if (employee) {
+          const updatedIgnoredFields = new Set(employee.ignoredIncompleteFields || []);
+          updatedIgnoredFields.add(todoToMark.relatedField);
 
-export { useTodosData as useToDosData }
+          const updatedEmployee: EmployeeFormValues = {
+            ...employee,
+            ignoredIncompleteFields: Array.from(updatedIgnoredFields),
+          };
+          console.log("useToDosData: Mock - updatedEmployee before addOrUpdateEmployee:", updatedEmployee); // Added log
+
+          try {
+            console.log(`useToDosData: Updating mock employee ${employee.firstName} with ignored field ${todoToMark.relatedField}.`);
+            await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee
+            showSuccess(`Field '${todoToMark.relatedField}' for ${employee.firstName} ${employee.lastName} marked as intentionally blank.`);
+          } catch (error) {
+            console.error("useToDosData: Failed to update employee with ignored field (mock):", error);
+            showError("Failed to mark field as intentionally blank (mock).");
+            return;
+          }
+        }
+      }
+
+      setToDos(prevToDos => {
+        const updatedToDos = prevToDos.map(todo =>
+          todo.id === id ? { ...todo, status: "done" as const } : todo
+        );
+        localStorage.setItem("mockToDos", JSON.stringify(updatedToDos));
+        window.dispatchEvent(new CustomEvent('toDosUpdated', { detail: updatedToDos }));
+        setPendingCount(updatedToDos.filter(todo => todo.status === "pending").length);
+        return updatedToDos;
+      });
+    } else {
+      console.log("useToDosData: Live data enabled. Marking To-Do as done in Supabase.");
+      setIsLoadingToDos(true);
+      try {
+        // 1. Update To-Do status in Supabase
+        const { error: updateTodoError } = await supabase
+          .from('todos')
+          .update({ status: 'done' })
+          .eq('id', id);
+
+        if (updateTodoError) {
+          console.error("useToDosData: Error updating To-Do status in Supabase:", updateTodoError);
+          showError(`Failed to mark To-Do as done: ${updateTodoError.message}`);
+          return;
+        }
+
+        // 2. If related to an employee field, update employee's ignored_incomplete_fields
+        if (todoToMark.employeeId && todoToMark.relatedField) {
+          const employee = employees.find(emp => emp.id === todoToMark.employeeId);
+          if (employee) {
+            const updatedIgnoredFields = new Set(employee.ignoredIncompleteFields || []);
+            updatedIgnoredFields.add(todoToMark.relatedField);
+
+            const updatedEmployee: EmployeeFormValues = {
+              ...employee,
+              ignoredIncompleteFields: Array.from(updatedIgnoredFields),
+            };
+            console.log("useToDosData: Live - updatedEmployee before addOrUpdateEmployee:", updatedEmployee); // Added log
+
+            try {
+              console.log(`useToDosData: Updating live employee ${employee.firstName} with ignored field ${todoToMark.relatedField}.`);
+              await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee to Supabase
+              showSuccess(`Field '${todoToMark.relatedField}' for ${employee.firstName} ${employee.lastName} marked as intentionally blank.`);
+            } catch (error) {
+              console.error("useToDosData: Failed to update employee with ignored field (live):", error);
+              showError("Failed to mark field as intentionally blank (live).");
+              return;
+            }
+          }
+        }
+
+        showSuccess("To-Do marked as done!");
+        fetchLiveToDos(); // Re-fetch to update the list
+      } catch (err) {
+        console.error("useToDosData: Unhandled error marking To-Do as done (live):", err);
+        showError("An unexpected error occurred while marking To-Do as done.");
+      } finally {
+        dismissToast("loading-todos"); // Dismiss any loading toast
+        setIsLoadingToDos(false);
+        console.log("useToDosData: markToDoAsDone finished. isLoadingToDos set to false.");
+      }
+    }
+  }, [toDos, employees, isMockDataEnabled, addOrUpdateEmployee, fetchLiveToDos]);
+
+  return {
+    toDos,
+    pendingCount,
+    markToDoAsDone,
+    getEmployeeCustomId,
+    isLoadingToDos,
+    refetchToDos: fetchLiveToDos,
+  };
+};

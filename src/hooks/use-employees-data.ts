@@ -1,223 +1,337 @@
-import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { useToast } from "@/components/ui/use-toast";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Helper to convert snake_case to camelCase for Supabase data
+const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
 
-type UseEmployeesDataProps = {
+    // Explicitly map DB columns to expected form fields
+    if (key === 'iban_number') {
+      newObj['accountNumber'] = obj[key];
+      continue;
+    }
+    if (key === 'routing_swift_code') {
+      newObj['branchCode'] = obj[key];
+      continue;
+    }
+
+    // Generic snake_case -> camelCase
+    const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+    newObj[camelKey] = obj[key];
+  }
+  return newObj as MockEmployee;
+};
+
+// Helper to convert camelCase to snake_case for Supabase inserts/updates
+const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+      // Special handling for renamed fields
+      if (key === 'accountNumber') {
+        newObj['iban_number'] = (obj as any)[key];
+      } else if (key === 'branchCode') {
+        newObj['routing_swift_code'] = (obj as any)[key];
+      } else {
+        newObj[snakeKey] = (obj as any)[key];
+      }
+    }
+  }
+  return newObj;
+};
+
+interface UseEmployeesDataProps {
   isMockDataEnabled: boolean;
   companyName: string;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
-};
-
-function mapRowToMock(row: any): MockEmployee {
-  return {
-    id: row.id,
-    customEmployeeId: row.custom_employee_id ?? row.id,
-    personalId: row.personal_id ?? undefined,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    email: row.email,
-    jobTitle: row.job_title,
-    salary: row.salary ?? undefined,
-    hourlyRate: row.hourly_rate ?? undefined,
-    startDate: row.start_date,
-    idNumber: row.id_number ?? undefined,
-    phoneNumber: row.phone_number ?? undefined,
-    emergencyContactName: row.emergency_contact_name ?? undefined,
-    emergencyContactNumber: row.emergency_contact_number ?? undefined,
-    emergencyContactAddress: row.emergency_contact_address ?? undefined,
-    addressLine1: row.address_line1 ?? undefined,
-    addressLine2: row.address_line2 ?? undefined,
-    city: row.city ?? undefined,
-    province: row.province ?? undefined,
-    postalCode: row.postal_code ?? undefined,
-    taxReferenceNumber: row.tax_reference_number ?? undefined,
-    uifNumber: row.uif_number ?? undefined,
-    bankName: row.bank_name ?? undefined,
-    bankAccountHolder: row.bank_account_holder ?? undefined,
-    accountNumber: row.account_number ?? undefined,
-    branchCode: row.branch_code ?? undefined,
-    bankAccountType: row.bank_account_type ?? undefined,
-    dateOfBirth: row.date_of_birth ?? undefined,
-    gender: row.gender ?? undefined,
-    department: row.department ?? undefined,
-    workLocation: row.work_location ?? undefined,
-    dateOfConfirmation: row.date_of_confirmation ?? undefined,
-    originCountry: row.origin_country ?? undefined,
-    employmentType: row.employment_type ?? undefined,
-    portalAccess: row.portal_access ?? undefined,
-    fathersName: row.fathers_name ?? undefined,
-    molId: row.mol_id ?? undefined,
-    permanentAddress: row.permanent_address ?? undefined,
-    paymentMode: row.payment_mode ?? undefined,
-    payFrequency: row.pay_frequency ?? undefined,
-    standardDailyHours: row.standard_daily_hours ?? undefined,
-    ignoredIncompleteFields: row.ignored_incomplete_fields ?? undefined,
-  };
 }
 
-function mapMockToRow(input: Partial<MockEmployee>): any {
-  const r: any = {};
-  if (input.id) r.id = input.id;
-  if (input.customEmployeeId) r.custom_employee_id = input.customEmployeeId;
-  if (input.personalId) r.personal_id = input.personalId;
-  if (input.firstName) r.first_name = input.firstName;
-  if (input.lastName) r.last_name = input.lastName;
-  if (input.email) r.email = input.email;
-  if (input.jobTitle) r.job_title = input.jobTitle;
-  if (input.salary !== undefined) r.salary = input.salary;
-  if (input.hourlyRate !== undefined) r.hourly_rate = input.hourlyRate;
-  if (input.startDate) r.start_date = input.startDate;
-  if (input.idNumber) r.id_number = input.idNumber;
-  if (input.phoneNumber) r.phone_number = input.phoneNumber;
-  if (input.emergencyContactName) r.emergency_contact_name = input.emergencyContactName;
-  if (input.emergencyContactNumber) r.emergency_contact_number = input.emergencyContactNumber;
-  if (input.emergencyContactAddress) r.emergency_contact_address = input.emergencyContactAddress;
-  if (input.addressLine1) r.address_line1 = input.addressLine1;
-  if (input.addressLine2) r.address_line2 = input.addressLine2;
-  if (input.city) r.city = input.city;
-  if (input.province) r.province = input.province;
-  if (input.postalCode) r.postal_code = input.postalCode;
-  if (input.taxReferenceNumber) r.tax_reference_number = input.taxReferenceNumber;
-  if (input.uifNumber) r.uif_number = input.uifNumber;
-  if (input.bankName) r.bank_name = input.bankName;
-  if (input.bankAccountHolder) r.bank_account_holder = input.bankAccountHolder;
-  if (input.accountNumber) r.account_number = input.accountNumber;
-  if (input.branchCode) r.branch_code = input.branchCode;
-  if (input.bankAccountType) r.bank_account_type = input.bankAccountType;
-  if (input.dateOfBirth) r.date_of_birth = input.dateOfBirth;
-  if (input.gender) r.gender = input.gender;
-  if (input.department) r.department = input.department;
-  if (input.workLocation) r.work_location = input.workLocation;
-  if (input.dateOfConfirmation) r.date_of_confirmation = input.dateOfConfirmation;
-  if (input.originCountry) r.origin_country = input.originCountry;
-  if (input.employmentType) r.employment_type = input.employmentType;
-  if (input.portalAccess !== undefined) r.portal_access = input.portalAccess;
-  if (input.fathersName) r.fathers_name = input.fathersName;
-  if (input.molId) r.mol_id = input.molId;
-  if (input.permanentAddress) r.permanent_address = input.permanentAddress;
-  if (input.paymentMode) r.payment_mode = input.paymentMode;
-  if (input.payFrequency) r.pay_frequency = input.payFrequency;
-  if (input.standardDailyHours !== undefined) r.standard_daily_hours = input.standardDailyHours;
-  if (input.ignoredIncompleteFields) r.ignored_incomplete_fields = input.ignoredIncompleteFields;
-  return r;
-}
-
-export function useEmployeesData({ isMockDataEnabled, companyName, isAuthenticated, isLoadingAuth }: UseEmployeesDataProps) {
-  const { toast } = useToast();
+export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticated, isLoadingAuth }: UseEmployeesDataProps) => {
   const [employees, setEmployees] = useState<MockEmployee[]>([]);
-  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
-  const [isMutatingEmployee, setIsMutatingEmployee] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // For initial/full data fetch
+  const [isMutating, setIsMutating] = useState<boolean>(false); // For add/update/delete operations
 
-  const fetchEmployees = useCallback(async () => {
-    if (isMockDataEnabled) {
-      const stored = localStorage.getItem("mockEmployees");
-      setEmployees(stored ? (JSON.parse(stored) as MockEmployee[]) : []);
-      setIsLoadingEmployees(false);
-      return;
-    }
-    if (!isAuthenticated || isLoadingAuth) {
-      setEmployees([]);
-      setIsLoadingEmployees(false);
-      return;
-    }
-    setIsLoadingEmployees(true);
-    const { data, error } = await supabase
-      .from("employees")
-      .select("*")
-      .order("last_name", { ascending: true });
-    if (error) {
-      toast({ title: "Failed to load employees", description: error.message, variant: "destructive" });
-      setEmployees([]);
-    } else {
-      setEmployees((data || []).map(mapRowToMock));
-    }
-    setIsLoadingEmployees(false);
-  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, toast]);
-
-  useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
-
-  const addOrUpdateEmployee = useCallback(async (formValues: any) => {
-    setIsMutatingEmployee(true);
+  // --- Live Employee Data Management (Supabase) ---
+  const refetchEmployees = useCallback(async () => { // Renamed from fetchLiveEmployees
+    setIsLoading(true); // Only set loading for full refetch
     try {
-      if (isMockDataEnabled) {
-        setEmployees(prev => {
-          let updated: MockEmployee[];
-          const existsIdx = prev.findIndex(e => e.id === formValues.id);
-          if (existsIdx !== -1) {
-            updated = prev.map((e, i) => (i === existsIdx ? { ...e, ...formValues } : e));
-          } else {
-            const id = formValues.id ?? crypto.randomUUID();
-            const customEmployeeId = formValues.customEmployeeId ?? `${(companyName || "ACME").slice(0, 3).toUpperCase()}-${String(prev.length + 1).padStart(4, "0")}`;
-            updated = [...prev, { ...formValues, id, customEmployeeId }];
-          }
-          localStorage.setItem("mockEmployees", JSON.stringify(updated));
-          window.dispatchEvent(new CustomEvent("employeesUpdated"));
-          return updated;
-        });
-        return;
-      }
-      const row = mapMockToRow(formValues);
+      console.log("useEmployeesData: Fetching live employees from Supabase...");
       const { data, error } = await supabase
-        .from("employees")
-        .upsert(row, { onConflict: "id" })
-        .select("*")
-        .maybeSingle();
-      if (error) {
-        toast({ title: "Failed to save employee", description: error.message, variant: "destructive" });
-      } else if (data) {
-        setEmployees(prev => {
-          const mapped = mapRowToMock(data);
-          const idx = prev.findIndex(e => e.id === mapped.id);
-          const next = idx !== -1 ? prev.map((e, i) => (i === idx ? mapped : e)) : [...prev, mapped];
-          window.dispatchEvent(new CustomEvent("employeesUpdated"));
-          return next;
-        });
-      }
-    } finally {
-      setIsMutatingEmployee(false);
-    }
-  }, [isMockDataEnabled, companyName, toast]);
+        .from('employees')
+        .select('*')
+        .order('first_name', { ascending: true });
 
-  const deleteEmployee = useCallback(async (id: string, _displayName?: string) => {
-    setIsMutatingEmployee(true);
-    try {
-      if (isMockDataEnabled) {
-        setEmployees(prev => {
-          const updated = prev.filter(e => e.id !== id);
-          localStorage.setItem("mockEmployees", JSON.stringify(updated));
-          window.dispatchEvent(new CustomEvent("employeesUpdated"));
-          return updated;
-        });
-        return;
-      }
-      const { error } = await supabase.from("employees").delete().eq("id", id);
       if (error) {
-        toast({ title: "Failed to delete employee", description: error.message, variant: "destructive" });
+        console.error("useEmployeesData: Error fetching live employees:", error);
+        showError("Failed to load live employee data.");
+        setEmployees([]);
       } else {
-        setEmployees(prev => {
-          const updated = prev.filter(e => e.id !== id);
-          window.dispatchEvent(new CustomEvent("employeesUpdated"));
-          return updated;
-        });
+        const camelCaseData = data.map(convertEmployeeKeysToCamelCase);
+        console.log("useEmployeesData: Live employees fetched:", camelCaseData);
+        console.log(`useEmployeesData: Successfully fetched ${camelCaseData.length} employees from Supabase.`);
+        setEmployees(camelCaseData);
       }
+    } catch (err) {
+      console.error("useEmployeesData: Unhandled error fetching live employees:", err);
+      showError("An unexpected error occurred while loading live employee data.");
+      setEmployees([]);
     } finally {
-      setIsMutatingEmployee(false);
+      setIsLoading(false);
+      console.log("useEmployeesData: refetchEmployees finished. isLoading set to false.");
     }
-  }, [isMockDataEnabled, toast]);
+  }, []); // No dependencies needed for refetchEmployees itself
+
+  const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues): Promise<MockEmployee | null> => {
+    const toastId = showLoading(employeeData.id ? "Updating employee..." : "Adding new employee...") as string;
+    setIsMutating(true); // Set mutating for this specific operation
+    try {
+      let customEmployeeIdToUse = employeeData.customEmployeeId;
+
+      if (!employeeData.id) { // If adding a new employee
+        const currentMaxNumber = employees.reduce((max, emp) => {
+          const match = emp.customEmployeeId?.match(/\d+$/);
+          return match ? Math.max(max, parseInt(match[0])) : max;
+        }, 0);
+        customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+      } else { // If updating an existing employee
+        if (!customEmployeeIdToUse) {
+          const existingEmployee = employees.find(emp => emp.id === employeeData.id);
+          customEmployeeIdToUse = existingEmployee?.customEmployeeId;
+        }
+        if (!customEmployeeIdToUse) {
+             const currentMaxNumber = employees.reduce((max, emp) => {
+                const match = emp.customEmployeeId?.match(/\d+$/);
+                return match ? Math.max(max, parseInt(match[0])) : max;
+            }, 0);
+            customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+        }
+      }
+
+      // Enforce exclusivity: if salary is set, clear hourly; if hourly is set, clear salary
+      const exclusivePayload: EmployeeFormValues = { ...employeeData };
+      if (exclusivePayload.salary !== undefined && exclusivePayload.salary > 0) {
+        exclusivePayload.hourlyRate = undefined;
+      } else if (exclusivePayload.hourlyRate !== undefined && exclusivePayload.hourlyRate > 0) {
+        exclusivePayload.salary = undefined;
+      }
+
+      // Include nulls for cleared fields so Supabase actually clears the column
+      const payloadWithCustomId = {
+        ...exclusivePayload,
+        customEmployeeId: customEmployeeIdToUse,
+        salary: exclusivePayload.salary ?? null,
+        hourlyRate: exclusivePayload.hourlyRate ?? null,
+      } as any;
+
+      const snakeCasePayload = convertEmployeeKeysToSnakeCase(payloadWithCustomId);
+      console.log("useEmployeesData: Upserting live employee with payload:", snakeCasePayload);
+
+      const { data, error } = await supabase
+        .from('employees')
+        .upsert(snakeCasePayload, { onConflict: 'id' })
+        .select();
+
+      if (error) {
+        console.error("useEmployeesData: Error upserting live employee:", error);
+        showError(`Failed to save employee: ${error.message}`);
+        return null;
+      } else if (data && data.length > 0) {
+        const camelCaseData = convertEmployeeKeysToCamelCase(data[0]);
+        setEmployees(prev => {
+          const existingIndex = prev.findIndex(emp => emp.id === camelCaseData.id);
+          if (existingIndex !== -1) {
+            return prev.map((emp, idx) => idx === existingIndex ? camelCaseData : emp);
+          } else {
+            return [...prev, camelCaseData];
+          }
+        });
+        showSuccess("Employee saved successfully!");
+        return camelCaseData;
+      } else {
+        console.warn("useEmployeesData: Upsert succeeded but returned no data. This might indicate an RLS issue or unexpected behavior.");
+        showError("Employee saved, but data could not be retrieved. Please refresh.");
+        return null;
+      }
+    } catch (err) {
+      console.error("useEmployeesData: Unhandled error upserting live employee:", err);
+      showError("An unexpected error occurred while saving employee data.");
+      return null;
+    } finally {
+      dismissToast(toastId);
+      setIsMutating(false); // Reset mutating state
+      console.log("useEmployeesData: upsertLiveEmployee finished. isMutating set to false.");
+    }
+  }, [employees, companyName]); // `employees` is a dependency here because `customEmployeeIdToUse` generation depends on it.
+
+  const deleteLiveEmployee = useCallback(async (employeeId: string) => {
+    const toastId = showLoading("Deleting employee...") as string;
+    setIsMutating(true); // Set mutating for this specific operation
+    try {
+      console.log("useEmployeesData: Deleting live employee with ID:", employeeId);
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', employeeId);
+
+      if (error) {
+        console.error("useEmployeesData: Error deleting live employee:", error);
+        showError(`Failed to delete employee: ${error.message}`);
+      } else {
+        setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+        showSuccess("Employee deleted successfully!");
+      }
+    } catch (err) {
+      console.error("useEmployeesData: Unhandled error deleting live employee:", err);
+      showError("An unexpected error occurred while deleting employee data.");
+    } finally {
+      dismissToast(toastId);
+      setIsMutating(false); // Reset mutating state
+      console.log("useEmployeesData: deleteLiveEmployee finished. isMutating set to false.");
+    }
+  }, []);
+
+  // --- Unified Employee Management Functions ---
+  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+    if (isMockDataEnabled) {
+      setEmployees(prevEmployees => {
+        let updatedEmployees: MockEmployee[];
+        if (employeeData.id) {
+          const existingEmployee = prevEmployees.find(emp => emp.id === employeeData.id);
+          let customEmployeeIdToUse = employeeData.customEmployeeId;
+
+          if (!customEmployeeIdToUse && existingEmployee) {
+            customEmployeeIdToUse = existingEmployee.customEmployeeId;
+          }
+          if (!customEmployeeIdToUse) {
+            const currentMaxNumber = prevEmployees.reduce((max, emp) => {
+              const match = emp.customEmployeeId?.match(/\d+$/);
+              return match ? Math.max(max, parseInt(match[0])) : max;
+            }, 0);
+            customEmployeeIdToUse = generateCustomEmployeeId(companyName, currentMaxNumber);
+          }
+
+          // Enforce exclusivity for mock update as well
+          const sanitized = { ...employeeData };
+          if (sanitized.salary !== undefined && sanitized.salary > 0) {
+            sanitized.hourlyRate = undefined;
+          } else if (sanitized.hourlyRate !== undefined && sanitized.hourlyRate > 0) {
+            sanitized.salary = undefined;
+          }
+          updatedEmployees = prevEmployees.map(emp =>
+            emp.id === employeeData.id ? { ...emp, ...sanitized, customEmployeeId: customEmployeeIdToUse } : emp
+          );
+          showSuccess("Mock employee updated successfully!");
+        } else {
+          const newId = uuidv4();
+          const currentMaxNumber = prevEmployees.reduce((max, emp) => {
+            const match = emp.customEmployeeId?.match(/\d+$/);
+            return match ? Math.max(max, parseInt(match[0])) : max;
+          }, 0);
+          const newCustomEmployeeId = generateCustomEmployeeId(companyName, currentMaxNumber);
+
+          // Enforce exclusivity for mock creation
+          const sanitized = { ...employeeData };
+          if (sanitized.salary !== undefined && sanitized.salary > 0) {
+            sanitized.hourlyRate = undefined;
+          } else if (sanitized.hourlyRate !== undefined && sanitized.hourlyRate > 0) {
+            sanitized.salary = undefined;
+          }
+
+          const newEmployee: MockEmployee = {
+            ...sanitized,
+            id: newId,
+            customEmployeeId: newCustomEmployeeId,
+            standardDailyHours: sanitized.standardDailyHours || 8,
+            firstName: sanitized.firstName,
+            lastName: sanitized.lastName,
+            email: sanitized.email,
+            jobTitle: sanitized.jobTitle,
+            startDate: sanitized.startDate,
+          };
+          updatedEmployees = [...prevEmployees, newEmployee];
+          showSuccess("Mock employee added successfully!");
+        }
+        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
+        return updatedEmployees;
+      });
+    } else {
+      const result = await upsertLiveEmployee(employeeData);
+      if (!result) {
+        refetchEmployees(); // Call refetchEmployees if upsert didn't return data
+      }
+    }
+  }, [isMockDataEnabled, upsertLiveEmployee, companyName, refetchEmployees]); // Added refetchEmployees to dependencies
+
+  const deleteEmployee = useCallback(async (employeeId: string, employeeName: string) => {
+    if (isMockDataEnabled) {
+      setEmployees(prevEmployees => {
+        const updatedEmployees = prevEmployees.filter(emp => emp.id !== employeeId);
+        localStorage.setItem("mockEmployees", JSON.stringify(updatedEmployees));
+        window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
+        showSuccess(`Mock employee ${employeeName} removed.`);
+        return updatedEmployees;
+      });
+    } else {
+      await deleteLiveEmployee(employeeId);
+    }
+  }, [isMockDataEnabled, deleteLiveEmployee]);
+
+  // Effect to load data based on mockDataEnabled status
+  useEffect(() => {
+    console.log("useEmployeesData: Main useEffect triggered. isMockDataEnabled:", isMockDataEnabled, "isAuthenticated:", isAuthenticated, "isLoadingAuth:", isLoadingAuth);
+    if (isLoadingAuth) {
+      setIsLoading(true); // Keep loading true while auth is loading
+      return;
+    }
+
+    if (isMockDataEnabled) {
+      console.log("useEmployeesData: Mock data enabled. Loading from localStorage.");
+      const storedMockEmployees = localStorage.getItem("mockEmployees");
+      setEmployees(storedMockEmployees ? JSON.parse(storedMockEmployees) : []);
+      setIsLoading(false);
+    } else if (isAuthenticated) {
+      console.log("useEmployeesData: Live data enabled and authenticated. Calling refetchEmployees.");
+      refetchEmployees(); // Use refetchEmployees here
+    } else {
+      // Not mock data, not authenticated, and auth is done loading
+      console.log("useEmployeesData: Live data enabled but not authenticated. Clearing employees.");
+      setEmployees([]);
+      setIsLoading(false);
+    }
+  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, refetchEmployees]); // Use refetchEmployees here
+
+  // Listen for specific update events to re-fetch/update state
+  useEffect(() => {
+    const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
+      console.log("useEmployeesData: 'employeesUpdated' event received. Updating state.");
+      if (isMockDataEnabled) {
+        setEmployees(event.detail);
+      }
+    };
+    window.addEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
+    return () => {
+      window.removeEventListener("employeesUpdated", handleEmployeesUpdated as EventListener);
+    };
+  }, [isMockDataEnabled]);
 
   return {
     employees,
-    isLoadingEmployees,
-    isMutatingEmployee,
+    isLoadingEmployees: isLoading,
+    isMutatingEmployee: isMutating, // Expose new mutating state
     addOrUpdateEmployee,
     deleteEmployee,
+    refetchEmployees, // Expose refetchEmployees
   };
-}
+};
