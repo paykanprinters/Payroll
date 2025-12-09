@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react"; // Import Loader2 icon
+import { Loader2 } from "lucide-react";
 
 // Import new modular components
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
@@ -10,7 +10,6 @@ import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { showError } from "@/utils/toast";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 
@@ -55,29 +54,32 @@ const PayslipOverviewPage: React.FC = () => {
     label.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)\s*$/i, "");
 
   const loadPayslipsAndEmployees = useCallback(() => {
-    if (payslips.length > 0) {
-      const totalGross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-      const totalNet = payslips.reduce((sum, p) => sum + p.netPay, 0);
-      setPayrollSummaryData([
-        { name: "Total Payroll", gross: totalGross, net: totalNet },
-      ]);
+    const list = Array.isArray(payslips) ? payslips : [];
+
+    if (list.length > 0) {
+      const totalGross = list.reduce((sum, p) => sum + Number(p?.grossEarnings ?? 0), 0);
+      const totalNet = list.reduce((sum, p) => sum + Number(p?.netPay ?? 0), 0);
+      setPayrollSummaryData([{ name: "Total Payroll", gross: totalGross, net: totalNet }]);
 
       const deductionsMap = new Map<string, number>();
-      payslips.forEach(payslip => {
-        payslip.deductionsBreakdown.forEach(deduction => {
-          const label = cleanLabel(deduction.name);
-          deductionsMap.set(label, (deductionsMap.get(label) || 0) + deduction.amount);
+      list.forEach((payslip) => {
+        const items = Array.isArray(payslip?.deductionsBreakdown) ? payslip.deductionsBreakdown : [];
+        items.forEach((deduction) => {
+          const name = typeof deduction?.name === "string" ? deduction.name : "Other";
+          const label = cleanLabel(name);
+          const amount = Number(deduction?.amount ?? 0);
+          deductionsMap.set(label, (deductionsMap.get(label) || 0) + (isFinite(amount) ? amount : 0));
         });
       });
+
       setDeductionsBreakdownData(
         Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
       );
-
     } else {
       setPayrollSummaryData([]);
       setDeductionsBreakdownData([]);
     }
-  }, [payslips, employees]);
+  }, [payslips]);
 
   const loadReportDesignSettings = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
@@ -101,8 +103,8 @@ const PayslipOverviewPage: React.FC = () => {
     };
 
     window.addEventListener('allMockDataUpdated', handleMockDataUpdate);
-    window.addEventListener('payslipsUpdated', handleMockDataUpdate); // Listen for specific payslip updates
-    window.addEventListener('employeesUpdated', handleMockDataUpdate); // Listen for specific employee updates
+    window.addEventListener('payslipsUpdated', handleMockDataUpdate);
+    window.addEventListener('employeesUpdated', handleMockDataUpdate);
     window.addEventListener('reportDesignUpdated', handleReportDesignUpdate);
 
     return () => {
@@ -114,13 +116,13 @@ const PayslipOverviewPage: React.FC = () => {
   }, [loadPayslipsAndEmployees, loadReportDesignSettings]);
 
   React.useEffect(() => {
+    const list = Array.isArray(payslips) ? payslips : [];
     console.log("PayslipOverviewPage useEffect: Running...");
     console.log("  selectedEmployeeId:", selectedEmployeeId);
     console.log("  selectedPayslipId (before logic):", selectedPayslipId);
-    console.log("  payslips.length:", payslips.length);
+    console.log("  payslips.length:", list.length);
 
-    if (!selectedEmployeeId || payslips.length === 0) {
-      // If no employee is selected or no payslips exist, ensure selectedPayslipId is cleared.
+    if (!selectedEmployeeId || list.length === 0) {
       if (selectedPayslipId) {
         console.log("  No employee or no payslips, clearing selectedPayslipId.");
         setSelectedPayslipId("");
@@ -128,11 +130,10 @@ const PayslipOverviewPage: React.FC = () => {
       return;
     }
 
-    const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
+    const filteredPayslipsForEmployee = list.filter((p) => p.employeeId === selectedEmployeeId);
     console.log("  filteredPayslipsForEmployee.length:", filteredPayslipsForEmployee.length);
 
     if (filteredPayslipsForEmployee.length === 0) {
-      // If no payslips for the selected employee, clear the selectedPayslipId
       if (selectedPayslipId) {
         console.log("  No payslips for selected employee, clearing selectedPayslipId.");
         setSelectedPayslipId("");
@@ -140,8 +141,6 @@ const PayslipOverviewPage: React.FC = () => {
       return;
     }
 
-    // ONLY set a default if NO payslip is currently selected.
-    // If selectedPayslipId has a value, we assume the user made a choice and don't override it.
     if (!selectedPayslipId) {
       console.log("  No payslip currently selected. Attempting to set to most recent as default.");
       const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
@@ -154,20 +153,16 @@ const PayslipOverviewPage: React.FC = () => {
       }
     } else {
       console.log("  A payslip is already selected. Not automatically changing user's selection.");
-      // We could add a check here to see if the selectedPayslipId is *still valid*
-      // for the current employee. If not, the dropdown might show an empty state.
-      // But we won't force it to the most recent.
     }
     console.log("PayslipOverviewPage useEffect: Finished. selectedPayslipId (after logic):", selectedPayslipId);
   }, [selectedEmployeeId, payslips, selectedPayslipId, setSelectedPayslipId]);
 
-
   const getEmployeeName = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
+    const employee = (employees ?? []).find((emp) => emp.id === employeeId);
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
-  };
+    };
 
-  const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
+  const selectedPayslipForPreview = (Array.isArray(payslips) ? payslips : []).find((p) => p.id === selectedPayslipId);
 
   const isLoadingPage = isLoadingCompanyDetails || isLoadingEmployees || isLoadingPayslips;
 
@@ -201,7 +196,7 @@ const PayslipOverviewPage: React.FC = () => {
         Generate new payslips, view historical payslips, and manage payroll periods.
       </p>
 
-      {payslips.length === 0 && (
+      {(Array.isArray(payslips) ? payslips : []).length === 0 && (
         <Card className="border-yellow-500 bg-yellow-50 text-yellow-800">
           <CardHeader>
             <CardTitle>No Payslips Found</CardTitle>
