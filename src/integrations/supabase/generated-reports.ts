@@ -62,13 +62,8 @@ export function computeChecksum(input: string): string {
   return Math.abs(hash).toString(16);
 }
 
-// New: alias matching prior usage
-export async function saveGeneratedReport(input: Omit<GeneratedReport, "id" | "generated_at">) {
-  return insertGeneratedReport(input);
-}
-
-// Overload: support (title, html) usage
 export async function saveGeneratedReport(title: string, html: string): Promise<boolean>;
+export async function saveGeneratedReport(input: Omit<GeneratedReport, "id" | "generated_at">): Promise<GeneratedReport>;
 export async function saveGeneratedReport(arg1: any, arg2?: any): Promise<any> {
   if (typeof arg1 === "string" && typeof arg2 === "string") {
     const { data: auth } = await supabase.auth.getUser();
@@ -81,6 +76,5 @@ export async function saveGeneratedReport(arg1: any, arg2?: any): Promise<any> {
     } as any);
     return true;
   }
-  // Object-style call
-  return insertGeneratedReport(arg1);
+  return insertGeneratedReport(arg1 as Omit<GeneratedReport, "id" | "generated_at">);
 }

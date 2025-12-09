@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useTodosData } from "@/hooks/use-todos-data";
+import { useToDosData as useTodosData } from "@/hooks/use-todos-data";
 
 type Props = {
   toDos?: any[];

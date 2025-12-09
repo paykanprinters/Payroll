@@ -6,7 +6,7 @@ import { sanitizeHTML } from "@/utils/sanitize-html";
 type Options = {
   filename?: string;
   format?: "a4" | "letter" | "a5";
-  orientation?: "portrait" | "landscape";
+  orientation?: "portrait" | "landscape" | string;
   documentType?: "payslip" | "report";
 };
 
