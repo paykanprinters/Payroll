@@ -1,4 +1,4 @@
-import { eachDayOfInterval, isWeekend, format, isSameMonth, parseISO, isWithinInterval, differenceInYears, startOfWeek, differenceInCalendarDays } from "date-fns";
+import { eachDayOfInterval, isWeekend, format, isSameMonth, parseISO, isWithinInterval, differenceInYears, startOfWeek, differenceInCalendarDays, startOfDay, endOfDay } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LeaveEntry, MockPayslip, TimesheetEntry, LoanDeductionHistoryEntry } from "../mock-data-interfaces";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
@@ -460,7 +460,8 @@ export const generatePayslipsForPeriod = (
     const approvedTimesheetsForPeriod = timesheets.filter(ts => {
       const isEmployeeMatch = ts.employeeId === emp.id;
       const isApprovedOrLockedOrSubmitted = ts.status === "Approved" || ts.status === "Locked" || ts.status === "Submitted";
-      const isWithin = isWithinInterval(parseISO(ts.date), { start: payPeriodStart, end: payPeriodEnd });
+      const tsDate = parseISO(ts.date);
+      const isWithin = isWithinInterval(tsDate, { start: startOfDay(payPeriodStart), end: endOfDay(payPeriodEnd) });
       return isEmployeeMatch && isApprovedOrLockedOrSubmitted && isWithin;
     });
 

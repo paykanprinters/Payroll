@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import HoursBreakdown from "@/components/payslips/HoursBreakdown";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
@@ -29,7 +30,7 @@ interface CalculatePaycheckDialogProps {
 }
 
 const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpen, onClose, payslipDesignSettings }) => {
-  const { employees, calculateSinglePayslipPreview, companyDetails, taxTables, payCycleSettings } = usePayrollProcessor();
+  const { employees, calculateSinglePayslipPreview, companyDetails, taxTables, payCycleSettings, timesheets, workHoursSettings } = usePayrollProcessor();
   const { generatePdf, printPdf } = usePdfGenerator();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
@@ -199,9 +200,19 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
                   companyDetails={companyDetails}
                   employees={employees}
                   getEmployeeName={getEmployeeName}
-                  isPdfGeneration={false} // This is for UI preview
+                  isPdfGeneration={false}
                 />
               </div>
+
+              <HoursBreakdown
+                employeeId={previewPayslip.employeeId}
+                timesheets={timesheets}
+                periodStart={currentPeriodStart}
+                periodEnd={currentPeriodEnd}
+                workHoursSettings={workHoursSettings || null}
+                weeklyThreshold={(workHoursSettings?.overtimeThresholdHours && workHoursSettings.overtimeThresholdHours > 0) ? workHoursSettings.overtimeThresholdHours : 41.25}
+              />
+
               <div className="flex justify-end gap-2 mt-4">
                 <Button variant="outline" onClick={() => handlePrintOrDownload('print')} disabled={!previewPayslip}>
                   <Printer className="mr-2 h-4 w-4" /> Print Preview
