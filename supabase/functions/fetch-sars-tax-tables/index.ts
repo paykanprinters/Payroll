@@ -1,34 +1,16 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const allowedOrigins = [Deno.env.get("ALLOWED_ORIGIN") ?? "http://localhost:5173"];
-
-function getCorsHeaders(origin: string | null) {
-  const isAllowed = origin && allowedOrigins.includes(origin);
-  return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : "null",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Vary": "Origin"
+};
 
 serve(async (req) => {
-  const origin = req.headers.get("Origin");
-  const corsHeaders = getCorsHeaders(origin);
-
   if (req.method === "OPTIONS") {
-    if (!origin || !allowedOrigins.includes(origin)) {
-      return new Response("Forbidden origin", { status: 403, headers: corsHeaders });
-    }
     return new Response(null, { headers: corsHeaders });
-  }
-
-  if (!origin || !allowedOrigins.includes(origin)) {
-    return new Response(JSON.stringify({ error: "Forbidden origin" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
   }
 
   const authHeader = req.headers.get("Authorization");
@@ -53,7 +35,6 @@ serve(async (req) => {
       });
     }
 
-    // Admin-only enforcement via trusted table
     const { data: requesterProfile, error: roleErr } = await supabaseAdmin
       .from("users")
       .select("role")
