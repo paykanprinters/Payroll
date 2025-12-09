@@ -24,11 +24,9 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
   const logoWidth = watch("logoWidth");
   const logoHeight = watch("logoHeight");
   const logoFit = watch("logoFit");
+  const logoStoragePath = watch("logoStoragePath"); // internal tracking: logos/{uid}/filename.ext
 
   const SUPABASE_STORAGE_BUCKET = "company-logos";
-
-  const getPublicUrlPrefix = (path: string) =>
-    supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(path).data.publicUrl.split("?")[0];
 
   const getCurrentPathFromUrl = (): string | null => {
     if (!logoUrl) return null;
@@ -39,15 +37,28 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
       if (idx === -1) return null;
       return decodeURIComponent(parts.pathname.substring(idx + "/object/public/".length));
     } catch {
-      // Likely a data URL or external URL
       return null;
     }
   };
 
-  const uploadFileToSupabaseStorage = async (file: File): Promise<string | null> => {
+  // From public URL -> relative storage path within bucket (e.g., 'logos/{uid}/file.png')
+  const getRelativePathFromUrl = (): string | null => {
+    const full = getCurrentPathFromUrl();
+    if (!full) return null;
+    if (!full.startsWith(`${SUPABASE_STORAGE_BUCKET}/`)) return null;
+    return full.replace(`${SUPABASE_STORAGE_BUCKET}/`, "");
+  };
+
+  const uploadFileToSupabaseStorage = async (file: File): Promise<{ publicUrl: string; path: string } | null> => {
     if (!file) return null;
     if (!userId) {
       showError("You must be signed in to upload a logo.");
+      return null;
+    }
+
+    // Only allow images
+    if (!file.type.startsWith("image/")) {
+      showError("Please upload an image file.");
       return null;
     }
 
@@ -74,24 +85,18 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
         return null;
       }
 
+      // Compute public URL
       const { data: publicUrlData } = supabase.storage
         .from(SUPABASE_STORAGE_BUCKET)
         .getPublicUrl(data.path);
 
-      // Delete the previous file if it was stored in our bucket
-      const prevPath = getCurrentPathFromUrl();
-      if (prevPath && prevPath.startsWith("company-logos/")) {
-        const rel = prevPath.replace(/^company-logos\//, "");
-        const { error: deleteError } = await supabase.storage
-          .from(SUPABASE_STORAGE_BUCKET)
-          .remove([rel]);
-        if (deleteError && deleteError.message !== "The resource was not found") {
-          console.error("Error deleting old logo from Supabase Storage:", deleteError);
-          // Not fatal for UX
-        }
+      // Delete the previous file securely via edge function if it belongs to this user namespace
+      const prevRel = (logoStoragePath as string | undefined) ?? getRelativePathFromUrl();
+      if (prevRel && userId && prevRel.startsWith(`logos/${userId}/`)) {
+        await supabase.functions.invoke("delete-logo", { body: { path: prevRel } });
       }
 
-      return publicUrlData.publicUrl;
+      return { publicUrl: publicUrlData.publicUrl, path: data.path as string };
     } catch (err: any) {
       console.error("Unexpected error during Supabase logo upload:", err);
       showError(`An unexpected error occurred during logo upload: ${err.message}`);
@@ -100,17 +105,19 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
   };
 
   const deleteFileFromSupabaseStorage = async () => {
-    const prevPath = getCurrentPathFromUrl();
-    if (!prevPath || !prevPath.startsWith("company-logos/")) return;
+    const rel = (logoStoragePath as string | undefined) ?? getRelativePathFromUrl();
+    if (!rel) return;
+
+    if (!userId || !rel.startsWith(`logos/${userId}/`)) {
+      // Do not attempt to delete paths outside of the user's namespace
+      showError("Cannot remove this logo: path not owned by current user.");
+      return;
+    }
 
     try {
-      const rel = prevPath.replace(/^company-logos\//, "");
-      const { error } = await supabase.storage
-        .from(SUPABASE_STORAGE_BUCKET)
-        .remove([rel]);
-
-      if (error && error.message !== "The resource was not found") {
-        console.error("Error deleting logo from Supabase Storage:", error);
+      const { error } = await supabase.functions.invoke("delete-logo", { body: { path: rel } });
+      if (error) {
+        console.error("Error deleting logo via edge function:", error);
         showError("Failed to delete logo from storage.");
       } else {
         showSuccess("Logo removed from storage.");
@@ -133,16 +140,18 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
         setValue("logoWidth", 100);
         setValue("logoHeight", 50);
         setValue("logoFit", "contain");
+        setValue("logoStoragePath", ""); // no storage path for mock
         showSuccess("Mock company logo uploaded successfully!");
       };
       reader.readAsDataURL(file);
     } else {
-      const publicUrl = await uploadFileToSupabaseStorage(file);
-      if (publicUrl) {
-        setValue("logoUrl", publicUrl);
+      const uploaded = await uploadFileToSupabaseStorage(file);
+      if (uploaded) {
+        setValue("logoUrl", uploaded.publicUrl);
         setValue("logoWidth", 100);
         setValue("logoHeight", 50);
         setValue("logoFit", "contain");
+        setValue("logoStoragePath", uploaded.path);
         showSuccess("Company logo uploaded successfully!");
       } else {
         showError("Failed to upload company logo.");
@@ -156,6 +165,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
       setValue("logoWidth", 100);
       setValue("logoHeight", 50);
       setValue("logoFit", "contain");
+      setValue("logoStoragePath", "");
       showSuccess("Mock company logo removed successfully!");
     } else {
       await deleteFileFromSupabaseStorage();
@@ -163,6 +173,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
       setValue("logoWidth", 100);
       setValue("logoHeight", 50);
       setValue("logoFit", "contain");
+      setValue("logoStoragePath", "");
     }
   };
 

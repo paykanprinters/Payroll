@@ -33,9 +33,14 @@ export async function updateGeneratedReport(id: string, patch: Partial<Pick<Gene
 }
 
 export async function listMyReports() {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return []
+
   const { data, error } = await supabase
     .from("generated_reports")
     .select("id, report_title, report_type, generated_at")
+    .eq("user_id", uid)
     .order("generated_at", { ascending: false })
   if (error) throw error
   return data as Pick<GeneratedReport, "id" | "report_title" | "report_type" | "generated_at">[]

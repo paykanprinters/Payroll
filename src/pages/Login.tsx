@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,40 +25,12 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 function Login() {
-  const [companyName, setCompanyName] = React.useState<string>("Your Company");
-  const [logoUrl, setLogoUrl] = React.useState<string>("");
-  const [logoWidth, setLogoWidth] = React.useState<number | undefined>(undefined);
-  const [logoHeight, setLogoHeight] = React.useState<number | undefined>(undefined);
-  const [logoFit, setLogoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
-
-  React.useEffect(() => {
-    const loadBranding = async () => {
-      const { data, error } = await supabase.functions.invoke("get-branding");
-
-      if (error) {
-        console.warn("Login: Could not load branding:", error.message);
-        return;
-      }
-
-      if (data) {
-        const name: string = (data.companyName as string) ?? "Your Company";
-        setCompanyName(name);
-
-        const url = data.logoUrl as string | null;
-        if (url) setLogoUrl(url);
-
-        const w = data.logoWidth as number | null;
-        const h = data.logoHeight as number | null;
-        if (typeof w === "number") setLogoWidth(w);
-        if (typeof h === "number") setLogoHeight(h);
-
-        const fit = (data.logoFit as "contain" | "cover" | "fill" | "none" | "scale-down") ?? "contain";
-        setLogoFit(fit);
-      }
-    };
-
-    loadBranding();
-  }, []);
+  // Render with a safe default; branding is loaded post-auth elsewhere if needed
+  const [companyName] = React.useState<string>("Your Company");
+  const [logoUrl] = React.useState<string>("");
+  const [logoWidth] = React.useState<number | undefined>(undefined);
+  const [logoHeight] = React.useState<number | undefined>(undefined);
+  const [logoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
 
   return (
     <div className="min-h-screen w-full relative">

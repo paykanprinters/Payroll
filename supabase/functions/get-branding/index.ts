@@ -27,6 +27,7 @@ serve(async (req) => {
     return new Response("Forbidden origin", { status: 403, headers: corsHeaders })
   }
 
+  // Require auth; we keep this function privileged and minimal
   const authHeader = req.headers.get("Authorization")
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders })
@@ -42,9 +43,10 @@ serve(async (req) => {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders })
   }
 
+  // Only fetch branding-related fields explicitly
   const { data, error } = await supabase
     .from("company_details")
-    .select("*")
+    .select("companytradingname, logourl, logowidth, logoheight, logofit")
     .limit(1)
     .maybeSingle()
 
@@ -52,5 +54,13 @@ serve(async (req) => {
     return new Response(`Failed to fetch branding: ${error.message}`, { status: 400, headers: corsHeaders })
   }
 
-  return new Response(JSON.stringify({ branding: data }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } })
+  const payload = {
+    companyName: data?.companytradingname ?? null,
+    logoUrl: data?.logourl ?? null,
+    logoWidth: data?.logowidth ?? null,
+    logoHeight: data?.logoheight ?? null,
+    logoFit: data?.logofit ?? "contain",
+  }
+
+  return new Response(JSON.stringify(payload), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } })
 })

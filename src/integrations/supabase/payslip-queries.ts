@@ -5,9 +5,14 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export async function listMyPayslips() {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return []
+
   const { data, error } = await supabase
     .from("payslips")
     .select("id, pay_period, pay_date, net_pay, created_at")
+    .eq("employee_id", uid)
     .order("pay_date", { ascending: false })
   if (error) throw error
   return data
@@ -24,7 +29,7 @@ export async function getMyPayslip(id: string) {
   return data
 }
 
-// New: full fetch
+// New: full fetch (keep as-is for admin-only contexts if used)
 export async function fetchPayslipsFromSupabase() {
   const { data, error } = await supabase
     .from("payslips")
