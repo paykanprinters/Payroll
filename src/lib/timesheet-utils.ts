@@ -65,9 +65,27 @@ export const calculateTimesheetMetrics = (
 
     const configuredBreakHours = (opts?.breakDurationMinutes ?? 45) / 60;
   
-    // Policy for hourly/weekly: subtract a fixed unpaid break (ignore captured tea/lunch if unpaid)
-    // If lunch is paid, subtract nothing; if unpaid, subtract exactly the configured fixed break
-    const breakHoursToSubtract = opts?.paidLunch ? 0 : configuredBreakHours;
+    // Determine if fixed unpaid break policy should apply (hourly-paid or weekly/bi-weekly employees)
+    const isHourlyOrWeekly =
+      !!_employee &&
+      (
+        (_employee.hourlyRate !== undefined && _employee.hourlyRate !== null && _employee.hourlyRate > 0) ||
+        _employee.payFrequency === "Weekly" ||
+        _employee.payFrequency === "Bi-Weekly"
+      );
+  
+    // If lunch is paid, subtract nothing; otherwise:
+    // - For hourly/weekly employees: subtract exactly the configured fixed break
+    // - For others (e.g., monthly salaried): use the larger of configured vs captured breaks (legacy behavior)
+    let breakHoursToSubtract = 0;
+    if (opts?.paidLunch) {
+      breakHoursToSubtract = 0;
+    } else if (isHourlyOrWeekly) {
+      breakHoursToSubtract = configuredBreakHours;
+    } else {
+      const capturedBreakHours = (teaDuration + lunchDuration);
+      breakHoursToSubtract = Math.max(configuredBreakHours, capturedBreakHours);
+    }
   
     totalWorkHours = Math.max(0, totalShiftDuration - breakHoursToSubtract);
 
