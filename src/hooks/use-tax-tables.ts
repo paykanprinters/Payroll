@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 
+// Define interfaces for fetched tax data
 interface TaxBracketPAYE {
   min_income: number;
   max_income: number | null;
@@ -32,9 +33,10 @@ interface TaxYearDetails {
 export interface TaxTables {
   payeBrackets: TaxBracketPAYE[];
   uifSdlRates: TaxRatesUIFSDL | null;
-  taxYearDetails: TaxYearDetails | null;
+  taxYearDetails: TaxYearDetails | null; // New field for tax year details including rebates
 }
 
+// Define mock tax tables for when mock data is enabled
 const mockTaxTables: TaxTables = {
   payeBrackets: [
     { min_income: 1, max_income: 237100, rate: 0.18, deduction: 0 },
@@ -47,10 +49,10 @@ const mockTaxTables: TaxTables = {
   ],
   uifSdlRates: {
     uif_rate: 0.01,
-    uif_cap: 177.12,
+    uif_cap: 177.12, // Monthly cap
     sdl_rate: 0.01,
   },
-  taxYearDetails: {
+  taxYearDetails: { // Mock tax year details with rebates
     year: new Date().getFullYear(),
     start_date: `${new Date().getFullYear()}-03-01`,
     end_date: `${new Date().getFullYear() + 1}-02-28`,
@@ -67,7 +69,7 @@ interface UseTaxTablesProps {
   isMockDataEnabled: boolean;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
-  activeTaxYear: number;
+  activeTaxYear: number; // NEW: Prop to specify the active tax year
 }
 
 export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear }: UseTaxTablesProps) => {
@@ -78,56 +80,40 @@ export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth
     setIsLoading(true);
     try {
       console.log("useTaxTables: Fetching live tax tables from Supabase for year:", year);
-
-      // PAYE brackets: empty array when none found (no error)
       const { data: payeData, error: payeError } = await supabase
-        .from("tax_brackets_paye")
-        .select("*")
-        .eq("tax_year", year)
-        .order("min_income", { ascending: true });
+        .from('tax_brackets_paye')
+        .select('*')
+        .eq('tax_year', year)
+        .order('min_income', { ascending: true });
 
-      // UIF/SDL: use maybeSingle to avoid error when not found
       const { data: uifSdlData, error: uifSdlError } = await supabase
-        .from("tax_rates_uif_sdl")
-        .select("*")
-        .eq("tax_year", year)
-        .maybeSingle();
-
-      // Tax year details: use maybeSingle to avoid error when not found
+        .from('tax_rates_uif_sdl')
+        .select('*')
+        .eq('tax_year', year)
+        .single();
+      
       const { data: taxYearDetailsData, error: taxYearDetailsError } = await supabase
-        .from("tax_years")
-        .select("*")
-        .eq("year", year)
-        .maybeSingle();
+        .from('tax_years')
+        .select('*')
+        .eq('year', year)
+        .single();
 
-      // Treat "no rows found" gracefully; only fail on real query errors
-      const isRealError = (err: any) =>
-        !!err && !(typeof err.code === "string" && err.code === "PGRST116");
-
-      if (isRealError(payeError) || isRealError(uifSdlError) || isRealError(taxYearDetailsError)) {
+      if (payeError || uifSdlError || taxYearDetailsError) {
         console.error("useTaxTables: Error fetching live tax tables:", payeError || uifSdlError || taxYearDetailsError);
-        setTaxTables({
-          payeBrackets: [],
-          uifSdlRates: null,
-          taxYearDetails: null,
-        });
-        showError("Failed to fully load tax tables; proceeding with defaults.");
+        setTaxTables(null);
+        showError("Failed to load live tax tables for payroll calculations.");
       } else {
         setTaxTables({
-          payeBrackets: Array.isArray(payeData) ? payeData : [],
-          uifSdlRates: uifSdlData ?? null,
-          taxYearDetails: (taxYearDetailsData as TaxYearDetails) ?? null,
+          payeBrackets: payeData || [],
+          uifSdlRates: uifSdlData || null,
+          taxYearDetails: taxYearDetailsData as TaxYearDetails || null, // Assign fetched tax year details
         });
-        console.log(`useTaxTables: Live tax tables for ${year} loaded (len=${(payeData || []).length}).`);
+        console.log(`useTaxTables: Live tax tables for ${year} loaded successfully.`);
       }
     } catch (err) {
       console.error("useTaxTables: Unhandled error fetching live tax tables:", err);
-      showError("An unexpected error occurred while loading tax tables; proceeding with defaults.");
-      setTaxTables({
-        payeBrackets: [],
-        uifSdlRates: null,
-        taxYearDetails: null,
-      });
+      showError("An unexpected error occurred while loading live tax tables.");
+      setTaxTables(null);
     } finally {
       setIsLoading(false);
     }
@@ -144,20 +130,16 @@ export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth
       const handleTaxTablesUpdate = () => {
         fetchLiveTaxTables(activeTaxYear);
       };
-      window.addEventListener("taxTablesUpdated", handleTaxTablesUpdate);
+      window.addEventListener('taxTablesUpdated', handleTaxTablesUpdate);
       return () => {
-        window.removeEventListener("taxTablesUpdated", handleTaxTablesUpdate);
+        window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
       };
     } else if (isMockDataEnabled) {
+      // Only fall back to mock when not authenticated
       setTaxTables(mockTaxTables);
       setIsLoading(false);
     } else {
-      // Not authenticated and not mock: still provide defaults so payroll can render
-      setTaxTables({
-        payeBrackets: [],
-        uifSdlRates: null,
-        taxYearDetails: null,
-      });
+      setTaxTables(null);
       setIsLoading(false);
     }
   }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveTaxTables, activeTaxYear]);
@@ -165,6 +147,6 @@ export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth
   return {
     taxTables,
     isLoadingTaxTables: isLoading,
-    refetchTaxTables: fetchLiveTaxTables,
+    refetchTaxTables: fetchLiveTaxTables, // Expose refetch for manual trigger
   };
 };

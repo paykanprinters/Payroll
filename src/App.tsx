@@ -21,7 +21,6 @@ import Unauthorized from "./pages/Unauthorized";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React from "react";
-import UserControlPanel from "./pages/settings/UserControlPanel";
 
 const queryClient = new QueryClient();
 
@@ -50,8 +49,6 @@ const App = () => {
                   <Route path="/vacation-absence" element={<VacationAbsence />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/reports" element={<Reports />} />
-                  {/* Repair route: allow any authenticated user to reach the control panel for bootstrapping */}
-                  <Route path="/repair-access" element={<UserControlPanel />} />
                   <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
                     <Route path="/settings/*" element={<Settings />} />
                   </Route>

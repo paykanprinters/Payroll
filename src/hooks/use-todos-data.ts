@@ -64,6 +64,7 @@ export function useTodosData(opts?: Options) {
     if (opts?.isMockDataEnabled) {
       const stored = localStorage.getItem("mockToDos");
       const parsed: any[] = stored ? JSON.parse(stored) : (opts.initialToDos ?? []);
+      // Normalize camelCase mock entries to snake_case Todo shape
       const normalized: Todo[] = parsed.map((t: any) =>
         "actionUrl" in t || "employeeId" in t ? toSnake(t as ToDoEntryMock) : (t as Todo)
       );
@@ -81,28 +82,10 @@ export function useTodosData(opts?: Options) {
       return;
     }
     setLoading(true)
-
-    // Determine if user is Admin to decide query scope
-    const { data: auth } = await supabase.auth.getUser();
-    const uid = auth?.user?.id ?? null;
-
-    let isAdmin = false;
-    if (uid) {
-      const { data: profile } = await supabase.from("users").select("role").eq("id", uid).maybeSingle();
-      isAdmin = profile?.role === "Admin";
-    }
-
-    let query = supabase
+    const { data, error } = await supabase
       .from("todos")
       .select("id,message,level,module,action_url,status,assigned_user_id,employee_id,created_at,updated_at")
-      .order("created_at", { ascending: false });
-
-    if (!isAdmin && uid) {
-      // Limit to items assigned to or owned by the current user
-      query = query.or(`assigned_user_id.eq.${uid},employee_id.eq.${uid}`);
-    }
-
-    const { data, error } = await query;
+      .order("created_at", { ascending: false })
     if (error) {
       toast({ title: "Failed to load todos", description: error.message, variant: "destructive" })
     } else {
@@ -142,5 +125,6 @@ export function useTodosData(opts?: Options) {
 
   return { todos, toDos: todos, loading, isLoadingToDos: loading, pendingCount, markToDoAsDone, refetchToDos }
 }
+
 
 export { useTodosData as useToDosData }
