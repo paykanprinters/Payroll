@@ -43,12 +43,10 @@ serve(async (req) => {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders })
   }
 
-  // Double-check admin: is_admin() + direct table check
-  const { data: isAdminData } = await anon.rpc("is_admin")
+  // Trusted admin check via users table with service role (do not rely on is_admin() here)
   const admin = createClient(supabaseUrl, serviceRoleKey)
-  const { data: profile } = await admin.from("users").select("role").eq("id", user.id).single()
-  const isAdmin = Boolean(isAdminData) && profile?.role === "Admin"
-  if (!isAdmin) {
+  const { data: profile, error: profileErr } = await admin.from("users").select("role").eq("id", user.id).single()
+  if (profileErr || profile?.role !== "Admin") {
     return new Response("Forbidden", { status: 403, headers: corsHeaders })
   }
 
@@ -58,7 +56,7 @@ serve(async (req) => {
     return new Response("Invalid payload", { status: 400, headers: corsHeaders })
   }
 
-  // Strip privileged keys from metadata to avoid confusion and privilege hints in client
+  // Strip privileged keys from metadata to avoid confusion
   const { role: _omitRole, status: _omitStatus, ...safeMetadata } = metadata as Record<string, unknown>
 
   const { error } = await admin.auth.admin.updateUserById(target_user_id, { user_metadata: safeMetadata })

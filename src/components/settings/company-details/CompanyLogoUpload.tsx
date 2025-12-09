@@ -52,10 +52,31 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
     }
 
     try {
-      // Generate a unique path to avoid accidental overwrite: logos/{userId}/{timestamp}_{filename}
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const uniqueName = `${Date.now()}_${sanitizedName}`;
-      const newPath = `logos/${userId}/${uniqueName}`;
+      // Ask edge function for a signed upload URL (admin-only)
+      const { data, error } = await supabase.functions.invoke("create-signed-logo-upload", {
+        body: { fileName: file.name },
+      });
+
+      if (error || !data?.token || !data?.path) {
+        console.error("Failed to get signed upload URL:", error);
+        showError("Failed to initialize secure upload.");
+        return null;
+      }
+
+      // Upload using signed URL token
+      const { error: uploadErr } = await supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .uploadToSignedUrl(data.path, data.token, file);
+
+      if (uploadErr) {
+        console.error("Error uploading logo via signed URL:", uploadErr);
+        showError(`Failed to upload logo: ${uploadErr.message}`);
+        return null;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .getPublicUrl(data.path);
 
       // Delete the previous file if it was stored in our bucket
       const prevPath = getCurrentPathFromUrl();
@@ -66,28 +87,9 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
           .remove([rel]);
         if (deleteError && deleteError.message !== "The resource was not found") {
           console.error("Error deleting old logo from Supabase Storage:", deleteError);
-          showError("Failed to delete old logo from storage.");
-          return null;
+          // Not fatal for UX
         }
       }
-
-      const { data, error } = await supabase.storage
-        .from(SUPABASE_STORAGE_BUCKET)
-        .upload(newPath, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type,
-        });
-
-      if (error) {
-        console.error("Error uploading logo to Supabase Storage:", error);
-        showError(`Failed to upload logo: ${error.message}`);
-        return null;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from(SUPABASE_STORAGE_BUCKET)
-        .getPublicUrl(newPath);
 
       return publicUrlData.publicUrl;
     } catch (err: any) {
@@ -141,7 +143,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
         setValue("logoWidth", 100);
         setValue("logoHeight", 50);
         setValue("logoFit", "contain");
-        showSuccess("Company logo uploaded successfully to Supabase Storage!");
+        showSuccess("Company logo uploaded successfully!");
       } else {
         showError("Failed to upload company logo.");
       }
