@@ -1,47 +1,27 @@
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { sanitizeHtml } from '@/utils/sanitize-html';
+"use client";
 
-type ReportPreviewDialogProps = {
-  title: string;
-  html: string;
-  open: boolean;
-  onClose: () => void;
-  onDownloadPdf?: () => void;
-};
+import React from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 
-const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
-  title,
-  html,
-  open,
-  onClose,
-  onDownloadPdf,
-}) => {
-  const clean = sanitizeHtml(html);
+type Props = {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  title: string
+  html: string
+}
 
+export default function ReportPreviewDialog({ open, onOpenChange, title, html }: Props) {
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="mt-4 max-h-[70vh] overflow-auto border rounded-md p-4 bg-white">
-          <div dangerouslySetInnerHTML={{ __html: clean }} />
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          {onDownloadPdf && (
-            <Button variant="default" onClick={onDownloadPdf}>
-              Download PDF
-            </Button>
-          )}
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
+        <div className="max-h-[70vh] overflow-auto">
+          <ReportContentWrapper html={html} />
         </div>
       </DialogContent>
     </Dialog>
-  );
-};
-
-export default ReportPreviewDialog;
+  )
+}

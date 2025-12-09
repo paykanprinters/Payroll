@@ -1,35 +1,19 @@
 "use client";
 
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react'; // Import Loader2 icon
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
-interface ProtectedRouteProps {
-  allowedRoles?: ('Admin' | 'Manager' | 'Staff' | 'Viewer')[];
-}
+export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { loading, isAuthenticated } = useAuth();
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-  const { isAuthenticated, user, isLoadingAuth } = useAuth();
-
-  if (isLoadingAuth) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
+  if (loading) {
+    return <div className="p-4 text-sm text-muted-foreground">Checking session…</div>;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // User is authenticated but not authorized for this route
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return <Outlet />;
-};
-
-export default ProtectedRoute;
+  return <>{children}</>;
+}

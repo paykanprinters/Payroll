@@ -1,20 +1,19 @@
-import React from 'react';
-import { sanitizeHtml } from '@/utils/sanitize-html';
+"use client";
 
-type ReportContentWrapperProps = {
+import React from "react";
+import { sanitizeHTML } from "@/utils/sanitize-html";
+
+type Props = {
   html: string;
   className?: string;
 };
 
-const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({ html, className }) => {
-  const clean = sanitizeHtml(html);
-
+export default function ReportContentWrapper({ html, className }: Props) {
+  const safe = sanitizeHTML(html);
   return (
     <div
-      className={className ?? 'prose max-w-none'}
-      dangerouslySetInnerHTML={{ __html: clean }}
+      className={className ?? "prose max-w-none"}
+      dangerouslySetInnerHTML={{ __html: safe }}
     />
   );
-};
-
-export default ReportContentWrapper;
+}
