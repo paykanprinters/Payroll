@@ -44,14 +44,16 @@ serve(async (req) => {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders })
   }
 
-  // Trusted admin check via users table with service role (do not rely on is_admin() here)
+  // Admin check (defense-in-depth): require BOTH is_admin() and a direct table check
+  const { data: isAdminData } = await anon.rpc("is_admin")
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
-  const { data: profile, error: profileErr } = await adminClient
+  const { data: profile } = await adminClient
     .from("users")
     .select("role")
     .eq("id", user.id)
     .single()
-  if (profileErr || profile?.role !== "Admin") {
+  const isAdmin = Boolean(isAdminData) && profile?.role === "Admin"
+  if (!isAdmin) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders })
   }
 
