@@ -35,18 +35,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserShape>(null);
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const u = session?.user ?? null;
+    let cancelled = false;
 
-      if (u) {
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const u = session?.user ?? null;
+
+        if (!u) {
+          setUserId(null);
+          setRole(null);
+          setUser(null);
+          return;
+        }
+
         setUserId(u.id);
-        // Get verified role from public.users (RLS ensures only own record)
-        const { data: profile } = await supabase
+
+        // Read verified role from public.users; tolerate missing rows
+        const { data: profile, error: profileErr } = await supabase
           .from("users")
           .select("role, name")
           .eq("id", u.id)
-          .single();
+          .maybeSingle();
 
         const verifiedRole = profile?.role ?? null;
         const displayName =
@@ -56,27 +66,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setRole(verifiedRole);
         setUser({ id: u.id, email: u.email ?? undefined, name: displayName, role: verifiedRole });
-      } else {
+
+        if (profileErr) {
+          // Log and continue; do not block routing
+          console.warn("AuthProvider: profile read warning:", profileErr);
+        }
+      } catch (err) {
+        console.error("AuthProvider: init session error:", err);
+        // Fall through to ensure loading clears
         setUserId(null);
         setRole(null);
         setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      setLoading(false);
     };
 
     init();
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user ?? null;
+      try {
+        const u = session?.user ?? null;
 
-      if (u) {
+        if (!u) {
+          setUserId(null);
+          setRole(null);
+          setUser(null);
+          return;
+        }
+
         setUserId(u.id);
-        const { data: profile } = await supabase
+
+        const { data: profile, error: profileErr } = await supabase
           .from("users")
           .select("role, name")
           .eq("id", u.id)
-          .single();
+          .maybeSingle();
 
         const verifiedRole = profile?.role ?? null;
         const displayName =
@@ -86,14 +111,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setRole(verifiedRole);
         setUser({ id: u.id, email: u.email ?? undefined, name: displayName, role: verifiedRole });
-      } else {
+
+        if (profileErr) {
+          console.warn("AuthProvider: profile update warning:", profileErr);
+        }
+      } catch (err) {
+        console.error("AuthProvider: auth state error:", err);
         setUserId(null);
         setRole(null);
         setUser(null);
+      } finally {
+        // Ensure we never get stuck in loading after auth events
+        setLoading(false);
       }
     });
 
-    return () => { subscription.subscription.unsubscribe(); };
+    // Safety: hard stop loading after 3s if something stalls
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(safetyTimer);
+      subscription.subscription.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthState>(() => ({
@@ -110,4 +152,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   return useContext(AuthContext);
-}
