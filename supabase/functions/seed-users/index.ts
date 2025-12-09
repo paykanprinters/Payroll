@@ -43,8 +43,12 @@ serve(async (req) => {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders })
   }
 
-  const { data: isAdminData, error: adminErr } = await anon.rpc("is_admin")
-  if (adminErr || !isAdminData) {
+  // Double-check admin: is_admin() + direct table check
+  const { data: isAdminData } = await anon.rpc("is_admin")
+  const admin = createClient(supabaseUrl, serviceRoleKey)
+  const { data: profile } = await admin.from("users").select("role").eq("id", user.id).single()
+  const isAdmin = Boolean(isAdminData) && profile?.role === "Admin"
+  if (!isAdmin) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders })
   }
 
@@ -54,18 +58,19 @@ serve(async (req) => {
     return new Response("Invalid payload", { status: 400, headers: corsHeaders })
   }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey)
-
-  const results = []
+  const results: Array<Record<string, unknown>> = []
   for (const u of users) {
     if (!u?.email || typeof u.email !== "string" || !u?.password || typeof u.password !== "string") {
       results.push({ email: u?.email, error: "invalid user payload" })
       continue
     }
+    const rawMeta = (u as Record<string, unknown>).user_metadata as Record<string, unknown> | undefined
+    // Strip privileged keys from metadata
+    const { role: _omitRole, status: _omitStatus, ...safeMetadata } = (rawMeta ?? {}) as Record<string, unknown>
     const { data, error } = await admin.auth.admin.createUser({
       email: u.email,
       password: u.password,
-      user_metadata: u.user_metadata ?? {}
+      user_metadata: safeMetadata
     })
     results.push({ email: u.email, ok: !error, error: error?.message, id: data?.user?.id })
   }

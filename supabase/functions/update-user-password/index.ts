@@ -44,14 +44,18 @@ serve(async (req) => {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders })
   }
 
-  // Check Admin via is_admin() helper
-  const { data: isAdminData, error: adminErr } = await anon.rpc("is_admin")
-  if (adminErr || !isAdminData) {
+  // Admin check (defense-in-depth): require BOTH is_admin() and a direct table check
+  const { data: isAdminData } = await anon.rpc("is_admin")
+  const adminClient = createClient(supabaseUrl, serviceRoleKey)
+  const { data: profile } = await adminClient
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+  const isAdmin = Boolean(isAdminData) && profile?.role === "Admin"
+  if (!isAdmin) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders })
   }
-
-  // Use service role only after authz, for auth password update
-  const admin = createClient(supabaseUrl, serviceRoleKey)
 
   const payload = await req.json()
   const { target_user_id, new_password } = payload ?? {}
@@ -59,11 +63,11 @@ serve(async (req) => {
     return new Response("Invalid payload", { status: 400, headers: corsHeaders })
   }
 
-  const { error } = await admin.auth.admin.updateUserById(target_user_id, { password: new_password })
+  // Use service role only after strict authz
+  const { error } = await adminClient.auth.admin.updateUserById(target_user_id, { password: new_password })
   if (error) {
     return new Response(`Failed to update password: ${error.message}`, { status: 400, headers: corsHeaders })
   }
 
-  // Basic audit log using generated_reports table is not appropriate; skip DB logging here to keep minimal.
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } })
 })
