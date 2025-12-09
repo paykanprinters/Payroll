@@ -126,7 +126,5 @@ export function useTodosData(opts?: Options) {
   return { todos, toDos: todos, loading, isLoadingToDos: loading, pendingCount, markToDoAsDone, refetchToDos }
 }
 
-// Single alias export (ensure it appears only once)
-export { useTodosData as useToDosData }
 
 export { useTodosData as useToDosData }
