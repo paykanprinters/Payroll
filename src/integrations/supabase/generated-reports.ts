@@ -66,3 +66,21 @@ export function computeChecksum(input: string): string {
 export async function saveGeneratedReport(input: Omit<GeneratedReport, "id" | "generated_at">) {
   return insertGeneratedReport(input);
 }
+
+// Overload: support (title, html) usage
+export async function saveGeneratedReport(title: string, html: string): Promise<boolean>;
+export async function saveGeneratedReport(arg1: any, arg2?: any): Promise<any> {
+  if (typeof arg1 === "string" && typeof arg2 === "string") {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id ?? "00000000-0000-0000-0000-000000000000";
+    await insertGeneratedReport({
+      user_id: userId,
+      report_title: arg1,
+      report_type: "report",
+      content_html: sanitizeHTML(arg2),
+    } as any);
+    return true;
+  }
+  // Object-style call
+  return insertGeneratedReport(arg1);
+}

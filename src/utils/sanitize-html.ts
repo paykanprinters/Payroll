@@ -1,6 +1,7 @@
-import DOMPurify from "dompurify";
+import DOMPurify, { sanitize as dompurifySanitize } from "dompurify";
+import type { Config } from "dompurify";
 
-const options: DOMPurify.Config = {
+const options: Config = {
   USE_PROFILES: { html: true },
   ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|data:image\/(?:png|gif|jpeg|webp));|#)/i,
   FORBID_TAGS: ["script", "iframe", "object", "embed"],
@@ -9,7 +10,8 @@ const options: DOMPurify.Config = {
 
 export function sanitizeHTML(input: string): string {
   if (typeof input !== "string") return "";
-  return DOMPurify.sanitize(input, options);
+  const result = (DOMPurify.sanitize ?? dompurifySanitize)(input, options) as unknown as string;
+  return result;
 }
 
 // Alias to satisfy existing imports
