@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -124,7 +125,9 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
               <span>Loading company data…</span>
             </div>
           )}
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
         <MadeWithDyad />
       </div>
