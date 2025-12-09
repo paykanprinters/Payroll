@@ -9,62 +9,36 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError } from "@/utils/toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 interface CompanyLogoUploadProps {
   canEdit: boolean;
-  isMockDataEnabled: boolean;
+  isMockDataEnabled: boolean; // New prop
 }
 
 const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDataEnabled }) => {
   const { setValue, watch } = useFormContext();
-  const { userId } = useAuth();
   const logoUrl = watch("logoUrl");
   const logoWidth = watch("logoWidth");
   const logoHeight = watch("logoHeight");
   const logoFit = watch("logoFit");
 
   const SUPABASE_STORAGE_BUCKET = "company-logos";
-
-  const getPublicUrlPrefix = (path: string) =>
-    supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(path).data.publicUrl.split("?")[0];
-
-  const getCurrentPathFromUrl = (): string | null => {
-    if (!logoUrl) return null;
-    try {
-      const withoutQuery = logoUrl.split("?")[0];
-      const parts = new URL(withoutQuery);
-      const idx = parts.pathname.indexOf("/object/public/");
-      if (idx === -1) return null;
-      return decodeURIComponent(parts.pathname.substring(idx + "/object/public/".length));
-    } catch {
-      // Likely a data URL or external URL
-      return null;
-    }
-  };
+  const SUPABASE_STORAGE_PATH = "company_logo.png";
+  const SUPABASE_PUBLIC_URL_PREFIX = `${supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(SUPABASE_STORAGE_PATH).data.publicUrl.split('?')[0]}`;
 
   const uploadFileToSupabaseStorage = async (file: File): Promise<string | null> => {
     if (!file) return null;
-    if (!userId) {
-      showError("You must be signed in to upload a logo.");
-      return null;
-    }
 
     try {
-      // Generate a unique path to avoid accidental overwrite: logos/{userId}/{timestamp}_{filename}
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const uniqueName = `${Date.now()}_${sanitizedName}`;
-      const newPath = `logos/${userId}/${uniqueName}`;
-
-      // Delete the previous file if it was stored in our bucket
-      const prevPath = getCurrentPathFromUrl();
-      if (prevPath && prevPath.startsWith("company-logos/")) {
-        const rel = prevPath.replace(/^company-logos\//, "");
+      // Delete existing file first if it's a Supabase URL
+      if (logoUrl && logoUrl.startsWith(SUPABASE_PUBLIC_URL_PREFIX)) {
         const { error: deleteError } = await supabase.storage
           .from(SUPABASE_STORAGE_BUCKET)
-          .remove([rel]);
-        if (deleteError && deleteError.message !== "The resource was not found") {
+          .remove([SUPABASE_STORAGE_PATH]);
+
+        if (deleteError && deleteError.message !== "The resource was not found") { // Ignore 'not found' error
           console.error("Error deleting old logo from Supabase Storage:", deleteError);
           showError("Failed to delete old logo from storage.");
           return null;
@@ -73,9 +47,9 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
 
       const { data, error } = await supabase.storage
         .from(SUPABASE_STORAGE_BUCKET)
-        .upload(newPath, file, {
-          cacheControl: "3600",
-          upsert: false,
+        .upload(SUPABASE_STORAGE_PATH, file, {
+          cacheControl: '3600',
+          upsert: true, // Overwrite if exists
           contentType: file.type,
         });
 
@@ -87,9 +61,10 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
 
       const { data: publicUrlData } = supabase.storage
         .from(SUPABASE_STORAGE_BUCKET)
-        .getPublicUrl(newPath);
+        .getPublicUrl(SUPABASE_STORAGE_PATH);
 
       return publicUrlData.publicUrl;
+
     } catch (err: any) {
       console.error("Unexpected error during Supabase logo upload:", err);
       showError(`An unexpected error occurred during logo upload: ${err.message}`);
@@ -98,14 +73,12 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
   };
 
   const deleteFileFromSupabaseStorage = async () => {
-    const prevPath = getCurrentPathFromUrl();
-    if (!prevPath || !prevPath.startsWith("company-logos/")) return;
+    if (!logoUrl || !logoUrl.startsWith(SUPABASE_PUBLIC_URL_PREFIX)) return; // Only delete Supabase URLs
 
     try {
-      const rel = prevPath.replace(/^company-logos\//, "");
       const { error } = await supabase.storage
         .from(SUPABASE_STORAGE_BUCKET)
-        .remove([rel]);
+        .remove([SUPABASE_STORAGE_PATH]);
 
       if (error && error.message !== "The resource was not found") {
         console.error("Error deleting logo from Supabase Storage:", error);
@@ -124,6 +97,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
     if (!file) return;
 
     if (isMockDataEnabled) {
+      // Handle mock data locally
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
@@ -135,6 +109,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
       };
       reader.readAsDataURL(file);
     } else {
+      // Handle live data with Supabase Storage
       const publicUrl = await uploadFileToSupabaseStorage(file);
       if (publicUrl) {
         setValue("logoUrl", publicUrl);
@@ -150,12 +125,14 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
 
   const handleRemoveLogo = async () => {
     if (isMockDataEnabled) {
+      // Handle mock data locally
       setValue("logoUrl", "");
       setValue("logoWidth", 100);
       setValue("logoHeight", 50);
       setValue("logoFit", "contain");
       showSuccess("Mock company logo removed successfully!");
     } else {
+      // Handle live data with Supabase Storage
       await deleteFileFromSupabaseStorage();
       setValue("logoUrl", "");
       setValue("logoWidth", 100);

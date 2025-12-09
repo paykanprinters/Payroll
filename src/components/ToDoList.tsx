@@ -17,17 +17,6 @@ const levelColor: Record<string, string> = {
   critical: "bg-red-100 text-red-700",
 };
 
-function isSafeUrl(href: string): boolean {
-  try {
-    // Allow internal routes
-    if (href.startsWith("/")) return true;
-    const u = new URL(href);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 export default function ToDoList(props: Props = {}) {
   const { todos, loading } = useTodosData();
   const items = props.toDos ?? todos;
@@ -43,31 +32,24 @@ export default function ToDoList(props: Props = {}) {
         ) : items.length === 0 ? (
           <div className="text-sm text-muted-foreground">No to-dos.</div>
         ) : (
-          items.map((t) => {
-            const safe = t.action_url && typeof t.action_url === "string" ? isSafeUrl(t.action_url) : false;
-            return (
-              <div key={t.id} className="flex items-start justify-between rounded-md border p-3">
-                <div className="pr-3">
-                  <div className="font-medium">{t.message}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{t.module}</div>
-                  {safe ? (
-                    <a
-                      href={t.action_url}
-                      className="text-xs text-blue-600 hover:underline mt-1 inline-block break-all"
-                      rel="noopener noreferrer"
-                    >
-                      Open action
-                    </a>
-                  ) : t.action_url ? (
-                    <div className="text-xs text-muted-foreground mt-1 break-all">
-                      {t.action_url}
-                    </div>
-                  ) : null}
-                </div>
-                <Badge className={levelColor[t.level] ?? ""}>{t.level}</Badge>
+          items.map((t) => (
+            <div key={t.id} className="flex items-start justify-between rounded-md border p-3">
+              <div className="pr-3">
+                <div className="font-medium">{t.message}</div>
+                <div className="text-xs text-muted-foreground mt-1">{t.module}</div>
+                {t.action_url ? (
+                  <a
+                    href={t.action_url}
+                    className="text-xs text-blue-600 hover:underline mt-1 inline-block break-all"
+                    rel="noopener noreferrer"
+                  >
+                    Open action
+                  </a>
+                ) : null}
               </div>
-            );
-          })
+              <Badge className={levelColor[t.level] ?? ""}>{t.level}</Badge>
+            </div>
+          ))
         )}
       </CardContent>
     </Card>

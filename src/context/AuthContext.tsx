@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
 type UserShape = {
   id: string;
@@ -11,10 +11,12 @@ type UserShape = {
 } | null;
 
 type AuthState = {
+  // Existing fields
   loading: boolean;
   isAuthenticated: boolean;
   userId: string | null;
   role: string | null;
+  // New fields (expected by various parts of the app)
   isLoadingAuth: boolean;
   user: UserShape;
 };
@@ -28,6 +30,10 @@ const AuthContext = createContext<AuthState>({
   user: null,
 });
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -38,61 +44,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const u = session?.user ?? null;
-
-      if (u) {
-        setUserId(u.id);
-        // Get verified role from public.users (RLS ensures only own record)
-        const { data: profile } = await supabase
-          .from("users")
-          .select("role, name")
-          .eq("id", u.id)
-          .single();
-
-        const verifiedRole = profile?.role ?? null;
-        const displayName =
-          (u.user_metadata as any)?.name ??
-          profile?.name ??
-          undefined;
-
-        setRole(verifiedRole);
-        setUser({ id: u.id, email: u.email ?? undefined, name: displayName, role: verifiedRole });
-      } else {
-        setUserId(null);
-        setRole(null);
-        setUser(null);
-      }
-
+      const meta = (u?.user_metadata as any) ?? {};
+      const nextRole = meta?.role ?? null;
+      setUserId(u?.id ?? null);
+      setRole(nextRole);
+      setUser(u ? { id: u.id, email: u.email ?? undefined, name: meta?.name ?? undefined, role: nextRole } : null);
       setLoading(false);
     };
-
     init();
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
-
-      if (u) {
-        setUserId(u.id);
-        const { data: profile } = await supabase
-          .from("users")
-          .select("role, name")
-          .eq("id", u.id)
-          .single();
-
-        const verifiedRole = profile?.role ?? null;
-        const displayName =
-          (u.user_metadata as any)?.name ??
-          profile?.name ??
-          undefined;
-
-        setRole(verifiedRole);
-        setUser({ id: u.id, email: u.email ?? undefined, name: displayName, role: verifiedRole });
-      } else {
-        setUserId(null);
-        setRole(null);
-        setUser(null);
-      }
+      const meta = (u?.user_metadata as any) ?? {};
+      const nextRole = meta?.role ?? null;
+      setUserId(u?.id ?? null);
+      setRole(nextRole);
+      setUser(u ? { id: u.id, email: u.email ?? undefined, name: meta?.name ?? undefined, role: nextRole } : null);
     });
-
     return () => { subscription.subscription.unsubscribe(); };
   }, []);
 
