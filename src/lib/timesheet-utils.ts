@@ -63,14 +63,12 @@ export const calculateTimesheetMetrics = (
     const teaDuration = calculateTimeDifferenceInHours((data as any).teaStart || "", (data as any).teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours((data as any).lunchStart || "", (data as any).lunchEnd || "");
 
-    const configuredBreakHours = (opts?.breakDurationMinutes ?? 0) / 60;
-
-    // If lunch is paid, do not subtract captured or configured breaks
-    const capturedBreakHours = opts?.paidLunch ? 0 : (teaDuration + lunchDuration);
-    const configuredBreakToSubtract = opts?.paidLunch ? 0 : configuredBreakHours;
-
-    const breakHoursToSubtract = Math.max(configuredBreakToSubtract, capturedBreakHours);
-
+    const configuredBreakHours = (opts?.breakDurationMinutes ?? 45) / 60;
+  
+    // Policy for hourly/weekly: subtract a fixed unpaid break (ignore captured tea/lunch if unpaid)
+    // If lunch is paid, subtract nothing; if unpaid, subtract exactly the configured fixed break
+    const breakHoursToSubtract = opts?.paidLunch ? 0 : configuredBreakHours;
+  
     totalWorkHours = Math.max(0, totalShiftDuration - breakHoursToSubtract);
 
     const expectedTimeIn = parse(expectedStart, "HH:mm", new Date());
