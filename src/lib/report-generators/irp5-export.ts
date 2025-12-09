@@ -12,12 +12,22 @@ export const generateIrp5ExportContent = (
   const contentFontSize = reportDesignSettings.irp5ContentFontSize || 12; // Use IRP5 specific font size
 
   const renderField = (label: string, value: string | number | boolean | undefined, code?: string) => {
-    const displayValue = (value === undefined || value === null || value === "") ? "N/A" : String(value);
+    const escape = (s: string) =>
+      s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    const rawValue = (value === undefined || value === null || value === "") ? "N/A" : String(value);
+    const displayValue = escape(rawValue);
+    const safeLabel = escape(String(label));
+    const safeCode = code ? escape(code) : undefined;
     return `
       <div class="flex justify-between items-baseline" style="font-size: ${contentFontSize}px; line-height: ${contentFontSize * 1.2}px; margin-bottom: ${contentFontSize * 0.1}px;">
-        <span class="font-semibold">${label}</span>
+        <span class="font-semibold">${safeLabel}</span>
         <span class="text-right">${displayValue}</span>
-        ${code ? `<span class="text-xs text-gray-500 ml-2" style="font-size: ${contentFontSize * 0.8}px;">(${code})</span>` : ''}
+        ${safeCode ? `<span class="text-xs text-gray-500 ml-2" style="font-size: ${contentFontSize * 0.8}px;">(${safeCode})</span>` : ''}
       </div>
     `;
   };
