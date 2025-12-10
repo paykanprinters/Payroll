@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Clock as ClockIcon, CheckCircle, XCircle, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
@@ -37,45 +38,89 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
   onEmployeeClick,
 }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [employeeFilter, setEmployeeFilter] = React.useState<string>("");
+
+  const empIdToCustomId = React.useMemo(() => {
+    const map = new Map<string, string>();
+    employees.forEach((emp) => map.set(emp.id, emp.customEmployeeId || "N/A"));
+    return map;
+  }, [employees]);
 
   const getEmployeeDisplayId = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? employee.customEmployeeId : "Unknown";
+    return empIdToCustomId.get(employeeId) ?? "Unknown";
   };
 
   const sortedTimesheets = React.useMemo(() => {
     return [...timesheets].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [timesheets]);
 
-  const totalPages = Math.ceil(sortedTimesheets.length / ITEMS_PER_PAGE);
+  const filteredTimesheets = React.useMemo(() => {
+    const query = employeeFilter.trim().toLowerCase();
+    if (!query) return sortedTimesheets;
+    return sortedTimesheets.filter((ts) => {
+      const customId = (empIdToCustomId.get(ts.employeeId) || "").toLowerCase();
+      return customId.includes(query);
+    });
+  }, [sortedTimesheets, empIdToCustomId, employeeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTimesheets.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedTimesheets = sortedTimesheets.slice(startIndex, endIndex);
+  const paginatedTimesheets = filteredTimesheets.slice(startIndex, endIndex);
 
   const handlePreviousPage = () => {
-    setCurrentPage(prev => Math.max(1, prev - 1));
+    setCurrentPage((prev) => Math.max(1, prev - 1));
   };
 
   const handleNextPage = () => {
-    setCurrentPage(prev => Math.min(totalPages, prev + 1));
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   };
 
+  // Only reset to page 1 when the filter changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [timesheets]);
+  }, [employeeFilter]);
+
+  // Clamp current page if data size shrinks (e.g., after delete/update) so we don't jump to page 1 unnecessarily
+  React.useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   return (
     <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Timesheet Entries</CardTitle>
-        <CardDescription>Overview of recorded employee working hours.</CardDescription>
+      <CardHeader className="space-y-2">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Timesheet Entries</CardTitle>
+            <CardDescription>Overview of recorded employee working hours.</CardDescription>
+          </div>
+          <div className="w-full max-w-xs">
+            <Input
+              value={employeeFilter}
+              onChange={(e) => setEmployeeFilter(e.target.value)}
+              placeholder="Filter by employee number (e.g., KAN004)"
+              aria-label="Filter by employee number"
+              className="h-9"
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        {timesheets.length > 0 ? (
+        {filteredTimesheets.length > 0 ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Employee ID</TableHead><TableHead>Date</TableHead><TableHead>Time In</TableHead><TableHead>Time Out</TableHead><TableHead>Work Hours</TableHead><TableHead>Overtime</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Flags</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
+                <TableRow>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Time In</TableHead>
+                  <TableHead>Time Out</TableHead>
+                  <TableHead>Work Hours</TableHead>
+                  <TableHead>Overtime</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Flags</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedTimesheets.map((entry) => (
@@ -109,7 +154,9 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                         {entry.absent && <XCircle className="h-4 w-4 text-red-500" />}
                         {entry.lateArrival && <ClockIcon className="h-4 w-4 text-yellow-500" />}
                         {entry.earlyDeparture && <ClockIcon className="h-4 w-4 text-orange-500" />}
-                        {!entry.absent && !entry.lateArrival && !entry.earlyDeparture && <CheckCircle className="h-4 w-4 text-green-500" />}
+                        {!entry.absent && !entry.lateArrival && !entry.earlyDeparture && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="flex justify-center gap-2">
@@ -119,7 +166,12 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       <Button variant="outline" size="icon" onClick={() => onDelete(entry.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      <Select onValueChange={(value: TimesheetEntry["status"]) => onStatusChange(entry.id, value)} value={entry.status}>
+                      <Select
+                        onValueChange={(value: TimesheetEntry["status"]) =>
+                          onStatusChange(entry.id, value)
+                        }
+                        value={entry.status}
+                      >
                         <SelectTrigger className="w-[120px] h-8">
                           <SelectValue placeholder="Change Status" />
                         </SelectTrigger>
@@ -135,6 +187,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                 ))}
               </TableBody>
             </Table>
+
             {totalPages > 1 && (
               <Pagination className="mt-4">
                 <PaginationContent>
@@ -166,7 +219,9 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            No timesheet entries found.
+            {employeeFilter.trim()
+              ? "No timesheet entries match the employee number filter."
+              : "No timesheet entries found."}
           </div>
         )}
       </CardContent>
