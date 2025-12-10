@@ -11,14 +11,14 @@ import IndividualPayslipCard from "./IndividualPayslipCard";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import IndividualPayslipActions from "./IndividualPayslipActions";
 import BulkPayslipActions from "./BulkPayslipActions";
-import BulkPayslipsRenderer from "./BulkPayslipsRenderer"; // Import the new component
-import BulkPayslipsWithReportsRenderer from "./BulkPayslipsWithReportsRenderer";
+import BulkPayslipsRenderer from "./BulkPayslipsRenderer";
+import BulkReportsRenderer from "./BulkReportsRenderer";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { saveGeneratedReport, computeChecksum } from "@/integrations/supabase/generated-reports";
 import { generatePayrollSummaryReportContent, generateEmployeePayslipReportContent } from "@/lib/report-generators";
-import { showError, showSuccess } from "@/utils/toast"; // Ensure showError and showSuccess are imported
-import { Button } from "@/components/ui/button"; // Import Button
-import { FileStack, CalendarCheck } from "lucide-react"; // Import FileStack and CalendarCheck icons
+import { showError, showSuccess } from "@/utils/toast";
+import { Button } from "@/components/ui/button";
+import { FileStack, CalendarCheck } from "lucide-react";
 
 interface PayslipGenerationSectionProps {
   employees: MockEmployee[];
@@ -29,7 +29,7 @@ interface PayslipGenerationSectionProps {
   setSelectedPayslipId: (id: string) => void;
   getEmployeeName: (employeeId: string) => string;
   payslipDesignSettings: PayslipDesignSettings;
-  companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
+  companyDetails: MockCompanyDetails | null;
   allEmployees: MockEmployee[];
 }
 
@@ -42,7 +42,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   setSelectedPayslipId,
   getEmployeeName,
   payslipDesignSettings,
-  companyDetails, // Destructure companyDetails
+  companyDetails,
   allEmployees,
 }) => {
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
@@ -75,7 +75,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
   React.useEffect(() => {
     if (selectedEmployeeId && filteredPayslipsForEmployee.length > 0) {
-      // Only set a default if no payslip is currently selected
       if (!selectedPayslipId) {
         const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
         if (mostRecentPayslip) {
@@ -83,13 +82,12 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         }
       }
     } else if (!selectedEmployeeId && selectedPayslipId) {
-      // If employee is deselected, clear the payslip selection
       setSelectedPayslipId("");
     }
   }, [selectedEmployeeId, filteredPayslipsForEmployee, selectedPayslipId, setSelectedPayslipId]);
 
   const handlePrintOrDownloadIndividual = useCallback(async (action: 'print' | 'download') => {
-    if (!selectedPayslip || !companyDetails) { // Check companyDetails
+    if (!selectedPayslip || !companyDetails) {
       showError(`Please select a payslip and ensure company details are loaded to ${action}.`);
       return;
     }
@@ -109,13 +107,13 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     const options = {
       filename: `payslip-${selectedPayslip.employeeId}-${selectedPayslip.payPeriod}.pdf`,
       format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
-      documentType: 'payslip' as const, // Specify document type
+      documentType: 'payslip' as const,
     };
 
     if (action === 'download') {
       await generatePdf(renderComponent, options, true);
     } else {
-      await printPdf(renderComponent, options);
+      await printPdf(renderComponent, options, true);
     }
   }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
 
@@ -158,7 +156,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     const reportDesignSettings = loadReportDesignSettings();
 
-    // Save combined report to Supabase only for detailed level
+    // Save combined report to Supabase only for detailed level (metadata only; PDFs will be separate)
     if (level === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
@@ -178,8 +176,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await saveGeneratedReport(`Bulk Payslips Reports — ${mode} — ${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}`, combinedHtml);
     }
 
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <BulkPayslipsWithReportsRenderer
+    // Render reports PDF
+    const renderReports = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <BulkReportsRenderer
         payslips={payslipsForPeriod}
         employees={allEmployees}
         companyDetails={companyDetails}
@@ -187,28 +186,52 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         auditLevel={level}
         selectedDate={selectedPayPeriodDate}
         mode={mode}
-        getEmployeeName={getEmployeeName}
         isPdfGeneration={true}
         onReadyForPdf={onReadyForPdf}
-        payslipDesignSettings={payslipDesignSettings}
       />
     );
 
-    const options = {
-      filename: `all-${mode}-payslips-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`,
+    const reportsOptions = {
+      filename: `reports-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`,
+      format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
+      orientation: 'portrait' as const,
+      documentType: 'report' as const,
+    };
+
+    // Render payslips PDF
+    const renderPayslips = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <BulkPayslipsRenderer
+        payslips={payslipsForPeriod}
+        getEmployeeName={getEmployeeName}
+        payslipDesignSettings={payslipDesignSettings}
+        companyDetails={companyDetails}
+        employees={allEmployees}
+        isPdfGeneration={true}
+        onReadyForPdf={onReadyForPdf}
+      />
+    );
+
+    const payslipsOptions = {
+      filename: `payslips-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`,
       format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
-      orientation: 'portrait',
+      orientation: 'portrait' as const,
       documentType: 'payslip' as const,
     };
 
-    if (action === 'download') {
-      await generatePdf(renderComponent, options, true);
-      showSuccess(`All ${mode} payslips with prepended reports downloaded successfully!`);
-    } else {
-      await printPdf(renderComponent, options);
-      showSuccess(`All ${mode} payslips with prepended reports sent to printer!`);
+    try {
+      if (action === 'download') {
+        await generatePdf(renderReports, reportsOptions, true);
+        await generatePdf(renderPayslips, payslipsOptions, true);
+        showSuccess(`Reports and payslips downloaded as separate PDFs.`);
+      } else {
+        await printPdf(renderReports, reportsOptions, true);
+        await printPdf(renderPayslips, payslipsOptions, true);
+        showSuccess(`Reports and payslips sent to printer separately.`);
+      }
+    } catch (e: any) {
+      showError(`Bulk ${action} failed: ${e?.message || 'Unknown error'}`);
     }
-  }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf, loadReportDesignSettings]);
+  }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf, loadReportDesignSettings, payCycleSettings]);
 
   const handleGenerateAllCurrentPeriodPayslips = React.useCallback(async (action: 'print' | 'download') => {
     if (!companyDetails) {
@@ -262,13 +285,13 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     const reportDesignSettings = loadReportDesignSettings();
 
-    // Save combined report to Supabase only for detailed level
+    // Save combined report to Supabase only for detailed level (metadata only)
     if (auditLevel === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
       const payslipsForReports = payslipsForCurrentPeriod.filter(p => nonCashIds.has(p.employeeId));
 
-      const mode: "monthly" | "weekly" = "monthly"; // Mixed frequencies; default to monthly summary for current period
+      const mode: "monthly" | "weekly" = "monthly";
       const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel);
       const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel);
       const combinedHtml = `
@@ -283,8 +306,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await saveGeneratedReport(`Bulk Payslips Reports — Current Period — ${format(today, 'yyyy-MM-dd')}`, combinedHtml);
     }
 
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <BulkPayslipsWithReportsRenderer
+    // Render reports PDF
+    const renderReports = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <BulkReportsRenderer
         payslips={payslipsForCurrentPeriod}
         employees={allEmployees}
         companyDetails={companyDetails}
@@ -292,28 +316,52 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         auditLevel={auditLevel}
         selectedDate={today}
         mode={"monthly"}
-        getEmployeeName={getEmployeeName}
         isPdfGeneration={true}
         onReadyForPdf={onReadyForPdf}
-        payslipDesignSettings={payslipDesignSettings}
       />
     );
 
-    const options = {
-      filename: `all-payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`,
+    const reportsOptions = {
+      filename: `reports-current-period-${format(today, 'yyyy-MM-dd')}.pdf`,
+      format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
+      orientation: 'portrait' as const,
+      documentType: 'report' as const,
+    };
+
+    // Render payslips PDF
+    const renderPayslips = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
+      <BulkPayslipsRenderer
+        payslips={payslipsForCurrentPeriod}
+        getEmployeeName={getEmployeeName}
+        payslipDesignSettings={payslipDesignSettings}
+        companyDetails={companyDetails}
+        employees={allEmployees}
+        isPdfGeneration={true}
+        onReadyForPdf={onReadyForPdf}
+      />
+    );
+
+    const payslipsOptions = {
+      filename: `payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`,
       format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
-      orientation: 'portrait',
+      orientation: 'portrait' as const,
       documentType: 'payslip' as const,
     };
 
-    if (action === 'download') {
-      await generatePdf(renderComponent, options, true);
-      showSuccess(`All payslips for the current period downloaded successfully!`);
-    } else {
-      await printPdf(renderComponent, options);
-      showSuccess(`All payslips for the current period sent to printer!`);
+    try {
+      if (action === 'download') {
+        await generatePdf(renderReports, reportsOptions, true);
+        await generatePdf(renderPayslips, payslipsOptions, true);
+        showSuccess(`Reports and payslips downloaded as separate PDFs for current period.`);
+      } else {
+        await printPdf(renderReports, reportsOptions, true);
+        await printPdf(renderPayslips, payslipsOptions, true);
+        showSuccess(`Reports and payslips sent to printer separately for current period.`);
+      }
+    } catch (e: any) {
+      showError(`Bulk ${action} failed: ${e?.message || 'Unknown error'}`);
     }
-  }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, generatePdf, printPdf, auditLevel, loadReportDesignSettings]);
+  }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, generatePdf, printPdf, auditLevel, loadReportDesignSettings, payCycleSettings]);
 
   const handleSelectCurrentPeriodPayslip = useCallback(() => {
     if (!selectedEmployeeId) {

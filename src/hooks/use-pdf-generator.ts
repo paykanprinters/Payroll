@@ -80,7 +80,7 @@ const buildStyles = (
   const cssFormat = format === "letter" ? "Letter" : format.toUpperCase();
   return `
   @page { size: ${cssFormat} ${orientation}; margin: 0; }
-  body {
+  html, body {
     margin: 0;
     padding: 0;
     -webkit-print-color-adjust: exact;
@@ -88,6 +88,11 @@ const buildStyles = (
     background: #fff;
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     line-height: 1.35;
+  }
+  img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    image-rendering: -webkit-optimize-contrast;
   }
   #pdf-root { background-color: white; }
   #pdf-root > div {
@@ -165,7 +170,7 @@ const mountReactInIframe = (
     })
   );
 
-  const timeoutId = setTimeout(() => resolveReady(), 5000);
+  const timeoutId = setTimeout(() => resolveReady(), 7000);
   return { root, readyPromise, timeoutId };
 };
 
@@ -182,16 +187,18 @@ const getHtml2PdfOptions = (
   options: PdfOptions,
   scaleOverride?: number
 ) => {
+  const dpr = Math.min(3, (window.devicePixelRatio || 2));
   return {
     margin: [contentMarginMm, contentMarginMm, contentMarginMm, contentMarginMm] as [number, number, number, number],
     filename: options.filename,
-    image: { type: "jpeg" as "jpeg", quality: 0.92 },
+    image: { type: "png" as "png", quality: 1.0 },
     html2canvas: {
-      scale: scaleOverride ?? 2,
+      scale: scaleOverride ?? dpr,
       logging: false,
       useCORS: true,
       windowWidth: mmToPx(contentWidthMm),
       scrollY: 0,
+      backgroundColor: "#ffffff",
     },
     pagebreak: { mode: ["css", "legacy"] as any },
     jsPDF: {
@@ -265,13 +272,14 @@ const renderBulkAsPages = async (
   const pageBlocks = Array.from(iframeDoc.querySelectorAll(".pdf-page")) as HTMLElement[];
   if (pageBlocks.length === 0) return null;
 
+  const MAX_CANVAS_DIM = 6144; // generous but safe canvas cap
+  const baseScale = Math.min(3, (iframeDoc.defaultView?.devicePixelRatio || window.devicePixelRatio || 2));
+
   for (let i = 0; i < pageBlocks.length; i++) {
     const block = pageBlocks[i];
 
     // Dynamically lower scale for very tall pages to avoid exceeding browser canvas limits
     const blockHeightPx = block.offsetHeight;
-    const baseScale = 2;
-    const MAX_CANVAS_DIM = 4096; // conservative safety cap for max canvas dimension
     const dynamicScale = Math.min(baseScale, MAX_CANVAS_DIM / Math.max(blockHeightPx, viewportWidthPx));
 
     const canvas = await html2canvas(block, {
@@ -283,7 +291,7 @@ const renderBulkAsPages = async (
       backgroundColor: "#ffffff",
     });
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.92);
+    const imgData = canvas.toDataURL("image/png");
     const imgWidthMm = contentWidthMm;
     const imgHeightMm = (canvas.height / canvas.width) * imgWidthMm;
 
@@ -297,7 +305,7 @@ const renderBulkAsPages = async (
       pdf.addPage(options.format || "a4", options.orientation || "portrait");
     }
 
-    pdf.addImage(imgData, "JPEG", contentMarginMm, contentMarginMm, finalWidthMm, finalHeightMm, undefined, "FAST");
+    pdf.addImage(imgData, "PNG", contentMarginMm, contentMarginMm, finalWidthMm, finalHeightMm, undefined, "FAST");
     drawBorderOnCurrentPage(pdf, options.documentType);
   }
 
@@ -361,7 +369,7 @@ export const usePdfGenerator = () => {
           // Fallback to html2pdf if no explicit page blocks are found
           const pdf = await html2pdf()
             .from(iframeDoc.getElementById("pdf-root"))
-            .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options, 1))
+            .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options, 2))
             .toPdf()
             .get("pdf");
 
@@ -402,7 +410,7 @@ export const usePdfGenerator = () => {
     async (
       renderComponent: (props: RenderComponentProps) => React.ReactElement,
       options: PdfOptions,
-      _isBulk: boolean = false
+      isBulk: boolean = false
     ) => {
       const toastId = showLoading(`Preparing ${options.filename} for printing, please wait...`) as string;
 
@@ -436,16 +444,29 @@ export const usePdfGenerator = () => {
           clearTimeout(timeoutId);
         }
 
-        const bulkPdf = await renderBulkAsPages(iframeDoc, dims, options);
+        // Prefer bulk page rendering if requested
+        if (isBulk) {
+          const bulkPdf = await renderBulkAsPages(iframeDoc, dims, options);
 
-        if (bulkPdf) {
-          drawBordersForAllPages(bulkPdf, options.documentType);
-          bulkPdf.output("dataurlnewwindow");
-          showSuccess(`${options.filename} sent to printer.`);
+          if (bulkPdf) {
+            drawBordersForAllPages(bulkPdf, options.documentType);
+            bulkPdf.output("dataurlnewwindow");
+            showSuccess(`${options.filename} sent to printer.`);
+          } else {
+            const pdf = await html2pdf()
+              .from(iframeDoc.getElementById("pdf-root"))
+              .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options, 2))
+              .toPdf()
+              .get("pdf");
+
+            drawBordersForAllPages(pdf, options.documentType);
+            pdf.output("dataurlnewwindow");
+            showSuccess(`${options.filename} sent to printer.`);
+          }
         } else {
           const pdf = await html2pdf()
             .from(iframeDoc.getElementById("pdf-root"))
-            .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options, 1))
+            .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options))
             .toPdf()
             .get("pdf");
 
