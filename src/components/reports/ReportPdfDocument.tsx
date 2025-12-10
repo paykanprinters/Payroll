@@ -87,6 +87,19 @@ const ReportPdfDocument: React.FC<Props> = ({
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // Aggregate deduction totals by type/name
+  const deductionTotals: Record<string, number> = {};
+  filteredPayslips.forEach((p) => {
+    (p.deductionsBreakdown || []).forEach((d) => {
+      const key = (d?.name || "Unknown").trim();
+      const amount = Number(d?.amount || 0);
+      deductionTotals[key] = (deductionTotals[key] || 0) + amount;
+    });
+  });
+  const deductionRows = Object.entries(deductionTotals)
+    .filter(([, amt]) => amt > 0)
+    .sort((a, b) => b[1] - a[1]);
+
   return (
     <Document>
       {/* Payroll Summary Report */}
@@ -146,6 +159,26 @@ const ReportPdfDocument: React.FC<Props> = ({
             </View>
           </View>
         </View>
+
+        {deductionRows.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Deductions Breakdown by Type</Text>
+            <View style={styles.table}>
+              <View style={styles.tableRow}>
+                <Text style={styles.th}>Deduction Type</Text>
+                <Text style={styles.th}>Amount (R)</Text>
+                <Text style={styles.th}></Text>
+              </View>
+              {deductionRows.map(([name, amt]) => (
+                <View style={styles.tableRow} key={name}>
+                  <Text style={styles.tdWide}>{name}</Text>
+                  <Text style={styles.td}>{currency(amt)}</Text>
+                  <Text style={styles.td}></Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
       </Page>
 
       {/* Employee Payslip Report */}

@@ -46,6 +46,19 @@ export const generatePayrollSummaryReportContent = (
   const totalNet = filteredPayslips.reduce((sum, p) => sum + p.netPay, 0);
   const employeeCount = new Set(filteredPayslips.map(p => p.employeeId)).size;
 
+  // Aggregate deduction totals by type/name
+  const deductionTotals: Record<string, number> = {};
+  filteredPayslips.forEach((p) => {
+    (p.deductionsBreakdown || []).forEach((d) => {
+      const key = (d?.name || "Unknown").trim();
+      const amount = Number(d?.amount || 0);
+      deductionTotals[key] = (deductionTotals[key] || 0) + amount;
+    });
+  });
+  const deductionRows = Object.entries(deductionTotals)
+    .filter(([, amt]) => amt > 0)
+    .sort((a, b) => b[1] - a[1]);
+
   if (auditLevel === "minimal") {
     return `
       <p><strong>Report Period:</strong> ${reportPeriodDescription}</p>
@@ -105,6 +118,33 @@ export const generatePayrollSummaryReportContent = (
         </tr>
       </tbody>
     </table>
+  `;
+
+  // Add deductions breakdown by type (e.g., PAYE, UIF, SDL)
+  if (deductionRows.length > 0) {
+    html += `
+      <br/>
+      <h4 class="text-md font-semibold mb-2">Deductions Breakdown by Type</h4>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b">
+            <th class="py-2 px-4">Deduction Type</th>
+            <th class="py-2 px-4 text-right">Amount (R)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${deductionRows.map(([name, amt]) => `
+            <tr class="border-b">
+              <td class="py-2 px-4">${name}</td>
+              <td class="py-2 px-4 text-right">${amt.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  html += `
     <br/>
     <h4 class="text-md font-semibold mb-2">Summary by Pay Period</h4>
     <table class="w-full text-left border-collapse">
