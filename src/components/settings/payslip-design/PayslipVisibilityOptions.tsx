@@ -48,6 +48,30 @@ const PayslipVisibilityOptions: React.FC<PayslipVisibilityOptionsProps> = ({
         />
       </div>
       <div className="flex items-center justify-between">
+        <Label htmlFor="showEmployeeIdNumber">Show Employee ID Number</Label>
+        <Switch
+          id="showEmployeeIdNumber"
+          checked={!!settings.showEmployeeIdNumber}
+          onCheckedChange={(checked) => onToggleChange("showEmployeeIdNumber", checked)}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label htmlFor="showEmployeeTaxRefNumber">Show Employee Tax Reference</Label>
+        <Switch
+          id="showEmployeeTaxRefNumber"
+          checked={!!settings.showEmployeeTaxRefNumber}
+          onCheckedChange={(checked) => onToggleChange("showEmployeeTaxRefNumber", checked)}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label htmlFor="showEmployeeAddress">Show Employee Address</Label>
+        <Switch
+          id="showEmployeeAddress"
+          checked={!!settings.showEmployeeAddress}
+          onCheckedChange={(checked) => onToggleChange("showEmployeeAddress", checked)}
+        />
+      </div>
+      <div className="flex items-center justify-between">
         <Label htmlFor="showEarningsBreakdown">Show Earnings Breakdown</Label>
         <Switch
           id="showEarningsBreakdown"

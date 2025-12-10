@@ -61,6 +61,29 @@ const PayslipPdfDocument: React.FC<Props> = ({
                   <Text style={styles.text}>
                     {(employee?.jobTitle || "Employee")}{employee?.customEmployeeId ? ` • ${employee.customEmployeeId}` : ""}
                   </Text>
+                  {!!payslipDesignSettings.showHourlyRate && employee?.hourlyRate != null && (
+                    <Text style={styles.text}>{`Hourly Rate: ${currency(employee.hourlyRate)}`}</Text>
+                  )}
+                  {!!payslipDesignSettings.showEmployeeIdNumber && !!employee?.idNumber && (
+                    <Text style={styles.text}>{`ID: ${employee.idNumber}`}</Text>
+                  )}
+                  {!!payslipDesignSettings.showEmployeeTaxRefNumber && !!employee?.taxReferenceNumber && (
+                    <Text style={styles.text}>{`Tax Ref: ${employee.taxReferenceNumber}`}</Text>
+                  )}
+                  {!!payslipDesignSettings.showEmployeeAddress && (
+                    <>
+                      {(employee?.addressLine1 || employee?.addressLine2) && (
+                        <Text style={styles.text}>
+                          {[employee?.addressLine1, employee?.addressLine2].filter(Boolean).join(", ")}
+                        </Text>
+                      )}
+                      {(employee?.city || employee?.province || employee?.postalCode) && (
+                        <Text style={styles.text}>
+                          {[employee?.city, employee?.province, employee?.postalCode].filter(Boolean).join(", ")}
+                        </Text>
+                      )}
+                    </>
+                  )}
                   {!!employee?.startDate && <Text style={styles.text}>{`Start: ${employee.startDate}`}</Text>}
                   {!!payslipDesignSettings.showBankDetails && (employee?.bankName || employee?.accountNumber) && (
                     <>

@@ -69,6 +69,10 @@ const IndividualPayslipCard: React.FC<Props> = ({
     showLeaveSummary,
     showBankDetails,
     showYTD,
+    // new toggles
+    showEmployeeIdNumber,
+    showEmployeeTaxRefNumber,
+    showEmployeeAddress,
     earningsDeductionsLayout,
     sectionOrder,
     payslipLogoUrl,
@@ -158,8 +162,21 @@ const IndividualPayslipCard: React.FC<Props> = ({
               {employee?.jobTitle || "Employee"}
               {employee?.customEmployeeId ? ` • ${employee.customEmployeeId}` : ""}
             </div>
-            {employee?.idNumber && (
+            {showEmployeeIdNumber && employee?.idNumber && (
               <div className="text-muted-foreground">ID: {employee.idNumber}</div>
+            )}
+            {showEmployeeTaxRefNumber && employee?.taxReferenceNumber && (
+              <div className="text-muted-foreground">Tax Ref: {employee.taxReferenceNumber}</div>
+            )}
+            {showEmployeeAddress && (
+              <div className="text-muted-foreground">
+                {(employee?.addressLine1 || employee?.addressLine2) && (
+                  <div>{[employee?.addressLine1, employee?.addressLine2].filter(Boolean).join(", ")}</div>
+                )}
+                {(employee?.city || employee?.province || employee?.postalCode) && (
+                  <div>{[employee?.city, employee?.province, employee?.postalCode].filter(Boolean).join(", ")}</div>
+                )}
+              </div>
             )}
             {employee?.startDate && (
               <div className="text-muted-foreground">Start: {employee.startDate}</div>

@@ -16,6 +16,10 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
   showBankDetails: true,
   showYTD: true,
   showHourlyRate: true,
+  // New toggles default to false
+  showEmployeeIdNumber: false,
+  showEmployeeTaxRefNumber: false,
+  showEmployeeAddress: false,
   sectionOrder: ["Earnings", "Deductions"],
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
@@ -33,12 +37,15 @@ export function usePayslipDesignSettings() {
   const load = useCallback(async () => {
     if (isLoadingAuth) return;
     if (!isAuthenticated) {
-      setSettings(DEFAULT_SETTINGS);
+      // Merge with local extras if present
+      const extras = JSON.parse(localStorage.getItem("payslip_design_extras_visibility") || "{}");
+      setSettings({ ...DEFAULT_SETTINGS, ...extras });
       return;
     }
     setIsLoading(true);
     const s = await fetchPayslipDesignSettings();
-    setSettings(s);
+    const extras = JSON.parse(localStorage.getItem("payslip_design_extras_visibility") || "{}");
+    setSettings({ ...s, ...extras });
     setIsLoading(false);
   }, [isAuthenticated, isLoadingAuth]);
 
@@ -47,7 +54,18 @@ export function usePayslipDesignSettings() {
   }, [load]);
 
   const save = useCallback(async (next: PayslipDesignSettings) => {
-    const ok = await upsertPayslipDesignSettings(next);
+    // Extract extra visibility flags and store them locally to avoid DB schema changes
+    const { showEmployeeIdNumber, showEmployeeTaxRefNumber, showEmployeeAddress, ...base } = next || {};
+    localStorage.setItem(
+      "payslip_design_extras_visibility",
+      JSON.stringify({
+        showEmployeeIdNumber: !!showEmployeeIdNumber,
+        showEmployeeTaxRefNumber: !!showEmployeeTaxRefNumber,
+        showEmployeeAddress: !!showEmployeeAddress,
+      })
+    );
+
+    const ok = await upsertPayslipDesignSettings(base as PayslipDesignSettings);
     if (ok) {
       setSettings(next);
       window.dispatchEvent(new Event("payslipDesignUpdated"));

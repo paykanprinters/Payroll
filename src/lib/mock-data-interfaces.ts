@@ -183,14 +183,19 @@ export interface PayslipDesignSettings {
   showLeaveSummary: boolean;
   showBankDetails: boolean;
   showYTD: boolean;
-  showHourlyRate: boolean; // Added showHourlyRate
+  showHourlyRate: boolean; // existing
+  // NEW visibility toggles
+  showEmployeeIdNumber?: boolean;
+  showEmployeeTaxRefNumber?: boolean;
+  showEmployeeAddress?: boolean;
+
   sectionOrder: ("Earnings" | "Deductions")[];
   layoutSize: "Letter" | "A4" | "A5";
   earningsDeductionsLayout: "deductions-left-earnings-right" | "earnings-left-deductions-right";
-  payslipLogoUrl?: string; // New field for payslip-specific logo
-  payslipLogoWidth?: number; // New field for payslip logo width
-  payslipLogoHeight?: number; // New field for payslip logo height
-  payslipLogoFit?: "contain" | "cover" | "fill" | "none" | "scale-down"; // New field for payslip logo object-fit
+  payslipLogoUrl?: string;
+  payslipLogoWidth?: number;
+  payslipLogoHeight?: number;
+  payslipLogoFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
 }
 
 export interface ToDoEntry {
