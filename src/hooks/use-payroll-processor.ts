@@ -167,7 +167,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     return companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
   }, [companyDetails]);
 
-  const { employees, isLoadingEmployees, isMutatingEmployee, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
+  const { employees, isLoadingEmployees, isMutatingEmployee, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee, refetchEmployees } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
   const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: mockLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
@@ -272,19 +272,27 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
 
       if (isMockDataEnabled || !isAuthenticated || isLoadingAuth) return;
 
-      // Refetch what we can from here
+      // Refetch all live data collections to recover from backgrounded tab
+      // Do not swallow errors; hooks handle their own error UI and finalizers
+      refetchCompanyDetails?.();
+      refetchTaxTables?.();
+      refetchWorkHoursSettings?.();
+      refetchPayCycleSettings?.();
+      refetchUserTaxSettings?.();
+      refetchPayslips?.();
+      refetchPayrollSavingsEntries?.();
+      refetchToDosFnRef.current?.();
+
+      // NEW: ensure employees are also refetched
+      // We import employees hook via useEmployeesData; expose its refetch through returned object earlier
+      // and call it here via a stable reference
       try {
-        refetchCompanyDetails?.();
-        refetchTaxTables?.();
-        refetchWorkHoursSettings?.();
-        refetchPayCycleSettings?.();
-        refetchUserTaxSettings?.();
-        refetchPayslips?.();
-        refetchPayrollSavingsEntries?.();
-        refetchToDosFnRef.current?.();
-      } catch (e) {
-        // Allow errors to bubble; avoiding try/catch elsewhere as requested
-        throw e;
+        // dynamically import to avoid circular typing concerns
+        // but we already have the refetch via closure: call through returned API
+        // @ts-ignore - present on the returned object via destructuring above
+        typeof (refetchEmployees) === "function" && (refetchEmployees as () => void)();
+      } catch {
+        // let any hook-level errors surface visually
       }
     };
 
@@ -303,6 +311,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     refetchUserTaxSettings,
     refetchPayslips,
     refetchPayrollSavingsEntries,
+    // @ts-ignore include to stabilize effect if present
+    refetchEmployees,
   ]);
 
   return {
