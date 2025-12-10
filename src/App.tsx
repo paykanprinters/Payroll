@@ -21,6 +21,7 @@ import Unauthorized from "./pages/Unauthorized";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React from "react";
+import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <AutoRefreshOnFocus />
         <BrowserRouter>
           <AuthProvider>
             <Routes>

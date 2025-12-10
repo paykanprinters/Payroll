@@ -260,6 +260,51 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     };
   }, [isMockDataEnabled, silent]);
 
+  // Central soft-refresh when app regains focus/visibility
+  useEffect(() => {
+    const lastRefetchTsRef = { current: 0 } as { current: number };
+    const MIN_INTERVAL = 10000; // 10s throttle
+
+    const handler = () => {
+      const now = Date.now();
+      if (now - lastRefetchTsRef.current < MIN_INTERVAL) return;
+      lastRefetchTsRef.current = now;
+
+      if (isMockDataEnabled || !isAuthenticated || isLoadingAuth) return;
+
+      // Refetch what we can from here
+      try {
+        refetchCompanyDetails?.();
+        refetchTaxTables?.();
+        refetchWorkHoursSettings?.();
+        refetchPayCycleSettings?.();
+        refetchUserTaxSettings?.();
+        refetchPayslips?.();
+        refetchPayrollSavingsEntries?.();
+        refetchToDosFnRef.current?.();
+      } catch (e) {
+        // Allow errors to bubble; avoiding try/catch elsewhere as requested
+        throw e;
+      }
+    };
+
+    window.addEventListener("appFocusRefresh", handler);
+    return () => {
+      window.removeEventListener("appFocusRefresh", handler);
+    };
+  }, [
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+    refetchCompanyDetails,
+    refetchTaxTables,
+    refetchWorkHoursSettings,
+    refetchPayCycleSettings,
+    refetchUserTaxSettings,
+    refetchPayslips,
+    refetchPayrollSavingsEntries,
+  ]);
+
   return {
     employees,
     addOrUpdateEmployee: baseAddOrUpdateEmployee,
