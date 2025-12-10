@@ -57,10 +57,14 @@ const PayslipPdfDocument: React.FC<Props> = ({
             {(payslipDesignSettings.showEmployeeDetails || payslipDesignSettings.showBankDetails || payslipDesignSettings.showCompanyDetails || (payslipDesignSettings.showCompanyLogo && logoSrc)) && (
               <View style={styles.row}>
                 <View style={[styles.col, styles.card]}>
-                  <Text style={styles.label}>{employeeName}</Text>
-                  <Text style={styles.text}>
-                    {(employee?.jobTitle || "Employee")}{employee?.customEmployeeId ? ` • ${employee.customEmployeeId}` : ""}
-                  </Text>
+                  {payslipDesignSettings.showEmployeeDetails && (
+                    <>
+                      <Text style={styles.label}>{employeeName}</Text>
+                      <Text style={styles.text}>
+                        {(employee?.jobTitle || "Employee")}{employee?.customEmployeeId ? ` • ${employee.customEmployeeId}` : ""}
+                      </Text>
+                    </>
+                  )}
                   {!!payslipDesignSettings.showHourlyRate && employee?.hourlyRate != null && (
                     <Text style={styles.text}>{`Hourly Rate: ${currency(employee.hourlyRate)}`}</Text>
                   )}
@@ -84,7 +88,9 @@ const PayslipPdfDocument: React.FC<Props> = ({
                       )}
                     </>
                   )}
-                  {!!employee?.startDate && <Text style={styles.text}>{`Start: ${employee.startDate}`}</Text>}
+                  {!!employee?.startDate && payslipDesignSettings.showEmployeeDetails && (
+                    <Text style={styles.text}>{`Start: ${employee.startDate}`}</Text>
+                  )}
                   {!!payslipDesignSettings.showBankDetails && (employee?.bankName || employee?.accountNumber) && (
                     <>
                       <View style={styles.hr} />
@@ -169,7 +175,7 @@ const PayslipPdfDocument: React.FC<Props> = ({
               </View>
             </View>
 
-            {p?.leaveSummary && (
+            {payslipDesignSettings.showLeaveSummary && p?.leaveSummary && (
               <View style={[styles.card, { marginTop: 12 }]}>
                 <Text style={styles.sectionTitle}>Leave Summary</Text>
                 <View style={styles.row}>
