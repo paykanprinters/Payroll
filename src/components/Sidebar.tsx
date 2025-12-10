@@ -3,7 +3,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Users,
@@ -17,15 +17,12 @@ import {
   LineChart,
   Clock,
   ListTodo,
-  Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
-import { useToDosData } from "@/hooks/use-todos-data";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 interface NavLinkProps {
   to: string;

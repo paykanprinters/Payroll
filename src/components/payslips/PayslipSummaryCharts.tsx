@@ -15,7 +15,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 
 interface PayrollSummaryData {
   name: string;
@@ -39,12 +39,8 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
   payrollSummaryData,
   deductionsBreakdownData,
 }) => {
-  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
+  const dataVisualsFontSize = useDataVisualsFontSize();
 
-  // Log the deductions breakdown data here
-  console.log("PayslipSummaryCharts: Deductions Breakdown Data:", deductionsBreakdownData);
-
-  // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
     return `${value} (${percentage}%)`;
@@ -86,11 +82,11 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
                 data={deductionsBreakdownData}
                 cx="50%"
                 cy="50%"
-                innerRadius={60} // Added for Doughnut
+                innerRadius={60}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
-                labelLine={false} // Ensure no lines to labels
+                labelLine={false}
                 style={{ fontSize: dataVisualsFontSize }}
               >
                 {deductionsBreakdownData.map((entry, index) => (
@@ -98,7 +94,13 @@ const PayslipSummaryCharts: React.FC<PayslipSummaryChartsProps> = ({
                 ))}
               </Pie>
               <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-              <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
+              <Legend
+                layout="vertical"
+                verticalAlign="middle"
+                align="right"
+                wrapperStyle={{ fontSize: dataVisualsFontSize }}
+                formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)}
+              />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>

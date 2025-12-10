@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
-import { format, differenceInMonths, differenceInYears } from "date-fns";
+import { format, differenceInMonths } from "date-fns";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
@@ -52,11 +52,13 @@ const Analytics: React.FC = () => {
     });
     const trendData = Array.from(monthlyDataMap.entries())
       .map(([monthYear, data]) => ({
-        name: format(new Date(monthYear), 'MMM yyyy'),
+        key: monthYear,
+        name: format(new Date(`${monthYear}-01`), 'MMM yyyy'),
         gross: data.gross,
         net: data.net,
       }))
-      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+      .sort((a, b) => new Date(`${a.key}-01`).getTime() - new Date(`${b.key}-01`).getTime())
+      .map(({ name, gross, net }) => ({ name, gross, net }));
     setMonthlyPayrollTrend(trendData);
 
     // --- Compensation Type Breakdown ---
@@ -88,7 +90,7 @@ const Analytics: React.FC = () => {
       { name: "Other Deductions", value: totalOtherDeductions },
     ].filter(item => item.value > 0);
     setDeductionCategoryBreakdown(breakdown);
-    console.log("Analytics: Deduction Category Breakdown Data:", breakdown); // Add this log
+
 
     // --- Employee Turnover Trend (Mocked for simplicity) ---
     const turnoverMap = new Map<string, { newHires: number; terminations: number }>();
@@ -114,7 +116,7 @@ const Analytics: React.FC = () => {
     setEmployeeTurnoverTrend(
       Array.from(turnoverMap.entries())
         .map(([name, data]) => ({ name, ...data }))
-        .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime())
+        .sort((a, b) => months.indexOf(a.name) - months.indexOf(b.name))
     );
 
     // --- Leave Type Distribution ---
@@ -155,10 +157,12 @@ const Analytics: React.FC = () => {
     });
     const sortedOvertimeTrend = Array.from(overtimeTrendMap.entries())
       .map(([monthYear, overtime]) => ({
-        name: format(new Date(monthYear), 'MMM yyyy'),
+        key: monthYear,
+        name: format(new Date(`${monthYear}-01`), 'MMM yyyy'),
         overtime: overtime,
       }))
-      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+      .sort((a, b) => new Date(`${a.key}-01`).getTime() - new Date(`${b.key}-01`).getTime())
+      .map(({ name, overtime }) => ({ name, overtime }));
     setOvertimeCostTrend(sortedOvertimeTrend);
 
     // --- Employee Tenure Distribution (New) ---
@@ -188,11 +192,13 @@ const Analytics: React.FC = () => {
     window.addEventListener('employeesUpdated', loadAnalyticsData); // Listen for specific employee updates
     window.addEventListener('payslipsUpdated', loadAnalyticsData); // Listen for specific payslip updates
     window.addEventListener('leaveRecordsUpdated', loadAnalyticsData); // Listen for specific leave updates
+    window.addEventListener('appFocusRefresh', loadAnalyticsData); // Recompute when tab regains focus
     return () => {
       window.removeEventListener('allMockDataUpdated', loadAnalyticsData);
       window.removeEventListener('employeesUpdated', loadAnalyticsData);
       window.removeEventListener('payslipsUpdated', loadAnalyticsData);
       window.removeEventListener('leaveRecordsUpdated', loadAnalyticsData);
+      window.removeEventListener('appFocusRefresh', loadAnalyticsData);
     };
   }, [loadAnalyticsData]);
 
