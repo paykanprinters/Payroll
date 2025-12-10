@@ -1,0 +1,225 @@
+"use client";
+
+import React from "react";
+import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
+import { MockPayslip, MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+
+type AuditLevel = "minimal" | "standard" | "detailed";
+type Mode = "monthly" | "weekly";
+
+interface Props {
+  payslips: MockPayslip[];
+  employees: MockEmployee[];
+  companyDetails: MockCompanyDetails | null;
+  reportDesignSettings: ReportDesignSettings;
+  auditLevel: AuditLevel;
+  selectedDate: Date;
+  mode: Mode;
+}
+
+const currency = (n: number) =>
+  `R ${Number(n || 0).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const styles = StyleSheet.create({
+  page: { padding: 24, fontSize: 11, color: "#111" },
+  header: { marginBottom: 12 },
+  companyRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  logo: { objectFit: "contain" },
+  companyInfo: { textAlign: "right" },
+  title: { fontSize: 16, fontWeight: 700, textAlign: "center", marginTop: 12, marginBottom: 10 },
+  subRow: { flexDirection: "row", gap: 8, justifyContent: "center", marginBottom: 12 },
+  labelBold: { fontWeight: 700 },
+  hr: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 10 },
+  card: { borderRadius: 6, borderWidth: 1, borderColor: "#d1d5db", padding: 10, marginBottom: 10 },
+  sectionTitle: { fontSize: 12, fontWeight: 700, marginBottom: 8 },
+  table: { display: "table", width: "auto" },
+  tableRow: { flexDirection: "row" },
+  th: { fontSize: 10, fontWeight: 700, padding: 6, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", width: "33.33%" },
+  td: { fontSize: 10, padding: 6, borderBottomWidth: 1, borderBottomColor: "#f1f5f9", width: "33.33%" },
+  tdWide: { fontSize: 10, padding: 6, borderBottomWidth: 1, borderBottomColor: "#f1f5f9", width: "66.66%" },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
+});
+
+const ReportPdfDocument: React.FC<Props> = ({
+  payslips,
+  employees,
+  companyDetails,
+  reportDesignSettings,
+  auditLevel,
+  selectedDate,
+  mode,
+}) => {
+  const companyName =
+    companyDetails?.companyLegalName ||
+    companyDetails?.companyTradingName ||
+    "Your Company Name";
+
+  const logoSrc = reportDesignSettings.includeCompanyLogo ? (companyDetails?.logoUrl || undefined) : undefined;
+  const logoW = (companyDetails?.logoWidth as number) || 100;
+  const logoH = (companyDetails?.logoHeight as number) || 50;
+
+  // Exclude cash employees for reports (match existing behavior)
+  const nonCashEmployees = employees.filter((e) => e.paymentMode !== "Cash");
+  const nonCashIds = new Set(nonCashEmployees.map((e) => e.id));
+  const filteredPayslips = payslips.filter((p) => nonCashIds.has(p.employeeId));
+
+  // Totals
+  const totalGross = filteredPayslips.reduce((s, p) => s + (p.grossEarnings || 0), 0);
+  const totalDeductions = filteredPayslips.reduce((s, p) => s + (p.totalDeductions || 0), 0);
+  const totalNet = filteredPayslips.reduce((s, p) => s + (p.netPay || 0), 0);
+
+  const reportPeriodStr = selectedDate.toLocaleDateString("en-ZA", { year: "numeric", month: "long", day: "numeric" });
+  const titleSuffix = mode === "monthly" ? "Monthly" : "Weekly";
+
+  // Build per-employee rows for the Employee Payslip Report
+  const employeeRows = filteredPayslips
+    .map((p) => {
+      const emp = nonCashEmployees.find((e) => e.id === p.employeeId);
+      const name = emp ? `${emp.firstName} ${emp.lastName}` : p.employeeId;
+      return {
+        name,
+        gross: p.grossEarnings || 0,
+        deductions: p.totalDeductions || 0,
+        net: p.netPay || 0,
+        id: p.id,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <Document>
+      {/* Payroll Summary Report */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View style={styles.companyRow}>
+            <View>
+              {logoSrc && (
+                <Image src={logoSrc as string} style={[styles.logo, { width: logoW, height: logoH }]} />
+              )}
+            </View>
+            <View style={styles.companyInfo}>
+              <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>
+              {!!companyDetails?.physicalAddress && <Text>{companyDetails.physicalAddress}</Text>}
+              {!!companyDetails?.companyRegistrationNumber && <Text>{`Reg. No: ${companyDetails.companyRegistrationNumber}`}</Text>}
+              {!!companyDetails?.vatRegistrationNumber && <Text>{`VAT No: ${companyDetails.vatRegistrationNumber}`}</Text>}
+              {!!companyDetails?.mainContactNumber && <Text>{`Tel: ${companyDetails.mainContactNumber}`}</Text>}
+              {!!companyDetails?.companyEmail && <Text>{`Email: ${companyDetails.companyEmail}`}</Text>}
+              {!!companyDetails?.companyWebsite && <Text>{`Web: ${companyDetails.companyWebsite}`}</Text>}
+            </View>
+          </View>
+        </View>
+
+        <View>
+          <Text style={styles.title}>{`Payroll Summary Report (${titleSuffix})`}</Text>
+          <View style={styles.subRow}>
+            <Text><Text style={styles.labelBold}>Report Period:</Text> {reportPeriodStr}</Text>
+            <Text>•</Text>
+            <Text><Text style={styles.labelBold}>Employees Paid (excluding cash):</Text> {String(nonCashEmployees.length)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.hr} />
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Overall Summary</Text>
+          <View style={styles.table}>
+            <View style={styles.tableRow}>
+              <Text style={styles.th}>Metric</Text>
+              <Text style={styles.th}>Amount (R)</Text>
+              <Text style={styles.th}></Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tdWide}>Total Gross Earnings</Text>
+              <Text style={styles.td}>{currency(totalGross)}</Text>
+              <Text style={styles.td}></Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tdWide}>Total Deductions</Text>
+              <Text style={styles.td}>{currency(totalDeductions)}</Text>
+              <Text style={styles.td}></Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tdWide, { fontWeight: 700 }]}>Total Net Pay</Text>
+              <Text style={[styles.td, { fontWeight: 700 }]}>{currency(totalNet)}</Text>
+              <Text style={styles.td}></Text>
+            </View>
+          </View>
+        </View>
+      </Page>
+
+      {/* Employee Payslip Report */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View style={styles.companyRow}>
+            <View>
+              {logoSrc && (
+                <Image src={logoSrc as string} style={[styles.logo, { width: logoW, height: logoH }]} />
+              )}
+            </View>
+            <View style={styles.companyInfo}>
+              <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>
+              {!!companyDetails?.physicalAddress && <Text>{companyDetails.physicalAddress}</Text>}
+              {!!companyDetails?.companyRegistrationNumber && <Text>{`Reg. No: ${companyDetails.companyRegistrationNumber}`}</Text>}
+              {!!companyDetails?.vatRegistrationNumber && <Text>{`VAT No: ${companyDetails.vatRegistrationNumber}`}</Text>}
+              {!!companyDetails?.mainContactNumber && <Text>{`Tel: ${companyDetails.mainContactNumber}`}</Text>}
+              {!!companyDetails?.companyEmail && <Text>{`Email: ${companyDetails.companyEmail}`}</Text>}
+              {!!companyDetails?.companyWebsite && <Text>{`Web: ${companyDetails.companyWebsite}`}</Text>}
+            </View>
+          </View>
+        </View>
+
+        <Text style={styles.title}>{`Employee Payslip Report (${titleSuffix})`}</Text>
+        <View style={styles.subRow}>
+          <Text><Text style={styles.labelBold}>Report Period:</Text> {reportPeriodStr}</Text>
+          <Text>•</Text>
+          <Text><Text style={styles.labelBold}>Employees (non-cash):</Text> {String(nonCashEmployees.length)}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Amounts by Employee</Text>
+          <View style={styles.table}>
+            <View style={styles.tableRow}>
+              <Text style={styles.th}>Employee</Text>
+              <Text style={styles.th}>Gross</Text>
+              <Text style={styles.th}>Net</Text>
+            </View>
+            {employeeRows.map((row) => (
+              <View style={styles.tableRow} key={row.id}>
+                <Text style={styles.td}>{row.name}</Text>
+                <Text style={styles.td}>{currency(row.gross)}</Text>
+                <Text style={styles.td}>{currency(row.net)}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ marginTop: 8 }}>
+            <View style={styles.summaryRow}>
+              <Text style={{ fontWeight: 700 }}>Total Gross</Text>
+              <Text style={{ fontWeight: 700 }}>{currency(totalGross)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={{ fontWeight: 700 }}>Total Deductions</Text>
+              <Text style={{ fontWeight: 700 }}>{currency(totalDeductions)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={{ fontWeight: 700 }}>Total Net</Text>
+              <Text style={{ fontWeight: 700 }}>{currency(totalNet)}</Text>
+            </View>
+          </View>
+        </View>
+
+        {auditLevel !== "minimal" && (
+          <View style={[styles.card, { marginTop: 10 }]}>
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <Text style={{ fontSize: 9, color: "#6b7280" }}>
+              This report excludes cash-paid employees. Audit level: {auditLevel}.
+            </Text>
+          </View>
+        )}
+      </Page>
+    </Document>
+  );
+};
+
+export default ReportPdfDocument;
