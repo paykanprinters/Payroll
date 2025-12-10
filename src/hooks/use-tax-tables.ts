@@ -98,17 +98,26 @@ export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth
         .eq('year', year)
         .single();
 
-      if (payeError || uifSdlError || taxYearDetailsError) {
-        console.error("useTaxTables: Error fetching live tax tables:", payeError || uifSdlError || taxYearDetailsError);
-        setTaxTables(null);
-        showError("Failed to load live tax tables for payroll calculations.");
+      if (payeError || taxYearDetailsError) {
+        console.error("useTaxTables: Error fetching live tax tables:", payeError || taxYearDetailsError);
+        showError("Failed to load live tax tables for payroll calculations. Using mock tables as fallback.");
+        setTaxTables(mockTaxTables);
       } else {
-        setTaxTables({
-          payeBrackets: payeData || [],
-          uifSdlRates: uifSdlData || null,
-          taxYearDetails: taxYearDetailsData as TaxYearDetails || null, // Assign fetched tax year details
-        });
-        console.log(`useTaxTables: Live tax tables for ${year} loaded successfully.`);
+        const payeBrackets = payeData || [];
+        const taxYearInfo = (taxYearDetailsData as TaxYearDetails) || null;
+        const uifSdl = uifSdlData || null;
+
+        if (payeBrackets.length === 0 || !taxYearInfo) {
+          console.warn("useTaxTables: Live tables missing/empty. Falling back to mock tables.");
+          setTaxTables(mockTaxTables);
+        } else {
+          setTaxTables({
+            payeBrackets,
+            uifSdlRates: uifSdl,
+            taxYearDetails: taxYearInfo,
+          });
+          console.log(`useTaxTables: Live tax tables for ${year} loaded successfully.`);
+        }
       }
     } catch (err) {
       console.error("useTaxTables: Unhandled error fetching live tax tables:", err);
