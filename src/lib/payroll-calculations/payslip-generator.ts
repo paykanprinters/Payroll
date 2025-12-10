@@ -141,14 +141,13 @@ const calculateEarnings = (
   // Calculate base pay and overtime pay
   let basicSalary = 0;
 
-  // For hourly AND non-monthly salaried, pay regular hours from timesheets (regularHours × hourly).
-  if (
-    (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) ||
-    (emp.salary !== undefined && emp.salary !== null && emp.salary > 0 && emp.payFrequency !== "Monthly")
-  ) {
+  // Hourly employees: pay regular hours from timesheets (regularHours × hourly).
+  if (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0) {
     basicSalary = regularHours * hourly;
   } else if (emp.salary !== undefined && emp.salary !== null && emp.salary > 0) {
-    // Monthly salaried base (lump sum), minus unpaid leave if applicable
+    // Salaried employees:
+    // - Monthly: lump sum, minus unpaid leave days
+    // - Weekly/Bi-Weekly: full period salary, minus unpaid leave days (pro-rated by working days in that period)
     basicSalary = emp.salary;
 
     let unpaidLeaveDaysInPeriod = 0;
@@ -170,7 +169,9 @@ const calculateEarnings = (
     });
 
     if (unpaidLeaveDaysInPeriod > 0) {
-      const dailyRate = (emp.salary as number) / 20; // Approximate working days
+      // Pro-rate by actual working days within the pay period
+      const workingDaysInPeriod = calculateWorkingDays(payPeriodStart, payPeriodEnd) || 1;
+      const dailyRate = (emp.salary as number) / workingDaysInPeriod;
       basicSalary -= dailyRate * unpaidLeaveDaysInPeriod;
     }
   }
@@ -190,7 +191,9 @@ const calculateEarnings = (
 
   // Make hours visible on earnings lines for clarity
   const earningsBreakdown = [{
-    name: (emp.hourlyRate || (emp.salary && emp.payFrequency !== "Monthly")) ? `Regular Hours (${regularHours.toFixed(2)}h)` : "Basic Salary",
+    name: (emp.hourlyRate !== undefined && emp.hourlyRate !== null && emp.hourlyRate > 0)
+      ? `Regular Hours (${regularHours.toFixed(2)}h)`
+      : "Basic Salary",
     amount: roundedBasic
   }];
   if (roundedOvertime > 0) {
