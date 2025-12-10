@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { format, isSameMonth, isSameYear, startOfMonth, endOfMonth } from "date-fns";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
+import { usePdfVector } from "@/hooks/use-pdf-vector";
+import PayslipPdfDocument from "./PayslipPdfDocument";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import IndividualPayslipCard from "./IndividualPayslipCard";
@@ -50,6 +52,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const [auditLevel, setAuditLevel] = React.useState<"minimal" | "standard" | "detailed">("standard");
 
   const { generatePdf, printPdf } = usePdfGenerator();
+  const { downloadPdf, openPdf } = usePdfVector();
   const { payCycleSettings } = usePayrollProcessor();
 
   const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
@@ -110,10 +113,20 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       documentType: 'payslip' as const,
     };
 
+    // Vector path for payslips (crisp output)
+    const doc = (
+      <PayslipPdfDocument
+        payslips={[selectedPayslip]}
+        employees={allEmployees}
+        companyDetails={companyDetails}
+        payslipDesignSettings={payslipDesignSettings}
+        getEmployeeName={getEmployeeName}
+      />
+    );
     if (action === 'download') {
-      await generatePdf(renderComponent, options, true);
+      await downloadPdf(doc, options.filename);
     } else {
-      await printPdf(renderComponent, options, true);
+      await openPdf(doc, options.filename);
     }
   }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, generatePdf, printPdf]);
 
@@ -198,34 +211,25 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       documentType: 'report' as const,
     };
 
-    // Render payslips PDF
-    const renderPayslips = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <BulkPayslipsRenderer
+    // Vector payslips PDF
+    const payslipsDoc = (
+      <PayslipPdfDocument
         payslips={payslipsForPeriod}
-        getEmployeeName={getEmployeeName}
-        payslipDesignSettings={payslipDesignSettings}
-        companyDetails={companyDetails}
         employees={allEmployees}
-        isPdfGeneration={true}
-        onReadyForPdf={onReadyForPdf}
+        companyDetails={companyDetails}
+        payslipDesignSettings={payslipDesignSettings}
+        getEmployeeName={getEmployeeName}
       />
     );
 
-    const payslipsOptions = {
-      filename: `payslips-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`,
-      format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
-      orientation: 'portrait' as const,
-      documentType: 'payslip' as const,
-    };
-
     try {
       if (action === 'download') {
-        await generatePdf(renderReports, reportsOptions, true);
-        await generatePdf(renderPayslips, payslipsOptions, true);
+        await generatePdf(renderReports, reportsOptions, true); // keep reports (HTML-based) separate
+        await downloadPdf(payslipsDoc, `payslips-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`);
         showSuccess(`Reports and payslips downloaded as separate PDFs.`);
       } else {
         await printPdf(renderReports, reportsOptions, true);
-        await printPdf(renderPayslips, payslipsOptions, true);
+        await openPdf(payslipsDoc, `payslips-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`);
         showSuccess(`Reports and payslips sent to printer separately.`);
       }
     } catch (e: any) {
@@ -328,34 +332,25 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       documentType: 'report' as const,
     };
 
-    // Render payslips PDF
-    const renderPayslips = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <BulkPayslipsRenderer
+    // Vector payslips PDF (current period)
+    const payslipsDoc = (
+      <PayslipPdfDocument
         payslips={payslipsForCurrentPeriod}
-        getEmployeeName={getEmployeeName}
-        payslipDesignSettings={payslipDesignSettings}
-        companyDetails={companyDetails}
         employees={allEmployees}
-        isPdfGeneration={true}
-        onReadyForPdf={onReadyForPdf}
+        companyDetails={companyDetails}
+        payslipDesignSettings={payslipDesignSettings}
+        getEmployeeName={getEmployeeName}
       />
     );
-
-    const payslipsOptions = {
-      filename: `payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`,
-      format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
-      orientation: 'portrait' as const,
-      documentType: 'payslip' as const,
-    };
 
     try {
       if (action === 'download') {
         await generatePdf(renderReports, reportsOptions, true);
-        await generatePdf(renderPayslips, payslipsOptions, true);
+        await downloadPdf(payslipsDoc, `payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`);
         showSuccess(`Reports and payslips downloaded as separate PDFs for current period.`);
       } else {
         await printPdf(renderReports, reportsOptions, true);
-        await printPdf(renderPayslips, payslipsOptions, true);
+        await openPdf(payslipsDoc, `payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`);
         showSuccess(`Reports and payslips sent to printer separately for current period.`);
       }
     } catch (e: any) {
