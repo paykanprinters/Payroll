@@ -16,6 +16,9 @@ type DbRow = {
   show_bank_details: boolean | null;
   show_ytd: boolean | null;
   show_hourly_rate: boolean | null;
+  show_employee_id_number: boolean | null;
+  show_employee_tax_ref_number: boolean | null;
+  show_employee_address: boolean | null;
   section_order: string[] | null;
   layout_size: string | null;
   earnings_deductions_layout: string | null;
@@ -37,6 +40,9 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
   showBankDetails: true,
   showYTD: true,
   showHourlyRate: true,
+  showEmployeeIdNumber: false,
+  showEmployeeTaxRefNumber: false,
+  showEmployeeAddress: false,
   sectionOrder: ["Earnings", "Deductions"],
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
@@ -49,7 +55,6 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
 function toDomain(row: DbRow): PayslipDesignSettings {
   if (!row) return DEFAULT_SETTINGS;
 
-  // Coerce section_order to the strict union and fallback if empty/invalid
   const coercedSectionOrder =
     Array.isArray(row.section_order)
       ? (row.section_order.filter((s): s is "Earnings" | "Deductions" => s === "Earnings" || s === "Deductions"))
@@ -68,7 +73,10 @@ function toDomain(row: DbRow): PayslipDesignSettings {
     showBankDetails: row.show_bank_details ?? DEFAULT_SETTINGS.showBankDetails,
     showYTD: row.show_ytd ?? DEFAULT_SETTINGS.showYTD,
     showHourlyRate: row.show_hourly_rate ?? DEFAULT_SETTINGS.showHourlyRate,
-    sectionOrder: finalSectionOrder, // FIXED: strict union type
+    showEmployeeIdNumber: row.show_employee_id_number ?? DEFAULT_SETTINGS.showEmployeeIdNumber,
+    showEmployeeTaxRefNumber: row.show_employee_tax_ref_number ?? DEFAULT_SETTINGS.showEmployeeTaxRefNumber,
+    showEmployeeAddress: row.show_employee_address ?? DEFAULT_SETTINGS.showEmployeeAddress,
+    sectionOrder: finalSectionOrder,
     layoutSize: (row.layout_size as "A4" | "A5" | "Letter") ?? DEFAULT_SETTINGS.layoutSize,
     earningsDeductionsLayout: (row.earnings_deductions_layout as "deductions-left-earnings-right" | "earnings-left-deductions-right") ?? DEFAULT_SETTINGS.earningsDeductionsLayout,
     payslipLogoUrl: row.payslip_logo_url ?? DEFAULT_SETTINGS.payslipLogoUrl,
@@ -90,6 +98,9 @@ function fromDomain(settings: PayslipDesignSettings, userId: string): Omit<DbRow
     show_bank_details: settings.showBankDetails,
     show_ytd: settings.showYTD,
     show_hourly_rate: settings.showHourlyRate,
+    show_employee_id_number: settings.showEmployeeIdNumber ?? false,
+    show_employee_tax_ref_number: settings.showEmployeeTaxRefNumber ?? false,
+    show_employee_address: settings.showEmployeeAddress ?? false,
     section_order: settings.sectionOrder,
     layout_size: settings.layoutSize,
     earnings_deductions_layout: settings.earningsDeductionsLayout,
