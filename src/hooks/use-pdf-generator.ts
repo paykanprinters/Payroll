@@ -488,5 +488,69 @@ export const usePdfGenerator = () => {
     []
   );
 
-  return { generatePdf, printPdf };
+  // Return a Blob of the generated PDF instead of downloading
+  const getPdfBlob = useCallback(
+    async (
+      renderComponent: (props: RenderComponentProps) => React.ReactElement,
+      options: PdfOptions,
+      isBulk: boolean = false
+    ): Promise<Blob | null> => {
+      const { iframe, iframeDoc } = createHiddenIframe();
+      if (!iframeDoc) return null;
+      try {
+        initIframeDocument(iframeDoc, "PDF Content");
+
+        const dims = computeDimensions(options);
+        injectPrintStyles(
+          iframeDoc,
+          buildStyles(
+            dims.contentWidthMm,
+            dims.contentMarginMm,
+            options.format || "a4",
+            options.orientation || "portrait"
+          )
+        );
+
+        const { root, readyPromise, timeoutId } = mountReactInIframe(iframeDoc, renderComponent);
+        try { await readyPromise; } finally { clearTimeout(timeoutId); }
+
+        if (isBulk) {
+          const bulkPdf = await renderBulkAsPages(iframeDoc, dims, options);
+          if (bulkPdf) {
+            drawBordersForAllPages(bulkPdf, options.documentType);
+            const blob = new Blob([bulkPdf.output("arraybuffer") as ArrayBuffer], { type: "application/pdf" });
+            cleanup(iframe, root);
+            return blob;
+          }
+          const pdfInstance = await html2pdf()
+            .from(iframeDoc.getElementById("pdf-root"))
+            .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options, 2))
+            .toPdf()
+            .get("pdf");
+          drawBordersForAllPages(pdfInstance, options.documentType);
+          const blob = new Blob([pdfInstance.output("arraybuffer") as ArrayBuffer], { type: "application/pdf" });
+          cleanup(iframe, root);
+          return blob;
+        }
+
+        const pdfInstance = await html2pdf()
+          .from(iframeDoc.getElementById("pdf-root"))
+          .set(getHtml2PdfOptions(dims.contentWidthMm, dims.contentMarginMm, options))
+          .toPdf()
+          .get("pdf");
+        drawBordersForAllPages(pdfInstance, options.documentType);
+        const blob = new Blob([pdfInstance.output("arraybuffer") as ArrayBuffer], { type: "application/pdf" });
+        cleanup(iframe, root);
+        return blob;
+      } catch {
+        const iframeEl = document.querySelector("iframe[style*='-9999px']") as HTMLIFrameElement | null;
+        const root: ReactDOM.Root | null = (iframeDoc?.defaultView as any)?._reactRoot || null;
+        if (iframeEl) cleanup(iframeEl, root);
+        return null;
+      }
+    },
+    []
+  );
+
+  return { generatePdf, printPdf, getPdfBlob };
 };

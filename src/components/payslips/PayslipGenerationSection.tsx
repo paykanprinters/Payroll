@@ -8,6 +8,8 @@ import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import PayslipPdfDocument from "./PayslipPdfDocument";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+import { useZipDownload } from "@/hooks/use-zip-download";
+import { pdf as pdfRenderer } from "@react-pdf/renderer";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import IndividualPayslipCard from "./IndividualPayslipCard";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
@@ -51,8 +53,9 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const [bulkGenerationMode, setBulkGenerationMode] = React.useState<"monthly" | "weekly">("monthly");
   const [auditLevel, setAuditLevel] = React.useState<"minimal" | "standard" | "detailed">("standard");
 
-  const { generatePdf, printPdf } = usePdfGenerator();
+  const { generatePdf, printPdf, getPdfBlob } = usePdfGenerator();
   const { downloadPdf, openPdf } = usePdfVector();
+  const { downloadZip } = useZipDownload();
   const { payCycleSettings } = usePayrollProcessor();
 
   const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
@@ -224,9 +227,19 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     try {
       if (action === 'download') {
-        await generatePdf(renderReports, reportsOptions, true); // keep reports (HTML-based) separate
-        await downloadPdf(payslipsDoc, `payslips-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`);
-        showSuccess(`Reports and payslips downloaded as separate PDFs.`);
+        const reportsBlob = await getPdfBlob(renderReports, reportsOptions, true);
+        const payslipsBlob = await pdfRenderer(payslipsDoc).toBlob();
+        const payslipsFilename = `payslips-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`;
+        const reportsFilename = reportsOptions.filename;
+
+        await downloadZip(
+          [
+            { filename: reportsFilename, blob: reportsBlob as Blob },
+            { filename: payslipsFilename, blob: payslipsBlob as Blob },
+          ],
+          `bulk-exports-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.zip`
+        );
+        showSuccess(`Reports and payslips downloaded together as a ZIP (separate PDFs inside).`);
       } else {
         await printPdf(renderReports, reportsOptions, true);
         await openPdf(payslipsDoc, `payslips-${mode}-${format(selectedPayPeriodDate, mode === "monthly" ? 'yyyy-MM' : 'yyyy-MM-dd')}.pdf`);
@@ -345,9 +358,17 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     try {
       if (action === 'download') {
-        await generatePdf(renderReports, reportsOptions, true);
-        await downloadPdf(payslipsDoc, `payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`);
-        showSuccess(`Reports and payslips downloaded as separate PDFs for current period.`);
+        const reportsBlob = await getPdfBlob(renderReports, reportsOptions, true);
+        const payslipsBlob = await pdfRenderer(payslipsDoc).toBlob();
+
+        await downloadZip(
+          [
+            { filename: reportsOptions.filename, blob: reportsBlob as Blob },
+            { filename: `payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`, blob: payslipsBlob as Blob },
+          ],
+          `bulk-exports-current-period-${format(today, 'yyyy-MM-dd')}.zip`
+        );
+        showSuccess(`Reports and payslips downloaded together as a ZIP (separate PDFs inside).`);
       } else {
         await printPdf(renderReports, reportsOptions, true);
         await openPdf(payslipsDoc, `payslips-current-period-${format(today, 'yyyy-MM-dd')}.pdf`);
