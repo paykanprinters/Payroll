@@ -105,7 +105,7 @@ const ReportPdfDocument: React.FC<Props> = ({
         .filter((x) => x.employeeId === p.employeeId && getStartDate(x.payPeriod) < currentStart)
         .sort((a, b) => getStartDate(b.payPeriod).getTime() - getStartDate(a.payPeriod).getTime())[0];
 
-      const deltaGross = prevForEmp ? (p.grossEarnings || 0) - (prevForEmp.grossEarnings || 0) : 0;
+      const deltaGross = prevForEmp ? ((p.grossEarnings || 0) - (prevForEmp.grossEarnings || 0)) : null;
       const deltaNet = prevForEmp ? (p.netPay || 0) - (prevForEmp.netPay || 0) : 0;
 
       return {
@@ -255,7 +255,7 @@ const ReportPdfDocument: React.FC<Props> = ({
                   <Text style={styles.thSmall}>UIF</Text>
                   <Text style={styles.thSmall}>PAYE</Text>
                   <Text style={styles.thSmall}>Net</Text>
-                  <Text style={styles.thSmall}>Δ Gross</Text>
+                  <Text style={styles.thSmall}>Change vs Prev</Text>
                 </View>
                 {employeeRows.map((row) => (
                   <View style={styles.tableRow} key={row.id}>
@@ -264,7 +264,7 @@ const ReportPdfDocument: React.FC<Props> = ({
                     <Text style={styles.tdSmall}>{currency(row.uif)}</Text>
                     <Text style={styles.tdSmall}>{currency(row.paye)}</Text>
                     <Text style={styles.tdSmall}>{currency(row.net)}</Text>
-                    <Text style={styles.tdSmall}>{currency(row.deltaGross)}</Text>
+                    <Text style={styles.tdSmall}>{row.deltaGross != null ? currency(row.deltaGross) : "—"}</Text>
                   </View>
                 ))}
               </>
