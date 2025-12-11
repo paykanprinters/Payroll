@@ -364,6 +364,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     markToDoAsDone,
     isAuthenticated,
     isLoadingAuth,
+    refetchEmployees,
     refetchPayslips,
     refetchPayrollSavingsEntries,
     activeTaxYearForCalculations,
