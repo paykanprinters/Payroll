@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ResponsiveContainer,
   BarChart,
@@ -17,7 +18,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { PlusCircle, Edit, Trash2, Download, Loader2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Download, Loader2, Search, X } from "lucide-react";
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import {
@@ -59,6 +60,37 @@ const Employees: React.FC = () => {
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
+  // Search state (with debounce)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const filteredEmployees = React.useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return employees;
+
+    const normalize = (v: unknown) => (v ?? "").toString().toLowerCase();
+
+    return employees.filter((emp) => {
+      const fields = [
+        emp.customEmployeeId,
+        emp.personalId,
+        `${emp.firstName} ${emp.lastName}`,
+        emp.jobTitle,
+        emp.department,
+        emp.email,
+        emp.phoneNumber,
+        emp.startDate,
+        emp.salary != null ? `salary ${emp.salary}` : "",
+        emp.hourlyRate != null ? `rate ${emp.hourlyRate}` : "",
+      ];
+      return fields.some((f) => normalize(f).includes(q));
+    });
+  }, [employees, debouncedSearch]);
 
   const dataVisualsFontSize = useDataVisualsFontSize();
   const { generatePdf } = usePdfGenerator();
@@ -254,45 +286,91 @@ const Employees: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Employee List</CardTitle>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle>Employee List</CardTitle>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by ID, name, title, department, email..."
+                  className="pl-8"
+                  aria-label="Search employees"
+                />
+              </div>
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm("")}
+                  aria-label="Clear search"
+                  className="px-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {employees.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow><TableHead>Employee ID</TableHead><TableHead>Personal ID</TableHead><TableHead>Name</TableHead><TableHead>Job Title</TableHead><TableHead>Department</TableHead><TableHead>Email</TableHead><TableHead>Mobile</TableHead><TableHead>Start Date</TableHead><TableHead className="text-right">Salary/Rate</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees.map((employee) => (
-                    <TableRow key={employee.id}><TableCell className="font-medium">{employee.customEmployeeId}</TableCell>
-                      <TableCell>{employee.personalId || "N/A"}</TableCell>
-                      <TableCell>{employee.firstName} {employee.lastName}</TableCell>
-                      <TableCell>{employee.jobTitle}</TableCell>
-                      <TableCell>{employee.department || "N/A"}</TableCell>
-                      <TableCell>{employee.email}</TableCell>
-                      <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
-                      <TableCell>{employee.startDate}</TableCell>
-                      <TableCell className="text-right">
-                        {employee.salary ? `R ${employee.salary.toLocaleString('en-ZA')}` :
-                         employee.hourlyRate ? `R ${employee.hourlyRate.toLocaleString('en-ZA')} / hr` : "N/A"}
-                      </TableCell>
-                      <TableCell className="flex justify-center gap-2">
-                        <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)} disabled={isMutatingEmployee}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)} disabled={isMutatingEmployee}>
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)} disabled={isMutatingEmployee}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+            filteredEmployees.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee ID</TableHead>
+                      <TableHead>Personal ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Job Title</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Mobile</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead className="text-right">Salary/Rate</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEmployees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">{employee.customEmployeeId}</TableCell>
+                        <TableCell>{employee.personalId || "N/A"}</TableCell>
+                        <TableCell>{employee.firstName} {employee.lastName}</TableCell>
+                        <TableCell>{employee.jobTitle}</TableCell>
+                        <TableCell>{employee.department || "N/A"}</TableCell>
+                        <TableCell>{employee.email}</TableCell>
+                        <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
+                        <TableCell>{employee.startDate}</TableCell>
+                        <TableCell className="text-right">
+                          {employee.salary ? `R ${employee.salary.toLocaleString('en-ZA')}` :
+                           employee.hourlyRate ? `R ${employee.hourlyRate.toLocaleString('en-ZA')} / hr` : "N/A"}
+                        </TableCell>
+                        <TableCell className="flex justify-center gap-2">
+                          <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)} disabled={isMutatingEmployee}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)} disabled={isMutatingEmployee}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)} disabled={isMutatingEmployee}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="text-xs text-muted-foreground mt-3">
+                  Showing {filteredEmployees.length} of {employees.length} employees
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No matching employees for “{debouncedSearch}”.
+              </div>
+            )
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               No employee data available. Please add employees using the button above or {isLoadingEmployees ? "loading..." : "add employees to the database."}
