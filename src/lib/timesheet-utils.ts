@@ -59,7 +59,13 @@ export const calculateTimesheetMetrics = (
   if (!timeIn || !timeOut) {
     absent = true;
   } else {
-    const totalShiftDuration = calculateTimeDifferenceInHours(timeIn, timeOut);
+    // Clamp start: if clock-in is before 07:45, ignore time before 07:45
+    const earliestStartStr = "07:45";
+    const earliestStartDate = parse(earliestStartStr, "HH:mm", new Date());
+    const actualTimeInDateForClamp = parse(timeIn, "HH:mm", new Date());
+    const timeInEffective = isBefore(actualTimeInDateForClamp, earliestStartDate) ? earliestStartStr : timeIn;
+
+    const totalShiftDuration = calculateTimeDifferenceInHours(timeInEffective, timeOut);
     const teaDuration = calculateTimeDifferenceInHours((data as any).teaStart || "", (data as any).teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours((data as any).lunchStart || "", (data as any).lunchEnd || "");
 
@@ -138,9 +144,7 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
   const isSundayNonWorking = dayIndex === 0 && !workDaysSet.has("sunday");
 
   // If entry falls on a non-working weekend day, all hours are overtime for that entry.
-  if (isSaturdayNonWorking || isSundayNonWorking) {
-    return Math.min(entryHours, entryHours);
-  }
+  // Weekend hours should first fill regular time; do not auto-mark as overtime here.
 
   // Otherwise, compute incremental weekly overtime based on hours worked on working days only.
   let priorHours = 0;
@@ -155,7 +159,7 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
     const isSunNonWork = idx === 0 && !workDaysSet.has("sunday");
 
     // Exclude non-working weekend hours from priorHours so they don't affect weekly threshold
-    if (isSatNonWork || isSunNonWork) continue;
+    // Include weekend hours toward weekly threshold per policy (no exclusion).
 
     priorHours += ts.totalWorkHours || 0;
   }

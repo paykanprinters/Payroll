@@ -85,8 +85,9 @@ const HoursBreakdown: React.FC<Props> = ({
       else if (r.classification.startsWith("Weekend (Sat")) satPrem += r.paidHours;
       else if (r.classification.startsWith("Weekend (Sun")) sunPrem += r.paidHours;
     });
-    const regular = Math.min(normalPaid, weeklyThreshold);
-    const weeklyOT = Math.max(0, normalPaid - weeklyThreshold);
+    const totalPaid = normalPaid + satPrem + sunPrem;
+    const regular = Math.min(totalPaid, weeklyThreshold);
+    const weeklyOT = Math.max(0, totalPaid - weeklyThreshold);
     return { normalPaid, satPrem, sunPrem, regular, weeklyOT };
   }, [rows, weeklyThreshold]);
 

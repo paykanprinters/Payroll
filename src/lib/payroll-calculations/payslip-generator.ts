@@ -124,7 +124,7 @@ const calculateEarnings = (
     }
   });
 
-  // Compute per-period overtime threshold based on employee pay frequency, applied ONLY to normal paid hours
+  // Compute per-period overtime threshold based on employee pay frequency; apply across ALL paid hours (weekday + weekend)
   let thresholdForPeriod = weeklyThreshold;
   if (emp.payFrequency === "Bi-Weekly") {
     thresholdForPeriod = weeklyThreshold * 2;
@@ -134,9 +134,19 @@ const calculateEarnings = (
     thresholdForPeriod = weeklyThreshold * approxWeeks;
   } // Weekly uses weeklyThreshold directly
 
-  // Split normal hours by the period threshold; weekend premium hours are separate
-  const regularHours = Math.min(normalPaidHours, thresholdForPeriod);
-  const overtimeHours = Math.max(0, normalPaidHours - thresholdForPeriod);
+  // Combine hours and split by threshold; then allocate overtime by day type: Sun → Sat → Weekday
+  const totalPaidHours = normalPaidHours + saturdayPremiumHours + sundayPremiumHours;
+  const regularHours = Math.min(totalPaidHours, thresholdForPeriod);
+  let remainingOT = Math.max(0, totalPaidHours - thresholdForPeriod);
+
+  const overtimeSundayHours = Math.min(sundayPremiumHours, remainingOT);
+  remainingOT -= overtimeSundayHours;
+
+  const overtimeSaturdayHours = Math.min(saturdayPremiumHours, remainingOT);
+  remainingOT -= overtimeSaturdayHours;
+
+  const overtimeWeekdayHours = Math.min(normalPaidHours, remainingOT);
+  remainingOT -= overtimeWeekdayHours;
 
   // Calculate base pay and overtime pay
   let basicSalary = 0;
@@ -176,18 +186,18 @@ const calculateEarnings = (
     }
   }
 
-  // Overtime paid at 1.5x using derived/effective hourly rate
-  let totalOvertimeAmount = 0;
-  if (overtimeHours > 0 && hourly > 0) {
-    totalOvertimeAmount = overtimeHours * hourly * 1.5;
-  }
+  // Overtime amounts by type
+  const weekdayOvertimeAmount = bankersRound((hourly > 0 ? overtimeWeekdayHours * hourly * 1.5 : 0), 2);
+  const saturdayOvertimeAmount = bankersRound((hourly > 0 ? overtimeSaturdayHours * hourly * 1.5 : 0), 2);
+  const sundayOvertimeAmount = bankersRound((hourly > 0 ? overtimeSundayHours * hourly * 2.0 : 0), 2);
+  const totalOvertimeAmount = bankersRound(weekdayOvertimeAmount + saturdayOvertimeAmount + sundayOvertimeAmount, 2);
 
   const roundedBasic = bankersRound(basicSalary, 2);
   const roundedOvertime = bankersRound(totalOvertimeAmount, 2);
 
-  // Weekend premium overtime amounts (exclude from weekly threshold)
-  const saturdayPremiumAmount = bankersRound((hourly > 0 ? saturdayPremiumHours * hourly * 1.5 : 0), 2);
-  const sundayPremiumAmount = bankersRound((hourly > 0 ? sundayPremiumHours * hourly * 2.0 : 0), 2);
+  // Weekend premium amounts only for the overtime portion
+  const saturdayPremiumAmount = saturdayOvertimeAmount;
+  const sundayPremiumAmount = sundayOvertimeAmount;
 
   // Make hours visible on earnings lines for clarity
   const earningsBreakdown = [{
@@ -196,14 +206,14 @@ const calculateEarnings = (
       : "Basic Salary",
     amount: roundedBasic
   }];
-  if (roundedOvertime > 0) {
-    earningsBreakdown.push({ name: `Overtime (${overtimeHours.toFixed(2)}h @1.5x)`, amount: roundedOvertime });
+  if (weekdayOvertimeAmount > 0) {
+    earningsBreakdown.push({ name: `Overtime (Weekday ${overtimeWeekdayHours.toFixed(2)}h @1.5x)`, amount: weekdayOvertimeAmount });
   }
-  if (saturdayPremiumHours > 0) {
-    earningsBreakdown.push({ name: `Weekend Overtime (Sat ${saturdayPremiumHours.toFixed(2)}h @1.5x)`, amount: saturdayPremiumAmount });
+  if (overtimeSaturdayHours > 0) {
+    earningsBreakdown.push({ name: `Weekend Overtime (Sat ${overtimeSaturdayHours.toFixed(2)}h @1.5x)`, amount: saturdayPremiumAmount });
   }
-  if (sundayPremiumHours > 0) {
-    earningsBreakdown.push({ name: `Weekend Overtime (Sun ${sundayPremiumHours.toFixed(2)}h @2.0x)`, amount: sundayPremiumAmount });
+  if (overtimeSundayHours > 0) {
+    earningsBreakdown.push({ name: `Weekend Overtime (Sun ${overtimeSundayHours.toFixed(2)}h @2.0x)`, amount: sundayPremiumAmount });
   }
   // Mock bonus example remains
   if (emp.id === "EMP004" && isSameMonth(payPeriodStart, new Date())) {
