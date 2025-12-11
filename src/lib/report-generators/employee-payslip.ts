@@ -95,8 +95,8 @@ export const generateEmployeePayslipReportContent = (
             <th class="py-2 px-4 text-right">PAYE</th>
             <th class="py-2 px-4 text-right">Gross</th>
             <th class="py-2 px-4 text-right">Net</th>
-            <th class="py-2 px-4 text-right">Δ Gross</th>
-            <th class="py-2 px-4 text-right">Δ Net</th>
+            <th class="py-2 px-4 text-right">Change vs Prev Gross</th>
+            <th class="py-2 px-4 text-right">Change vs Prev Net</th>
           </tr>
         </thead>
         <tbody>
@@ -108,8 +108,8 @@ export const generateEmployeePayslipReportContent = (
       const prev = payslips
         .filter(x => x.employeeId === p.employeeId && getStart(x.payPeriod) < currentStart)
         .sort((a, b) => getStart(b.payPeriod).getTime() - getStart(a.payPeriod).getTime())[0];
-      const dGross = prev ? (p.grossEarnings || 0) - (prev.grossEarnings || 0) : 0;
-      const dNet = prev ? (p.netPay || 0) - (prev.netPay || 0) : 0;
+      const dGross = prev ? (p.grossEarnings || 0) - (prev.grossEarnings || 0) : null;
+      const dNet = prev ? (p.netPay || 0) - (prev.netPay || 0) : null;
 
       html += `
         <tr class="border-b">
@@ -119,8 +119,8 @@ export const generateEmployeePayslipReportContent = (
           <td class="py-2 px-4 text-right">${paye.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
           <td class="py-2 px-4 text-right">${(p.grossEarnings || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
           <td class="py-2 px-4 text-right">${(p.netPay || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-          <td class="py-2 px-4 text-right">${dGross.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-          <td class="py-2 px-4 text-right">${dNet.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+          <td class="py-2 px-4 text-right">${dGross != null ? dGross.toLocaleString('en-ZA', { minimumFractionDigits: 2 }) : '—'}</td>
+          <td class="py-2 px-4 text-right">${dNet != null ? dNet.toLocaleString('en-ZA', { minimumFractionDigits: 2 }) : '—'}</td>
         </tr>
       `;
     });
