@@ -75,14 +75,25 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
+      const parsePeriodStart = (period: string) => {
+        const [startStr] = period.split(' - ');
+        return parseISO(startStr);
+      };
+
       const updatedPayslipsWithYTD = newPayslips.map(newPayslip => {
+        const currentStart = parsePeriodStart(newPayslip.payPeriod);
         const employeePayslips = payslips.filter(p => p.employeeId === newPayslip.employeeId);
-        const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
+
+        // Only include payslips strictly before this period
+        const previousPayslips = employeePayslips.filter(p => parsePeriodStart(p.payPeriod) < currentStart);
+
+        const prevYtdGross = previousPayslips.reduce((sum, p) => sum + (p.grossEarnings || 0), 0);
+        const prevYtdDeductions = previousPayslips.reduce((sum, p) => sum + (p.totalDeductions || 0), 0);
 
         return {
           ...newPayslip,
-          ytdGrossEarnings: (lastPayslipForEmployee?.ytdGrossEarnings || 0) + newPayslip.grossEarnings,
-          ytdTotalDeductions: (lastPayslipForEmployee?.ytdTotalDeductions || 0) + newPayslip.totalDeductions,
+          ytdGrossEarnings: prevYtdGross + newPayslip.grossEarnings,
+          ytdTotalDeductions: prevYtdDeductions + newPayslip.totalDeductions,
         };
       });
 
@@ -173,11 +184,20 @@ export const usePayrollProcessingLogic = (
       if (previewPayslips.length > 0) {
         const previewPayslip = previewPayslips[0];
 
-        const employeePayslips = payslips.filter(p => p.employeeId === employeeId);
-        const lastPayslipForEmployee = employeePayslips.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
+        const parsePeriodStart = (period: string) => {
+          const [startStr] = period.split(' - ');
+          return parseISO(startStr);
+        };
 
-        previewPayslip.ytdGrossEarnings = (lastPayslipForEmployee?.ytdGrossEarnings || 0) + previewPayslip.grossEarnings;
-        previewPayslip.ytdTotalDeductions = (lastPayslipForEmployee?.ytdTotalDeductions || 0) + previewPayslip.totalDeductions;
+        const employeePayslips = payslips.filter(p => p.employeeId === employeeId);
+        const currentStart = parsePeriodStart(previewPayslip.payPeriod);
+        const previousPayslips = employeePayslips.filter(p => parsePeriodStart(p.payPeriod) < currentStart);
+
+        const prevYtdGross = previousPayslips.reduce((sum, p) => sum + (p.grossEarnings || 0), 0);
+        const prevYtdDeductions = previousPayslips.reduce((sum, p) => sum + (p.totalDeductions || 0), 0);
+
+        previewPayslip.ytdGrossEarnings = prevYtdGross + previewPayslip.grossEarnings;
+        previewPayslip.ytdTotalDeductions = prevYtdDeductions + previewPayslip.totalDeductions;
 
         return previewPayslip;
       }
