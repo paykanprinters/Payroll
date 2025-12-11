@@ -272,8 +272,13 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
 
       if (isMockDataEnabled || !isAuthenticated || isLoadingAuth) return;
 
+      // Prevent re-entrancy across pages for a few seconds
+      const w = window as any;
+      if (w.__appRefreshInProgress) return;
+      w.__appRefreshInProgress = true;
+      setTimeout(() => { w.__appRefreshInProgress = false; }, 5000);
+
       // Refetch all live data collections to recover from backgrounded tab
-      // Do not swallow errors; hooks handle their own error UI and finalizers
       refetchCompanyDetails?.();
       refetchTaxTables?.();
       refetchWorkHoursSettings?.();
@@ -283,16 +288,11 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
       refetchPayrollSavingsEntries?.();
       refetchToDosFnRef.current?.();
 
-      // NEW: ensure employees are also refetched
-      // We import employees hook via useEmployeesData; expose its refetch through returned object earlier
-      // and call it here via a stable reference
+      // Ensure employees are also refetched
       try {
-        // dynamically import to avoid circular typing concerns
-        // but we already have the refetch via closure: call through returned API
-        // @ts-ignore - present on the returned object via destructuring above
         typeof (refetchEmployees) === "function" && (refetchEmployees as () => void)();
       } catch {
-        // let any hook-level errors surface visually
+        // allow hook-level errors to surface
       }
     };
 

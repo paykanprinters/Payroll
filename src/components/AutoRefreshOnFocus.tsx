@@ -13,8 +13,7 @@ const AutoRefreshOnFocus: React.FC = () => {
       if (now - lastTriggeredRef.current < MIN_INTERVAL_MS) return;
       lastTriggeredRef.current = now;
 
-      // Notify user and broadcast a global refresh event
-      showSuccess("Refreshing data…");
+      // Broadcast a global refresh event (no toast to avoid spam)
       window.dispatchEvent(new Event("appFocusRefresh"));
     };
 

@@ -510,16 +510,7 @@ export const useTimesheetData = ({
     return isLeaveDay(employeeId, date, leaveRecords);
   }, [leaveRecords]);
 
-  // Refresh timesheets on focus/visibility (live mode)
-  useEffect(() => {
-    const handler = () => {
-      if (!isMockDataEnabled && isAuthenticated) {
-        fetchLiveTimesheets();
-      }
-    };
-    window.addEventListener("appFocusRefresh", handler);
-    return () => window.removeEventListener("appFocusRefresh", handler);
-  }, [isMockDataEnabled, isAuthenticated, fetchLiveTimesheets]);
+  // Focus refresh is handled centrally in usePayrollProcessor.
 
   return {
     timesheets,

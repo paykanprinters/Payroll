@@ -225,14 +225,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
       // Live mode: fetch once per auth/mock-state change
       fetchCompanyDetails();
 
-      // Also refetch when the tab regains focus/visibility to recover from paused connections
-      const onFocusRefresh = () => {
-        fetchCompanyDetails();
-      };
-      window.addEventListener('appFocusRefresh', onFocusRefresh);
-      return () => {
-        window.removeEventListener('appFocusRefresh', onFocusRefresh);
-      };
+      // Focus refresh is handled centrally in usePayrollProcessor.
     }
   }, [isMockDataEnabled, isLoadingAuth, isAuthenticated]); // REMOVED companyDetails and fetchCompanyDetails from deps
 
