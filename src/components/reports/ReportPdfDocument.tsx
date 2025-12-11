@@ -4,6 +4,7 @@ import React from "react";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { MockPayslip, MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { parseISO, isSameMonth, isSameYear, isSameWeek } from "date-fns";
 
 type AuditLevel = "minimal" | "standard" | "detailed";
 type Mode = "monthly" | "weekly";
@@ -36,7 +37,9 @@ const styles = StyleSheet.create({
   table: { display: "table", width: "auto" },
   tableRow: { flexDirection: "row" },
   th: { fontSize: 10, fontWeight: 700, padding: 6, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", width: "33.33%" },
+  thSmall: { fontSize: 10, fontWeight: 700, padding: 6, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", width: "16.66%" },
   td: { fontSize: 10, padding: 6, borderBottomWidth: 1, borderBottomColor: "#f1f5f9", width: "33.33%" },
+  tdSmall: { fontSize: 10, padding: 6, borderBottomWidth: 1, borderBottomColor: "#f1f5f9", width: "16.66%" },
   tdWide: { fontSize: 10, padding: 6, borderBottomWidth: 1, borderBottomColor: "#f1f5f9", width: "66.66%" },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
 });
@@ -62,7 +65,21 @@ const ReportPdfDocument: React.FC<Props> = ({
   // Exclude cash employees for reports (match existing behavior)
   const nonCashEmployees = employees.filter((e) => e.paymentMode !== "Cash");
   const nonCashIds = new Set(nonCashEmployees.map((e) => e.id));
-  const filteredPayslips = payslips.filter((p) => nonCashIds.has(p.employeeId));
+  // Filter by selected period (so we can still use the full history to compute deltas)
+  let filteredPayslips = payslips.filter((p) => nonCashIds.has(p.employeeId));
+  if (mode === "monthly") {
+    filteredPayslips = filteredPayslips.filter((p) => {
+      const [startStr] = p.payPeriod.split(" - ");
+      const d = parseISO(startStr);
+      return isSameMonth(d, selectedDate) && isSameYear(d, selectedDate);
+    });
+  } else {
+    filteredPayslips = filteredPayslips.filter((p) => {
+      const [startStr] = p.payPeriod.split(" - ");
+      const d = parseISO(startStr);
+      return isSameWeek(d, selectedDate, { weekStartsOn: 1 }) && isSameYear(d, selectedDate);
+    });
+  }
 
   // Totals
   const totalGross = filteredPayslips.reduce((s, p) => s + (p.grossEarnings || 0), 0);
@@ -73,15 +90,33 @@ const ReportPdfDocument: React.FC<Props> = ({
   const titleSuffix = mode === "monthly" ? "Monthly" : "Weekly";
 
   // Build per-employee rows for the Employee Payslip Report
+  const getStartDate = (period: string) => parseISO(period.split(" - ")[0]);
+
   const employeeRows = filteredPayslips
     .map((p) => {
       const emp = nonCashEmployees.find((e) => e.id === p.employeeId);
       const name = emp ? `${emp.firstName} ${emp.lastName}` : p.employeeId;
+
+      const uif = (p.deductionsBreakdown || []).filter((d) => (d?.name || "").trim() === "UIF").reduce((s, d) => s + (d.amount || 0), 0);
+      const paye = (p.deductionsBreakdown || []).filter((d) => (d?.name || "").trim() === "PAYE").reduce((s, d) => s + (d.amount || 0), 0);
+
+      const currentStart = getStartDate(p.payPeriod);
+      const prevForEmp = payslips
+        .filter((x) => x.employeeId === p.employeeId && getStartDate(x.payPeriod) < currentStart)
+        .sort((a, b) => getStartDate(b.payPeriod).getTime() - getStartDate(a.payPeriod).getTime())[0];
+
+      const deltaGross = prevForEmp ? (p.grossEarnings || 0) - (prevForEmp.grossEarnings || 0) : 0;
+      const deltaNet = prevForEmp ? (p.netPay || 0) - (prevForEmp.netPay || 0) : 0;
+
       return {
         name,
         gross: p.grossEarnings || 0,
         deductions: p.totalDeductions || 0,
         net: p.netPay || 0,
+        uif,
+        paye,
+        deltaGross,
+        deltaNet,
         id: p.id,
       };
     })
@@ -212,18 +247,43 @@ const ReportPdfDocument: React.FC<Props> = ({
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Amounts by Employee</Text>
           <View style={styles.table}>
-            <View style={styles.tableRow}>
-              <Text style={styles.th}>Employee</Text>
-              <Text style={styles.th}>Gross</Text>
-              <Text style={styles.th}>Net</Text>
-            </View>
-            {employeeRows.map((row) => (
-              <View style={styles.tableRow} key={row.id}>
-                <Text style={styles.td}>{row.name}</Text>
-                <Text style={styles.td}>{currency(row.gross)}</Text>
-                <Text style={styles.td}>{currency(row.net)}</Text>
-              </View>
-            ))}
+            {auditLevel === "detailed" ? (
+              <>
+                <View style={styles.tableRow}>
+                  <Text style={styles.thSmall}>Employee</Text>
+                  <Text style={styles.thSmall}>Gross</Text>
+                  <Text style={styles.thSmall}>UIF</Text>
+                  <Text style={styles.thSmall}>PAYE</Text>
+                  <Text style={styles.thSmall}>Net</Text>
+                  <Text style={styles.thSmall}>Δ Gross</Text>
+                </View>
+                {employeeRows.map((row) => (
+                  <View style={styles.tableRow} key={row.id}>
+                    <Text style={styles.tdSmall}>{row.name}</Text>
+                    <Text style={styles.tdSmall}>{currency(row.gross)}</Text>
+                    <Text style={styles.tdSmall}>{currency(row.uif)}</Text>
+                    <Text style={styles.tdSmall}>{currency(row.paye)}</Text>
+                    <Text style={styles.tdSmall}>{currency(row.net)}</Text>
+                    <Text style={styles.tdSmall}>{currency(row.deltaGross)}</Text>
+                  </View>
+                ))}
+              </>
+            ) : (
+              <>
+                <View style={styles.tableRow}>
+                  <Text style={styles.th}>Employee</Text>
+                  <Text style={styles.th}>Gross</Text>
+                  <Text style={styles.th}>Net</Text>
+                </View>
+                {employeeRows.map((row) => (
+                  <View style={styles.tableRow} key={row.id}>
+                    <Text style={styles.td}>{row.name}</Text>
+                    <Text style={styles.td}>{currency(row.gross)}</Text>
+                    <Text style={styles.td}>{currency(row.net)}</Text>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
 
           <View style={{ marginTop: 8 }}>
@@ -242,11 +302,20 @@ const ReportPdfDocument: React.FC<Props> = ({
           </View>
         </View>
 
-        {auditLevel !== "minimal" && (
+        {auditLevel === "detailed" && (
           <View style={[styles.card, { marginTop: 10 }]}>
-            <Text style={styles.sectionTitle}>Notes</Text>
+            <Text style={styles.sectionTitle}>Calculation Notes</Text>
+            <Text style={{ fontSize: 9, color: "#374151", marginBottom: 4 }}>
+              Gross includes regular hours, overtime (threshold-based), and weekend premiums; salaried employees are pro-rated for unpaid leave within the pay period.
+            </Text>
+            <Text style={{ fontSize: 9, color: "#374151", marginBottom: 4 }}>
+              UIF is applied at the configured rate up to a monthly cap; it is excluded from PAYE taxable income.
+            </Text>
+            <Text style={{ fontSize: 9, color: "#374151", marginBottom: 4 }}>
+              PAYE is calculated on annualized taxable income per frequency, rebates applied, then de-annualized to the period amount.
+            </Text>
             <Text style={{ fontSize: 9, color: "#6b7280" }}>
-              This report excludes cash-paid employees. Audit level: {auditLevel}.
+              This report excludes cash-paid employees. Audit level: Detailed.
             </Text>
           </View>
         )}

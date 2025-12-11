@@ -180,6 +180,7 @@ export const generatePayrollSummaryReportContent = (
   `;
 
   if (auditLevel === "detailed") {
+    const getStart = (period: string) => parseISO(period.split(' - ')[0]);
     html += `
       <br/>
       <h4 class="text-md font-semibold mb-2">Employee-Level Detail</h4>
@@ -188,9 +189,12 @@ export const generatePayrollSummaryReportContent = (
           <tr class="border-b">
             <th class="py-2 px-4">Employee</th>
             <th class="py-2 px-4">Pay Period</th>
+            <th class="py-2 px-4 text-right">UIF</th>
+            <th class="py-2 px-4 text-right">PAYE</th>
             <th class="py-2 px-4 text-right">Gross</th>
-            <th class="py-2 px-4 text-right">Deductions</th>
             <th class="py-2 px-4 text-right">Net</th>
+            <th class="py-2 px-4 text-right">Δ Gross</th>
+            <th class="py-2 px-4 text-right">Δ Net</th>
           </tr>
         </thead>
         <tbody>
@@ -198,19 +202,35 @@ export const generatePayrollSummaryReportContent = (
     filteredPayslips.forEach(p => {
       const emp = employees.find(e => e.id === p.employeeId);
       const name = emp ? `${emp.firstName} ${emp.lastName}` : "Unknown Employee";
+      const uif = (p.deductionsBreakdown || []).filter(d => (d?.name || '').trim() === 'UIF').reduce((s, d) => s + (d.amount || 0), 0);
+      const paye = (p.deductionsBreakdown || []).filter(d => (d?.name || '').trim() === 'PAYE').reduce((s, d) => s + (d.amount || 0), 0);
+      const currentStart = getStart(p.payPeriod);
+      const prev = payslips
+        .filter(x => x.employeeId === p.employeeId && getStart(x.payPeriod) < currentStart)
+        .sort((a, b) => getStart(b.payPeriod).getTime() - getStart(a.payPeriod).getTime())[0];
+      const dGross = prev ? (p.grossEarnings || 0) - (prev.grossEarnings || 0) : 0;
+      const dNet = prev ? (p.netPay || 0) - (prev.netPay || 0) : 0;
+
       html += `
         <tr class="border-b">
           <td class="py-2 px-4">${name}</td>
           <td class="py-2 px-4">${p.payPeriod}</td>
+          <td class="py-2 px-4 text-right">${uif.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+          <td class="py-2 px-4 text-right">${paye.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
           <td class="py-2 px-4 text-right">${p.grossEarnings.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
-          <td class="py-2 px-4 text-right">${p.totalDeductions.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
           <td class="py-2 px-4 text-right">${p.netPay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+          <td class="py-2 px-4 text-right">${dGross.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+          <td class="py-2 px-4 text-right">${dNet.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
         </tr>
       `;
     });
     html += `
         </tbody>
       </table>
+      <br/>
+      <p class="text-sm text-muted-foreground">
+        Notes: Gross includes regular/overtime/weekend premiums; salaried employees are pro-rated for unpaid leave. UIF is capped and excluded from PAYE taxable income. PAYE is annualized per frequency with rebates, then de-annualized.
+      </p>
     `;
   }
 

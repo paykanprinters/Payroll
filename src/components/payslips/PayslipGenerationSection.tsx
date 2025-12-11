@@ -177,7 +177,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     // Vector reports and payslips documents
     const reportsDoc = (
       <ReportPdfDocument
-        payslips={payslipsForPeriod}
+        payslips={payslips}
         employees={allEmployees}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
@@ -300,7 +300,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     // Vector docs
     const reportsDoc = (
       <ReportPdfDocument
-        payslips={payslipsForCurrentPeriod}
+        payslips={payslips}
         employees={allEmployees}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
