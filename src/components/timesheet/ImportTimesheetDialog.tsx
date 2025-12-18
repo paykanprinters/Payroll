@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, XCircle, Wand2, CalendarClock, Eraser } from "lucide-react";
+import { UploadCloud, XCircle, Wand2, CalendarClock, Eraser, Eye } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
@@ -54,6 +54,18 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   // Local editable copy of the validated data for in-place fixes
   const [editableRows, setEditableRows] = useState<ParsedTimesheetRow[]>([]);
   const [compact, setCompact] = useState<boolean>(false);
+  const [showAggErrors, setShowAggErrors] = useState<boolean>(false);
+
+  // Show errors on new parse, then auto-dismiss after 10 seconds
+  useEffect(() => {
+    if (aggregationErrors.length > 0) {
+      setShowAggErrors(true);
+      const timer = setTimeout(() => setShowAggErrors(false), 10000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowAggErrors(false);
+    }
+  }, [aggregationErrors]);
 
   useEffect(() => {
     setEditableRows(validatedData);
@@ -258,26 +270,49 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           </div>
         </div>
 
-        {/* Aggregation Errors Section */}
-        {aggregationErrors.length > 0 && (
-          <Card className="mt-3 border-red-500 bg-red-50 text-red-800">
-            <CardHeader>
-              <CardTitle className="text-lg">Aggregation Errors ({aggregationErrors.length})</CardTitle>
-              <CardDescription>The following entries could not be processed into daily timesheets.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-40 w-full rounded-md border p-4 bg-white text-gray-900">
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  {aggregationErrors.map((err, index) => (
-                    <li key={index}>
-                      <span className="font-semibold">Personal ID:</span> {err.personalIdAttempted || "N/A"},{" "}
-                      <span className="font-semibold">Date:</span> {err.dateAttempted || "N/A"} - {err.error}
-                    </li>
-                  ))}
-                </ul>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+        {/* Aggregation Errors Section with auto-dismiss and fade */}
+        {aggregationErrors.length > 0 && showAggErrors && (
+          <div className="mt-3 transition-opacity duration-700 ease-out opacity-100">
+            <Card className="border-red-500 bg-red-50 text-red-800">
+              <CardHeader className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-lg">Aggregation Errors ({aggregationErrors.length})</CardTitle>
+                  <CardDescription>The following entries could not be processed into daily timesheets.</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAggErrors(false)}
+                  className="text-red-800 border-red-300 hover:bg-red-100"
+                  title="Dismiss"
+                >
+                  Dismiss
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-40 w-full rounded-md border p-4 bg-white text-gray-900">
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {aggregationErrors.map((err, index) => (
+                      <li key={index}>
+                        <span className="font-semibold">Personal ID:</span> {err.personalIdAttempted || "N/A"},{" "}
+                        <span className="font-semibold">Date:</span> {err.dateAttempted || "N/A"} - {err.error}
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Slim banner to restore errors after auto-dismiss */}
+        {aggregationErrors.length > 0 && !showAggErrors && (
+          <div className="mt-3 flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
+            <span className="text-sm">Aggregation Errors hidden to free space.</span>
+            <Button variant="outline" size="sm" onClick={() => setShowAggErrors(true)}>
+              <Eye className="h-4 w-4 mr-1" /> Show errors
+            </Button>
+          </div>
         )}
 
         {/* Editable validated data table */}
@@ -292,12 +327,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           />
         )}
 
-        {/* Error message, always visible if present */}
-        {editableRows.length > 0 && !localAllRowsValid && (
-          <p className="text-sm text-red-500 mt-2">
-            Some rows contain errors and will not be imported. Hover over <XCircle className="inline h-3 w-3" /> for details.
-          </p>
-        )}
+        {/* Removed duplicate bottom error message to avoid clutter; ValidatedDataTable already shows it */}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleCancel}>
