@@ -15,7 +15,16 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const Timesheet: React.FC = () => {
   // Use silent mode to avoid global side effects (e.g., To-Dos refresh) during imports
-  const { employees, leaveRecords, isMockDataEnabled, timesheets: initialTimesheets, isAuthenticated, isLoadingAuth, workHoursSettings } = usePayrollProcessor({ silent: true });
+  const {
+    employees,
+    leaveRecords,
+    isMockDataEnabled,
+    timesheets: initialTimesheets,
+    isAuthenticated,
+    isLoadingAuth,
+    workHoursSettings,
+    isLoadingEmployees,
+  } = usePayrollProcessor({ silent: true });
 
   const {
     timesheets,
@@ -55,7 +64,7 @@ const Timesheet: React.FC = () => {
 
       {/* Modal trigger */}
       <div className="flex justify-end gap-2">
-        <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
+        <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" disabled={!!isLoadingEmployees}>
           <UploadCloud className="mr-2 h-4 w-4" /> Import Clock Times
         </Button>
       </div>
@@ -70,7 +79,7 @@ const Timesheet: React.FC = () => {
         </CardHeader>
         <CardContent>
           <TimesheetForm
-            employees={employees}
+            employees={employees || []}
             onSave={addOrUpdateTimesheet}
             initialData={editingTimesheet}
             isEditing={isEditing}
@@ -83,7 +92,7 @@ const Timesheet: React.FC = () => {
       {/* Timesheet table */}
       <TimesheetTable
         timesheets={timesheets}
-        employees={employees}
+        employees={employees || []}
         onEdit={startEditing}
         onDelete={deleteTimesheet}
         onStatusChange={updateTimesheetStatus}
@@ -102,14 +111,16 @@ const Timesheet: React.FC = () => {
       </div>
 
       {/* Import dialog modal */}
-      <ErrorBoundary fallbackTitle="Import Clock Times failed to render" onReset={() => setIsImportDialogOpen(false)}>
-        <ImportTimesheetDialog
-          isOpen={isImportDialogOpen}
-          onClose={() => setIsImportDialogOpen(false)}
-          onImport={handleImportTimesheets}
-          employees={employees}
-        />
-      </ErrorBoundary>
+      {isImportDialogOpen && (
+        <ErrorBoundary fallbackTitle="Import Clock Times failed to render" onReset={() => setIsImportDialogOpen(false)}>
+          <ImportTimesheetDialog
+            isOpen={isImportDialogOpen}
+            onClose={() => setIsImportDialogOpen(false)}
+            onImport={handleImportTimesheets}
+            employees={employees || []}
+          />
+        </ErrorBoundary>
+      )}
 
       {/* Weekly editor modal */}
       {isWeeklyEditorOpen && (
@@ -123,7 +134,7 @@ const Timesheet: React.FC = () => {
             onSaveTimesheet={addOrUpdateTimesheet}
             getEmployeeName={getEmployeeName}
             isLeaveDay={isLeaveDay}
-            employees={employees}
+            employees={employees || []}
           />
         </ErrorBoundary>
       )}

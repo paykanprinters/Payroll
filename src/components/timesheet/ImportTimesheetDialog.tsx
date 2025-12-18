@@ -36,6 +36,9 @@ const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
 type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" | "personalDesc";
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, onClose, onImport, employees }) => {
+  // Always use a safe array to avoid render errors if employees is momentarily undefined
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+
   const {
     file,
     csvHeaders,
@@ -49,7 +52,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     handleColumnMappingChange,
     handleRevalidate,
     reset,
-  } = useTimesheetImport(employees, isOpen);
+  } = useTimesheetImport(safeEmployees, isOpen);
 
   // Local editable rows (in-place fixes)
   const [editableRows, setEditableRows] = useState<ParsedTimesheetRow[]>([]);
@@ -76,9 +79,9 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
   const employeesById = useMemo(() => {
     const map = new Map<string, { name: string }>();
-    employees.forEach((e) => map.set(e.id, { name: `${e.firstName} ${e.lastName}`.trim() }));
+    safeEmployees.forEach((e) => map.set(e.id, { name: `${e.firstName} ${e.lastName}`.trim() }));
     return map;
-  }, [employees]);
+  }, [safeEmployees]);
 
   // Row validation helper (client-side)
   const validateRow = (row: ParsedTimesheetRow): { isValid: boolean; errors: string[] } => {
@@ -105,7 +108,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       if (!hhmmRegex.test(row.lunchEnd || "")) errors.push("Invalid Lunch End (HH:mm).");
     }
 
-    const employeeExists = employees.some((e) => e.id === row.employeeId);
+    const employeeExists = safeEmployees.some((e) => e.id === row.employeeId);
     if (!employeeExists) errors.push("Employee not found (resolve employee).");
 
     return { isValid: errors.length === 0, errors };
@@ -246,7 +249,6 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     setSortKey("dateAsc");
   };
 
-
   const handleImportData = () => {
     const sourceRows = importFilteredOnly ? filteredRows : editableRows.length ? editableRows : validatedData;
     const validEntries = sourceRows.filter((row) => row._isValid);
@@ -341,7 +343,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
         {/* Filters */}
         <FiltersBar
-          employees={employees}
+          employees={safeEmployees}
           compact={compact}
           setCompact={setCompact}
           filterEmployeeId={filterEmployeeId}
@@ -392,7 +394,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         {filteredRows.length > 0 && (
           <ValidatedDataTable
             validatedData={filteredRows}
-            employees={employees}
+            employees={safeEmployees}
             allRowsValid={filteredRows.every((r) => r._isValid)}
             compact={compact}
             onEditRow={updateRow}
