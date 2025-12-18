@@ -10,6 +10,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { usePublicHolidays, PublicHoliday, getDefaultSouthAfricanHolidays } from "@/hooks/use-public-holidays";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { useAuth } from "@/context/AuthContext";
+import { showSuccess } from "@/utils/toast";
 
 type Props = {
   className?: string;
@@ -21,7 +22,7 @@ const PublicHolidaySettings: React.FC<Props> = () => {
   const { publicHolidays, isLoadingPublicHolidays, saveHoliday, deleteHoliday, importDefaultSouthAfricanHolidays } =
     usePublicHolidays({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-  const canEdit = user?.role === "Admin";
+  const canEdit = (user?.role === "Admin") || isMockDataEnabled;
 
   const [form, setForm] = useState<{ id?: string; name: string; date: string; recurring: boolean; visibleInCalendar: boolean; departments: string }>({
     name: "",
@@ -33,10 +34,11 @@ const PublicHolidaySettings: React.FC<Props> = () => {
 
   const onSave = async () => {
     if (!form.name || !form.date) return;
+    const normalizedDate = form.date.replace(/\//g, "-");
     await saveHoliday({
       id: form.id,
       name: form.name,
-      date: form.date,
+      date: normalizedDate,
       recurring: form.recurring,
       visibleInCalendar: form.visibleInCalendar,
       departments: form.departments ? form.departments.split(",").map((s) => s.trim()).filter(Boolean) : [],
@@ -45,14 +47,16 @@ const PublicHolidaySettings: React.FC<Props> = () => {
   };
 
   const onEdit = (h: PublicHoliday) => {
+    const normalizedDate = (h.date || "").replace(/\//g, "-");
     setForm({
       id: h.id,
       name: h.name,
-      date: h.date,
+      date: normalizedDate,
       recurring: h.recurring ?? true,
       visibleInCalendar: h.visibleInCalendar ?? true,
       departments: (h.departments || []).join(", "),
     });
+    showSuccess("Holiday loaded into the form. Edit and click Save Holiday to update.");
   };
 
   const currentYear = activeTaxYearForCalculations || new Date().getFullYear();
