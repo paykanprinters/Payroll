@@ -35,9 +35,11 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
   const rowClass = compact ? "py-1" : "py-2";
   const cellClass = compact ? "p-2" : "p-4";
 
+  const normalizeDate = (d: string) => (d || "").replace(/\//g, "-");
+
   return (
     <>
-      <ScrollArea className="border rounded-md w-full h-[55vh]">
+      <ScrollArea className="border rounded-md w-full h-[70vh] md:h-[65vh]">
         <div className="min-w-full">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
@@ -105,12 +107,12 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                       {isEditing ? (
                         <Input
                           type="date"
-                          value={row.date}
+                          value={normalizeDate(row.date)}
                           onChange={(e) => onEditRow?.(index, { date: e.target.value })}
                           className="w-40"
                         />
                       ) : (
-                        row.date
+                        normalizeDate(row.date)
                       )}
                     </TableCell>
 
