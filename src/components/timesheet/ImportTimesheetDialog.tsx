@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, XCircle } from "lucide-react";
+import { UploadCloud, XCircle, Wand2, CalendarClock, Eraser } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
-import { useTimesheetImport } from "@/hooks/use-timesheet-import";
+import { useTimesheetImport, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
+import { Switch } from "@/components/ui/switch";
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
@@ -28,6 +29,9 @@ interface ImportTimesheetDialogProps {
   onImport: (timesheets: ImportableTimesheetEntry[]) => void;
   employees: MockEmployee[];
 }
+
+const hhmmRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, onClose, onImport, employees }) => {
   const {
@@ -47,8 +51,108 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     reset,
   } = useTimesheetImport(employees, isOpen);
 
+  // Local editable copy of the validated data for in-place fixes
+  const [editableRows, setEditableRows] = useState<ParsedTimesheetRow[]>([]);
+  const [compact, setCompact] = useState<boolean>(false);
+
+  useEffect(() => {
+    setEditableRows(validatedData);
+  }, [validatedData]);
+
+  const validateRow = (row: ParsedTimesheetRow): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    // Date
+    const normalizedDate = (row.date || "").replace(/\//g, "-");
+    if (!isoDateRegex.test(normalizedDate)) {
+      errors.push("Invalid date format. Use YYYY-MM-DD.");
+    }
+    // Time In/Out
+    if (!hhmmRegex.test(row.timeIn)) errors.push("Invalid Time In (HH:mm).");
+    if (!hhmmRegex.test(row.timeOut)) errors.push("Invalid Time Out (HH:mm).");
+    // Time Out must be later than Time In
+    if (hhmmRegex.test(row.timeIn) && hhmmRegex.test(row.timeOut)) {
+      const [ih, im] = row.timeIn.split(":").map(Number);
+      const [oh, om] = row.timeOut.split(":").map(Number);
+      const inMin = ih * 60 + im;
+      const outMin = oh * 60 + om;
+      if (outMin <= inMin) errors.push("Time Out must be later than Time In.");
+    }
+    // Optional breaks
+    if (row.teaStart || row.teaEnd) {
+      if (!hhmmRegex.test(row.teaStart || "")) errors.push("Invalid Tea Start (HH:mm).");
+      if (!hhmmRegex.test(row.teaEnd || "")) errors.push("Invalid Tea End (HH:mm).");
+    }
+    if (row.lunchStart || row.lunchEnd) {
+      if (!hhmmRegex.test(row.lunchStart || "")) errors.push("Invalid Lunch Start (HH:mm).");
+      if (!hhmmRegex.test(row.lunchEnd || "")) errors.push("Invalid Lunch End (HH:mm).");
+    }
+    // Employee resolution
+    const employeeExists = employees.some((e) => e.id === row.employeeId);
+    if (!employeeExists) errors.push("Employee not found (resolve employee).");
+
+    return { isValid: errors.length === 0, errors };
+  };
+
+  const updateRow = (index: number, updates: Partial<ParsedTimesheetRow>) => {
+    setEditableRows((prev) => {
+      const next = [...prev];
+      const merged = { ...next[index], ...updates };
+      // normalize date slashes
+      if (merged.date) merged.date = merged.date.replace(/\//g, "-");
+      const { isValid, errors } = validateRow(merged);
+      merged._isValid = isValid;
+      merged._errors = errors;
+      next[index] = merged;
+      return next;
+    });
+  };
+
+  const resolveEmployee = (index: number, employeeId: string) => {
+    updateRow(index, { employeeId });
+  };
+
+  const bulkNormalizeDates = () => {
+    setEditableRows((prev) => prev.map((r) => {
+      const updated = { ...r, date: (r.date || "").replace(/\//g, "-") };
+      const { isValid, errors } = validateRow(updated);
+      updated._isValid = isValid;
+      updated._errors = errors;
+      return updated;
+    }));
+  };
+
+  const clampTimeInToStart = () => {
+    setEditableRows((prev) => prev.map((r) => {
+      if (!hhmmRegex.test(r.timeIn)) return r;
+      const [h, m] = r.timeIn.split(":").map(Number);
+      const minutes = h * 60 + m;
+      const clampMin = 7 * 60 + 45; // 07:45
+      const clamped = minutes < clampMin ? "07:45" : r.timeIn;
+      const updated = { ...r, timeIn: clamped };
+      const { isValid, errors } = validateRow(updated);
+      updated._isValid = isValid;
+      updated._errors = errors;
+      return updated;
+    }));
+  };
+
+  const clearMissingBreaks = () => {
+    setEditableRows((prev) => prev.map((r) => {
+      const updated = { ...r };
+      if (!r.teaStart || !r.teaEnd) { updated.teaStart = ""; updated.teaEnd = ""; }
+      if (!r.lunchStart || !r.lunchEnd) { updated.lunchStart = ""; updated.lunchEnd = ""; }
+      const { isValid, errors } = validateRow(updated);
+      updated._isValid = isValid;
+      updated._errors = errors;
+      return updated;
+    }));
+  };
+
+  const localAllRowsValid = useMemo(() => editableRows.length > 0 && editableRows.every((r) => r._isValid), [editableRows]);
+
   const handleImportData = () => {
-    const validEntries = validatedData.filter((row) => row._isValid);
+    const sourceRows = editableRows.length ? editableRows : validatedData;
+    const validEntries = sourceRows.filter((row) => row._isValid);
     if (validEntries.length === 0) {
       showError("No valid timesheet entries to import.");
       return;
@@ -56,7 +160,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
 
     const timesheetsToImport: ImportableTimesheetEntry[] = validEntries.map((row) => ({
       employeeId: row.employeeId,
-      date: new Date(row.date),
+      date: new Date(row.date.replace(/\//g, "-")),
       timeIn: row.timeIn,
       teaStart: row.teaStart,
       teaEnd: row.teaEnd,
@@ -80,12 +184,12 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        // Ignore automatic close attempts from Radix (file picker focus, outside clicks)
+        // Ignore automatic close attempts from Radix
         if (!open) return;
       }}
     >
       <DialogContent
-        className="sm:max-w-[900px] max-h-[90vh] flex flex-col"
+        className="w-[95vw] sm:max-w-[1200px] lg:max-w-[1400px] max-h-[92vh] flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
           if (isParsing) e.preventDefault();
@@ -101,19 +205,16 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         <DialogHeader>
           <DialogTitle>Import Clock Times</DialogTitle>
           <DialogDescription>
-            Upload a CSV file containing employee clock punches. The system will automatically
-            extract the earliest punch as "Time In" and the latest punch as "Time Out" for each employee per day.
+            Upload a CSV of punches. We aggregate the earliest as Time In and latest as Time Out per employee/day.
             <br />
-            <span className="font-semibold text-blue-600">Note:</span> "Time Out" must be strictly later than "Time In".
+            <span className="font-semibold text-blue-600">Note:</span> Time Out must be strictly later than Time In.
           </DialogDescription>
         </DialogHeader>
 
         {/* File upload and column mapping */}
         <div className="flex flex-col gap-4 py-4">
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="timesheet-file" className="sr-only">
-              Upload CSV
-            </Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="timesheet-file" className="sr-only">Upload CSV</Label>
             <Input
               id="timesheet-file"
               type="file"
@@ -140,9 +241,26 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           />
         </div>
 
+        {/* Quick-fix tools */}
+        <div className="flex flex-wrap items-center gap-3 pb-2 border-b">
+          <Button type="button" variant="outline" onClick={bulkNormalizeDates}>
+            <Wand2 className="h-4 w-4 mr-2" /> Normalize Dates (YYYY-MM-DD)
+          </Button>
+          <Button type="button" variant="outline" onClick={clampTimeInToStart}>
+            <CalendarClock className="h-4 w-4 mr-2" /> Clamp Time In to 07:45
+          </Button>
+          <Button type="button" variant="outline" onClick={clearMissingBreaks}>
+            <Eraser className="h-4 w-4 mr-2" /> Clear Missing Breaks
+          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Label htmlFor="compact">Compact Table</Label>
+            <Switch id="compact" checked={compact} onCheckedChange={setCompact} />
+          </div>
+        </div>
+
         {/* Aggregation Errors Section */}
         {aggregationErrors.length > 0 && (
-          <Card className="border-red-500 bg-red-50 text-red-800">
+          <Card className="mt-3 border-red-500 bg-red-50 text-red-800">
             <CardHeader>
               <CardTitle className="text-lg">Aggregation Errors ({aggregationErrors.length})</CardTitle>
               <CardDescription>The following entries could not be processed into daily timesheets.</CardDescription>
@@ -162,13 +280,20 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           </Card>
         )}
 
-        {/* Validated data table */}
-        {validatedData.length > 0 && (
-          <ValidatedDataTable validatedData={validatedData} employees={employees} allRowsValid={allRowsValid} />
+        {/* Editable validated data table */}
+        {editableRows.length > 0 && (
+          <ValidatedDataTable
+            validatedData={editableRows}
+            employees={employees}
+            allRowsValid={editableRows.every((r) => r._isValid)}
+            compact={compact}
+            onEditRow={updateRow}
+            onResolveEmployee={resolveEmployee}
+          />
         )}
 
         {/* Error message, always visible if present */}
-        {validatedData.length > 0 && !allRowsValid && (
+        {editableRows.length > 0 && !localAllRowsValid && (
           <p className="text-sm text-red-500 mt-2">
             Some rows contain errors and will not be imported. Hover over <XCircle className="inline h-3 w-3" /> for details.
           </p>
@@ -178,7 +303,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleImportData} disabled={!canImport}>
+          <Button type="button" onClick={handleImportData} disabled={!(canImport || localAllRowsValid)}>
             Import Valid Entries
           </Button>
         </DialogFooter>
