@@ -81,7 +81,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                           <User className="h-4 w-4 text-muted-foreground" />
                           <Select
                             onValueChange={(value) => onResolveEmployee?.(index, value)}
-                            value={row.employeeId || undefined}
+                            value={row.employeeId || ""}
                           >
                             <SelectTrigger className="w-56">
                               <SelectValue placeholder="Resolve employee" />

@@ -79,7 +79,7 @@ const FiltersBar: React.FC<Props> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
         <div>
           <Label className="text-xs">Employee</Label>
-          <Select value={filterEmployeeId || undefined} onValueChange={(v) => setFilterEmployeeId(v)}>
+          <Select value={filterEmployeeId} onValueChange={(v) => setFilterEmployeeId(v)}>
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="All employees" />
             </SelectTrigger>
