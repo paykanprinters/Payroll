@@ -74,6 +74,7 @@ const calculateEarnings = (
   );
 
   const holidayAmounts = computeHolidayAmounts(
+    emp,
     holidayBuckets.holidayWorkedHours,
     holidayBuckets.holidayNonWorkedHours,
     hourlyRate

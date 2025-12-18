@@ -258,12 +258,22 @@ export const computeBasicSalary = (
 };
 
 export const computeHolidayAmounts = (
+  emp: MockEmployee,
   holidayWorkedHours: number,
   holidayNonWorkedHours: number,
   hourlyRate: number
 ) => {
+  // Worked public holiday hours are paid at 2.0x
   const workedAmount = bankersRound(hourlyRate > 0 ? holidayWorkedHours * hourlyRate * 2.0 : 0, 2);
-  const nonWorkedAmount = bankersRound(hourlyRate > 0 ? holidayNonWorkedHours * hourlyRate * 1.5 : 0, 2);
+
+  // If no timesheet on a public holiday: treat as a normal day (1.0x) for hourly workers only.
+  // Salaried employees already have this included in their salary, so no extra amount.
+  const isHourly = !!emp.hourlyRate && emp.hourlyRate > 0;
+  const nonWorkedAmount = bankersRound(
+    isHourly && hourlyRate > 0 ? holidayNonWorkedHours * hourlyRate * 1.0 : 0,
+    2
+  );
+
   return { workedAmount, nonWorkedAmount };
 };
 
@@ -320,7 +330,7 @@ export const buildEarningsBreakdown = (
 
   if (holidayAmounts.nonWorkedAmount > 0) {
     lines.push({
-      name: `Public Holiday (no timesheet ${holidayHours.holidayNonWorkedHours.toFixed(2)}h @1.5x)`,
+      name: `Public Holiday (not worked ${holidayHours.holidayNonWorkedHours.toFixed(2)}h @1.0x)`,
       amount: holidayAmounts.nonWorkedAmount,
     });
   }
