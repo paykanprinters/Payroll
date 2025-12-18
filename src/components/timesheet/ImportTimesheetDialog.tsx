@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, XCircle, Wand2, CalendarClock, Eraser, Eye } from "lucide-react";
+import { UploadCloud, XCircle, Wand2, CalendarClock, Eraser, Eye, Filter, ArrowDownAZ, ArrowUpAZ, CalendarDays } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ interface ImportTimesheetDialogProps {
 
 const hhmmRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" | "personalDesc";
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, onClose, onImport, employees }) => {
   const {
@@ -56,6 +59,25 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   const [compact, setCompact] = useState<boolean>(false);
   const [showAggErrors, setShowAggErrors] = useState<boolean>(false);
 
+  // Filters
+  const [filterEmployeeId, setFilterEmployeeId] = useState<string>("");
+  const [filterEmployeeName, setFilterEmployeeName] = useState<string>("");
+  const [filterPersonalId, setFilterPersonalId] = useState<string>("");
+  const [filterDateStart, setFilterDateStart] = useState<string>("");
+  const [filterDateEnd, setFilterDateEnd] = useState<string>("");
+  const [sortKey, setSortKey] = useState<SortKey>("dateAsc");
+  const [importFilteredOnly, setImportFilteredOnly] = useState<boolean>(false);
+
+  const employeesById = useMemo(() => {
+    const map = new Map<string, { name: string }>();
+    employees.forEach((e) => map.set(e.id, { name: `${e.firstName} ${e.lastName}`.trim() }));
+    return map;
+  }, [employees]);
+
+  useEffect(() => {
+    setEditableRows(validatedData);
+  }, [validatedData]);
+
   // Show errors on new parse, then auto-dismiss after 10 seconds
   useEffect(() => {
     if (aggregationErrors.length > 0) {
@@ -66,10 +88,6 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       setShowAggErrors(false);
     }
   }, [aggregationErrors]);
-
-  useEffect(() => {
-    setEditableRows(validatedData);
-  }, [validatedData]);
 
   const validateRow = (row: ParsedTimesheetRow): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
@@ -160,10 +178,53 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     }));
   };
 
-  const localAllRowsValid = useMemo(() => editableRows.length > 0 && editableRows.every((r) => r._isValid), [editableRows]);
+  // Filter and sort pipeline
+  const filteredRows = useMemo(() => {
+    let rows = [...editableRows];
+
+    // Filters
+    if (filterEmployeeId) {
+      rows = rows.filter((r) => r.employeeId === filterEmployeeId);
+    }
+    if (filterEmployeeName.trim()) {
+      const q = filterEmployeeName.trim().toLowerCase();
+      rows = rows.filter((r) => (employeesById.get(r.employeeId)?.name || "").toLowerCase().includes(q));
+    }
+    if (filterPersonalId.trim()) {
+      const q = filterPersonalId.trim().toLowerCase();
+      rows = rows.filter((r) => String(r.csvPersonalId || "").toLowerCase().includes(q));
+    }
+    if (filterDateStart) {
+      rows = rows.filter((r) => r.date.replace(/\//g, "-") >= filterDateStart);
+    }
+    if (filterDateEnd) {
+      rows = rows.filter((r) => r.date.replace(/\//g, "-") <= filterDateEnd);
+    }
+
+    // Sorting
+    const byName = (r: ParsedTimesheetRow) => (employeesById.get(r.employeeId)?.name || "").toLowerCase();
+    const byDate = (r: ParsedTimesheetRow) => r.date.replace(/\//g, "-");
+    const byPersonal = (r: ParsedTimesheetRow) => String(r.csvPersonalId || "");
+
+    rows.sort((a, b) => {
+      switch (sortKey) {
+        case "dateAsc": return byDate(a).localeCompare(byDate(b));
+        case "dateDesc": return byDate(b).localeCompare(byDate(a));
+        case "nameAsc": return byName(a).localeCompare(byName(b));
+        case "nameDesc": return byName(b).localeCompare(byName(a));
+        case "personalAsc": return byPersonal(a).localeCompare(byPersonal(b), undefined, { numeric: true });
+        case "personalDesc": return byPersonal(b).localeCompare(byPersonal(a), undefined, { numeric: true });
+        default: return 0;
+      }
+    });
+
+    return rows;
+  }, [editableRows, filterEmployeeId, filterEmployeeName, filterPersonalId, filterDateStart, filterDateEnd, sortKey, employeesById]);
+
+  const localAllRowsValid = useMemo(() => filteredRows.length > 0 && filteredRows.every((r) => r._isValid), [filteredRows]);
 
   const handleImportData = () => {
-    const sourceRows = editableRows.length ? editableRows : validatedData;
+    const sourceRows = importFilteredOnly ? filteredRows : (editableRows.length ? editableRows : validatedData);
     const validEntries = sourceRows.filter((row) => row._isValid);
     if (validEntries.length === 0) {
       showError("No valid timesheet entries to import.");
@@ -190,6 +251,15 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   const handleCancel = () => {
     reset();
     onClose();
+  };
+
+  const clearFilters = () => {
+    setFilterEmployeeId("");
+    setFilterEmployeeName("");
+    setFilterPersonalId("");
+    setFilterDateStart("");
+    setFilterDateEnd("");
+    setSortKey("dateAsc");
   };
 
   return (
@@ -253,8 +323,115 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           />
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-col gap-3 pb-2 border-b">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Filters</span>
+            <div className="ml-auto flex items-center gap-2">
+              <Label htmlFor="compact">Compact Table</Label>
+              <Switch id="compact" checked={compact} onCheckedChange={setCompact} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
+            <div>
+              <Label className="text-xs">Employee</Label>
+              <Select value={filterEmployeeId || undefined} onValueChange={(v) => setFilterEmployeeId(v)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="All employees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All employees</SelectItem>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs">Employee Name</Label>
+              <Input
+                placeholder="Search name"
+                value={filterEmployeeName}
+                onChange={(e) => setFilterEmployeeName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Personal ID (CSV)</Label>
+              <Input
+                placeholder="Search personal ID"
+                value={filterPersonalId}
+                onChange={(e) => setFilterPersonalId(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Date From</Label>
+              <div className="flex items-center gap-1 mt-1">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={filterDateStart}
+                  onChange={(e) => setFilterDateStart(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Date To</Label>
+              <div className="flex items-center gap-1 mt-1">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={filterDateEnd}
+                  onChange={(e) => setFilterDateEnd(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label className="text-xs">Sort</Label>
+            <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Sort by..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dateAsc"><ArrowDownAZ className="inline h-4 w-4 mr-1" /> Date (oldest first)</SelectItem>
+                <SelectItem value="dateDesc"><ArrowUpAZ className="inline h-4 w-4 mr-1" /> Date (newest first)</SelectItem>
+                <SelectItem value="nameAsc"><ArrowDownAZ className="inline h-4 w-4 mr-1" /> Name (A→Z)</SelectItem>
+                <SelectItem value="nameDesc"><ArrowUpAZ className="inline h-4 w-4 mr-1" /> Name (Z→A)</SelectItem>
+                <SelectItem value="personalAsc"><ArrowDownAZ className="inline h-4 w-4 mr-1" /> Personal ID (↑)</SelectItem>
+                <SelectItem value="personalDesc"><ArrowUpAZ className="inline h-4 w-4 mr-1" /> Personal ID (↓)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" onClick={clearFilters} className="ml-auto">
+              Reset Filters
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              Showing {filteredRows.length} of {editableRows.length} rows
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="importFilteredOnly" className="text-xs">Import only filtered rows</Label>
+              <Switch id="importFilteredOnly" checked={importFilteredOnly} onCheckedChange={setImportFilteredOnly} />
+            </div>
+          </div>
+        </div>
+
         {/* Quick-fix tools */}
-        <div className="flex flex-wrap items-center gap-3 pb-2 border-b">
+        <div className="flex flex-wrap items-center gap-3 pb-2">
           <Button type="button" variant="outline" onClick={bulkNormalizeDates}>
             <Wand2 className="h-4 w-4 mr-2" /> Normalize Dates (YYYY-MM-DD)
           </Button>
@@ -264,10 +441,6 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           <Button type="button" variant="outline" onClick={clearMissingBreaks}>
             <Eraser className="h-4 w-4 mr-2" /> Clear Missing Breaks
           </Button>
-          <div className="ml-auto flex items-center gap-2">
-            <Label htmlFor="compact">Compact Table</Label>
-            <Switch id="compact" checked={compact} onCheckedChange={setCompact} />
-          </div>
         </div>
 
         {/* Aggregation Errors Section with auto-dismiss and fade */}
@@ -315,26 +488,24 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           </div>
         )}
 
-        {/* Editable validated data table */}
-        {editableRows.length > 0 && (
+        {/* Editable validated data table (filtered) */}
+        {filteredRows.length > 0 && (
           <ValidatedDataTable
-            validatedData={editableRows}
+            validatedData={filteredRows}
             employees={employees}
-            allRowsValid={editableRows.every((r) => r._isValid)}
+            allRowsValid={filteredRows.every((r) => r._isValid)}
             compact={compact}
             onEditRow={updateRow}
             onResolveEmployee={resolveEmployee}
           />
         )}
 
-        {/* Removed duplicate bottom error message to avoid clutter; ValidatedDataTable already shows it */}
-
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button type="button" onClick={handleImportData} disabled={!(canImport || localAllRowsValid)}>
-            Import Valid Entries
+            Import {importFilteredOnly ? "Filtered" : "Valid"} Entries
           </Button>
         </DialogFooter>
       </DialogContent>
