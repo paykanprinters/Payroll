@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   hr: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 10 },
   card: { borderRadius: 6, borderWidth: 1, borderColor: "#d1d5db", padding: 10, marginBottom: 10 },
   sectionTitle: { fontSize: 12, fontWeight: 700, marginBottom: 8 },
-  table: { display: "table", width: "auto" },
+  table: { width: "auto" },
   tableRow: { flexDirection: "row" },
   th: { fontSize: 10, fontWeight: 700, padding: 6, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", width: "33.33%" },
   thSmall: { fontSize: 10, fontWeight: 700, padding: 6, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", width: "16.66%" },

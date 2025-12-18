@@ -283,7 +283,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
 
       // Refetch all live data collections to recover from backgrounded tab
       refetchCompanyDetails?.();
-      refetchTaxTables?.();
+      refetchTaxTables?.(activeTaxYearForCalculations);
       refetchWorkHoursSettings?.();
       // public holidays also refresh on focus
       try { typeof importDefaultSouthAfricanHolidays === "function" && null; } catch {}

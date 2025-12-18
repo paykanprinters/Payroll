@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { UploadCloud } from "lucide-react";
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
