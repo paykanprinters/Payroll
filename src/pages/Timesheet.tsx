@@ -38,7 +38,15 @@ const Timesheet: React.FC = () => {
     cancelEditing,
     isLeaveDay,
     addTimesheetBatch,
-  } = useTimesheetData({ initialTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth, workHoursSettings });
+  } = useTimesheetData({
+    initialTimesheets,
+    employees,
+    leaveRecords,
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+    workHoursSettings,
+  });
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
   const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = React.useState(false);

@@ -38,8 +38,9 @@ type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" |
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, onClose, onImport, employees }) => {
   // Always use a safe array to avoid render errors if employees is momentarily undefined
-  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const safeEmployees: MockEmployee[] = Array.isArray(employees) ? employees : [];
 
+  // Initialize importer with safeEmployees
   const {
     file,
     csvHeaders,
@@ -294,7 +295,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           if (isParsing) e.preventDefault();
         }}
         onPointerDownOutside={(e) => {
-          const target = e.target as HTMLElement;
+          const target = e.target as HTMLElement | null;
           if (target?.closest("[data-radix-popper-content]") || target?.closest(".radix-select-content")) {
             e.preventDefault();
           }
@@ -326,7 +327,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           </Card>
         ) : (
           <>
-            {/* File upload and column mapping */}
+            {/* Upload and parse */}
             <div className="flex flex-col gap-4 py-4">
               <div className="flex items-center gap-2">
                 <Label htmlFor="timesheet-file" className="sr-only">
@@ -344,7 +345,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                   onKeyDown={(e) => e.stopPropagation()}
                   className="flex-1"
                 />
-                <Button type="button" onClick={handleParseFile} disabled={!file || isParsing || safeEmployees.length === 0}>
+                <Button type="button" onClick={handleParseFile} disabled={!file || isParsing}>
                   <UploadCloud className="mr-2 h-4 w-4" /> {isParsing ? "Parsing..." : "Parse File"}
                 </Button>
               </div>
