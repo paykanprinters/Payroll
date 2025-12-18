@@ -101,26 +101,30 @@ const Timesheet: React.FC = () => {
       </div>
 
       {/* Import dialog modal */}
-      <ImportTimesheetDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportTimesheets}
-        employees={employees}
-      />
+      <ErrorBoundary fallbackTitle="Import Clock Times failed to render" onReset={() => setIsImportDialogOpen(false)}>
+        <ImportTimesheetDialog
+          isOpen={isImportDialogOpen}
+          onClose={() => setIsImportDialogOpen(false)}
+          onImport={handleImportTimesheets}
+          employees={employees}
+        />
+      </ErrorBoundary>
 
       {/* Weekly editor modal */}
       {isWeeklyEditorOpen && (
-        <WeeklyTimesheetEditorDialog
-          isOpen={isWeeklyEditorOpen}
-          onClose={() => setIsWeeklyEditorOpen(false)}
-          employeeId={selectedEmployeeIdForWeeklyEditor}
-          initialDateInWeek={selectedDateForWeeklyEditor}
-          allTimesheets={timesheets}
-          onSaveTimesheet={addOrUpdateTimesheet}
-          getEmployeeName={getEmployeeName}
-          isLeaveDay={isLeaveDay}
-          employees={employees}
-        />
+        <ErrorBoundary fallbackTitle="Weekly Timesheet Editor failed to render" onReset={() => setIsWeeklyEditorOpen(false)}>
+          <WeeklyTimesheetEditorDialog
+            isOpen={isWeeklyEditorOpen}
+            onClose={() => setIsWeeklyEditorOpen(false)}
+            employeeId={selectedEmployeeIdForWeeklyEditor}
+            initialDateInWeek={selectedDateForWeeklyEditor}
+            allTimesheets={timesheets}
+            onSaveTimesheet={addOrUpdateTimesheet}
+            getEmployeeName={getEmployeeName}
+            isLeaveDay={isLeaveDay}
+            employees={employees}
+          />
+        </ErrorBoundary>
       )}
     </div>
   );

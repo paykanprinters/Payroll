@@ -339,7 +339,6 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     workHoursSettings,
     isLoadingWorkHoursSettings,
     isLoadingPublicHolidays,
-    isLoadingPublicHolidays,
     payCycleSettings,
     isLoadingPayCycleSettings,
     userTaxSettings,

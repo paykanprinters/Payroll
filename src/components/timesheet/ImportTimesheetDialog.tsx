@@ -281,7 +281,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (!open) return;
+        if (!open) onClose();
       }}
     >
       <DialogContent
