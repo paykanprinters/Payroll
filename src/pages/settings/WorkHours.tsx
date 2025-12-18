@@ -303,4 +303,4 @@ const WrappedWorkHours: React.FC = () => {
 
 export default WrappedWorkHours;
 
-export default WorkHours;
+export { WorkHours };

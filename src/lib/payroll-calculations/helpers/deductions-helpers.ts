@@ -4,6 +4,7 @@ import { PayrollSavingsEntry } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { bankersRound } from "@/lib/utils";
+import { calculatePAYE } from "@/lib/payroll-calculations";
 
 const computeUIF = (
   grossEarnings: number,
@@ -41,7 +42,6 @@ const computePAYE = (
   if (emp.dateOfBirth) {
     employeeAge = differenceInYears(new Date(), new Date(emp.dateOfBirth));
   }
-  const { calculatePAYE } = require("@/lib/payroll-calculations");
   const paye = calculatePAYE(
     taxableIncomeForPAYE,
     payeBrackets,
