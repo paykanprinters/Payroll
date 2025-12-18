@@ -14,8 +14,8 @@ interface ValidatedDataTableProps {
   employees: MockEmployee[];
   allRowsValid: boolean;
   compact?: boolean;
-  onEditRow?: (index: number, updates: Partial<ParsedTimesheetRow>) => void;
-  onResolveEmployee?: (index: number, employeeId: string) => void;
+  onEditRow?: (key: string, updates: Partial<ParsedTimesheetRow>) => void;
+  onResolveEmployee?: (key: string, employeeId: string) => void;
 }
 
 const normalizeDate = (d: string) => (d || "").replace(/\//g, "-");
@@ -70,6 +70,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
             <TableBody>
               {validatedData.map((row, index) => {
                 const isEditing = editingIndex === index;
+                const rowKey = `${row.employeeId}|${normalizeDate(row.date)}`;
                 const employee = employees.find((emp) => emp.id === row.employeeId);
                 const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : "N/A";
 
@@ -94,7 +95,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <Select
-                            onValueChange={(value) => onResolveEmployee?.(index, value)}
+                            onValueChange={(value) => onResolveEmployee?.(rowKey, value)}
                             value={row.employeeId || ""}
                           >
                             <SelectTrigger className="w-56">
@@ -120,7 +121,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                         <Input
                           type="date"
                           value={normalizeDate(row.date)}
-                          onChange={(e) => onEditRow?.(index, { date: e.target.value })}
+                          onChange={(e) => onEditRow?.(rowKey, { date: e.target.value })}
                           className="w-40"
                         />
                       ) : (
@@ -136,7 +137,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                           inputMode="numeric"
                           placeholder="HH:mm"
                           value={row.timeIn || ""}
-                          onChange={(e) => onEditRow?.(index, { timeIn: formatHHmmInput(e.target.value) })}
+                          onChange={(e) => onEditRow?.(rowKey, { timeIn: formatHHmmInput(e.target.value) })}
                           className="w-28"
                         />
                       ) : (
@@ -153,7 +154,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                             inputMode="numeric"
                             placeholder="HH:mm"
                             value={row.teaStart || ""}
-                            onChange={(e) => onEditRow?.(index, { teaStart: formatHHmmInput(e.target.value) })}
+                            onChange={(e) => onEditRow?.(rowKey, { teaStart: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                           <span className="text-muted-foreground">–</span>
@@ -162,7 +163,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                             inputMode="numeric"
                             placeholder="HH:mm"
                             value={row.teaEnd || ""}
-                            onChange={(e) => onEditRow?.(index, { teaEnd: formatHHmmInput(e.target.value) })}
+                            onChange={(e) => onEditRow?.(rowKey, { teaEnd: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                         </div>
@@ -180,7 +181,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                             inputMode="numeric"
                             placeholder="HH:mm"
                             value={row.lunchStart || ""}
-                            onChange={(e) => onEditRow?.(index, { lunchStart: formatHHmmInput(e.target.value) })}
+                            onChange={(e) => onEditRow?.(rowKey, { lunchStart: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                           <span className="text-muted-foreground">–</span>
@@ -189,7 +190,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                             inputMode="numeric"
                             placeholder="HH:mm"
                             value={row.lunchEnd || ""}
-                            onChange={(e) => onEditRow?.(index, { lunchEnd: formatHHmmInput(e.target.value) })}
+                            onChange={(e) => onEditRow?.(rowKey, { lunchEnd: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                         </div>
@@ -206,7 +207,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                           inputMode="numeric"
                           placeholder="HH:mm"
                           value={row.timeOut || ""}
-                          onChange={(e) => onEditRow?.(index, { timeOut: formatHHmmInput(e.target.value) })}
+                          onChange={(e) => onEditRow?.(rowKey, { timeOut: formatHHmmInput(e.target.value) })}
                           className="w-28"
                         />
                       ) : (

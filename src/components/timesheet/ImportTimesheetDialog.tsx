@@ -113,21 +113,23 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     return { isValid: errors.length === 0, errors };
   };
 
-  const updateRow = (index: number, updates: Partial<ParsedTimesheetRow>) => {
+  const updateRow = (key: string, updates: Partial<ParsedTimesheetRow>) => {
     setEditableRows((prev) => {
       const next = [...prev];
-      const merged = { ...next[index], ...updates };
+      const idx = next.findIndex((r) => `${r.employeeId}|${r.date.replace(/\//g, "-")}` === key);
+      if (idx === -1) return prev;
+      const merged = { ...next[idx], ...updates };
       if (merged.date) merged.date = merged.date.replace(/\//g, "-");
       const { isValid, errors } = validateRow(merged);
       merged._isValid = isValid;
       merged._errors = errors;
-      next[index] = merged;
+      next[idx] = merged;
       return next;
     });
   };
 
-  const resolveEmployee = (index: number, employeeId: string) => {
-    updateRow(index, { employeeId });
+  const resolveEmployee = (key: string, employeeId: string) => {
+    updateRow(key, { employeeId });
   };
 
   const bulkNormalizeDates = () => {
