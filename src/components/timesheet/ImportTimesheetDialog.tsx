@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -294,7 +295,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
         }}
         onPointerDownOutside={(e) => {
           const target = e.target as HTMLElement;
-          if (target.closest("[data-radix-popper-content]") || target.closest(".radix-select-content")) {
+          if (target?.closest("[data-radix-popper-content]") || target?.closest(".radix-select-content")) {
             e.preventDefault();
           }
         }}
@@ -309,107 +310,125 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
           </DialogDescription>
         </DialogHeader>
 
-        {/* File upload and column mapping */}
-        <div className="flex flex-col gap-4 py-4">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="timesheet-file" className="sr-only">
-              Upload CSV
-            </Label>
-            <Input
-              id="timesheet-file"
-              type="file"
-              accept=".csv"
-              onChange={(e) => {
-                e.stopPropagation();
-                handleFileChange(e);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              className="flex-1"
+        {safeEmployees.length === 0 ? (
+          <Card className="border-amber-300 bg-amber-50 text-amber-900">
+            <CardHeader>
+              <CardTitle>No employees available</CardTitle>
+              <CardDescription>
+                Please add employees or enable mock data in Settings. The importer needs employees to resolve Personal IDs.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-end">
+              <Button type="button" variant="outline" onClick={handleCancel}>
+                Close
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* File upload and column mapping */}
+            <div className="flex flex-col gap-4 py-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="timesheet-file" className="sr-only">
+                  Upload CSV
+                </Label>
+                <Input
+                  id="timesheet-file"
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleFileChange(e);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  className="flex-1"
+                />
+                <Button type="button" onClick={handleParseFile} disabled={!file || isParsing || safeEmployees.length === 0}>
+                  <UploadCloud className="mr-2 h-4 w-4" /> {isParsing ? "Parsing..." : "Parse File"}
+                </Button>
+              </div>
+
+              <ColumnMappingSection
+                csvHeaders={csvHeaders}
+                columnMappings={columnMappings}
+                onColumnMappingChange={handleColumnMappingChange}
+                onRevalidate={handleRevalidate}
+                parsedRawDataLength={parsedRawData.length}
+              />
+            </div>
+
+            {/* Filters */}
+            <FiltersBar
+              employees={safeEmployees}
+              compact={compact}
+              setCompact={setCompact}
+              filterEmployeeId={filterEmployeeId}
+              setFilterEmployeeId={setFilterEmployeeId}
+              filterEmployeeName={filterEmployeeName}
+              setFilterEmployeeName={setFilterEmployeeName}
+              filterPersonalId={filterPersonalId}
+              setFilterPersonalId={setFilterPersonalId}
+              filterDateStart={filterDateStart}
+              setFilterDateStart={setFilterDateStart}
+              filterDateEnd={filterDateEnd}
+              setFilterDateEnd={setFilterDateEnd}
+              sortKey={sortKey}
+              setSortKey={setSortKey}
+              onResetFilters={clearFilters}
+              totalCount={editableRows.length}
+              filteredCount={filteredRows.length}
+              importFilteredOnly={importFilteredOnly}
+              setImportFilteredOnly={setImportFilteredOnly}
             />
-            <Button type="button" onClick={handleParseFile} disabled={!file || isParsing}>
-              <UploadCloud className="mr-2 h-4 w-4" /> {isParsing ? "Parsing..." : "Parse File"}
-            </Button>
-          </div>
 
-          <ColumnMappingSection
-            csvHeaders={csvHeaders}
-            columnMappings={columnMappings}
-            onColumnMappingChange={handleColumnMappingChange}
-            onRevalidate={handleRevalidate}
-            parsedRawDataLength={parsedRawData.length}
-          />
-        </div>
+            {/* Quick-fix tools */}
+            <QuickFixTools
+              onNormalizeDates={bulkNormalizeDates}
+              onClampTimeIn={clampTimeInToStart}
+              onClearMissingBreaks={clearMissingBreaks}
+            />
 
-        {/* Filters */}
-        <FiltersBar
-          employees={safeEmployees}
-          compact={compact}
-          setCompact={setCompact}
-          filterEmployeeId={filterEmployeeId}
-          setFilterEmployeeId={setFilterEmployeeId}
-          filterEmployeeName={filterEmployeeName}
-          setFilterEmployeeName={setFilterEmployeeName}
-          filterPersonalId={filterPersonalId}
-          setFilterPersonalId={setFilterPersonalId}
-          filterDateStart={filterDateStart}
-          setFilterDateStart={setFilterDateStart}
-          filterDateEnd={filterDateEnd}
-          setFilterDateEnd={setFilterDateEnd}
-          sortKey={sortKey}
-          setSortKey={setSortKey}
-          onResetFilters={clearFilters}
-          totalCount={editableRows.length}
-          filteredCount={filteredRows.length}
-          importFilteredOnly={importFilteredOnly}
-          setImportFilteredOnly={setImportFilteredOnly}
-        />
+            {/* Aggregation Errors with auto-dismiss */}
+            <AggregationErrorsPanel
+              errors={aggregationErrors as any}
+              show={aggregationErrors.length > 0 && showAggErrors}
+              onDismiss={() => setShowAggErrors(false)}
+              autoDismissMs={10000}
+            />
 
-        {/* Quick-fix tools */}
-        <QuickFixTools
-          onNormalizeDates={bulkNormalizeDates}
-          onClampTimeIn={clampTimeInToStart}
-          onClearMissingBreaks={clearMissingBreaks}
-        />
+            {/* Slim banner to restore errors after auto-dismiss */}
+            {aggregationErrors.length > 0 && !showAggErrors && (
+              <div className="mt-3 flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
+                <span className="text-sm">Aggregation Errors hidden to free space.</span>
+                <Button variant="outline" size="sm" onClick={() => setShowAggErrors(true)}>
+                  <Eye className="h-4 w-4 mr-1" /> Show errors
+                </Button>
+              </div>
+            )}
 
-        {/* Aggregation Errors with auto-dismiss */}
-        <AggregationErrorsPanel
-          errors={aggregationErrors as any}
-          show={aggregationErrors.length > 0 && showAggErrors}
-          onDismiss={() => setShowAggErrors(false)}
-          autoDismissMs={10000}
-        />
+            {/* Editable validated data table (filtered) */}
+            {filteredRows.length > 0 && (
+              <ValidatedDataTable
+                validatedData={filteredRows}
+                employees={safeEmployees}
+                allRowsValid={filteredRows.every((r) => r._isValid)}
+                compact={compact}
+                onEditRow={updateRow}
+                onResolveEmployee={resolveEmployee}
+              />
+            )}
 
-        {/* Slim banner to restore errors after auto-dismiss */}
-        {aggregationErrors.length > 0 && !showAggErrors && (
-          <div className="mt-3 flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
-            <span className="text-sm">Aggregation Errors hidden to free space.</span>
-            <Button variant="outline" size="sm" onClick={() => setShowAggErrors(true)}>
-              <Eye className="h-4 w-4 mr-1" /> Show errors
-            </Button>
-          </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleImportData} disabled={!localAllRowsValid}>
+                Import {importFilteredOnly ? "Filtered" : "Valid"} Entries
+              </Button>
+            </DialogFooter>
+          </>
         )}
-
-        {/* Editable validated data table (filtered) */}
-        {filteredRows.length > 0 && (
-          <ValidatedDataTable
-            validatedData={filteredRows}
-            employees={safeEmployees}
-            allRowsValid={filteredRows.every((r) => r._isValid)}
-            compact={compact}
-            onEditRow={updateRow}
-            onResolveEmployee={resolveEmployee}
-          />
-        )}
-
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleImportData} disabled={!localAllRowsValid}>
-            Import {importFilteredOnly ? "Filtered" : "Valid"} Entries
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
