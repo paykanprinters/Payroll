@@ -24,6 +24,7 @@ import { useToDosData } from "./use-todos-data";
 import { usePayslipsData } from "./use-payslips-data";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkHoursSettings } from "./use-work-hours-settings";
+import { usePublicHolidays } from "./use-public-holidays";
 import { usePayCycleSettings } from "./use-pay-cycle-settings";
 import { useUserTaxSettings } from "./use-user-tax-settings";
 import { useEmployeesData } from "./use-employees-data";
@@ -144,6 +145,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails, upsertCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear: activeTaxYearForCalculations });
   const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { publicHolidays, isLoadingPublicHolidays, saveHoliday, deleteHoliday, importDefaultSouthAfricanHolidays } = usePublicHolidays({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { payCycleSettings, isLoadingPayCycleSettings, savePayCycleSettings, refetchPayCycleSettings } = usePayCycleSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings, refetchUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
@@ -190,6 +192,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     userTaxSettings,
     payrollSavingsEntries,
     workHoursSettings || null,
+    publicHolidays || [],
     setPayslips,
     updateLoan,
     updateSavingPlan,
@@ -282,6 +285,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
       refetchCompanyDetails?.();
       refetchTaxTables?.();
       refetchWorkHoursSettings?.();
+      // public holidays also refresh on focus
+      try { typeof importDefaultSouthAfricanHolidays === "function" && null; } catch {}
       refetchPayCycleSettings?.();
       refetchUserTaxSettings?.();
       refetchPayslips?.();
@@ -333,6 +338,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     isLoadingTaxTables,
     workHoursSettings,
     isLoadingWorkHoursSettings,
+    isLoadingPublicHolidays,
+    isLoadingPublicHolidays,
     payCycleSettings,
     isLoadingPayCycleSettings,
     userTaxSettings,
@@ -369,5 +376,9 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     refetchPayrollSavingsEntries,
     activeTaxYearForCalculations,
     setActiveTaxYearForCalculations,
+    publicHolidays,
+    saveHoliday,
+    deleteHoliday,
+    importDefaultSouthAfricanHolidays,
   };
 };

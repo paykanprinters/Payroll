@@ -289,4 +289,18 @@ const WorkHours: React.FC = () => {
   );
 };
 
+// Attach PublicHolidaySettings panel below the Work Hours card
+import PublicHolidaySettings from "@/components/settings/work-hours/PublicHolidaySettings";
+
+const WrappedWorkHours: React.FC = () => {
+  return (
+    <div className="space-y-8">
+      <WorkHours />
+      <PublicHolidaySettings />
+    </div>
+  );
+};
+
+export default WrappedWorkHours;
+
 export default WorkHours;

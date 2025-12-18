@@ -21,6 +21,8 @@ import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queri
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 
+import type { PublicHoliday } from "@/hooks/use-public-holidays";
+
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
   payslips: MockPayslip[],
@@ -32,6 +34,7 @@ export const usePayrollProcessingLogic = (
   userTaxSettings: UserTaxSettings | null,
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
   workHoursSettings: WorkHoursSettings | null,
+  publicHolidays: PublicHoliday[] | null,
   setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>,
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
@@ -67,7 +70,8 @@ export const usePayrollProcessingLogic = (
         taxTables,
         userTaxSettings,
         payrollSavingsEntries,
-        workHoursSettings
+        workHoursSettings,
+        publicHolidays || []
       );
 
       if (newPayslips.length === 0) {
@@ -148,7 +152,7 @@ export const usePayrollProcessingLogic = (
 
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -178,7 +182,8 @@ export const usePayrollProcessingLogic = (
         taxTables,
         userTaxSettings,
         payrollSavingsEntries,
-        workHoursSettings
+        workHoursSettings,
+        publicHolidays || []
       );
 
       if (previewPayslips.length > 0) {
@@ -203,7 +208,7 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, isMockDataEnabled]
   );
 
   return {
