@@ -67,7 +67,7 @@ const PublicHolidaySettings: React.FC<Props> = () => {
       <CardHeader>
         <CardTitle>Public Holiday Settings</CardTitle>
         <CardDescription>
-          Configure South African public holidays. Holidays on a regular workday are non-workable unless timesheets exist. Pay rules: No timesheet = 1.5x, Worked = 2.0x.
+          Configure South African public holidays. Holidays on a regular workday are non-workable unless timesheets exist. Pay rules: If no work is done on a public holiday, it is treated as a normal day. If worked, pay is 2.0x.
         </CardDescription>
       </CardHeader>
       <CardContent>
