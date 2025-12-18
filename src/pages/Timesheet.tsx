@@ -120,14 +120,12 @@ const Timesheet: React.FC = () => {
 
       {/* Import dialog modal */}
       {isImportDialogOpen && (
-        <ErrorBoundary fallbackTitle="Import Clock Times failed to render" onReset={() => setIsImportDialogOpen(false)}>
-          <ImportTimesheetDialog
-            isOpen={isImportDialogOpen}
-            onClose={() => setIsImportDialogOpen(false)}
-            onImport={handleImportTimesheets}
-            employees={employees || []}
-          />
-        </ErrorBoundary>
+        <ImportTimesheetDialog
+          isOpen={isImportDialogOpen}
+          onClose={() => setIsImportDialogOpen(false)}
+          onImport={handleImportTimesheets}
+          employees={employees || []}
+        />
       )}
 
       {/* Weekly editor modal */}
