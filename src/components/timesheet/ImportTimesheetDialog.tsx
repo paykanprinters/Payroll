@@ -246,8 +246,6 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
     setSortKey("dateAsc");
   };
 
-  const [importFilteredOnly, setImportFiltered] = useState<boolean>(false);
-  const setImportFilteredOnly = (v: boolean) => setImportFiltered(v);
 
   const handleImportData = () => {
     const sourceRows = importFilteredOnly ? filteredRows : editableRows.length ? editableRows : validatedData;
