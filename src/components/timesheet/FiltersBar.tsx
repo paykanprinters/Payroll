@@ -79,12 +79,12 @@ const FiltersBar: React.FC<Props> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
         <div>
           <Label className="text-xs">Employee</Label>
-          <Select value={filterEmployeeId} onValueChange={(v) => setFilterEmployeeId(v)}>
+          <Select value={filterEmployeeId === "" ? "all" : filterEmployeeId} onValueChange={(v) => setFilterEmployeeId(v === "all" ? "" : v)}>
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="All employees" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All employees</SelectItem>
+              <SelectItem value="all">All employees</SelectItem>
               {employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
                   {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
