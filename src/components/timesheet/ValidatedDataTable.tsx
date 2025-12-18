@@ -18,6 +18,20 @@ interface ValidatedDataTableProps {
   onResolveEmployee?: (index: number, employeeId: string) => void;
 }
 
+const normalizeDate = (d: string) => (d || "").replace(/\//g, "-");
+
+// Light formatter: allow free typing, auto-insert ":" after HH, keep only digits/colon, clamp length
+const formatHHmmInput = (raw: string) => {
+  let v = (raw || "").replace(/[^\d:]/g, "");
+  // Auto insert colon after two digits if none
+  if (!v.includes(":") && v.length >= 3) {
+    v = `${v.slice(0, 2)}:${v.slice(2)}`;
+  }
+  // Clamp to HH:mm length
+  if (v.length > 5) v = v.slice(0, 5);
+  return v;
+};
+
 const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
   validatedData,
   employees,
@@ -34,8 +48,6 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
 
   const rowClass = compact ? "py-1" : "py-2";
   const cellClass = compact ? "p-2" : "p-4";
-
-  const normalizeDate = (d: string) => (d || "").replace(/\//g, "-");
 
   return (
     <>
@@ -120,9 +132,11 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                     <TableCell className={cellClass}>
                       {isEditing ? (
                         <Input
-                          type="time"
-                          value={row.timeIn}
-                          onChange={(e) => onEditRow?.(index, { timeIn: e.target.value })}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="HH:mm"
+                          value={row.timeIn || ""}
+                          onChange={(e) => onEditRow?.(index, { timeIn: formatHHmmInput(e.target.value) })}
                           className="w-28"
                         />
                       ) : (
@@ -135,16 +149,20 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                       {isEditing ? (
                         <div className="flex items-center gap-2">
                           <Input
-                            type="time"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="HH:mm"
                             value={row.teaStart || ""}
-                            onChange={(e) => onEditRow?.(index, { teaStart: e.target.value })}
+                            onChange={(e) => onEditRow?.(index, { teaStart: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                           <span className="text-muted-foreground">–</span>
                           <Input
-                            type="time"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="HH:mm"
                             value={row.teaEnd || ""}
-                            onChange={(e) => onEditRow?.(index, { teaEnd: e.target.value })}
+                            onChange={(e) => onEditRow?.(index, { teaEnd: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                         </div>
@@ -158,16 +176,20 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                       {isEditing ? (
                         <div className="flex items-center gap-2">
                           <Input
-                            type="time"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="HH:mm"
                             value={row.lunchStart || ""}
-                            onChange={(e) => onEditRow?.(index, { lunchStart: e.target.value })}
+                            onChange={(e) => onEditRow?.(index, { lunchStart: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                           <span className="text-muted-foreground">–</span>
                           <Input
-                            type="time"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="HH:mm"
                             value={row.lunchEnd || ""}
-                            onChange={(e) => onEditRow?.(index, { lunchEnd: e.target.value })}
+                            onChange={(e) => onEditRow?.(index, { lunchEnd: formatHHmmInput(e.target.value) })}
                             className="w-24"
                           />
                         </div>
@@ -180,9 +202,11 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                     <TableCell className={cellClass}>
                       {isEditing ? (
                         <Input
-                          type="time"
-                          value={row.timeOut}
-                          onChange={(e) => onEditRow?.(index, { timeOut: e.target.value })}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="HH:mm"
+                          value={row.timeOut || ""}
+                          onChange={(e) => onEditRow?.(index, { timeOut: formatHHmmInput(e.target.value) })}
                           className="w-28"
                         />
                       ) : (
