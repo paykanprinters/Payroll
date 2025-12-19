@@ -62,7 +62,9 @@ const calculateEarnings = (
 
   const nonHolidayBuckets = collectNonHolidayBuckets(emp, approvedTimesheetsForPeriod, holidays);
   const thresholdForPeriod = computeThresholdForPeriod(emp, weeklyThreshold, payPeriodStart, payPeriodEnd);
-  const overtimeAlloc = allocateOvertime(nonHolidayBuckets, thresholdForPeriod);
+  // Holiday worked hours should consume the weekly threshold so OT can apply to non-holiday hours if the total exceeds the threshold.
+  const adjustedThresholdForNonHoliday = Math.max(0, thresholdForPeriod - holidayBuckets.holidayWorkedHours);
+  const overtimeAlloc = allocateOvertime(nonHolidayBuckets, adjustedThresholdForNonHoliday);
 
   const basicSalary = computeBasicSalary(
     emp,
