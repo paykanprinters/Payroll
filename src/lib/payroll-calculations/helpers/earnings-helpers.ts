@@ -120,8 +120,10 @@ export const computeThresholdForPeriod = (
 
 export type NonHolidayHourBuckets = {
   weekdayPaidHours: number;
-  saturdayPaidHours: number;
-  sundayPaidHours: number;
+  saturdayPaidHours: number;         // Saturday hours on scheduled workday
+  sundayPaidHours: number;           // Sunday hours on scheduled workday
+  saturdayNonWorkingHours: number;   // Saturday hours on non-working day (direct OT)
+  sundayNonWorkingHours: number;     // Sunday hours on non-working day (direct OT)
 };
 
 export type HolidayHourBuckets = {
@@ -165,9 +167,16 @@ export const collectHolidayBuckets = (
 export const collectNonHolidayBuckets = (
   emp: MockEmployee,
   approvedTs: TimesheetEntry[],
-  holidays: PublicHoliday[] = []
+  holidays: PublicHoliday[] = [],
+  workDaysSet: Set<string>
 ): NonHolidayHourBuckets => {
-  const res: NonHolidayHourBuckets = { weekdayPaidHours: 0, saturdayPaidHours: 0, sundayPaidHours: 0 };
+  const res: NonHolidayHourBuckets = {
+    weekdayPaidHours: 0,
+    saturdayPaidHours: 0,
+    sundayPaidHours: 0,
+    saturdayNonWorkingHours: 0,
+    sundayNonWorkingHours: 0,
+  };
 
   approvedTs.forEach((ts) => {
     const isHoliday = !!dayIsHolidayForEmployee(ts.date, emp, holidays);
@@ -177,9 +186,17 @@ export const collectNonHolidayBuckets = (
     const date = parseISO(ts.date);
     const dow = date.getDay();
 
-    if (dow === 0) res.sundayPaidHours += hours;
-    else if (dow === 6) res.saturdayPaidHours += hours;
-    else res.weekdayPaidHours += hours;
+    if (dow === 0) {
+      // Sunday
+      if (workDaysSet.has("sunday")) res.sundayPaidHours += hours;
+      else res.sundayNonWorkingHours += hours;
+    } else if (dow === 6) {
+      // Saturday
+      if (workDaysSet.has("saturday")) res.saturdayPaidHours += hours;
+      else res.saturdayNonWorkingHours += hours;
+    } else {
+      res.weekdayPaidHours += hours;
+    }
   });
 
   return res;
@@ -196,19 +213,24 @@ export const allocateOvertime = (
   buckets: NonHolidayHourBuckets,
   thresholdForPeriod: number
 ): OvertimeAllocation => {
-  const totalNonHoliday = buckets.weekdayPaidHours + buckets.saturdayPaidHours + buckets.sundayPaidHours;
-  const regularHours = Math.min(totalNonHoliday, thresholdForPeriod);
+  // Only scheduled working-day hours participate in threshold split.
+  const totalEligible = buckets.weekdayPaidHours + buckets.saturdayPaidHours + buckets.sundayPaidHours;
+  const regularHours = Math.min(totalEligible, thresholdForPeriod);
 
-  let remainingOT = Math.max(0, totalNonHoliday - thresholdForPeriod);
+  let remainingOT = Math.max(0, totalEligible - thresholdForPeriod);
 
-  const overtimeSundayHours = Math.min(buckets.sundayPaidHours, remainingOT);
+  let overtimeSundayHours = Math.min(buckets.sundayPaidHours, remainingOT);
   remainingOT -= overtimeSundayHours;
 
-  const overtimeSaturdayHours = Math.min(buckets.saturdayPaidHours, remainingOT);
+  let overtimeSaturdayHours = Math.min(buckets.saturdayPaidHours, remainingOT);
   remainingOT -= overtimeSaturdayHours;
 
   const overtimeWeekdayHours = Math.min(buckets.weekdayPaidHours, remainingOT);
   remainingOT -= overtimeWeekdayHours;
+
+  // Non-working weekend hours are always overtime, do not consume threshold.
+  overtimeSaturdayHours += buckets.saturdayNonWorkingHours;
+  overtimeSundayHours += buckets.sundayNonWorkingHours;
 
   return { regularHours, overtimeWeekdayHours, overtimeSaturdayHours, overtimeSundayHours };
 };
