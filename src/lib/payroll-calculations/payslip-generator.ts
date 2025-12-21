@@ -60,18 +60,9 @@ const calculateEarnings = (
     holidays
   );
 
-  const nonHolidayBuckets = collectNonHolidayBuckets(emp, approvedTimesheetsForPeriod, holidays, workDaysSet);
+  const nonHolidayBuckets = collectNonHolidayBuckets(emp, approvedTimesheetsForPeriod, holidays);
   const thresholdForPeriod = computeThresholdForPeriod(emp, weeklyThreshold, payPeriodStart, payPeriodEnd);
-  // For hourly employees: both worked and non-worked public holiday hours should consume the threshold.
-  // For salaried employees: only worked holiday hours affect threshold.
-  const isHourly = !!emp.hourlyRate && emp.hourlyRate > 0;
-  const adjustedThresholdForNonHoliday = Math.max(
-    0,
-    thresholdForPeriod
-      - holidayBuckets.holidayWorkedHours
-      - (isHourly ? holidayBuckets.holidayNonWorkedHours : 0)
-  );
-  const overtimeAlloc = allocateOvertime(nonHolidayBuckets, adjustedThresholdForNonHoliday);
+  const overtimeAlloc = allocateOvertime(nonHolidayBuckets, thresholdForPeriod);
 
   const basicSalary = computeBasicSalary(
     emp,
@@ -83,7 +74,6 @@ const calculateEarnings = (
   );
 
   const holidayAmounts = computeHolidayAmounts(
-    emp,
     holidayBuckets.holidayWorkedHours,
     holidayBuckets.holidayNonWorkedHours,
     hourlyRate

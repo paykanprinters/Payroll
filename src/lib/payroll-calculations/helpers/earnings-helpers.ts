@@ -120,10 +120,8 @@ export const computeThresholdForPeriod = (
 
 export type NonHolidayHourBuckets = {
   weekdayPaidHours: number;
-  saturdayPaidHours: number;         // Saturday hours on scheduled workday
-  sundayPaidHours: number;           // Sunday hours on scheduled workday
-  saturdayNonWorkingHours: number;   // Saturday hours on non-working day (direct OT)
-  sundayNonWorkingHours: number;     // Sunday hours on non-working day (direct OT)
+  saturdayPaidHours: number;
+  sundayPaidHours: number;
 };
 
 export type HolidayHourBuckets = {
@@ -167,16 +165,9 @@ export const collectHolidayBuckets = (
 export const collectNonHolidayBuckets = (
   emp: MockEmployee,
   approvedTs: TimesheetEntry[],
-  holidays: PublicHoliday[] = [],
-  workDaysSet: Set<string>
+  holidays: PublicHoliday[] = []
 ): NonHolidayHourBuckets => {
-  const res: NonHolidayHourBuckets = {
-    weekdayPaidHours: 0,
-    saturdayPaidHours: 0,
-    sundayPaidHours: 0,
-    saturdayNonWorkingHours: 0,
-    sundayNonWorkingHours: 0,
-  };
+  const res: NonHolidayHourBuckets = { weekdayPaidHours: 0, saturdayPaidHours: 0, sundayPaidHours: 0 };
 
   approvedTs.forEach((ts) => {
     const isHoliday = !!dayIsHolidayForEmployee(ts.date, emp, holidays);
@@ -186,17 +177,9 @@ export const collectNonHolidayBuckets = (
     const date = parseISO(ts.date);
     const dow = date.getDay();
 
-    if (dow === 0) {
-      // Sunday
-      if (workDaysSet.has("sunday")) res.sundayPaidHours += hours;
-      else res.sundayNonWorkingHours += hours;
-    } else if (dow === 6) {
-      // Saturday
-      if (workDaysSet.has("saturday")) res.saturdayPaidHours += hours;
-      else res.saturdayNonWorkingHours += hours;
-    } else {
-      res.weekdayPaidHours += hours;
-    }
+    if (dow === 0) res.sundayPaidHours += hours;
+    else if (dow === 6) res.saturdayPaidHours += hours;
+    else res.weekdayPaidHours += hours;
   });
 
   return res;
@@ -213,24 +196,19 @@ export const allocateOvertime = (
   buckets: NonHolidayHourBuckets,
   thresholdForPeriod: number
 ): OvertimeAllocation => {
-  // Only scheduled working-day hours participate in threshold split.
-  const totalEligible = buckets.weekdayPaidHours + buckets.saturdayPaidHours + buckets.sundayPaidHours;
-  const regularHours = Math.min(totalEligible, thresholdForPeriod);
+  const totalNonHoliday = buckets.weekdayPaidHours + buckets.saturdayPaidHours + buckets.sundayPaidHours;
+  const regularHours = Math.min(totalNonHoliday, thresholdForPeriod);
 
-  let remainingOT = Math.max(0, totalEligible - thresholdForPeriod);
+  let remainingOT = Math.max(0, totalNonHoliday - thresholdForPeriod);
 
-  let overtimeSundayHours = Math.min(buckets.sundayPaidHours, remainingOT);
+  const overtimeSundayHours = Math.min(buckets.sundayPaidHours, remainingOT);
   remainingOT -= overtimeSundayHours;
 
-  let overtimeSaturdayHours = Math.min(buckets.saturdayPaidHours, remainingOT);
+  const overtimeSaturdayHours = Math.min(buckets.saturdayPaidHours, remainingOT);
   remainingOT -= overtimeSaturdayHours;
 
   const overtimeWeekdayHours = Math.min(buckets.weekdayPaidHours, remainingOT);
   remainingOT -= overtimeWeekdayHours;
-
-  // Non-working weekend hours are always overtime, do not consume threshold.
-  overtimeSaturdayHours += buckets.saturdayNonWorkingHours;
-  overtimeSundayHours += buckets.sundayNonWorkingHours;
 
   return { regularHours, overtimeWeekdayHours, overtimeSaturdayHours, overtimeSundayHours };
 };
@@ -280,22 +258,12 @@ export const computeBasicSalary = (
 };
 
 export const computeHolidayAmounts = (
-  emp: MockEmployee,
   holidayWorkedHours: number,
   holidayNonWorkedHours: number,
   hourlyRate: number
 ) => {
-  // Worked public holiday hours are paid at 2.0x
   const workedAmount = bankersRound(hourlyRate > 0 ? holidayWorkedHours * hourlyRate * 2.0 : 0, 2);
-
-  // If no timesheet on a public holiday: treat as a normal day (1.0x) for hourly workers only.
-  // Salaried employees already have this included in their salary, so no extra amount.
-  const isHourly = !!emp.hourlyRate && emp.hourlyRate > 0;
-  const nonWorkedAmount = bankersRound(
-    isHourly && hourlyRate > 0 ? holidayNonWorkedHours * hourlyRate * 1.0 : 0,
-    2
-  );
-
+  const nonWorkedAmount = bankersRound(hourlyRate > 0 ? holidayNonWorkedHours * hourlyRate * 1.5 : 0, 2);
   return { workedAmount, nonWorkedAmount };
 };
 
@@ -352,7 +320,7 @@ export const buildEarningsBreakdown = (
 
   if (holidayAmounts.nonWorkedAmount > 0) {
     lines.push({
-      name: `Public Holiday (not worked ${holidayHours.holidayNonWorkedHours.toFixed(2)}h @1.0x)`,
+      name: `Public Holiday (no timesheet ${holidayHours.holidayNonWorkedHours.toFixed(2)}h @1.5x)`,
       amount: holidayAmounts.nonWorkedAmount,
     });
   }
