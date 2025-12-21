@@ -59,23 +59,31 @@ export const generatePayrollSummaryReportContent = (
     .filter(([, amt]) => amt > 0)
     .sort((a, b) => b[1] - a[1]);
 
-  // New: Aggregate overtime and public holiday totals from payslip earnings lines
+  // New: Aggregate overtime and public holiday totals from payslip earnings lines (robust matching)
   let overallOvertimePaid = 0;
   let weekendOvertimePaid = 0;
   let publicHolidayPaid = 0;
 
   filteredPayslips.forEach((p) => {
     (p.earningsBreakdown || []).forEach((e) => {
-      const name = (e?.name || "").toLowerCase().trim();
+      const rawName = (e?.name || "");
+      const name = rawName.toLowerCase().trim();
       const amount = Number(e?.amount || 0);
-      if (name.startsWith("public holiday")) {
+
+      const isPublicHoliday = name.includes("public holiday");
+      const isWeekendOvertime =
+        name.includes("weekend overtime") ||
+        name.includes("(sat") ||
+        name.includes("(sun");
+      const isAnyOvertime = name.includes("overtime") || isWeekendOvertime;
+
+      if (isPublicHoliday) {
         publicHolidayPaid += amount;
       }
-      if (name.startsWith("weekend overtime")) {
+      if (isWeekendOvertime) {
         weekendOvertimePaid += amount;
-        overallOvertimePaid += amount;
-      } else if (name.startsWith("overtime")) {
-        // Weekday overtime lines (e.g., "Overtime (Weekday ... @1.5x)")
+      }
+      if (isAnyOvertime) {
         overallOvertimePaid += amount;
       }
     });
