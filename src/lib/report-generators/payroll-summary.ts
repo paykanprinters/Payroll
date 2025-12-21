@@ -59,6 +59,28 @@ export const generatePayrollSummaryReportContent = (
     .filter(([, amt]) => amt > 0)
     .sort((a, b) => b[1] - a[1]);
 
+  // New: Aggregate overtime and public holiday totals from payslip earnings lines
+  let overallOvertimePaid = 0;
+  let weekendOvertimePaid = 0;
+  let publicHolidayPaid = 0;
+
+  filteredPayslips.forEach((p) => {
+    (p.earningsBreakdown || []).forEach((e) => {
+      const name = (e?.name || "").toLowerCase().trim();
+      const amount = Number(e?.amount || 0);
+      if (name.startsWith("public holiday")) {
+        publicHolidayPaid += amount;
+      }
+      if (name.startsWith("weekend overtime")) {
+        weekendOvertimePaid += amount;
+        overallOvertimePaid += amount;
+      } else if (name.startsWith("overtime")) {
+        // Weekday overtime lines (e.g., "Overtime (Weekday ... @1.5x)")
+        overallOvertimePaid += amount;
+      }
+    });
+  });
+
   if (auditLevel === "minimal") {
     return `
       <p><strong>Report Period:</strong> ${reportPeriodDescription}</p>
@@ -143,6 +165,34 @@ export const generatePayrollSummaryReportContent = (
       </table>
     `;
   }
+
+  // Add new Overtime and Public Holiday summary section
+  html += `
+    <br/>
+    <h4 class="text-md font-semibold mb-2">Overtime and Public Holiday Summary</h4>
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="border-b">
+          <th class="py-2 px-4">Metric</th>
+          <th class="py-2 px-4 text-right">Amount (R)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b">
+          <td class="py-2 px-4">Overall Overtime Paid</td>
+          <td class="py-2 px-4 text-right">${overallOvertimePaid.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-2 px-4">Public Holiday Paid</td>
+          <td class="py-2 px-4 text-right">${publicHolidayPaid.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-2 px-4">Weekend Overtime</td>
+          <td class="py-2 px-4 text-right">${weekendOvertimePaid.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
 
   html += `
     <br/>
