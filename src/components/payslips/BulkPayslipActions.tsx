@@ -65,6 +65,23 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
 
   return (
     <>
+      {/* Bulk Generation Mode first */}
+      <div>
+        <Label htmlFor="bulk-mode-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Bulk Generation Mode
+        </Label>
+        <Select onValueChange={(value) => setBulkGenerationMode(value as "monthly" | "weekly")} value={bulkGenerationMode}>
+          <SelectTrigger id="bulk-mode-select" className="mt-1">
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="monthly">Monthly</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Select Pay Period second */}
       <div>
         <Label htmlFor="pay-period-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
           Select Pay Period for Bulk Payslips
@@ -88,7 +105,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
               selected={selectedPayPeriodDate}
               onSelect={setSelectedPayPeriodDate}
               initialFocus
-              captionLayout="dropdown-buttons" // Allows month/year selection
+              captionLayout="dropdown-buttons"
               fromYear={2020}
               toYear={2030}
             />
@@ -98,20 +115,8 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           <p className="text-xs text-muted-foreground mt-2">{periodHint}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="bulk-mode-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-          Bulk Generation Mode
-        </Label>
-        <Select onValueChange={(value) => setBulkGenerationMode(value as "monthly" | "weekly")} value={bulkGenerationMode}>
-          <SelectTrigger id="bulk-mode-select" className="mt-1">
-            <SelectValue placeholder="Select mode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="monthly">Monthly</SelectItem>
-            <SelectItem value="weekly">Weekly</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+
+      {/* Audit Level */}
       <div>
         <Label htmlFor="audit-level-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
           Audit Level (for report sections)
@@ -127,6 +132,8 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Bulk actions */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="w-full" variant="outline" disabled={!selectedPayPeriodDate || payslips.length === 0}>
