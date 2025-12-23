@@ -62,10 +62,22 @@ const Analytics: React.FC = () => {
     setMonthlyPayrollTrend(trendData);
 
     // --- Compensation Type Breakdown ---
+    const normalizeEarningName = (raw: string) => {
+      const n = (raw || "").toLowerCase();
+      if (n.startsWith("regular hours")) return "Regular Hours";
+      if (n.startsWith("basic salary")) return "Basic Salary";
+      if (n.startsWith("overtime")) return "Overtime";
+      if (n.startsWith("weekend overtime")) return "Weekend Overtime";
+      if (n.startsWith("public holiday (worked")) return "Public Holiday (Worked)";
+      if (n.startsWith("public holiday (no timesheet") || n.startsWith("public holiday (not worked")) return "Public Holiday (Not Worked)";
+      if (n.startsWith("bonus")) return "Bonus";
+      return raw;
+    };
     const compensationMap = new Map<string, number>();
     payslips.forEach(p => {
       p.earningsBreakdown.forEach(e => {
-        compensationMap.set(e.name, (compensationMap.get(e.name) || 0) + e.amount);
+        const key = normalizeEarningName(e.name);
+        compensationMap.set(key, (compensationMap.get(key) || 0) + e.amount);
       });
     });
     setCompensationBreakdown(
@@ -150,9 +162,12 @@ const Analytics: React.FC = () => {
     const overtimeTrendMap = new Map<string, number>();
     payslips.forEach(p => {
       const monthYear = p.payPeriod.substring(0, 7);
-      const overtimeEntry = p.earningsBreakdown.find(e => e.name === "Overtime");
-      if (overtimeEntry) {
-        overtimeTrendMap.set(monthYear, (overtimeTrendMap.get(monthYear) || 0) + overtimeEntry.amount);
+      const overtimeTotal = (p.earningsBreakdown || []).reduce((sum, e) => {
+        const n = (e.name || "").toLowerCase();
+        return sum + (n.includes("overtime") ? e.amount : 0);
+      }, 0);
+      if (overtimeTotal > 0) {
+        overtimeTrendMap.set(monthYear, (overtimeTrendMap.get(monthYear) || 0) + overtimeTotal);
       }
     });
     const sortedOvertimeTrend = Array.from(overtimeTrendMap.entries())
