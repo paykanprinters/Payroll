@@ -411,7 +411,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-start">
           <EmployeePayslipSelector
             employees={employees}
             payslips={payslips}
@@ -436,7 +436,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             />
           </div>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
+        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-start">
           <BulkPayslipActions
             payslips={payslips}
             selectedPayPeriodDate={selectedPayPeriodDate}
@@ -448,7 +448,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             auditLevel={auditLevel}
             setAuditLevel={setAuditLevel}
           />
-          <div className="md:col-span-2 lg:col-span-1 flex items-end">
+          <div className="md:col-span-2 lg:col-span-1 flex items-start">
             <Button
               className="w-full"
               onClick={() => handleGenerateAllCurrentPeriodPayslips('download')}
