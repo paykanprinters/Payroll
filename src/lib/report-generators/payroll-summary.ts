@@ -205,7 +205,7 @@ export const generatePayrollSummaryReportContent = (
       const currentStart = getStart(p.payPeriod);
       const prev = payslips
         .filter(x => x.employeeId === p.employeeId && getStart(x.payPeriod) < currentStart)
-        .sort((a, b) => getStart(b.payPeriod).getTime() - getStartDate(a.payPeriod).getTime())[0];
+        .sort((a, b) => getStart(b.payPeriod).getTime() - getStart(a.payPeriod).getTime())[0];
 
       const dGross = prev ? (p.grossEarnings || 0) - (prev.grossEarnings || 0) : null;
       const dNet = prev ? (p.netPay || 0) - (prev.netPay || 0) : null;

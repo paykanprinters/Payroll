@@ -30,9 +30,19 @@ interface NavLinkProps {
   label: string;
   isCollapsed: boolean;
   badgeCount?: number;
+  iconColor?: string;
+  activeAccentColor?: string;
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, badgeCount }) => {
+const NavLink: React.FC<NavLinkProps> = ({
+  to,
+  icon: Icon,
+  label,
+  isCollapsed,
+  badgeCount,
+  iconColor = "text-muted-foreground",
+  activeAccentColor = "border-primary",
+}) => {
   const location = useLocation();
   const isActive = location.pathname.startsWith(to);
 
@@ -41,16 +51,26 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
       asChild
       variant="ghost"
       className={cn(
-        "justify-start",
+        "justify-start group",
         isCollapsed ? "h-9 w-9 p-1.5" : "w-full px-4 py-2",
-        isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline"
+        isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent"
       )}
     >
       <Link
         to={to}
-        className="flex items-center w-full"
+        className={cn(
+          "flex items-center w-full rounded-md transition-colors",
+          isActive ? `border-l-2 ${activeAccentColor} pl-3` : ""
+        )}
       >
-        <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+        <Icon
+          className={cn(
+            "h-5 w-5 transition-transform duration-200 drop-shadow-sm",
+            iconColor,
+            !isCollapsed && "mr-3",
+            "group-hover:scale-110"
+          )}
+        />
         <span className={cn("flex-1 whitespace-nowrap", isCollapsed && "hidden")}>
           {label}
         </span>
@@ -67,16 +87,21 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, b
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
-  companyDetails: MockCompanyDetails | null; // This prop is the source of truth
-  isMockDataEnabled: boolean; // Keep this prop for other potential mock data indicators if needed
-  pendingToDosCount: number; // New prop for pending to-dos
+  companyDetails: MockCompanyDetails | null;
+  isMockDataEnabled: boolean;
+  pendingToDosCount: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyDetails, isMockDataEnabled, pendingToDosCount }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isCollapsed,
+  setIsCollapsed,
+  companyDetails,
+  isMockDataEnabled,
+  pendingToDosCount,
+}) => {
   const isMobile = useIsMobile();
   const { isAuthenticated, isLoadingAuth } = useAuth();
 
-  // Always use the companyDetails prop for display
   const displayCompanyDetails = React.useMemo(() => {
     return {
       name: companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
@@ -87,26 +112,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
     };
   }, [companyDetails]);
 
-
-  const navItems = [
-    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
-    { to: "/employees", icon: Users, label: "Employees" },
-    { to: "/timesheet", icon: Clock, label: "Timesheet" },
-    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },
-    { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements" },
-    { to: "/savings", icon: PiggyBank, label: "Savings" },
-    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
-    { to: "/analytics", icon: LineChart, label: "Analytics" },
-    { to: "/reports", icon: BarChart, label: "Reports" },
-    { to: "/settings", icon: Settings, label: "Settings" },
+  // Assign tasteful, theme-friendly colors for icons and matching active accents
+  const navItems: Array<{
+    to: string;
+    icon: React.ElementType;
+    label: string;
+    badgeCount?: number;
+    iconColor: string;
+    activeAccentColor: string;
+  }> = [
+    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", iconColor: "text-sky-600 dark:text-sky-400", activeAccentColor: "border-sky-500" },
+    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount, iconColor: "text-rose-600 dark:text-rose-400", activeAccentColor: "border-rose-500" },
+    { to: "/employees", icon: Users, label: "Employees", iconColor: "text-teal-600 dark:text-teal-400", activeAccentColor: "border-teal-500" },
+    { to: "/timesheet", icon: Clock, label: "Timesheet", iconColor: "text-amber-600 dark:text-amber-400", activeAccentColor: "border-amber-500" },
+    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips", iconColor: "text-violet-600 dark:text-violet-400", activeAccentColor: "border-violet-500" },
+    { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements", iconColor: "text-cyan-600 dark:text-cyan-400", activeAccentColor: "border-cyan-500" },
+    { to: "/savings", icon: PiggyBank, label: "Savings", iconColor: "text-emerald-600 dark:text-emerald-400", activeAccentColor: "border-emerald-500" },
+    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence", iconColor: "text-fuchsia-600 dark:text-fuchsia-400", activeAccentColor: "border-fuchsia-500" },
+    { to: "/analytics", icon: LineChart, label: "Analytics", iconColor: "text-indigo-600 dark:text-indigo-400", activeAccentColor: "border-indigo-500" },
+    { to: "/reports", icon: BarChart, label: "Reports", iconColor: "text-blue-600 dark:text-blue-400", activeAccentColor: "border-blue-500" },
+    { to: "/settings", icon: Settings, label: "Settings", iconColor: "text-orange-600 dark:text-orange-400", activeAccentColor: "border-orange-500" },
   ];
 
   const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
-    <div className={cn(
-      "flex items-center border-b px-4 lg:px-6",
-      currentIsCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6"
-    )}>
+    <div
+      className={cn(
+        "flex items-center border-b px-4 lg:px-6",
+        currentIsCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6"
+      )}
+    >
       {currentIsCollapsed ? (
         <Button
           variant="ghost"
@@ -114,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
           onClick={() => toggleCollapse(!currentIsCollapsed)}
           className="mx-auto bg-gray-100 dark:bg-gray-700 z-10"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-5 w-5 text-primary" />
         </Button>
       ) : (
         <>
@@ -123,7 +157,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
               <img
                 src={displayCompanyDetails.logoUrl}
                 alt="Company Logo"
-                style={{ width: displayCompanyDetails.logoWidth, height: displayCompanyDetails.logoHeight, objectFit: displayCompanyDetails.logoFit as React.CSSProperties['objectFit'] }}
+                style={{
+                  width: displayCompanyDetails.logoWidth,
+                  height: displayCompanyDetails.logoHeight,
+                  objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
+                }}
                 className="mb-1"
               />
             )}
@@ -135,7 +173,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
             onClick={() => toggleCollapse(!currentIsCollapsed)}
             className="ml-auto bg-gray-100 dark:bg-gray-700 z-10"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5 text-primary" />
           </Button>
         </>
       )}
@@ -151,7 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50">
-            <Menu className="h-6 w-6" />
+            <Menu className="h-6 w-6 text-primary" />
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
@@ -166,6 +204,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
                   label={item.label}
                   isCollapsed={false}
                   badgeCount={item.badgeCount}
+                  iconColor={item.iconColor}
+                  activeAccentColor={item.activeAccentColor}
                 />
               ))}
             </nav>
@@ -192,6 +232,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, companyD
             label={item.label}
             isCollapsed={isCollapsed}
             badgeCount={item.badgeCount}
+            iconColor={item.iconColor}
+            activeAccentColor={item.activeAccentColor}
           />
         ))}
       </nav>
