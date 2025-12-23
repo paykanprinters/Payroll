@@ -99,20 +99,6 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
         )}
       </div>
       <div>
-        <Label htmlFor="bulk-mode-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-          Bulk Generation Mode
-        </Label>
-        <Select onValueChange={(value) => setBulkGenerationMode(value as "monthly" | "weekly")} value={bulkGenerationMode}>
-          <SelectTrigger id="bulk-mode-select" className="mt-1">
-            <SelectValue placeholder="Select mode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="monthly">Monthly</SelectItem>
-            <SelectItem value="weekly">Weekly</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
         <Label htmlFor="audit-level-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
           Audit Level (for report sections)
         </Label>
@@ -124,6 +110,20 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
             <SelectItem value="minimal">Minimal</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
             <SelectItem value="detailed">Detailed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="bulk-mode-select" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Bulk Generation Mode
+        </Label>
+        <Select onValueChange={(value) => setBulkGenerationMode(value as "monthly" | "weekly")} value={bulkGenerationMode}>
+          <SelectTrigger id="bulk-mode-select" className="mt-1">
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="monthly">Monthly</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
           </SelectContent>
         </Select>
       </div>
