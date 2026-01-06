@@ -17,6 +17,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
 
 interface TimesheetTableProps {
   timesheets: TimesheetEntry[];
@@ -76,18 +77,17 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
     setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   };
 
-  // Only reset to page 1 when the filter changes
   React.useEffect(() => {
     setCurrentPage(1);
   }, [employeeFilter]);
 
-  // Clamp current page if data size shrinks (e.g., after delete/update) so we don't jump to page 1 unnecessarily
   React.useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
 
   return (
-    <Card className="mt-6">
+    <Card className="mt-6 relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+      <SummaryAccent variant="emerald" />
       <CardHeader className="space-y-2">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -100,7 +100,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
               onChange={(e) => setEmployeeFilter(e.target.value)}
               placeholder="Filter by employee number (e.g., KAN004)"
               aria-label="Filter by employee number"
-              className="h-9"
+              className="h-9 rounded-full"
             />
           </div>
         </div>
@@ -160,10 +160,10 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="flex justify-center gap-2">
-                      <Button variant="outline" size="icon" onClick={() => onEdit(entry)}>
+                      <Button variant="outline" size="icon" onClick={() => onEdit(entry)} className="rounded-full">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" onClick={() => onDelete(entry.id)}>
+                      <Button variant="outline" size="icon" onClick={() => onDelete(entry.id)} className="rounded-full">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Select
@@ -172,7 +172,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                         }
                         value={entry.status}
                       >
-                        <SelectTrigger className="w-[120px] h-8">
+                        <SelectTrigger className="w-[120px] h-8 rounded-full">
                           <SelectValue placeholder="Change Status" />
                         </SelectTrigger>
                         <SelectContent>

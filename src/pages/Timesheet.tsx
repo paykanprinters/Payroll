@@ -6,15 +6,16 @@ import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, Clock, Send, CheckCircle } from "lucide-react";
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import TimesheetHeader from "@/components/timesheet/TimesheetHeader";
 
 const Timesheet: React.FC = () => {
-  // Use silent mode to avoid global side effects (e.g., To-Dos refresh) during imports
   const {
     employees,
     leaveRecords,
@@ -63,22 +64,68 @@ const Timesheet: React.FC = () => {
     setIsWeeklyEditorOpen(true);
   };
 
+  const totalEntries = React.useMemo(() => timesheets.length, [timesheets]);
+  const submittedCount = React.useMemo(() => timesheets.filter(ts => ts.status === "Submitted").length, [timesheets]);
+  const approvedCount = React.useMemo(() => timesheets.filter(ts => ts.status === "Approved").length, [timesheets]);
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Timesheet Management</h1>
-      <p className="text-lg text-muted-foreground">
-        Accurately track employee working hours, breaks, and calculate payroll-related metrics.
-      </p>
+      <TimesheetHeader onOpenImport={() => setIsImportDialogOpen(true)} importDisabled={!!isLoadingEmployees} />
 
-      {/* Modal trigger */}
-      <div className="flex justify-end gap-2">
-        <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" disabled={!!isLoadingEmployees}>
-          <UploadCloud className="mr-2 h-4 w-4" /> Import Clock Times
-        </Button>
+      {/* Compact stats row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
+                <Clock className="h-4 w-4" />
+              </span>
+              Total Entries
+            </CardTitle>
+            <CardDescription className="text-xs">All recorded timesheets</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalEntries}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+                <Send className="h-4 w-4" />
+              </span>
+              Submitted
+            </CardTitle>
+            <CardDescription className="text-xs">Awaiting approval</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{submittedCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="orange" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
+                <CheckCircle className="h-4 w-4" />
+              </span>
+              Approved
+            </CardTitle>
+            <CardDescription className="text-xs">Finalized entries</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{approvedCount}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Timesheet entry form */}
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="sky" />
         <CardHeader>
           <CardTitle>{isEditing ? "Edit Timesheet Entry" : "Record Daily Time"}</CardTitle>
           <CardDescription>
