@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import RetroFunkHeader from "@/components/dashboard/RetroFunkHeader";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
 import ToDoList from "@/components/ToDoList";
 import DashboardMonthlyPayrollOverviewChart from "@/components/dashboard/DashboardMonthlyPayrollOverviewChart";
@@ -160,14 +160,22 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <DashboardHeader />
+      <RetroFunkHeader />
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full max-w-xl grid grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="payroll">Payroll</TabsTrigger>
-          <TabsTrigger value="workforce">Workforce</TabsTrigger>
-          <TabsTrigger value="leave">Leave</TabsTrigger>
+        <TabsList className="w-full max-w-2xl grid grid-cols-4 gap-2 bg-white/60 backdrop-blur-md rounded-full p-1 ring-1 ring-muted">
+          <TabsTrigger value="overview" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="payroll" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
+            Payroll
+          </TabsTrigger>
+          <TabsTrigger value="workforce" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
+            Workforce
+          </TabsTrigger>
+          <TabsTrigger value="leave" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
+            Leave
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -179,39 +187,48 @@ const Dashboard: React.FC = () => {
             />
           )}
 
-          {visibleWidgets.payrollRunCard && (
-            <PayrollRunCard
-              employees={employees}
-              companyDetails={companyDetails}
-              payCycleType={payCycleSettings?.payCycleType ?? 'Weekly'}
-              cutOffDay={payCycleSettings?.cutOffDay ?? 5}
-              payDayOffset={payCycleSettings?.payDayOffset ?? 0}
-              runPayrollProcess={runPayrollProcess}
-              calculateSinglePayslipPreview={calculateSinglePayslipPreview}
-              payslipDesignSettings={payslipDesignSettings}
-            />
-          )}
-
-          {visibleWidgets.quickActionsCard && <DashboardQuickActionsCard />}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-4 lg:col-span-2">
+              {visibleWidgets.payrollRunCard && (
+                <PayrollRunCard
+                  employees={employees}
+                  companyDetails={companyDetails}
+                  payCycleType={payCycleSettings?.payCycleType ?? 'Weekly'}
+                  cutOffDay={payCycleSettings?.cutOffDay ?? 5}
+                  payDayOffset={payCycleSettings?.payDayOffset ?? 0}
+                  runPayrollProcess={runPayrollProcess}
+                  calculateSinglePayslipPreview={calculateSinglePayslipPreview}
+                  payslipDesignSettings={payslipDesignSettings}
+                />
+              )}
+            </div>
+            <div className="space-y-4 lg:col-span-1">
+              {visibleWidgets.quickActionsCard && <DashboardQuickActionsCard />}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="payroll" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-            {visibleWidgets.monthlyPayrollOverviewChart && (
-              <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />
-            )}
-            {visibleWidgets.averageNetPayTrendChart && (
-              <DashboardAverageNetPayTrendChart averageNetPayTrend={averageNetPayTrend} />
-            )}
-          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-4 lg:col-span-2">
+              <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+                {visibleWidgets.monthlyPayrollOverviewChart && (
+                  <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />
+                )}
+                {visibleWidgets.averageNetPayTrendChart && (
+                  <DashboardAverageNetPayTrendChart averageNetPayTrend={averageNetPayTrend} />
+                )}
+              </div>
+              {visibleWidgets.totalDeductionsBreakdownChart && (
+                <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={totalDeductionsBreakdown} />
+              )}
+            </div>
 
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-            {visibleWidgets.totalDeductionsBreakdownChart && (
-              <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={totalDeductionsBreakdown} />
-            )}
-            {visibleWidgets.toDoListCard && (
-              <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />
-            )}
+            <div className="space-y-4 lg:col-span-1">
+              {visibleWidgets.toDoListCard && (
+                <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />
+              )}
+            </div>
           </div>
         </TabsContent>
 
@@ -238,7 +255,7 @@ const Dashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      <div className="mt-4 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
+      <div className="mt-2 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
         <h3 className="font-semibold text-lg mb-2">Important Note on South African Regulations:</h3>
         <p className="text-sm">
           This dashboard provides the user interface for a payroll system. The complex calculations required to meet full South African regulations for pay and deductions (such as PAYE, UIF, SDL, etc.) are highly specialized and typically handled by a robust backend system. This front-end setup provides the structure for managing and displaying payroll data, but the actual calculation logic would need to be implemented on the server-side.
