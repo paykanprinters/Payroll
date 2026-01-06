@@ -19,64 +19,57 @@ import {
   Cell,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { useLoansData } from "@/hooks/use-loans-data"; // Import the new hook
-import LoanForm from "@/components/loans/LoanForm"; // Import the new form component
-import LoanCard from "@/components/loans/LoanCard"; // Import the new card component
-import { Loan } from "@/lib/mock-data-interfaces"; // Import Loan interface
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { useLoansData } from "@/hooks/use-loans-data";
+import LoanForm from "@/components/loans/LoanForm";
+import LoanCard from "@/components/loans/LoanCard";
+import { Loan } from "@/lib/mock-data-interfaces";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import LoansHeader from "@/components/loans/LoansHeader";
+import { DollarSign, Wallet, PauseCircle } from "lucide-react";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const LoansAndAdvancements: React.FC = () => {
-  const { employees, loans: initialLoans, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor(); // Get employees, initialLoans, isMockDataEnabled from usePayrollProcessor
-  const { loans, addLoan, getEmployeeName, getEmployeeCustomId, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData({ initialLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Pass initialLoans, employees, isMockDataEnabled to useLoansData
+  const { employees, loans: initialLoans, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
+  const { loans, addLoan, getEmployeeName, getEmployeeCustomId, togglePauseDeduction, applyManualPayment, deleteLoan } = useLoansData({ initialLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   const [loanSummaryData, setLoanSummaryData] = useState<{ name: string; totalLoan: number; remaining: number }[]>([]);
   const [loansByEmployeeData, setLoansByEmployeeData] = useState<{ name: string; value: number }[]>([]);
-  const [loansByTypeData, setLoansByTypeData] = useState<{ name: string; value: number }[]>([]); // New state for loans by type
+  const [loansByTypeData, setLoansByTypeData] = useState<{ name: string; value: number }[]>([]);
 
   useEffect(() => {
-    console.log("LoansAndAdvancements: Current loans state:", loans); // Added log
-    console.log("LoansAndAdvancements: Current employees state:", employees); // Added log
-
     // Calculate loan summary for BarChart
     const totalLoanAmount = loans.reduce((sum, loan) => sum + loan.loanAmount, 0);
     const totalRemainingBalance = loans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
-    setLoanSummaryData([
-      { name: "All Loans", totalLoan: totalLoanAmount, remaining: totalRemainingBalance },
-    ]);
+    setLoanSummaryData([{ name: "All Loans", totalLoan: totalLoanAmount, remaining: totalRemainingBalance }]);
 
-    // Calculate loans by employee for PieChart (top 5 employees with highest remaining balance)
+    // Calculate loans by employee for PieChart (top 5 remaining)
     const employeeLoanBalances = new Map<string, number>();
     loans.forEach(loan => {
       const employeeName = getEmployeeName(loan.employeeId);
       employeeLoanBalances.set(employeeName, (employeeLoanBalances.get(employeeName) || 0) + loan.remainingBalance);
     });
-
     const sortedEmployeeLoans = Array.from(employeeLoanBalances.entries())
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 5) // Top 5
+      .slice(0, 5)
       .map(([name, value]) => ({ name, value }));
-    
     setLoansByEmployeeData(sortedEmployeeLoans);
 
-    // Calculate loans by type for PieChart
+    // Calculate loans by type
     const loanTypeCounts = new Map<Loan["loanType"], number>();
     loans.forEach(loan => {
       loanTypeCounts.set(loan.loanType, (loanTypeCounts.get(loan.loanType) || 0) + 1);
     });
-    setLoansByTypeData(
-      Array.from(loanTypeCounts.entries()).map(([name, value]) => ({ name, value }))
-    );
-
-  }, [loans, employees, getEmployeeName]); // Added employees to dependencies
+    setLoansByTypeData(Array.from(loanTypeCounts.entries()).map(([name, value]) => ({ name, value })));
+  }, [loans, getEmployeeName]);
 
   const handleAddLoan = (newLoanData: Omit<Loan, 'id' | 'status' | 'remainingBalance' | 'deductionHistory' | 'paused'>) => {
     addLoan(newLoanData);
   };
 
-  // Helper for PieChart legend formatter
+  // Legend formatter for Pie
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
     return `${value} (${percentage}%)`;
@@ -85,15 +78,81 @@ const LoansAndAdvancements: React.FC = () => {
   const totalLoansByEmployee = loansByEmployeeData.reduce((sum, entry) => sum + entry.value, 0);
   const totalLoansByType = loansByTypeData.reduce((sum, entry) => sum + entry.value, 0);
 
+  const totalLoanAmount = loanSummaryData[0]?.totalLoan || 0;
+  const totalRemainingBalance = loanSummaryData[0]?.remaining || 0;
+  const activeLoansCount = loans.filter(l => l.status === "active").length;
+  const pausedDeductionsCount = loans.filter(l => l.paused).length;
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Loans & Advancements</h1>
-      <p className="text-lg text-muted-foreground">
-        Manage employee loans and advancements, including flexible repayment schedules and controls.
-      </p>
+      <LoansHeader />
 
+      {/* KPI row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
+                <DollarSign className="h-4 w-4" />
+              </span>
+              Total Loan Amount
+            </CardTitle>
+            <CardDescription className="text-xs">Sum across all recorded loans</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R {totalLoanAmount.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+                <Wallet className="h-4 w-4" />
+              </span>
+              Total Remaining
+            </CardTitle>
+            <CardDescription className="text-xs">Outstanding balances to recover</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R {totalRemainingBalance.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="orange" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Active Loans</CardTitle>
+            <CardDescription className="text-xs">Currently in repayment</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeLoansCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="amber" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-100 text-amber-600">
+                <PauseCircle className="h-4 w-4" />
+              </span>
+              Paused Deductions
+            </CardTitle>
+            <CardDescription className="text-xs">Paused until resumed</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pausedDeductionsCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
           <CardHeader>
             <CardTitle>Loan Overview</CardTitle>
             <CardDescription>Total loan amounts vs. remaining balances.</CardDescription>
@@ -113,7 +172,8 @@ const LoansAndAdvancements: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
           <CardHeader>
             <CardTitle>Loans by Employee (Top 5 Remaining)</CardTitle>
             <CardDescription>Distribution of remaining loan balances among employees.</CardDescription>
@@ -144,74 +204,73 @@ const LoansAndAdvancements: React.FC = () => {
         </Card>
       </div>
 
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="orange" />
         <CardHeader>
           <CardTitle>Loans by Type</CardTitle>
           <CardDescription>Distribution of loans by their categorized type.</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={loansByTypeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  labelLine={false} // Ensure no lines to labels
-                  style={{ fontSize: dataVisualsFontSize }}
-                >
-                  {loansByTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLoansByType)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={loansByTypeData}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                labelLine={false}
+                style={{ fontSize: dataVisualsFontSize }}
+              >
+                {loansByTypeData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+              <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLoansByType)} />
+            </PieChart>
+          </ResponsiveContainer>
+        </CardContent>
       </Card>
 
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="emerald" />
         <CardHeader>
           <CardTitle>Add New Loan/Advancement</CardTitle>
-          <CardDescription>
-            Enter details for a new loan or advancement to an employee.
-          </CardDescription>
+          <CardDescription>Enter details for a new loan or advancement to an employee.</CardDescription>
         </CardHeader>
         <CardContent>
           <LoanForm employees={employees} onAddLoan={handleAddLoan} />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="sky" />
         <CardHeader>
           <CardTitle>Current Loans & Advancements</CardTitle>
-          <CardDescription>
-            Manage active and completed loans for your employees.
-          </CardDescription>
+          <CardDescription>Manage active and completed loans for your employees.</CardDescription>
         </CardHeader>
         <CardContent>
           {loans.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {loans.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).map((loan) => (
-                <LoanCard
-                  key={loan.id}
-                  loan={loan}
-                  getEmployeeName={getEmployeeName}
-                  getEmployeeCustomId={getEmployeeCustomId} // Pass new prop
-                  togglePauseDeduction={togglePauseDeduction}
-                  applyManualPayment={applyManualPayment}
-                  deleteLoan={deleteLoan}
-                />
-              ))}
+              {loans
+                .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                .map((loan) => (
+                  <LoanCard
+                    key={loan.id}
+                    loan={loan}
+                    getEmployeeName={getEmployeeName}
+                    getEmployeeCustomId={getEmployeeCustomId}
+                    togglePauseDeduction={togglePauseDeduction}
+                    applyManualPayment={applyManualPayment}
+                    deleteLoan={deleteLoan}
+                  />
+                ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No loans or advancements recorded.
-            </div>
+            <div className="text-center py-8 text-muted-foreground">No loans or advancements recorded.</div>
           )}
         </CardContent>
       </Card>
