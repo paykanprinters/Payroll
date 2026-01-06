@@ -260,6 +260,9 @@ const Employees: React.FC = () => {
     [employees]
   );
 
+  // Call this hook once at the top-level to avoid varying hook calls across renders
+  const chartFontSize = useDataVisualsFontSize();
+
   if (isLoadingEmployees && employees.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -308,8 +311,8 @@ const Employees: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <JobTitleDistributionChart data={jobTitleDistribution} fontSize={useDataVisualsFontSize()} />
-        <AverageSalaryChart data={averageSalaryByJobTitle} fontSize={useDataVisualsFontSize()} />
+        <JobTitleDistributionChart data={jobTitleDistribution} fontSize={chartFontSize} />
+        <AverageSalaryChart data={averageSalaryByJobTitle} fontSize={chartFontSize} />
       </div>
 
       <EmployeesTable
