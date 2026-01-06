@@ -1,49 +1,26 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as ReTooltip,
-  Legend as ReLegend,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import { PlusCircle, Edit, Trash2, Download, Loader2, Search, X, RefreshCcw, ListFilter, ArrowUpDown } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
-import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
-import html2pdf from 'html2pdf.js';
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import EmployeesHeader from "@/components/employees/EmployeesHeader";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import EmployeesToolbar from "@/components/employees/EmployeesToolbar";
+import EmployeesStats from "@/components/employees/EmployeesStats";
+import JobTitleDistributionChart from "@/components/employees/JobTitleDistributionChart";
+import AverageSalaryChart from "@/components/employees/AverageSalaryChart";
+import EmployeesTable from "@/components/employees/EmployeesTable";
+import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
+type SortField = "name" | "jobTitle" | "startDate" | "customEmployeeId";
+type SortDir = "asc" | "desc";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -52,9 +29,6 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   reportContentFontSize: 14,
   irp5ContentFontSize: 12,
 };
-
-type SortField = "name" | "jobTitle" | "startDate" | "customEmployeeId";
-type SortDir = "asc" | "desc";
 
 const Employees: React.FC = () => {
   const {
@@ -78,7 +52,7 @@ const Employees: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // New filters and sorting
+  // Filters and sorting state
   const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [payBasisFilter, setPayBasisFilter] = useState<"all" | "salary" | "hourly">("all");
@@ -254,7 +228,6 @@ const Employees: React.FC = () => {
 
   const handleDownloadProfile = async (employee: MockEmployee) => {
     if (!companyDetails || !reportDesignSettings) {
-      // Keep UX simple: rely on toast from hooks elsewhere
       return;
     }
 
@@ -278,13 +251,6 @@ const Employees: React.FC = () => {
     await generatePdf(renderComponent, options);
   };
 
-  const renderLegendText = (value: string, entry: any, total: number) => {
-    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
-    return `${value} (${percentage}%)`;
-  };
-
-  const totalJobTitles = jobTitleDistribution.reduce((sum, entry) => sum + entry.value, 0);
-
   const salaryCount = useMemo(
     () => employees.filter(e => e.salary != null && e.salary > 0).length,
     [employees]
@@ -307,141 +273,33 @@ const Employees: React.FC = () => {
     <div className="flex flex-col gap-4">
       <EmployeesHeader />
 
-      {/* Toolbar: Filters, Sorting, Actions */}
-      <Card className="border rounded-xl">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="flex items-center gap-2">
-              <ListFilter className="h-4 w-4 text-muted-foreground" />
-              <Select value={jobTitleFilter} onValueChange={setJobTitleFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Job title" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All job titles</SelectItem>
-                  {jobTitles.map((jt) => <SelectItem key={jt} value={jt}>{jt}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <ListFilter className="h-4 w-4 text-muted-foreground" />
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All departments</SelectItem>
-                  {departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <ListFilter className="h-4 w-4 text-muted-foreground" />
-              <Select value={payBasisFilter} onValueChange={(v: "all" | "salary" | "hourly") => setPayBasisFilter(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pay basis" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="salary">Salary</SelectItem>
-                  <SelectItem value="hourly">Hourly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <ListFilter className="h-4 w-4 text-muted-foreground" />
-              <Select value={portalAccessFilter} onValueChange={(v: "all" | "true" | "false") => setPortalAccessFilter(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Portal access" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="true">Enabled</SelectItem>
-                  <SelectItem value="false">Disabled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <EmployeesToolbar
+        jobTitles={jobTitles}
+        departments={departments}
+        jobTitleFilter={jobTitleFilter}
+        setJobTitleFilter={setJobTitleFilter}
+        departmentFilter={departmentFilter}
+        setDepartmentFilter={setDepartmentFilter}
+        payBasisFilter={payBasisFilter}
+        setPayBasisFilter={setPayBasisFilter}
+        portalAccessFilter={portalAccessFilter}
+        setPortalAccessFilter={setPortalAccessFilter}
+        sortField={sortField}
+        setSortField={setSortField}
+        sortDir={sortDir}
+        setSortDir={setSortDir}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        onRefresh={() => refetchEmployees?.()}
+        totalCount={employees.length}
+        filteredCount={filteredEmployees.length}
+      />
 
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              <Select value={sortField} onValueChange={(v: SortField) => setSortField(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="jobTitle">Job Title</SelectItem>
-                  <SelectItem value="startDate">Start Date</SelectItem>
-                  <SelectItem value="customEmployeeId">Employee ID</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              <Select value={sortDir} onValueChange={(v: SortDir) => setSortDir(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Order" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="asc">Ascending</SelectItem>
-                  <SelectItem value="desc">Descending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetchEmployees?.()}
-                className="rounded-full"
-                title="Refresh employees"
-              >
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                Refresh
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                Showing {filteredEmployees.length} of {employees.length}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm">
-          <SummaryAccent variant="sky" />
-          <CardHeader className="pb-2">
-            <CardTitle>Total Employees</CardTitle>
-            <CardDescription>Organization size</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-semibold">{employees.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm">
-          <SummaryAccent variant="emerald" />
-          <CardHeader className="pb-2">
-            <CardTitle>Salary-based</CardTitle>
-            <CardDescription>Fixed compensation</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-semibold">{salaryCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm">
-          <SummaryAccent variant="orange" />
-          <CardHeader className="pb-2">
-            <CardTitle>Hourly-based</CardTitle>
-            <CardDescription>Time-based compensation</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-semibold">{hourlyCount}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <EmployeesStats
+        totalCount={employees.length}
+        salaryCount={salaryCount}
+        hourlyCount={hourlyCount}
+      />
 
       <div className="flex justify-end">
         <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee} className="rounded-full">
@@ -450,164 +308,17 @@ const Employees: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="sky" />
-          <CardHeader>
-            <CardTitle>Employee Distribution by Job Title</CardTitle>
-            <CardDescription>Visual breakdown of employees across different roles.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={jobTitleDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  labelLine={false}
-                  style={{ fontSize: dataVisualsFontSize }}
-                >
-                  {jobTitleDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <ReTooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <ReLegend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="emerald" />
-          <CardHeader>
-            <CardTitle>Average Salary by Job Title</CardTitle>
-            <CardDescription>Comparison of average salaries across different job titles.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={averageSalaryByJobTitle}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-                <ReTooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <ReLegend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                <Bar dataKey="salary" fill="#82ca9d" name="Average Salary" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <JobTitleDistributionChart data={jobTitleDistribution} fontSize={useDataVisualsFontSize()} />
+        <AverageSalaryChart data={averageSalaryByJobTitle} fontSize={useDataVisualsFontSize()} />
       </div>
 
-      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-        <SummaryAccent variant="orange" />
-        <CardHeader>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Employee List</CardTitle>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative w-full sm:w-80">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by ID, name, title, department, email..."
-                  className="pl-8 rounded-full"
-                  aria-label="Search employees"
-                />
-              </div>
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchTerm("")}
-                  aria-label="Clear search"
-                  className="px-2 rounded-full"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {employees.length > 0 ? (
-            filteredEmployees.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee ID</TableHead>
-                      <TableHead>Personal ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Job Title</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Mobile</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead className="text-right">Salary/Rate</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEmployees.map((employee) => (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.customEmployeeId}</TableCell>
-                        <TableCell>{employee.personalId || "N/A"}</TableCell>
-                        <TableCell>{employee.firstName} {employee.lastName}</TableCell>
-                        <TableCell>{employee.jobTitle}</TableCell>
-                        <TableCell>{employee.department || "N/A"}</TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
-                        <TableCell>{employee.startDate}</TableCell>
-                        <TableCell className="text-right">
-                          {employee.salary ? (
-                            <div className="inline-flex items-center gap-2">
-                              <Badge variant="secondary">Salary</Badge>
-                              <span>{`R ${employee.salary.toLocaleString('en-ZA')}`}</span>
-                            </div>
-                          ) : employee.hourlyRate ? (
-                            <div className="inline-flex items-center gap-2">
-                              <Badge variant="secondary">Hourly</Badge>
-                              <span>{`R ${employee.hourlyRate.toLocaleString('en-ZA')} / hr`}</span>
-                            </div>
-                          ) : (
-                            "N/A"
-                          )}
-                        </TableCell>
-                        <TableCell className="flex justify-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)} disabled={isMutatingEmployee} className="rounded-full">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)} disabled={isMutatingEmployee} className="rounded-full">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)} disabled={isMutatingEmployee} className="rounded-full">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="text-xs text-muted-foreground mt-3">
-                  Showing {filteredEmployees.length} of {employees.length} employees
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No matching employees for “{debouncedSearch}”.
-              </div>
-            )
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No employee data available. Please add employees using the button above or {isLoadingEmployees ? "loading..." : "add employees to the database."}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <EmployeesTable
+        employees={filteredEmployees}
+        isMutatingEmployee={isMutatingEmployee}
+        onEdit={handleEditEmployeeClick}
+        onDownloadProfile={handleDownloadProfile}
+        onDelete={handleDeleteEmployeeClick}
+      />
 
       <EmployeeFormDialog
         isOpen={isFormOpen}
@@ -616,24 +327,13 @@ const Employees: React.FC = () => {
         initialEmployee={editingEmployee}
       />
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently remove the employee{" "}
-              <span className="font-semibold">{employeeToDelete?.firstName} {employeeToDelete?.lastName}</span>{" "}
-              and their associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isMutatingEmployee}>
-              {isMutatingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteEmployeeDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        employee={employeeToDelete}
+        onConfirm={confirmDeleteEmployee}
+        isMutatingEmployee={isMutatingEmployee}
+      />
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Employee Data Section</h3>
