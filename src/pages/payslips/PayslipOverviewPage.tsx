@@ -1,37 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react"; // Import Loader2 icon
+import { Loader2, DollarSign, Wallet, ReceiptText } from "lucide-react";
 
-// Import new modular components
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
-import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { showError } from "@/utils/toast";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
-
-const defaultPayslipSettings: PayslipDesignSettings = {
-  showCompanyLogo: true,
-  showCompanyDetails: true,
-  showEmployeeDetails: true,
-  showEarningsBreakdown: true,
-  showDeductionsBreakdown: true,
-  showLeaveSummary: true,
-  showBankDetails: true,
-  showYTD: true,
-  showHourlyRate: true,
-  sectionOrder: ["Earnings", "Deductions"],
-  layoutSize: "A4",
-  earningsDeductionsLayout: "deductions-left-earnings-right",
-  payslipLogoUrl: '',
-  payslipLogoWidth: 100,
-  payslipLogoHeight: 50,
-  payslipLogoFit: 'contain',
-};
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import PayslipsHeader from "@/components/payslips/PayslipsHeader";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -58,9 +38,7 @@ const PayslipOverviewPage: React.FC = () => {
     if (payslips.length > 0) {
       const totalGross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
       const totalNet = payslips.reduce((sum, p) => sum + p.netPay, 0);
-      setPayrollSummaryData([
-        { name: "Total Payroll", gross: totalGross, net: totalNet },
-      ]);
+      setPayrollSummaryData([{ name: "Total Payroll", gross: totalGross, net: totalNet }]);
 
       const deductionsMap = new Map<string, number>();
       payslips.forEach(payslip => {
@@ -72,7 +50,6 @@ const PayslipOverviewPage: React.FC = () => {
       setDeductionsBreakdownData(
         Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
       );
-
     } else {
       setPayrollSummaryData([]);
       setDeductionsBreakdownData([]);
@@ -101,8 +78,8 @@ const PayslipOverviewPage: React.FC = () => {
     };
 
     window.addEventListener('allMockDataUpdated', handleMockDataUpdate);
-    window.addEventListener('payslipsUpdated', handleMockDataUpdate); // Listen for specific payslip updates
-    window.addEventListener('employeesUpdated', handleMockDataUpdate); // Listen for specific employee updates
+    window.addEventListener('payslipsUpdated', handleMockDataUpdate);
+    window.addEventListener('employeesUpdated', handleMockDataUpdate);
     window.addEventListener('reportDesignUpdated', handleReportDesignUpdate);
 
     return () => {
@@ -113,54 +90,21 @@ const PayslipOverviewPage: React.FC = () => {
     };
   }, [loadPayslipsAndEmployees, loadReportDesignSettings]);
 
-  React.useEffect(() => {
-    console.log("PayslipOverviewPage useEffect: Running...");
-    console.log("  selectedEmployeeId:", selectedEmployeeId);
-    console.log("  selectedPayslipId (before logic):", selectedPayslipId);
-    console.log("  payslips.length:", payslips.length);
-
+  useEffect(() => {
     if (!selectedEmployeeId || payslips.length === 0) {
-      // If no employee is selected or no payslips exist, ensure selectedPayslipId is cleared.
-      if (selectedPayslipId) {
-        console.log("  No employee or no payslips, clearing selectedPayslipId.");
-        setSelectedPayslipId("");
-      }
+      if (selectedPayslipId) setSelectedPayslipId("");
       return;
     }
-
     const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
-    console.log("  filteredPayslipsForEmployee.length:", filteredPayslipsForEmployee.length);
-
     if (filteredPayslipsForEmployee.length === 0) {
-      // If no payslips for the selected employee, clear the selectedPayslipId
-      if (selectedPayslipId) {
-        console.log("  No payslips for selected employee, clearing selectedPayslipId.");
-        setSelectedPayslipId("");
-      }
+      if (selectedPayslipId) setSelectedPayslipId("");
       return;
     }
-
-    // ONLY set a default if NO payslip is currently selected.
-    // If selectedPayslipId has a value, we assume the user made a choice and don't override it.
     if (!selectedPayslipId) {
-      console.log("  No payslip currently selected. Attempting to set to most recent as default.");
       const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
-      if (mostRecentPayslip) {
-        console.log("  Setting selectedPayslipId to most recent:", mostRecentPayslip.id);
-        setSelectedPayslipId(mostRecentPayslip.id);
-      } else {
-        console.log("  No most recent payslip found, clearing selectedPayslipId.");
-        setSelectedPayslipId("");
-      }
-    } else {
-      console.log("  A payslip is already selected. Not automatically changing user's selection.");
-      // We could add a check here to see if the selectedPayslipId is *still valid*
-      // for the current employee. If not, the dropdown might show an empty state.
-      // But we won't force it to the most recent.
+      if (mostRecentPayslip) setSelectedPayslipId(mostRecentPayslip.id);
     }
-    console.log("PayslipOverviewPage useEffect: Finished. selectedPayslipId (after logic):", selectedPayslipId);
   }, [selectedEmployeeId, payslips, selectedPayslipId, setSelectedPayslipId]);
-
 
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
@@ -168,8 +112,14 @@ const PayslipOverviewPage: React.FC = () => {
   };
 
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
-
   const isLoadingPage = isLoadingCompanyDetails || isLoadingEmployees || isLoadingPayslips;
+
+  const totals = useMemo(() => {
+    const gross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+    const net = payslips.reduce((sum, p) => sum + p.netPay, 0);
+    const count = payslips.length;
+    return { gross, net, count };
+  }, [payslips]);
 
   if (isLoadingPage) {
     return (
@@ -196,10 +146,58 @@ const PayslipOverviewPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Payslip Overview</h1>
-      <p className="text-lg text-muted-foreground">
-        Generate new payslips, view historical payslips, and manage payroll periods.
-      </p>
+      <PayslipsHeader />
+
+      {/* Soft-accent stat cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
+                <DollarSign className="h-4 w-4" />
+              </span>
+              Total Gross Payroll
+            </CardTitle>
+            <CardDescription className="text-xs">Sum of gross earnings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R {totals.gross.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+                <Wallet className="h-4 w-4" />
+              </span>
+              Total Net Payroll
+            </CardTitle>
+            <CardDescription className="text-xs">Sum of net pay</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R {totals.net.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="orange" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
+                <ReceiptText className="h-4 w-4" />
+              </span>
+              Payslips Generated
+            </CardTitle>
+            <CardDescription className="text-xs">Total available payslips</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.count}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       {payslips.length === 0 && (
         <Card className="border-yellow-500 bg-yellow-50 text-yellow-800">
@@ -214,44 +212,61 @@ const PayslipOverviewPage: React.FC = () => {
         </Card>
       )}
 
-      <PayslipSummaryCharts
-        payrollSummaryData={payrollSummaryData}
-        deductionsBreakdownData={deductionsBreakdownData}
-      />
+      {/* Two-column layout: charts on the left, generator on the right */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <PayslipSummaryCharts
+            payrollSummaryData={payrollSummaryData}
+            deductionsBreakdownData={deductionsBreakdownData}
+          />
 
-      <PayslipGenerationSection
-        employees={employees}
-        payslips={payslips}
-        selectedEmployeeId={selectedEmployeeId}
-        setSelectedEmployeeId={setSelectedEmployeeId}
-        selectedPayslipId={selectedPayslipId}
-        setSelectedPayslipId={setSelectedPayslipId}
-        getEmployeeName={getEmployeeName}
-        payslipDesignSettings={payslipDesignSettings}
-        companyDetails={companyDetails}
-        allEmployees={employees}
-      />
+          {selectedPayslipForPreview && (
+            <Card className="relative overflow-hidden border rounded-xl bg-white">
+              <SummaryAccent variant="sky" />
+              <CardHeader>
+                <CardTitle>Payslip Preview</CardTitle>
+                <CardDescription>
+                  Preview of the selected payslip for {getEmployeeName(selectedPayslipForPreview.employeeId)} - {selectedPayslipForPreview.payPeriod}.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <IndividualPayslipCard
+                  payslip={selectedPayslipForPreview}
+                  payslipDesignSettings={payslipDesignSettings}
+                  companyDetails={companyDetails}
+                  employees={employees}
+                  getEmployeeName={getEmployeeName}
+                  isPdfGeneration={false}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-      {selectedPayslipForPreview && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Payslip Preview</CardTitle>
-            <CardDescription>
-              Preview of the selected payslip for {getEmployeeName(selectedPayslipForPreview.employeeId)} - {selectedPayslipForPreview.payPeriod}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <IndividualPayslipCard
-              payslip={selectedPayslipForPreview}
-              payslipDesignSettings={payslipDesignSettings}
-              companyDetails={companyDetails}
-              employees={employees}
-              getEmployeeName={getEmployeeName}
-              isPdfGeneration={false}
-            />
-          </CardContent>
-        </Card>
-      )}
+        <div className="space-y-4 lg:col-span-1">
+          <Card className="relative overflow-hidden border rounded-xl bg-white">
+            <SummaryAccent variant="emerald" />
+            <CardHeader>
+              <CardTitle>Generate / Select Payslip</CardTitle>
+              <CardDescription>Choose an employee and manage payslip periods.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PayslipGenerationSection
+                employees={employees}
+                payslips={payslips}
+                selectedEmployeeId={selectedEmployeeId}
+                setSelectedEmployeeId={setSelectedEmployeeId}
+                selectedPayslipId={selectedPayslipId}
+                setSelectedPayslipId={setSelectedPayslipId}
+                getEmployeeName={getEmployeeName}
+                payslipDesignSettings={payslipDesignSettings}
+                companyDetails={companyDetails}
+                allEmployees={employees}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <div className="mt-4 p-4 border rounded-lg bg-green-50 text-green-800">
         <h3 className="font-semibold text-lg mb-2">Payslip Management Area</h3>
