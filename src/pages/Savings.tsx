@@ -40,6 +40,9 @@ import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces";
 import SavingsPlanManagerDialog from "@/components/savings/SavingsPlanManagerDialog";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { useSavingPlansData } from "@/hooks/use-saving-plans-data";
+import SavingsHeader from "@/components/savings/SavingsHeader";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import { DollarSign, CalendarClock, ListChecks } from "lucide-react";
 
 const savingPlanSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -123,22 +126,87 @@ const Savings: React.FC = () => {
 
   const totalSavingsFrequency = savingsByFrequencyData.reduce((sum, entry) => sum + entry.value, 0);
 
+  // Simple KPIs
+  const totalActiveAmount = totalSavingsData[0]?.amount || 0;
+  const totalPlansCount = savingPlans.length;
+  const monthlyCount = savingsByFrequencyData.find(d => d.name === "monthly")?.value || 0;
+  const weeklyCount = savingsByFrequencyData.find(d => d.name === "weekly")?.value || 0;
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Employee Savings</h1>
-      <p className="text-lg text-muted-foreground">
-        Manage employee savings deductions from their salaries.
-      </p>
+      <SavingsHeader />
 
-      <SavingsPlanManagerDialog
-        open={managerOpen}
-        onOpenChange={setManagerOpen}
-        plan={selectedPlan}
-        employeeName={selectedPlan ? getEmployeeName(selectedPlan.employeeId) : ""}
-      />
+      {/* KPI row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
+                <DollarSign className="h-4 w-4" />
+              </span>
+              Total Active Savings
+            </CardTitle>
+            <CardDescription className="text-xs">Sum of all active contributions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R {totalActiveAmount.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</div>
+          </CardContent>
+        </Card>
 
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+                <ListChecks className="h-4 w-4" />
+              </span>
+              Total Plans
+            </CardTitle>
+            <CardDescription className="text-xs">All recorded savings plans</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalPlansCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="orange" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
+                <CalendarClock className="h-4 w-4" />
+              </span>
+              Monthly Plans
+            </CardTitle>
+            <CardDescription className="text-xs">Recurring monthly deductions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{monthlyCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="amber" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-100 text-amber-600">
+                <CalendarClock className="h-4 w-4" />
+              </span>
+              Weekly Plans
+            </CardTitle>
+            <CardDescription className="text-xs">Recurring weekly deductions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{weeklyCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
           <CardHeader>
             <CardTitle>Total Active Savings Contributions</CardTitle>
             <CardDescription>Overview of the total amount being saved by employees.</CardDescription>
@@ -157,7 +225,8 @@ const Savings: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
           <CardHeader>
             <CardTitle>Savings Plans by Frequency</CardTitle>
             <CardDescription>Distribution of savings plans based on their deduction frequency.</CardDescription>
@@ -188,7 +257,9 @@ const Savings: React.FC = () => {
         </Card>
       </div>
 
-      <Card>
+      {/* Add form */}
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="orange" />
         <CardHeader>
           <CardTitle>Add New Savings Plan</CardTitle>
           <CardDescription>
@@ -203,7 +274,7 @@ const Savings: React.FC = () => {
                 onValueChange={(value) => form.setValue("employeeId", value)}
                 value={form.watch("employeeId")}
               >
-                <SelectTrigger id="employeeId" className="mt-1">
+                <SelectTrigger id="employeeId" className="mt-1 rounded-full">
                   <SelectValue placeholder="Select an employee" />
                 </SelectTrigger>
                 <SelectContent>
@@ -232,7 +303,7 @@ const Savings: React.FC = () => {
                 type="number"
                 step="0.01"
                 {...form.register("amount")}
-                className="mt-1"
+                className="mt-1 rounded-full"
               />
               {form.formState.errors.amount && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.amount.message}</p>
@@ -245,7 +316,7 @@ const Savings: React.FC = () => {
                 onValueChange={(value) => form.setValue("frequency", value as "monthly" | "weekly")}
                 value={form.watch("frequency")}
               >
-                <SelectTrigger id="frequency" className="mt-1">
+                <SelectTrigger id="frequency" className="mt-1 rounded-full">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -264,7 +335,7 @@ const Savings: React.FC = () => {
                 id="startDate"
                 type="date"
                 {...form.register("startDate")}
-                className="mt-1"
+                className="mt-1 rounded-full"
               />
               {form.formState.errors.startDate && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.startDate.message}</p>
@@ -277,19 +348,21 @@ const Savings: React.FC = () => {
                 id="endDate"
                 type="date"
                 {...form.register("endDate")}
-                className="mt-1"
+                className="mt-1 rounded-full"
               />
               {form.formState.errors.endDate && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.endDate.message}</p>
               )}
             </div>
 
-            <Button type="submit" className="w-full">Add Savings Plan</Button>
+            <Button type="submit" className="w-full rounded-full">Add Savings Plan</Button>
           </form>
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Current plans */}
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="sky" />
         <CardHeader>
           <CardTitle>Current Savings Plans</CardTitle>
         </CardHeader>
@@ -320,12 +393,12 @@ const Savings: React.FC = () => {
                     <TableCell>{plan.status}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => openManager(plan)}>
+                        <Button variant="secondary" size="sm" onClick={() => openManager(plan)} className="rounded-full">
                           Manage
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
+                            <Button variant="destructive" size="sm" className="rounded-full">
                               Delete
                             </Button>
                           </AlertDialogTrigger>
@@ -355,6 +428,13 @@ const Savings: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <SavingsPlanManagerDialog
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        plan={selectedPlan}
+        employeeName={selectedPlan ? getEmployeeName(selectedPlan.employeeId) : ""}
+      />
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Important Note on Savings Deductions:</h3>
