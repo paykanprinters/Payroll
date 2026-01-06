@@ -24,6 +24,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import React from "react";
 import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 import Profile from "./pages/Profile";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -41,7 +42,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
-                <Route element={<MainLayout />}>
+                <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/todos" element={<ToDosPage />} />
