@@ -18,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
 import { Eye, EyeOff, RefreshCcw, Mail, ShieldCheck, Info } from "lucide-react";
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
 const userSchema = z.object({
@@ -104,7 +104,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     }
 
     const { error } = await supabase.auth.resend({
-      type: 'signup',
+      type: "signup",
       email: initialUser.email,
     });
 
@@ -114,27 +114,6 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     } else {
       showSuccess(`Confirmation email sent to ${initialUser.email}!`);
     }
-  };
-
-  const handleForceConfirmEmail = async () => {
-    if (isMockDataEnabled) {
-      showError("Cannot confirm email when mock data is enabled.");
-      return;
-    }
-    if (!initialUser?.id) {
-      showError("User ID not available.");
-      return;
-    }
-    const res = await supabase.functions.invoke("confirm-user-email", {
-      body: JSON.stringify({ userId: initialUser.id }),
-    });
-    if (res.error) {
-      console.error("Force confirm email error:", res.error);
-      const serverMsg = typeof res.error?.message === "string" ? res.error.message : (res.data as any)?.error;
-      showError(serverMsg || "Failed to confirm user email.");
-      return;
-    }
-    showSuccess("User email confirmed successfully.");
   };
 
   const handleCheckAuthStatus = async () => {
@@ -167,6 +146,29 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     }
   };
 
+  const handleForceConfirmEmail = async () => {
+    if (isMockDataEnabled) {
+      showError("Cannot confirm email when mock data is enabled.");
+      return;
+    }
+    if (!initialUser?.id && !initialUser?.email) {
+      showError("User reference not available.");
+      return;
+    }
+    const res = await supabase.functions.invoke("confirm-user-email", {
+      body: JSON.stringify({ userId: initialUser?.id, email: initialUser?.email }),
+    });
+    if (res.error) {
+      console.error("Force confirm email error:", res.error);
+      const serverMsg = typeof res.error?.message === "string" ? res.error.message : (res.data as any)?.error;
+      showError(serverMsg || "Failed to confirm user email.");
+      return;
+    }
+    showSuccess("User email confirmed successfully.");
+    // Re-check status immediately
+    await handleCheckAuthStatus();
+  };
+
   const onSubmit = (data: UserFormValues) => {
     if (isMockDataEnabled) {
       showError("Cannot save user to Supabase when mock data is enabled.");
@@ -179,28 +181,31 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:max-w-[425px]">
+      <DialogContent className="w-full sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>{initialUser ? "Edit User" : "Add New User"}</DialogTitle>
           <DialogDescription>
             {initialUser ? "Make changes to user details here." : "Fill in the details for the new user."}
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <div className="space-y-1">
             <Label htmlFor="name">Name</Label>
-            <Input id="name" {...form.register("name")} disabled={isMockDataEnabled} />
+            <Input id="name" {...form.register("name")} disabled={isMockDataEnabled} className="mt-1 w-full" />
             {form.formState.errors.name && (<p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>)}
           </div>
+
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...form.register("email")} disabled={isMockDataEnabled} />
+            <Input id="email" type="email" {...form.register("email")} disabled={isMockDataEnabled} className="mt-1 w-full" />
             {form.formState.errors.email && (<p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>)}
           </div>
+
           <div className="space-y-1">
             <Label htmlFor="role">Role</Label>
             <Select onValueChange={(value) => form.setValue("role", value as "Admin" | "Manager" | "Staff" | "Viewer")} value={form.watch("role")} disabled={isMockDataEnabled}>
-              <SelectTrigger id="role">
+              <SelectTrigger id="role" className="mt-1 w-full">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
@@ -212,10 +217,11 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
             </Select>
             {form.formState.errors.role && (<p className="text-red-500 text-sm">{form.formState.errors.role.message}</p>)}
           </div>
+
           <div className="space-y-1">
             <Label htmlFor="status">Status</Label>
             <Select onValueChange={(value) => form.setValue("status", value as "Active" | "Inactive")} value={form.watch("status")} disabled={isMockDataEnabled}>
-              <SelectTrigger id="status">
+              <SelectTrigger id="status" className="mt-1 w-full">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -225,6 +231,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
             </Select>
             {form.formState.errors.status && (<p className="text-red-500 text-sm">{form.formState.errors.status.message}</p>)}
           </div>
+
           <div className="space-y-1">
             <Label htmlFor="password">Password {initialUser && <span className="text-muted-foreground">(Leave blank to keep current)</span>}</Label>
             <div className="relative">
@@ -232,7 +239,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 id="password"
                 type={showPassword ? "text" : "password"}
                 {...form.register("password")}
-                className="pr-10"
+                className="mt-1 w-full pr-10"
                 disabled={isMockDataEnabled}
               />
               <Button
@@ -251,7 +258,8 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
               <RefreshCcw className="mr-2 h-4 w-4" /> Generate Password
             </Button>
           </div>
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
+
+          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4 flex-wrap">
             {initialUser && (
               <>
                 <Button type="button" variant="outline" onClick={handleResendConfirmationEmail} disabled={isMockDataEnabled}>
@@ -270,7 +278,6 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
           </DialogFooter>
         </form>
 
-        {/* Inline status indicator */}
         {initialUser && (
           <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
             <Info className="h-4 w-4" />
