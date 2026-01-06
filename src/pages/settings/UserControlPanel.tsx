@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDialog";
+import AdminPolicyBadge from "@/components/settings/AdminPolicyBadge";
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -354,7 +355,7 @@ const UserControlPanel: React.FC = () => {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
+                <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Policy</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.length > 0 ? (
@@ -368,6 +369,9 @@ const UserControlPanel: React.FC = () => {
                         <Badge className={user.status === "Active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
                           {user.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <AdminPolicyBadge role={user.role} />
                       </TableCell>
                       <TableCell className="flex justify-center items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditUserClick(user)} disabled={isMockDataEnabled}>Edit</Button>
