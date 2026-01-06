@@ -136,6 +136,7 @@ const PayslipOverviewPage: React.FC = () => {
 
           onRefresh={() => window.dispatchEvent(new Event("appFocusRefresh"))}
           totals={{ filteredCount: totals.filteredCount, totalCount: totals.totalCount }}
+          hideAllOption={user?.role === "Staff"}
           disabled={false}
         />
       </Card>

@@ -29,6 +29,7 @@ interface Props {
   onRefresh: () => void;
 
   totals: { filteredCount: number; totalCount: number };
+  hideAllOption?: boolean;
   disabled?: boolean;
 }
 
@@ -46,6 +47,7 @@ const PayslipsOverviewToolbar: React.FC<Props> = ({
   onSearchChange,
   onRefresh,
   totals,
+  hideAllOption = false,
   disabled = false,
 }) => {
   // Debounced search: keep local typing value, commit via onSearchChange after delay
@@ -75,7 +77,9 @@ const PayslipsOverviewToolbar: React.FC<Props> = ({
               <SelectValue placeholder="Employee" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All employees</SelectItem>
+              {!hideAllOption && (
+                <SelectItem value="all">All employees</SelectItem>
+              )}
               {employees.map(emp => (
                 <SelectItem key={emp.id} value={emp.id}>
                   {emp.firstName} {emp.lastName} ({emp.customEmployeeId || "N/A"})
