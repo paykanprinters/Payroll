@@ -23,13 +23,11 @@ import { format, differenceInMonths } from "date-fns";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import AnalyticsHeader from "@/components/analytics/AnalyticsHeader";
 import { useAuth } from "@/context/AuthContext";
-import { useAuth } from "@/context/AuthContext";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Analytics: React.FC = () => {
   const { employees, payslips, leaveRecords } = usePayrollProcessor();
-  const { user } = useAuth();
   const { user } = useAuth();
 
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
@@ -57,19 +55,6 @@ const Analytics: React.FC = () => {
   };
 
   const loadAnalyticsData = useCallback(() => {
-    // Scope to the logged-in Staff member; Admin/Manager remain company-wide
-    const staffScoped = user?.role === "Staff";
-    const scopedEmployees = staffScoped
-      ? employees.filter(emp => (emp as any).userId === user?.id)
-      : employees;
-
-    const employeeIds = new Set(scopedEmployees.map(e => e.id));
-    const scopedPayslips = staffScoped
-      ? payslips.filter(p => employeeIds.has(p.employeeId))
-      : payslips;
-    const scopedLeaveRecords = staffScoped
-      ? (leaveRecords || []).filter(record => employeeIds.has(record.employeeId))
-      : (leaveRecords || []);
     // Scope to the logged-in Staff member; Admin/Manager remain company-wide
     const staffScoped = user?.role === "Staff";
     const scopedEmployees = staffScoped
