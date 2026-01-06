@@ -106,8 +106,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     return {
       name: companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
       logoUrl: companyDetails?.logoUrl,
-      logoWidth: companyDetails?.logoWidth || 100,
-      logoHeight: companyDetails?.logoHeight || 50,
+      logoWidth: companyDetails?.logoWidth || 140,
+      logoHeight: companyDetails?.logoHeight || 70,
       logoFit: companyDetails?.logoFit || "contain",
     };
   }, [companyDetails]);
@@ -137,13 +137,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div
       className={cn(
         "relative overflow-hidden",
-        currentIsCollapsed ? "h-16" : "h-24"
+        currentIsCollapsed ? "h-16" : "h-32"
       )}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500" />
       <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
       <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-      <div className={cn("relative z-10 flex items-center border-b px-4 lg:px-6", currentIsCollapsed ? "justify-center" : "justify-between py-4 lg:py-6 text-white")}>
+      <div className={cn("relative z-10 flex items-center border-b px-4 lg:px-6", currentIsCollapsed ? "justify-center" : "justify-between py-6 lg:py-8 text-white")}>
         {currentIsCollapsed ? (
           <Button
             variant="ghost"
@@ -168,7 +168,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className="mb-1 drop-shadow-sm"
                 />
               )}
-              <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
+              <span className="text-xl lg:text-2xl font-semibold whitespace-nowrap">{displayCompanyDetails.name}</span>
             </Link>
             <Button
               variant="ghost"
