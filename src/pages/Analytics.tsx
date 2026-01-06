@@ -18,9 +18,10 @@ import {
   Bar,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format, differenceInMonths } from "date-fns";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import AnalyticsHeader from "@/components/analytics/AnalyticsHeader";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -52,7 +53,6 @@ const Analytics: React.FC = () => {
   };
 
   const loadAnalyticsData = useCallback(() => {
-    // Monthly Payroll Cost Trend
     const monthlyDataMap = new Map<string, { gross: number; net: number }>();
     payslips.forEach((p) => {
       const monthYear = p.payPeriod.substring(0, 7);
@@ -73,7 +73,6 @@ const Analytics: React.FC = () => {
       .map(({ name, gross, net }) => ({ name, gross, net }));
     setMonthlyPayrollTrend(trendData);
 
-    // Compensation Type Breakdown (deduplicated)
     const compensationMap = new Map<string, number>();
     payslips.forEach((p) => {
       (p.earningsBreakdown || []).forEach((e) => {
@@ -83,7 +82,6 @@ const Analytics: React.FC = () => {
     });
     setCompensationBreakdown(Array.from(compensationMap.entries()).map(([name, value]) => ({ name, value })));
 
-    // Deduction Category Breakdown
     const statutoryDeductions = ["PAYE", "UIF", "SDL"];
     let totalStatutory = 0;
     let totalOtherDeductions = 0;
@@ -99,7 +97,6 @@ const Analytics: React.FC = () => {
     ].filter((x) => x.value > 0);
     setDeductionCategoryBreakdown(breakdown);
 
-    // Employee Turnover Trend (mocked termination logic)
     const turnoverMap = new Map<string, { newHires: number; terminations: number }>();
     const currentYear = new Date().getFullYear();
     const months = Array.from({ length: 12 }, (_, i) => format(new Date(currentYear, i, 1), "MMM yyyy"));
@@ -110,7 +107,6 @@ const Analytics: React.FC = () => {
       if (turnoverMap.has(hireMonth)) {
         turnoverMap.get(hireMonth)!.newHires++;
       }
-      // Optional: if terminationDate exists, count it; otherwise keep mock minimal
       if ((emp as any).terminationDate) {
         const termMonth = format(new Date((emp as any).terminationDate), "MMM yyyy");
         if (turnoverMap.has(termMonth)) {
@@ -124,7 +120,6 @@ const Analytics: React.FC = () => {
         .sort((a, b) => months.indexOf(a.name) - months.indexOf(b.name))
     );
 
-    // Leave Type Distribution
     const leaveTypeMap = new Map<string, number>();
     (leaveRecords || []).forEach((record) => {
       const prev = leaveTypeMap.get(record.leaveType) || 0;
@@ -132,7 +127,6 @@ const Analytics: React.FC = () => {
     });
     setLeaveTypeDistribution(Array.from(leaveTypeMap.entries()).map(([name, value]) => ({ name, value })));
 
-    // Employee Salary Distribution
     const salaryRanges = [
       { range: "R0 - R20k", min: 0, max: 20000, count: 0 },
       { range: "R20k - R40k", min: 20001, max: 40000, count: 0 },
@@ -150,7 +144,6 @@ const Analytics: React.FC = () => {
     });
     setEmployeeSalaryDistribution(salaryRanges.map((r) => ({ range: r.range, count: r.count })));
 
-    // Overtime Cost Trend (sum all overtime lines)
     const overtimeTrendMap = new Map<string, number>();
     payslips.forEach((p) => {
       const monthYear = p.payPeriod.substring(0, 7);
@@ -170,7 +163,6 @@ const Analytics: React.FC = () => {
       .map(({ name, overtime }) => ({ name, overtime }));
     setOvertimeCostTrend(sortedOvertimeTrend);
 
-    // Employee Tenure Distribution
     const tenureRanges = [
       { name: "< 1 Year", minMonths: 0, maxMonths: 11, count: 0 },
       { name: "1-3 Years", minMonths: 12, maxMonths: 35, count: 0 },
@@ -220,11 +212,15 @@ const Analytics: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Payroll Analytics</h1>
-      <p className="text-lg text-muted-foreground">Dive deeper into your payroll data with advanced analysis and trends.</p>
+      <AnalyticsHeader />
+
+      <p className="text-sm text-muted-foreground">
+        Dive deeper into your payroll data with advanced analysis and trends.
+      </p>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
           <CardHeader>
             <CardTitle>Monthly Payroll Cost Trend</CardTitle>
             <CardDescription>Evolution of total gross and net pay over time.</CardDescription>
@@ -244,7 +240,8 @@ const Analytics: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
           <CardHeader>
             <CardTitle>Compensation Type Breakdown</CardTitle>
             <CardDescription>Distribution of earnings by type (e.g., Basic, Overtime, Bonus).</CardDescription>
@@ -276,7 +273,8 @@ const Analytics: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="orange" />
           <CardHeader>
             <CardTitle>Deduction Category Breakdown</CardTitle>
             <CardDescription>Comparison of statutory vs. other deductions.</CardDescription>
@@ -306,7 +304,8 @@ const Analytics: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="amber" />
           <CardHeader>
             <CardTitle>Employee Turnover Trend</CardTitle>
             <CardDescription>Monthly new hires vs. terminations (mock data).</CardDescription>
@@ -328,7 +327,8 @@ const Analytics: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
           <CardHeader>
             <CardTitle>Leave Type Distribution</CardTitle>
             <CardDescription>Breakdown of total working days taken by leave type.</CardDescription>
@@ -358,7 +358,8 @@ const Analytics: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
           <CardHeader>
             <CardTitle>Employee Salary Distribution</CardTitle>
             <CardDescription>Number of employees within different salary ranges.</CardDescription>
@@ -379,7 +380,8 @@ const Analytics: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="orange" />
           <CardHeader>
             <CardTitle>Overtime Cost Trend</CardTitle>
             <CardDescription>Monthly trend of total overtime expenses.</CardDescription>
@@ -398,7 +400,8 @@ const Analytics: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="amber" />
           <CardHeader>
             <CardTitle>Employee Tenure Distribution</CardTitle>
             <CardDescription>Distribution of employees by their length of service.</CardDescription>
