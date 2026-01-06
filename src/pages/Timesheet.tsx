@@ -23,6 +23,11 @@ const Timesheet: React.FC = () => {
     employees,
     leaveRecords,
     isMockDataEnabled,
+    timesheets: initialTimesheets,
+    isAuthenticated,
+    isLoadingAuth,
+    workHoursSettings,
+    isLoadingEmployees,
   } = usePayrollProcessor({ silent: true });
 
   const {
@@ -38,13 +43,13 @@ const Timesheet: React.FC = () => {
     isLeaveDay,
     addTimesheetBatch,
   } = useTimesheetData({
-    initialTimesheets: [],
+    initialTimesheets,
     employees,
     leaveRecords,
     isMockDataEnabled,
-    isAuthenticated: false,
-    isLoadingAuth: false,
-    workHoursSettings: null,
+    isAuthenticated,
+    isLoadingAuth,
+    workHoursSettings,
   });
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
@@ -117,7 +122,7 @@ const Timesheet: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <TimesheetHeader onOpenImport={() => setIsImportDialogOpen(true)} importDisabled={!(employees && employees.length > 0)} />
+      <TimesheetHeader onOpenImport={() => setIsImportDialogOpen(true)} importDisabled={!!isLoadingEmployees} />
 
       {/* Toolbar: Filters and Refresh */}
       <Card className="border rounded-xl">
