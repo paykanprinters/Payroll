@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
 
 interface LeaveRecordsTableProps {
   leaveRecords: LeaveEntry[];
@@ -13,7 +14,8 @@ interface LeaveRecordsTableProps {
 
 const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, getEmployeeName, getEmployeeCustomId }) => {
   return (
-    <Card className="mt-6">
+    <Card className="mt-6 relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+      <SummaryAccent variant="orange" />
       <CardHeader>
         <CardTitle>All Leave Records</CardTitle>
       </CardHeader>
@@ -22,11 +24,22 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({ leaveRecords, get
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Employee ID</TableHead><TableHead>Employee Name</TableHead><TableHead>Leave Type</TableHead><TableHead>Start Date</TableHead><TableHead>End Date</TableHead><TableHead>Total Days</TableHead><TableHead>Working Days</TableHead><TableHead>Reason</TableHead><TableHead>Document</TableHead></TableRow>
+                <TableRow>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Employee Name</TableHead>
+                  <TableHead>Leave Type</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>End Date</TableHead>
+                  <TableHead>Total Days</TableHead>
+                  <TableHead>Working Days</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Document</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {leaveRecords.map((record) => (
-                  <TableRow key={record.id}><TableCell>{getEmployeeCustomId(record.employeeId)}</TableCell>
+                  <TableRow key={record.id}>
+                    <TableCell>{getEmployeeCustomId(record.employeeId)}</TableCell>
                     <TableCell>{getEmployeeName(record.employeeId)}</TableCell>
                     <TableCell>{record.leaveType}</TableCell>
                     <TableCell>{record.startDate}</TableCell>

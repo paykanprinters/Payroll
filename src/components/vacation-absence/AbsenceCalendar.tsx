@@ -3,6 +3,7 @@
 import React from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
 
 interface LeaveEntry {
   id: string;
@@ -27,15 +28,16 @@ const AbsenceCalendar: React.FC<AbsenceCalendarProps> = ({ leaveRecords }) => {
   }));
 
   const modifiers = {
-    leaveDays: leaveRanges, // Pass array of DateRange objects to modifier
+    leaveDays: leaveRanges,
   };
 
   const modifiersClassNames = {
-    leaveDays: "bg-blue-200 text-blue-900 rounded-md", // Default style for the entire range
+    leaveDays: "bg-blue-200 text-blue-900 rounded-md",
   };
 
   return (
-    <Card>
+    <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+      <SummaryAccent variant="emerald" />
       <CardHeader>
         <CardTitle>Absence Calendar</CardTitle>
         <CardDescription>
@@ -44,8 +46,8 @@ const AbsenceCalendar: React.FC<AbsenceCalendarProps> = ({ leaveRecords }) => {
       </CardHeader>
       <CardContent className="flex justify-center">
         <Calendar
-          mode="range" // Keep range mode for visual consistency, but no active selection
-          selected={undefined} // No active selection for display calendar
+          mode="range"
+          selected={undefined}
           modifiers={modifiers}
           modifiersClassNames={modifiersClassNames}
           className="rounded-md border"
