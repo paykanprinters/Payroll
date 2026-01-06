@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -15,7 +15,7 @@ type LayoutSide = "deductions-left-earnings-right" | "earnings-left-deductions-r
 interface Props {
   payslip: MockPayslip;
   payslipDesignSettings: PayslipDesignSettings;
-  companyDetails: MockCompanyDetails;
+  companyDetails: MockCompanyDetails | null;
   employees: MockEmployee[];
   getEmployeeName: (id: string) => string;
   isPdfGeneration?: boolean;
@@ -81,7 +81,7 @@ const IndividualPayslipCard: React.FC<Props> = ({
     payslipLogoFit,
   } = payslipDesignSettings;
 
-  const logoSrc = payslipLogoUrl || companyDetails.logoUrl || "";
+  const logoSrc = payslipLogoUrl || companyDetails?.logoUrl || "";
 
   const earningsTotal = useMemo(
     () => payslip.earningsBreakdown.reduce((sum, e) => sum + (e?.amount || 0), 0),
@@ -114,35 +114,37 @@ const IndividualPayslipCard: React.FC<Props> = ({
         {showCompanyDetails ? (
           <div className="text-sm space-y-1">
             <div className="font-medium">
-              {companyDetails.companyTradingName || companyDetails.companyLegalName || "Company"}
+              {companyDetails?.companyTradingName ||
+                companyDetails?.companyLegalName ||
+                "Company"}
             </div>
-            {companyDetails.companyLegalName && (
+            {companyDetails?.companyLegalName && (
               <div className="text-muted-foreground">
                 Legal: {companyDetails.companyLegalName}
               </div>
             )}
-            {companyDetails.companyRegistrationNumber && (
+            {companyDetails?.companyRegistrationNumber && (
               <div className="text-muted-foreground">
                 Reg No: {companyDetails.companyRegistrationNumber}
               </div>
             )}
-            {companyDetails.companyTaxNumber && (
+            {companyDetails?.companyTaxNumber && (
               <div className="text-muted-foreground">
                 Tax No: {companyDetails.companyTaxNumber}
               </div>
             )}
-            {companyDetails.vatRegistrationNumber && (
+            {companyDetails?.vatRegistrationNumber && (
               <div className="text-muted-foreground">
                 VAT: {companyDetails.vatRegistrationNumber}
               </div>
             )}
-            {companyDetails.physicalAddress && (
+            {companyDetails?.physicalAddress && (
               <div className="text-muted-foreground">{companyDetails.physicalAddress}</div>
             )}
-            {(companyDetails.mainContactNumber || companyDetails.companyEmail) && (
+            {(companyDetails?.mainContactNumber || companyDetails?.companyEmail) && (
               <div className="text-muted-foreground">
-                {companyDetails.mainContactNumber || ""}{companyDetails.mainContactNumber && companyDetails.companyEmail ? " • " : ""}
-                {companyDetails.companyEmail || ""}
+                {companyDetails?.mainContactNumber || ""}{companyDetails?.mainContactNumber && companyDetails?.companyEmail ? " • " : ""}
+                {companyDetails?.companyEmail || ""}
               </div>
             )}
           </div>
@@ -289,7 +291,6 @@ const IndividualPayslipCard: React.FC<Props> = ({
 
   return (
     <Card className="w-full"
-      // Keep original card styling; just prevent splitting across pages during PDF generation
       style={isPdfGeneration ? { pageBreakInside: 'avoid' } : undefined}
     >
       <CardHeader className="pb-4 text-center items-center">
