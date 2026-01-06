@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, DollarSign, Wallet, ReceiptText, Filter, RefreshCcw, CalendarDays, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
@@ -10,10 +10,10 @@ import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
-import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import PayslipsHeader from "@/components/payslips/PayslipsHeader";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOverviewToolbar";
+import PayslipsSummaryCards from "@/components/payslips/overview/PayslipsSummaryCards";
+import { usePayslipsOverviewSelectors, PayslipsOverviewFilters } from "@/hooks/selectors/usePayslipsOverviewSelectors";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -31,97 +31,27 @@ const PayslipOverviewPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
 
-  const cleanLabel = (label: string) =>
-    label.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)\s*$/i, "");
+  // Filters (canonical state lives in page)
+  const [filters, setFilters] = useState<PayslipsOverviewFilters>({
+    employeeFilterId: "all",
+    frequencyFilter: "all",
+    dateStart: "",
+    dateEnd: "",
+    search: "",
+  });
 
-  // Toolbar filters
-  const [employeeFilterId, setEmployeeFilterId] = useState<string>("all");
-  const [frequencyFilter, setFrequencyFilter] = useState<"all" | "Monthly" | "Weekly" | "Bi-Weekly">("all");
-  const [dateStart, setDateStart] = useState<string>("");
-  const [dateEnd, setDateEnd] = useState<string>("");
-  const [search, setSearch] = useState<string>("");
-
-  // Helpers
-  const employeesById = useMemo(() => {
-    const map = new Map<string, { name: string; customId: string; frequency?: string }>();
-    employees.forEach(e => map.set(e.id, { name: `${e.firstName} ${e.lastName}`.trim(), customId: e.customEmployeeId || "N/A", frequency: e.payFrequency }));
-    return map;
-  }, [employees]);
-
-  const filteredPayslips = useMemo(() => {
-    let list = [...payslips];
-
-    if (employeeFilterId !== "all") {
-      list = list.filter(p => p.employeeId === employeeFilterId);
-    }
-
-    if (frequencyFilter !== "all") {
-      list = list.filter(p => {
-        const freq = employeesById.get(p.employeeId)?.frequency;
-        return freq === frequencyFilter;
-      });
-    }
-
-    if (dateStart) {
-      list = list.filter(p => {
-        const [startStr] = p.payPeriod.split(" - ");
-        return startStr >= dateStart;
-      });
-    }
-    if (dateEnd) {
-      list = list.filter(p => {
-        const [, endStr] = p.payPeriod.split(" - ");
-        return endStr <= dateEnd;
-      });
-    }
-
-    const q = search.trim().toLowerCase();
-    if (q) {
-      list = list.filter(p => {
-        const emp = employeesById.get(p.employeeId);
-        const hay = `${emp?.name || ""} ${emp?.customId || ""}`.toLowerCase();
-        return hay.includes(q);
-      });
-    }
-
-    // newest first by period start
-    list.sort((a, b) => {
-      const [sa] = a.payPeriod.split(" - ");
-      const [sb] = b.payPeriod.split(" - ");
-      return new Date(sb).getTime() - new Date(sa).getTime();
-    });
-
-    return list;
-  }, [payslips, employeeFilterId, frequencyFilter, dateStart, dateEnd, search, employeesById]);
-
-  const totals = useMemo(() => {
-    const gross = filteredPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-    const net = filteredPayslips.reduce((sum, p) => sum + p.netPay, 0);
-    const count = filteredPayslips.length;
-    return { gross, net, count, filteredCount: filteredPayslips.length, totalCount: payslips.length };
-  }, [filteredPayslips, payslips]);
-
-  const payrollSummaryData = useMemo(() => {
-    const gross = filteredPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-    const net = filteredPayslips.reduce((sum, p) => sum + p.netPay, 0);
-    return [{ name: "Filtered Payroll", gross, net }];
-  }, [filteredPayslips]);
-
-  const deductionsBreakdownData = useMemo(() => {
-    const deductionsMap = new Map<string, number>();
-    filteredPayslips.forEach(payslip => {
-      payslip.deductionsBreakdown.forEach(deduction => {
-        const label = cleanLabel(deduction.name);
-        deductionsMap.set(label, (deductionsMap.get(label) || 0) + deduction.amount);
-      });
-    });
-    return Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }));
-  }, [filteredPayslips]);
+  const {
+    filteredPayslips,
+    totals,
+    payrollSummaryData,
+    deductionsBreakdownData,
+    getEmployeeName,
+  } = usePayslipsOverviewSelectors(payslips, employees, filters);
 
   const loadReportDesignSettings = useCallback(() => {
-    const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
-    if (savedReportDesignSettings) {
-      setReportDesignSettings(JSON.parse(savedReportDesignSettings));
+    const saved = localStorage.getItem("reportDesignSettings");
+    if (saved) {
+      setReportDesignSettings(JSON.parse(saved));
     } else {
       localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
       setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
@@ -130,36 +60,27 @@ const PayslipOverviewPage: React.FC = () => {
 
   useEffect(() => {
     loadReportDesignSettings();
-
-    const handleReportDesignUpdate = () => {
-      loadReportDesignSettings();
-    };
-    window.addEventListener('reportDesignUpdated', handleReportDesignUpdate);
-    return () => {
-      window.removeEventListener('reportDesignUpdated', handleReportDesignUpdate);
-    };
+    const handler = () => loadReportDesignSettings();
+    window.addEventListener('reportDesignUpdated', handler);
+    return () => window.removeEventListener('reportDesignUpdated', handler);
   }, [loadReportDesignSettings]);
 
+  // Keep existing selection auto-pick logic
   useEffect(() => {
     if (!selectedEmployeeId || payslips.length === 0) {
       if (selectedPayslipId) setSelectedPayslipId("");
       return;
     }
-    const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
-    if (filteredPayslipsForEmployee.length === 0) {
+    const forEmp = payslips.filter(p => p.employeeId === selectedEmployeeId);
+    if (forEmp.length === 0) {
       if (selectedPayslipId) setSelectedPayslipId("");
       return;
     }
     if (!selectedPayslipId) {
-      const mostRecentPayslip = filteredPayslipsForEmployee.sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
-      if (mostRecentPayslip) setSelectedPayslipId(mostRecentPayslip.id);
+      const mostRecent = [...forEmp].sort((a, b) => b.payPeriod.localeCompare(a.payPeriod))[0];
+      if (mostRecent) setSelectedPayslipId(mostRecent.id);
     }
-  }, [selectedEmployeeId, payslips, selectedPayslipId, setSelectedPayslipId]);
-
-  const getEmployeeName = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
-  };
+  }, [selectedEmployeeId, payslips, selectedPayslipId]);
 
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
   const isLoadingPage = isLoadingCompanyDetails || isLoadingEmployees || isLoadingPayslips;
@@ -191,130 +112,33 @@ const PayslipOverviewPage: React.FC = () => {
     <div className="flex flex-col gap-4">
       <PayslipsHeader />
 
-      {/* Toolbar: Filters, Date range, Search, Refresh */}
+      {/* Toolbar: Filters, Date range, Search (debounced), Refresh */}
       <Card className="border rounded-xl">
-        <CardContent className="p-4 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={employeeFilterId} onValueChange={setEmployeeFilterId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All employees</SelectItem>
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <PayslipsOverviewToolbar
+          employees={employees}
+          employeeFilterId={filters.employeeFilterId}
+          onEmployeeFilterChange={(v) => setFilters(prev => ({ ...prev, employeeFilterId: v }))}
 
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={frequencyFilter} onValueChange={(v: "all" | "Monthly" | "Weekly" | "Bi-Weekly") => setFrequencyFilter(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pay frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="Monthly">Monthly</SelectItem>
-                  <SelectItem value="Weekly">Weekly</SelectItem>
-                  <SelectItem value="Bi-Weekly">Bi-Weekly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          frequencyFilter={filters.frequencyFilter}
+          onFrequencyFilterChange={(v) => setFilters(prev => ({ ...prev, frequencyFilter: v }))}
 
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="w-full" placeholder="Date from" />
-            </div>
+          dateStart={filters.dateStart}
+          onDateStartChange={(v) => setFilters(prev => ({ ...prev, dateStart: v }))}
 
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="w-full" placeholder="Date to" />
-            </div>
-          </div>
+          dateEnd={filters.dateEnd}
+          onDateEndChange={(v) => setFilters(prev => ({ ...prev, dateEnd: v }))}
 
-          <div className="flex items-center gap-2">
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by employee name or number..."
-                className="pl-8 rounded-full"
-                aria-label="Search payslips"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.dispatchEvent(new Event("appFocusRefresh"))}
-              className="rounded-full"
-              title="Refresh payslips"
-            >
-              <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              Showing {totals.filteredCount} of {totals.totalCount}
-            </span>
-          </div>
-        </CardContent>
+          search={filters.search}
+          onSearchChange={(v) => setFilters(prev => ({ ...prev, search: v }))}
+
+          onRefresh={() => window.dispatchEvent(new Event("appFocusRefresh"))}
+          totals={{ filteredCount: totals.filteredCount, totalCount: totals.totalCount }}
+          disabled={false}
+        />
       </Card>
 
       {/* Soft-accent stat cards (filtered) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="sky" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
-                <DollarSign className="h-4 w-4" />
-              </span>
-              Total Gross Payroll (Filtered)
-            </CardTitle>
-            <CardDescription className="text-xs">Sum of gross earnings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R {totals.gross.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="emerald" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
-                <Wallet className="h-4 w-4" />
-              </span>
-              Total Net Payroll (Filtered)
-            </CardTitle>
-            <CardDescription className="text-xs">Sum of net pay</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R {totals.net.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="orange" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
-                <ReceiptText className="h-4 w-4" />
-              </span>
-              Payslips Shown
-            </CardTitle>
-            <CardDescription className="text-xs">Filtered count vs total</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totals.count}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <PayslipsSummaryCards gross={totals.gross} net={totals.net} count={totals.count} />
 
       {payslips.length === 0 && (
         <Card className="border-yellow-500 bg-yellow-50 text-yellow-800">
@@ -339,7 +163,6 @@ const PayslipOverviewPage: React.FC = () => {
 
           {selectedPayslipForPreview && (
             <Card className="relative overflow-hidden border rounded-xl bg-white">
-              <SummaryAccent variant="sky" />
               <CardHeader>
                 <CardTitle>Payslip Preview</CardTitle>
                 <CardDescription>
@@ -362,7 +185,6 @@ const PayslipOverviewPage: React.FC = () => {
 
         <div className="space-y-4 lg:col-span-1">
           <Card className="relative overflow-hidden border rounded-xl bg-white">
-            <SummaryAccent variant="emerald" />
             <CardHeader>
               <CardTitle>Generate / Select Payslip</CardTitle>
               <CardDescription>Choose an employee and manage payslip periods.</CardDescription>
