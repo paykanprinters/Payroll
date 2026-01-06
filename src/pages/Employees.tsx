@@ -39,6 +39,8 @@ import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import EmployeesHeader from "@/components/employees/EmployeesHeader";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
@@ -51,7 +53,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Employees: React.FC = () => {
-  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees, isMutatingEmployee } = usePayrollProcessor(); // Get isMutatingEmployee
+  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees, isMutatingEmployee } = usePayrollProcessor();
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -60,7 +62,6 @@ const Employees: React.FC = () => {
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
-  // Search state (with debounce)
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -138,7 +139,6 @@ const Employees: React.FC = () => {
   useEffect(() => {
     loadEmployeeDataAndCharts();
     loadReportSettings();
-    // Listen for employeesUpdated event from usePayrollProcessor
     window.addEventListener('employeesUpdated', loadEmployeeDataAndCharts as EventListener);
     window.addEventListener('reportDesignUpdated', loadReportSettings);
     return () => {
@@ -209,8 +209,6 @@ const Employees: React.FC = () => {
 
   const totalJobTitles = jobTitleDistribution.reduce((sum, entry) => sum + entry.value, 0);
 
-  // Only show full-page loader if initially loading employees AND no employees are currently displayed
-  // This prevents the full-page loader from appearing during updates/deletions if there's already data.
   if (isLoadingEmployees && employees.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -222,19 +220,17 @@ const Employees: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Employees Management</h1>
-      <p className="text-lg text-muted-foreground">
-        Manage all employee records, personal details, and employment information here.
-      </p>
-      
+      <EmployeesHeader />
+
       <div className="flex justify-end">
-        <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee}>
+        <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee} className="rounded-full">
           {isMutatingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add New Employee
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
           <CardHeader>
             <CardTitle>Employee Distribution by Job Title</CardTitle>
             <CardDescription>Visual breakdown of employees across different roles.</CardDescription>
@@ -264,7 +260,8 @@ const Employees: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
           <CardHeader>
             <CardTitle>Average Salary by Job Title</CardTitle>
             <CardDescription>Comparison of average salaries across different job titles.</CardDescription>
@@ -284,7 +281,8 @@ const Employees: React.FC = () => {
         </Card>
       </div>
 
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="orange" />
         <CardHeader>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Employee List</CardTitle>
@@ -295,7 +293,7 @@ const Employees: React.FC = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by ID, name, title, department, email..."
-                  className="pl-8"
+                  className="pl-8 rounded-full"
                   aria-label="Search employees"
                 />
               </div>
@@ -305,7 +303,7 @@ const Employees: React.FC = () => {
                   size="sm"
                   onClick={() => setSearchTerm("")}
                   aria-label="Clear search"
-                  className="px-2"
+                  className="px-2 rounded-full"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -348,13 +346,13 @@ const Employees: React.FC = () => {
                            employee.hourlyRate ? `R ${employee.hourlyRate.toLocaleString('en-ZA')} / hr` : "N/A"}
                         </TableCell>
                         <TableCell className="flex justify-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)} disabled={isMutatingEmployee}>
+                          <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)} disabled={isMutatingEmployee} className="rounded-full">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)} disabled={isMutatingEmployee}>
+                          <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)} disabled={isMutatingEmployee} className="rounded-full">
                             <Download className="h-4 w-4" />
                           </Button>
-                          <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)} disabled={isMutatingEmployee}>
+                          <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)} disabled={isMutatingEmployee} className="rounded-full">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>

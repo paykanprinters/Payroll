@@ -51,9 +51,9 @@ const NavLink: React.FC<NavLinkProps> = ({
       asChild
       variant="ghost"
       className={cn(
-        "justify-start group",
+        "justify-start group rounded-lg",
         isCollapsed ? "h-9 w-9 p-1.5" : "w-full px-4 py-2",
-        isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent"
+        isActive ? "bg-white/40 hover:bg-white/50 dark:bg-white/10 dark:hover:bg-white/15" : "hover:bg-transparent"
       )}
     >
       <Link
@@ -112,7 +112,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [companyDetails]);
 
-  // Assign tasteful, theme-friendly colors for icons and matching active accents
   const navItems: Array<{
     to: string;
     icon: React.ElementType;
@@ -137,46 +136,51 @@ const Sidebar: React.FC<SidebarProps> = ({
   const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
     <div
       className={cn(
-        "flex items-center border-b px-4 lg:px-6",
-        currentIsCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6"
+        "relative overflow-hidden",
+        currentIsCollapsed ? "h-16" : "h-24"
       )}
     >
-      {currentIsCollapsed ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => toggleCollapse(!currentIsCollapsed)}
-          className="mx-auto bg-gray-100 dark:bg-gray-700 z-10"
-        >
-          <Menu className="h-5 w-5 text-primary" />
-        </Button>
-      ) : (
-        <>
-          <Link to="/" className="flex flex-col items-center flex-grow-0">
-            {displayCompanyDetails.logoUrl && (
-              <img
-                src={displayCompanyDetails.logoUrl}
-                alt="Company Logo"
-                style={{
-                  width: displayCompanyDetails.logoWidth,
-                  height: displayCompanyDetails.logoHeight,
-                  objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
-                }}
-                className="mb-1"
-              />
-            )}
-            <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
-          </Link>
+      <div className="absolute inset-0 bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500" />
+      <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
+      <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+      <div className={cn("relative z-10 flex items-center border-b px-4 lg:px-6", currentIsCollapsed ? "justify-center" : "justify-between py-4 lg:py-6 text-white")}>
+        {currentIsCollapsed ? (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => toggleCollapse(!currentIsCollapsed)}
-            className="ml-auto bg-gray-100 dark:bg-gray-700 z-10"
+            className="mx-auto bg-white/20 hover:bg-white/30 z-10"
           >
-            <Menu className="h-5 w-5 text-primary" />
+            <Menu className="h-5 w-5 text-white" />
           </Button>
-        </>
-      )}
+        ) : (
+          <>
+            <Link to="/" className="flex flex-col items-center flex-grow-0">
+              {displayCompanyDetails.logoUrl && (
+                <img
+                  src={displayCompanyDetails.logoUrl}
+                  alt="Company Logo"
+                  style={{
+                    width: displayCompanyDetails.logoWidth,
+                    height: displayCompanyDetails.logoHeight,
+                    objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
+                  }}
+                  className="mb-1 drop-shadow-sm"
+                />
+              )}
+              <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => toggleCollapse(!currentIsCollapsed)}
+              className="ml-auto bg-white/20 hover:bg-white/30 z-10"
+            >
+              <Menu className="h-5 w-5 text-white" />
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 
