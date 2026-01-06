@@ -15,7 +15,6 @@ import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOver
 import { useAuth } from "@/context/AuthContext";
 import PayslipsSummaryCards from "@/components/payslips/overview/PayslipsSummaryCards";
 import { usePayslipsOverviewSelectors, PayslipsOverviewFilters } from "@/hooks/selectors/usePayslipsOverviewSelectors";
-import { useAuth } from "@/context/AuthContext";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -27,7 +26,6 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 
 const PayslipOverviewPage: React.FC = () => {
   const { employees, payslips, companyDetails, isLoadingCompanyDetails, isLoadingEmployees, isLoadingPayslips } = usePayrollProcessor();
-  const { user } = useAuth();
   const { user } = useAuth();
   const { settings: payslipDesignSettings } = usePayslipDesignSettings();
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
@@ -54,7 +52,7 @@ const PayslipOverviewPage: React.FC = () => {
         setSelectedEmployeeId(myId);
       }
     }
-  }, [user, employees]);
+  }, [user, employees]); // intentionally not including filters to avoid loops
 
   const {
     filteredPayslips,
