@@ -12,6 +12,7 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import PayslipsHeader from "@/components/payslips/PayslipsHeader";
 import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOverviewToolbar";
+import { useAuth } from "@/context/AuthContext";
 import PayslipsSummaryCards from "@/components/payslips/overview/PayslipsSummaryCards";
 import { usePayslipsOverviewSelectors, PayslipsOverviewFilters } from "@/hooks/selectors/usePayslipsOverviewSelectors";
 import { useAuth } from "@/context/AuthContext";
@@ -27,6 +28,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 const PayslipOverviewPage: React.FC = () => {
   const { employees, payslips, companyDetails, isLoadingCompanyDetails, isLoadingEmployees, isLoadingPayslips } = usePayrollProcessor();
   const { user } = useAuth();
+  const { user } = useAuth();
   const { settings: payslipDesignSettings } = usePayslipDesignSettings();
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
@@ -41,6 +43,18 @@ const PayslipOverviewPage: React.FC = () => {
     dateEnd: "",
     search: "",
   });
+
+  // Staff scoping: default to the staff's own employee and restrict selection
+  useEffect(() => {
+    if (user?.role === "Staff") {
+      const myEmployee = employees.find(emp => (emp as any).userId === user.id);
+      const myId = myEmployee?.id;
+      if (myId && filters.employeeFilterId !== myId) {
+        setFilters(prev => ({ ...prev, employeeFilterId: myId }));
+        setSelectedEmployeeId(myId);
+      }
+    }
+  }, [user, employees]);
 
   const {
     filteredPayslips,
@@ -106,7 +120,7 @@ const PayslipOverviewPage: React.FC = () => {
       {/* Toolbar: Filters, Date range, Search (debounced), Refresh */}
       <Card className="border rounded-xl">
         <PayslipsOverviewToolbar
-          employees={employees}
+          employees={user?.role === "Staff" ? employees.filter(emp => (emp as any).userId === user?.id) : employees}
           employeeFilterId={filters.employeeFilterId}
           onEmployeeFilterChange={(v) => setFilters(prev => ({ ...prev, employeeFilterId: v }))}
 
@@ -198,7 +212,7 @@ const PayslipOverviewPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <PayslipGenerationSection
-                employees={employees}
+                employees={user?.role === "Staff" ? employees.filter(emp => (emp as any).userId === user?.id) : employees}
                 payslips={payslips}
                 selectedEmployeeId={selectedEmployeeId}
                 setSelectedEmployeeId={setSelectedEmployeeId}
