@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { format, isSameMonth, isSameYear, startOfMonth, endOfMonth } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
@@ -432,17 +431,13 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   }, [selectedEmployeeId, allEmployees, payslips, setSelectedPayslipId, payCycleSettings]);
 
-
+  // Layout only (no nested Card)
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Generate Payslips</CardTitle>
-        <CardDescription>
-          Generate individual payslips or a batch of all payslips for printing or downloading.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-start">
+    <div className="space-y-6">
+      {/* Row 1: Employee & payslip selection + actions */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
+        {/* Left: selectors (2 inputs) */}
+        <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-2">
           <EmployeePayslipSelector
             employees={employees}
             payslips={payslips}
@@ -452,22 +447,32 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             setSelectedPayslipId={setSelectedPayslipId}
             filteredPayslipsForEmployee={filteredPayslipsForEmployee}
           />
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSelectCurrentPeriodPayslip}
-              disabled={!selectedEmployeeId}
-            >
-              <CalendarCheck className="mr-2 h-4 w-4" /> Select Current Period Payslip
-            </Button>
-            <IndividualPayslipActions
-              selectedPayslip={selectedPayslip}
-              onPrint={() => handlePrintOrDownloadIndividual('print')}
-              onDownload={() => handlePrintOrDownloadIndividual('download')}
-            />
-          </div>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-start">
+
+        {/* Right: actions */}
+        <div className="md:col-span-1 lg:col-span-1 flex flex-col gap-3">
+          <Button
+            variant="outline"
+            onClick={handleSelectCurrentPeriodPayslip}
+            disabled={!selectedEmployeeId}
+          >
+            <CalendarCheck className="mr-2 h-4 w-4" /> Select Current Period Payslip
+          </Button>
+          <IndividualPayslipActions
+            selectedPayslip={selectedPayslip}
+            onPrint={() => handlePrintOrDownloadIndividual('print')}
+            onDownload={() => handlePrintOrDownloadIndividual('download')}
+          />
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t" />
+
+      {/* Row 2: Bulk actions + generation buttons */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
+        {/* Left: bulk controls (mode, date, audit) + bulk menu */}
+        <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-3">
           <BulkPayslipActions
             payslips={payslips}
             selectedPayPeriodDate={selectedPayPeriodDate}
@@ -479,25 +484,27 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             auditLevel={auditLevel}
             setAuditLevel={setAuditLevel}
           />
-          <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
-            <Button
-              className="w-full"
-              onClick={handleGenerateSelectedPeriodPayslips}
-              disabled={!selectedPayPeriodDate || allEmployees.length === 0}
-            >
-              <FileStack className="mr-2 h-4 w-4" /> Generate Payslips for Selected Period
-            </Button>
-            <Button
-              className="w-full"
-              onClick={() => handleGenerateAllCurrentPeriodPayslips('download')}
-              disabled={allEmployees.length === 0 || payslips.length === 0}
-            >
-              <FileStack className="mr-2 h-4 w-4" /> Generate All for Current Period (Download)
-            </Button>
-          </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Right: generate buttons */}
+        <div className="md:col-span-1 lg:col-span-1 flex flex-col gap-3">
+          <Button
+            className="w-full"
+            onClick={handleGenerateSelectedPeriodPayslips}
+            disabled={!selectedPayPeriodDate || allEmployees.length === 0}
+          >
+            <FileStack className="mr-2 h-4 w-4" /> Generate Payslips for Selected Period
+          </Button>
+          <Button
+            className="w-full"
+            onClick={() => handleGenerateAllCurrentPeriodPayslips('download')}
+            disabled={allEmployees.length === 0 || payslips.length === 0}
+          >
+            <FileStack className="mr-2 h-4 w-4" /> Generate All for Current Period (Download)
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 };
 
