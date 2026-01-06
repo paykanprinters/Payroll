@@ -61,10 +61,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (error || !profile) return null;
 
+    // Phase 1: ensure allowlisted emails are Admin
+    const ADMIN_ALLOWLIST = ["info@kanprinters.co.za"];
+    let role: UserRole = (profile.role || "Staff") as UserRole;
+    const email = profile.email as string;
+
+    if (ADMIN_ALLOWLIST.includes(email) && role !== "Admin") {
+      try {
+        const { data: resp, error: fnError } = await supabase.functions.invoke("bootstrap-admins", {
+          body: JSON.stringify({ emails: ADMIN_ALLOWLIST }),
+        });
+        if (fnError) {
+          console.error("AuthContext: bootstrap-admins error", fnError);
+        } else {
+          // Re-fetch to reflect updated role
+          const { data: refreshed, error: refErr } = await supabase
+            .from("users")
+            .select("id, email, name, role")
+            .eq("id", userId)
+            .single();
+          if (!refErr && refreshed) {
+            role = (refreshed.role || "Staff") as UserRole;
+          }
+        }
+      } catch (e) {
+        console.error("AuthContext: bootstrap-admins exception", e);
+      }
+    }
+
     const authUser: AuthUser = {
       id: profile.id,
-      email: profile.email,
-      role: (profile.role || "Staff") as UserRole,
+      email,
+      role,
       name: profile.name ?? profile.email,
     };
     return authUser;
