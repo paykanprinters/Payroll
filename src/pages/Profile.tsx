@@ -50,7 +50,7 @@ const Profile: React.FC = () => {
       .select(
         "id, first_name, last_name, phone_number, emergency_contact_name, emergency_contact_number, emergency_contact_address, address_line1, address_line2, city, province, postal_code"
       )
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (error) {
@@ -107,7 +107,7 @@ const Profile: React.FC = () => {
         province: fields.province || null,
         postal_code: fields.postal_code || null,
       })
-      .eq("id", user.id);
+      .eq("user_id", user.id);
 
     setSaving(false);
     if (error) {

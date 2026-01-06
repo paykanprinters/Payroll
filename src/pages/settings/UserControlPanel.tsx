@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDialog";
 import AdminPolicyBadge from "@/components/settings/AdminPolicyBadge";
+import LinkEmployeeDialog from "@/components/settings/LinkEmployeeDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -54,13 +55,17 @@ const UserControlPanel: React.FC = () => {
   const [isUserDeleteDialogOpen, setIsUserDeleteDialogOpen] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState<UserData | null>(null);
 
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = React.useState(false);
+  const [linkTargetUser, setLinkTargetUser] = React.useState<UserData | null>(null);
+  const [linkedMap, setLinkedMap] = React.useState<Record<string, { id: string; name: string; customId: string } | null>>({}); // userId -> employee summary
+
   const { user: currentUser, isAuthenticated } = useAuth();
-  const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
+  const { isMockDataEnabled, employees } = usePayrollProcessor(); // Get mock data status & employees
 
   const fetchUsers = React.useCallback(async () => {
     if (isMockDataEnabled) {
-      // For mock data, users are not managed here.
       setUsers([]);
+      setLinkedMap({});
       setIsLoading(false);
       return;
     }
@@ -72,8 +77,32 @@ const UserControlPanel: React.FC = () => {
       console.error("Error fetching users:", error);
       showError("Failed to load users.");
       setUsers([]);
+      setLinkedMap({});
     } else {
-      setUsers(data as UserData[]);
+      const fetched = data as UserData[];
+      setUsers(fetched);
+
+      const { data: empRows, error: empErr } = await supabase
+        .from('employees')
+        .select('id, user_id, first_name, last_name, custom_employee_id');
+
+      if (empErr) {
+        console.error("Error fetching employees for link mapping:", empErr);
+        setLinkedMap({});
+      } else {
+        const map: Record<string, { id: string; name: string; customId: string } | null> = {};
+        fetched.forEach(u => { map[u.id] = null; });
+        (empRows || []).forEach((row: any) => {
+          if (row.user_id) {
+            map[row.user_id] = {
+              id: row.id,
+              name: `${row.first_name} ${row.last_name}`,
+              customId: row.custom_employee_id ?? "",
+            };
+          }
+        });
+        setLinkedMap(map);
+      }
     }
     setIsLoading(false);
   }, [isMockDataEnabled]);
@@ -277,6 +306,31 @@ const UserControlPanel: React.FC = () => {
 
   const canManageUsers = currentUser?.role === 'Admin';
 
+  const openLinkDialog = (user: UserData) => {
+    if (isMockDataEnabled) {
+      showError("Cannot link employees when mock data is enabled.");
+      return;
+    }
+    setLinkTargetUser(user);
+    setIsLinkDialogOpen(true);
+  };
+
+  const refreshLinkedForUser = (userId: string) => {
+    supabase
+      .from('employees')
+      .select('id, user_id, first_name, last_name, custom_employee_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setLinkedMap(prev => ({
+          ...prev,
+          [userId]: data
+            ? { id: data.id, name: `${data.first_name} ${data.last_name}`, customId: data.custom_employee_id ?? "" }
+            : null
+        }));
+      });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -355,7 +409,15 @@ const UserControlPanel: React.FC = () => {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Policy</TableHead><TableHead className="text-center">Actions</TableHead></TableRow>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Policy</TableHead>
+                  <TableHead>Linked Employee</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.length > 0 ? (
@@ -373,15 +435,26 @@ const UserControlPanel: React.FC = () => {
                       <TableCell>
                         <AdminPolicyBadge role={user.role} />
                       </TableCell>
+                      <TableCell>
+                        {linkedMap[user.id] ? (
+                          <span className="text-sm">
+                            {linkedMap[user.id]?.name}
+                            {linkedMap[user.id]?.customId ? ` (${linkedMap[user.id]?.customId})` : ""}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not linked</span>
+                        )}
+                      </TableCell>
                       <TableCell className="flex justify-center items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditUserClick(user)} disabled={isMockDataEnabled}>Edit</Button>
+                        <Button variant="secondary" size="sm" onClick={() => openLinkDialog(user)} disabled={isMockDataEnabled}>Link Employee</Button>
                         <Button variant="destructive" size="sm" onClick={() => handleDeleteUserClick(user)} disabled={isMockDataEnabled}>Delete</Button>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       No users found matching your criteria.
                     </TableCell>
                   </TableRow>
@@ -404,6 +477,19 @@ const UserControlPanel: React.FC = () => {
         onClose={() => setIsUserFormOpen(false)}
         onSave={handleSaveUser}
         initialUser={editingUser}
+      />
+
+      <LinkEmployeeDialog
+        isOpen={isLinkDialogOpen}
+        onClose={() => setIsLinkDialogOpen(false)}
+        user={linkTargetUser ? { id: linkTargetUser.id, email: linkTargetUser.email, name: linkTargetUser.name } : null}
+        employees={employees}
+        currentLinkedEmployeeId={linkTargetUser ? linkedMap[linkTargetUser.id]?.id ?? null : null}
+        onLinkedChange={(linkedId) => {
+          if (linkTargetUser) {
+            refreshLinkedForUser(linkTargetUser.id);
+          }
+        }}
       />
 
       <AlertDialog open={isUserDeleteDialogOpen} onOpenChange={setIsUserDeleteDialogOpen}>
