@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
@@ -14,6 +14,7 @@ import PayslipsHeader from "@/components/payslips/PayslipsHeader";
 import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOverviewToolbar";
 import PayslipsSummaryCards from "@/components/payslips/overview/PayslipsSummaryCards";
 import { usePayslipsOverviewSelectors, PayslipsOverviewFilters } from "@/hooks/selectors/usePayslipsOverviewSelectors";
+import { useAuth } from "@/context/AuthContext";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -25,6 +26,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 
 const PayslipOverviewPage: React.FC = () => {
   const { employees, payslips, companyDetails, isLoadingCompanyDetails, isLoadingEmployees, isLoadingPayslips } = usePayrollProcessor();
+  const { user } = useAuth();
   const { settings: payslipDesignSettings } = usePayslipDesignSettings();
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
@@ -94,19 +96,8 @@ const PayslipOverviewPage: React.FC = () => {
     );
   }
 
-  if (!companyDetails) {
-    return (
-      <Card className="border-red-500 bg-red-50 text-red-800">
-        <CardHeader>
-          <CardTitle>Company Details Missing</CardTitle>
-          <CardDescription>
-            Company details are required to generate payslips. Please set them up in{" "}
-            <a href="/settings/company-details" className="underline font-semibold">Settings &gt; Company Details</a>.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
+  // Do not block the page if company details are missing.
+  // Staff should be able to view their own payslips; Admin/Manager will see a soft warning near generation actions.
 
   return (
     <div className="flex flex-col gap-4">
@@ -184,6 +175,22 @@ const PayslipOverviewPage: React.FC = () => {
         </div>
 
         <div className="space-y-4 lg:col-span-1">
+          {/* Inline admin/manager warning if company details are missing */}
+          {!companyDetails && (user?.role === "Admin" || user?.role === "Manager") && (
+            <Card className="border-amber-500 bg-amber-50 text-amber-900">
+              <CardHeader className="flex flex-row items-start gap-3">
+                <AlertTriangle className="h-5 w-5 mt-0.5" />
+                <div>
+                  <CardTitle className="text-amber-900">Company Details Missing</CardTitle>
+                  <CardDescription className="text-amber-800">
+                    Company details are required for generating and exporting payslips. Please set them up in{" "}
+                    <a href="/settings/company-details" className="underline font-semibold">Settings &gt; Company Details</a>.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+            </Card>
+          )}
+
           <Card className="relative overflow-hidden border rounded-xl bg-white">
             <CardHeader>
               <CardTitle>Generate / Select Payslip</CardTitle>
