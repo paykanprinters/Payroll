@@ -17,20 +17,18 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
-import { Eye, EyeOff, RefreshCcw, Mail } from "lucide-react";
+import { Eye, EyeOff, RefreshCcw, Mail, ShieldCheck } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
-// Define the schema for user form validation
 const userSchema = z.object({
-  id: z.string().optional(), // ID is optional for new users
+  id: z.string().optional(),
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   role: z.enum(["Admin", "Manager", "Staff", "Viewer"], { message: "Role is required" }),
   status: z.enum(["Active", "Inactive"]).default("Active"),
-  password: z.string().min(8, "Password must be at least 8 characters long").optional(), // Password is optional for existing users
+  password: z.string().min(8, "Password must be at least 8 characters long").optional(),
 }).superRefine((data, ctx) => {
-  // Password is required for new users
   if (!data.id && !data.password) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -57,7 +55,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
 }) => {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
-    defaultValues: initialUser ? { ...initialUser, password: "" } : { // Clear password for editing
+    defaultValues: initialUser ? { ...initialUser, password: "" } : {
       name: "",
       email: "",
       role: "Staff",
@@ -67,11 +65,11 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   });
 
   const [showPassword, setShowPassword] = React.useState(false);
-  const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
+  const { isMockDataEnabled } = usePayrollProcessor();
 
   React.useEffect(() => {
     if (initialUser) {
-      form.reset({ ...initialUser, password: "" }); // Clear password field when editing
+      form.reset({ ...initialUser, password: "" });
     } else {
       form.reset({
         name: "",
@@ -86,7 +84,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
     let newPassword = "";
-    for (let i = 0; i < 12; i++) { // Generate a 12-character password
+    for (let i = 0; i < 12; i++) {
       newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     form.setValue("password", newPassword, { shouldValidate: true });
@@ -114,6 +112,27 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     } else {
       showSuccess(`Confirmation email sent to ${initialUser.email}!`);
     }
+  };
+
+  const handleForceConfirmEmail = async () => {
+    if (isMockDataEnabled) {
+      showError("Cannot confirm email when mock data is enabled.");
+      return;
+    }
+    if (!initialUser?.id) {
+      showError("User ID not available.");
+      return;
+    }
+    const res = await supabase.functions.invoke("confirm-user-email", {
+      body: JSON.stringify({ userId: initialUser.id }),
+    });
+    if (res.error) {
+      console.error("Force confirm email error:", res.error);
+      const serverMsg = typeof res.error?.message === "string" ? res.error.message : (res.data as any)?.error;
+      showError(serverMsg || "Failed to confirm user email.");
+      return;
+    }
+    showSuccess("User email confirmed successfully.");
   };
 
   const onSubmit = (data: UserFormValues) => {
@@ -181,7 +200,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 id="password"
                 type={showPassword ? "text" : "password"}
                 {...form.register("password")}
-                className="pr-10" // Add padding for the icon
+                className="pr-10"
                 disabled={isMockDataEnabled}
               />
               <Button
@@ -202,9 +221,14 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
           </div>
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
             {initialUser && (
-              <Button type="button" variant="outline" onClick={handleResendConfirmationEmail} disabled={isMockDataEnabled}>
-                <Mail className="mr-2 h-4 w-4" /> Resend Confirmation
-              </Button>
+              <>
+                <Button type="button" variant="outline" onClick={handleResendConfirmationEmail} disabled={isMockDataEnabled}>
+                  <Mail className="mr-2 h-4 w-4" /> Resend Confirmation
+                </Button>
+                <Button type="button" variant="outline" onClick={handleForceConfirmEmail} disabled={isMockDataEnabled}>
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Force Confirm Email
+                </Button>
+              </>
             )}
             <Button type="submit" disabled={isMockDataEnabled}>{initialUser ? "Save Changes" : "Add User"}</Button>
           </DialogFooter>
