@@ -237,18 +237,19 @@ const UserControlPanel: React.FC = () => {
         fetchUsers();
       }
 
-      const { data: metadataUpdate, error: metadataError } = await supabase.functions.invoke('update-user-metadata', {
+      const resMeta = await supabase.functions.invoke('update-user-metadata', {
         body: JSON.stringify({
           userId: userData.id,
           metadata: { name: userData.name, role: userData.role, status: userData.status },
         }),
       });
 
-      if (metadataError) {
-        console.error("Error updating user metadata via Edge Function:", metadataError);
-        showError("Failed to update user display name in Auth system.");
+      if (resMeta.error) {
+        console.error("Error updating user metadata via Edge Function:", resMeta.error);
+        const serverMsgMeta = typeof resMeta.error?.message === 'string' ? resMeta.error.message : (resMeta.data as any)?.error;
+        showError(serverMsgMeta || "Failed to update user display name in Auth system.");
       } else {
-        console.log("User metadata updated:", metadataUpdate);
+        console.log("User metadata updated:", resMeta.data);
       }
 
       if (userData.password) {
