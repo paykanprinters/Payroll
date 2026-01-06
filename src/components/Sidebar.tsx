@@ -17,6 +17,7 @@ import {
   LineChart,
   Clock,
   ListTodo,
+  User as UserIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -100,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   pendingToDosCount,
 }) => {
   const isMobile = useIsMobile();
-  const { isAuthenticated, isLoadingAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, user } = useAuth();
 
   const displayCompanyDetails = React.useMemo(() => {
     return {
@@ -121,6 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     activeAccentColor: string;
   }> = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", iconColor: "text-sky-600 dark:text-sky-400", activeAccentColor: "border-sky-500" },
+    { to: "/profile", icon: UserIcon, label: "My Profile", iconColor: "text-gray-700 dark:text-gray-300", activeAccentColor: "border-gray-500" },
     { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount, iconColor: "text-rose-600 dark:text-rose-400", activeAccentColor: "border-rose-500" },
     { to: "/employees", icon: Users, label: "Employees", iconColor: "text-teal-600 dark:text-teal-400", activeAccentColor: "border-teal-500" },
     { to: "/timesheet", icon: Clock, label: "Timesheet", iconColor: "text-amber-600 dark:text-amber-400", activeAccentColor: "border-amber-500" },
@@ -200,7 +202,17 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
             {renderSidebarHeader(false, setIsCollapsed)}
             <nav className="grid items-start gap-1 p-4">
-              {navItems.map((item) => (
+              {navItems
+                .filter((item) => {
+                  if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports") {
+                    return user?.role === "Admin" || user?.role === "Manager";
+                  }
+                  if (item.to === "/settings") {
+                    return user?.role === "Admin";
+                  }
+                  return true;
+                })
+                .map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -228,7 +240,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     >
       {renderSidebarHeader(isCollapsed, setIsCollapsed)}
       <nav className="grid items-start gap-1 p-4">
-        {navItems.map((item) => (
+        {navItems
+          .filter((item) => {
+            if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports") {
+              return user?.role === "Admin" || user?.role === "Manager";
+            }
+            if (item.to === "/settings") {
+              return user?.role === "Admin";
+            }
+            return true;
+          })
+          .map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

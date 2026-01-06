@@ -22,6 +22,7 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React from "react";
 import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -43,17 +44,25 @@ const App = () => {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/todos" element={<ToDosPage />} />
-                  <Route path="/employees" element={<Employees />} />
                   <Route path="/timesheet" element={<Timesheet />} />
                   <Route path="/payslips/*" element={<Payslips />} />
                   <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
                   <Route path="/savings" element={<Savings />} />
                   <Route path="/vacation-absence" element={<VacationAbsence />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/profile" element={<Profile />} />
+
+                  {/* Manager/Admin-only routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager']} />}>
+                    <Route path="/employees" element={<Employees />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/reports" element={<Reports />} />
+                  </Route>
+
+                  {/* Admin-only settings */}
                   <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
                     <Route path="/settings/*" element={<Settings />} />
                   </Route>
+
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Route>
