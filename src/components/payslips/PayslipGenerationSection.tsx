@@ -5,23 +5,23 @@ import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } 
 import { format, isSameMonth, isSameYear, startOfMonth, endOfMonth } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import IndividualPayslipCard from "./IndividualPayslipCard";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
-import IndividualPayslipActions from "./IndividualPayslipActions";
 import BulkPayslipActions from "./BulkPayslipActions";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { saveGeneratedReport, computeChecksum } from "@/integrations/supabase/generated-reports";
 import { generatePayrollSummaryReportContent, generateEmployeePayslipReportContent } from "@/lib/report-generators";
 import { showError, showSuccess } from "@/utils/toast";
-import { Button } from "@/components/ui/button";
-import { FileStack, CalendarCheck } from "lucide-react";
+import { pdf as pdfRenderer } from "@react-pdf/renderer";
 
 // Vector PDF helpers
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import PayslipPdfDocument from "./PayslipPdfDocument";
 import ReportPdfDocument from "@/components/reports/ReportPdfDocument";
-import { pdf as pdfRenderer } from "@react-pdf/renderer";
 import { useZipDownload } from "@/hooks/use-zip-download";
+
+// Modular panels
+import IndividualActionsPanel from "./IndividualActionsPanel";
+import GenerationButtonsPanel from "./GenerationButtonsPanel";
 
 interface PayslipGenerationSectionProps {
   employees: MockEmployee[];
@@ -112,7 +112,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     } else {
       await openPdf(doc, filename);
     }
-  }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName]);
+  }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, downloadPdf, openPdf]);
 
   const handleGenerateSelectedPeriodPayslips = React.useCallback(async () => {
     if (!selectedPayPeriodDate) {
@@ -141,7 +141,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
 
     await runPayrollProcess(periodStart, periodEnd);
-    // Ensure live mode reflects new payslips immediately
     refetchPayslips?.();
   }, [selectedPayPeriodDate, bulkGenerationMode, payCycleSettings, runPayrollProcess, refetchPayslips]);
 
@@ -184,7 +183,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     const reportDesignSettings = loadReportDesignSettings();
 
-    // Save combined metadata to Supabase only for detailed level
     if (level === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
@@ -204,7 +202,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await saveGeneratedReport(`Bulk Payslips Reports — ${mode} — ${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}`, combinedHtml);
     }
 
-    // Vector reports and payslips documents
     const reportsDoc = (
       <ReportPdfDocument
         payslips={payslips}
@@ -252,7 +249,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     } catch (e: any) {
       showError(`Bulk ${action} failed: ${e?.message || 'Unknown error'}`);
     }
-  }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, loadReportDesignSettings, payCycleSettings]);
+  }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, loadReportDesignSettings, payCycleSettings, downloadZip, openPdf]);
 
   const handleGenerateAllCurrentPeriodPayslips = React.useCallback(async (action: 'print' | 'download') => {
     if (!companyDetails) {
@@ -306,7 +303,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
 
     const reportDesignSettings = loadReportDesignSettings();
 
-    // Save metadata for detailed audit level
     if (auditLevel === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
@@ -327,7 +323,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await saveGeneratedReport(`Bulk Payslips Reports — Current Period — ${format(today, 'yyyy-MM-dd')}`, combinedHtml);
     }
 
-    // Vector docs
     const reportsDoc = (
       <ReportPdfDocument
         payslips={payslips}
@@ -375,7 +370,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     } catch (e: any) {
       showError(`Bulk ${action} failed: ${e?.message || 'Unknown error'}`);
     }
-  }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, auditLevel, loadReportDesignSettings, payCycleSettings]);
+  }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, auditLevel, loadReportDesignSettings, payCycleSettings, downloadZip, openPdf]);
 
   const handleSelectCurrentPeriodPayslip = useCallback(() => {
     if (!selectedEmployeeId) {
@@ -431,12 +426,11 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   }, [selectedEmployeeId, allEmployees, payslips, setSelectedPayslipId, payCycleSettings]);
 
-  // Layout only (no nested Card)
   return (
     <div className="space-y-6">
       {/* Row 1: Employee & payslip selection + actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
-        {/* Left: selectors (2 inputs) */}
+        {/* Left: selectors */}
         <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-2">
           <EmployeePayslipSelector
             employees={employees}
@@ -449,29 +443,23 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
           />
         </div>
 
-        {/* Right: actions */}
-        <div className="md:col-span-1 lg:col-span-1 flex flex-col gap-3">
-          <Button
-            variant="outline"
-            onClick={handleSelectCurrentPeriodPayslip}
-            disabled={!selectedEmployeeId}
-          >
-            <CalendarCheck className="mr-2 h-4 w-4" /> Select Current Period Payslip
-          </Button>
-          <IndividualPayslipActions
+        {/* Right: individual actions panel */}
+        <div className="md:col-span-1 lg:col-span-1">
+          <IndividualActionsPanel
             selectedPayslip={selectedPayslip}
+            selectedEmployeeId={selectedEmployeeId}
+            onSelectCurrentPeriodPayslip={handleSelectCurrentPeriodPayslip}
             onPrint={() => handlePrintOrDownloadIndividual('print')}
             onDownload={() => handlePrintOrDownloadIndividual('download')}
           />
         </div>
       </div>
 
-      {/* Divider */}
       <div className="border-t" />
 
       {/* Row 2: Bulk actions + generation buttons */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
-        {/* Left: bulk controls (mode, date, audit) + bulk menu */}
+        {/* Left: bulk controls */}
         <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-3">
           <BulkPayslipActions
             payslips={payslips}
@@ -486,22 +474,14 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
           />
         </div>
 
-        {/* Right: generate buttons */}
-        <div className="md:col-span-1 lg:col-span-1 flex flex-col gap-3">
-          <Button
-            className="w-full"
-            onClick={handleGenerateSelectedPeriodPayslips}
-            disabled={!selectedPayPeriodDate || allEmployees.length === 0}
-          >
-            <FileStack className="mr-2 h-4 w-4" /> Generate Payslips for Selected Period
-          </Button>
-          <Button
-            className="w-full"
-            onClick={() => handleGenerateAllCurrentPeriodPayslips('download')}
-            disabled={allEmployees.length === 0 || payslips.length === 0}
-          >
-            <FileStack className="mr-2 h-4 w-4" /> Generate All for Current Period (Download)
-          </Button>
+        {/* Right: generation buttons panel */}
+        <div className="md:col-span-1 lg:col-span-1">
+          <GenerationButtonsPanel
+            onGenerateSelectedPeriod={handleGenerateSelectedPeriodPayslips}
+            onGenerateAllCurrentPeriodDownload={() => handleGenerateAllCurrentPeriodPayslips('download')}
+            disabledSelectedPeriod={!selectedPayPeriodDate || allEmployees.length === 0}
+            disabledCurrentPeriod={allEmployees.length === 0 || payslips.length === 0}
+          />
         </div>
       </div>
     </div>
