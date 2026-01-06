@@ -13,6 +13,7 @@ import LoansAndAdvancements from "./pages/LoansAndAdvancements";
 import Savings from "./pages/Savings";
 import VacationAbsence from "./pages/VacationAbsence";
 import Analytics from "./pages/Analytics";
+import AnalyticsStaff from "./pages/AnalyticsStaff";
 import Timesheet from "./pages/Timesheet";
 import NotFound from "./pages/NotFound";
 import ToDosPage from "./pages/ToDosPage";
@@ -50,6 +51,11 @@ const App = () => {
                   <Route path="/savings" element={<Savings />} />
                   <Route path="/vacation-absence" element={<VacationAbsence />} />
                   <Route path="/profile" element={<Profile />} />
+                  
+                  {/* Staff-only analytics route */}
+                  <Route element={<ProtectedRoute allowedRoles={['Staff']} />}>
+                    <Route path="/analytics/staff" element={<AnalyticsStaff />} />
+                  </Route>
 
                   {/* Manager/Admin-only routes */}
                   <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager']} />}>
