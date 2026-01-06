@@ -52,7 +52,7 @@ function Login() {
         <div className="w-full max-w-5xl rounded-2xl overflow-hidden bg-white/80 backdrop-blur-md shadow-xl">
           <div className="grid grid-cols-1 md:grid-cols-2">
             {/* Left panel: branded info */}
-            <div className="relative p-8 md:p-10 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+            <div className="relative p-8 md:p-10 bg-gradient-to-br from-sky-400 to-blue-800 text-white">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-white/15 p-3">
                   <ShieldCheck className="h-6 w-6 text-white" />
