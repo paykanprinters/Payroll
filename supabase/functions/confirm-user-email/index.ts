@@ -74,10 +74,9 @@ serve(async (req) => {
       targetUserId = match.id;
     }
 
-    // Confirm email via Admin API
-    const nowIso = new Date().toISOString();
+    // Confirm email via Admin API (v2: email_confirm flag)
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(targetUserId!, {
-      email_confirmed_at: nowIso,
+      email_confirm: true,
     });
 
     if (error) {
@@ -88,11 +87,11 @@ serve(async (req) => {
       });
     }
 
-    console.log("[confirm-user-email] Email confirmed", { userId: data.user?.id, at: nowIso });
+    console.log("[confirm-user-email] Email confirmed flag set", { userId: data.user?.id });
     return new Response(JSON.stringify({
       message: "Email confirmed",
       user: data.user?.id,
-      email_confirmed_at: nowIso
+      email_confirmed_at: data.user?.email_confirmed_at ?? null
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
