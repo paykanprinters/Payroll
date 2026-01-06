@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, DollarSign, Wallet, ReceiptText } from "lucide-react";
+import { Loader2, DollarSign, Wallet, ReceiptText, Filter, RefreshCcw, CalendarDays, Search } from "lucide-react";
 
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
@@ -12,6 +12,8 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import PayslipsHeader from "@/components/payslips/PayslipsHeader";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -25,8 +27,6 @@ const PayslipOverviewPage: React.FC = () => {
   const { employees, payslips, companyDetails, isLoadingCompanyDetails, isLoadingEmployees, isLoadingPayslips } = usePayrollProcessor();
   const { settings: payslipDesignSettings } = usePayslipDesignSettings();
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
-  const [payrollSummaryData, setPayrollSummaryData] = useState<{ name: string; gross: number; net: number }[]>([]);
-  const [deductionsBreakdownData, setDeductionsBreakdownData] = useState<{ name: string; value: number }[]>([]);
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
@@ -34,27 +34,89 @@ const PayslipOverviewPage: React.FC = () => {
   const cleanLabel = (label: string) =>
     label.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)\s*$/i, "");
 
-  const loadPayslipsAndEmployees = useCallback(() => {
-    if (payslips.length > 0) {
-      const totalGross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-      const totalNet = payslips.reduce((sum, p) => sum + p.netPay, 0);
-      setPayrollSummaryData([{ name: "Total Payroll", gross: totalGross, net: totalNet }]);
+  // Toolbar filters
+  const [employeeFilterId, setEmployeeFilterId] = useState<string>("all");
+  const [frequencyFilter, setFrequencyFilter] = useState<"all" | "Monthly" | "Weekly" | "Bi-Weekly">("all");
+  const [dateStart, setDateStart] = useState<string>("");
+  const [dateEnd, setDateEnd] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
 
-      const deductionsMap = new Map<string, number>();
-      payslips.forEach(payslip => {
-        payslip.deductionsBreakdown.forEach(deduction => {
-          const label = cleanLabel(deduction.name);
-          deductionsMap.set(label, (deductionsMap.get(label) || 0) + deduction.amount);
-        });
-      });
-      setDeductionsBreakdownData(
-        Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
-      );
-    } else {
-      setPayrollSummaryData([]);
-      setDeductionsBreakdownData([]);
+  // Helpers
+  const employeesById = useMemo(() => {
+    const map = new Map<string, { name: string; customId: string; frequency?: string }>();
+    employees.forEach(e => map.set(e.id, { name: `${e.firstName} ${e.lastName}`.trim(), customId: e.customEmployeeId || "N/A", frequency: e.payFrequency }));
+    return map;
+  }, [employees]);
+
+  const filteredPayslips = useMemo(() => {
+    let list = [...payslips];
+
+    if (employeeFilterId !== "all") {
+      list = list.filter(p => p.employeeId === employeeFilterId);
     }
-  }, [payslips, employees]);
+
+    if (frequencyFilter !== "all") {
+      list = list.filter(p => {
+        const freq = employeesById.get(p.employeeId)?.frequency;
+        return freq === frequencyFilter;
+      });
+    }
+
+    if (dateStart) {
+      list = list.filter(p => {
+        const [startStr] = p.payPeriod.split(" - ");
+        return startStr >= dateStart;
+      });
+    }
+    if (dateEnd) {
+      list = list.filter(p => {
+        const [, endStr] = p.payPeriod.split(" - ");
+        return endStr <= dateEnd;
+      });
+    }
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(p => {
+        const emp = employeesById.get(p.employeeId);
+        const hay = `${emp?.name || ""} ${emp?.customId || ""}`.toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    // newest first by period start
+    list.sort((a, b) => {
+      const [sa] = a.payPeriod.split(" - ");
+      const [sb] = b.payPeriod.split(" - ");
+      return new Date(sb).getTime() - new Date(sa).getTime();
+    });
+
+    return list;
+  }, [payslips, employeeFilterId, frequencyFilter, dateStart, dateEnd, search, employeesById]);
+
+  const totals = useMemo(() => {
+    const gross = filteredPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+    const net = filteredPayslips.reduce((sum, p) => sum + p.netPay, 0);
+    const count = filteredPayslips.length;
+    return { gross, net, count, filteredCount: filteredPayslips.length, totalCount: payslips.length };
+  }, [filteredPayslips, payslips]);
+
+  const payrollSummaryData = useMemo(() => {
+    const gross = filteredPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+    const net = filteredPayslips.reduce((sum, p) => sum + p.netPay, 0);
+    return [{ name: "Filtered Payroll", gross, net }];
+  }, [filteredPayslips]);
+
+  const deductionsBreakdownData = useMemo(() => {
+    const deductionsMap = new Map<string, number>();
+    filteredPayslips.forEach(payslip => {
+      payslip.deductionsBreakdown.forEach(deduction => {
+        const label = cleanLabel(deduction.name);
+        deductionsMap.set(label, (deductionsMap.get(label) || 0) + deduction.amount);
+      });
+    });
+    return Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }));
+  }, [filteredPayslips]);
 
   const loadReportDesignSettings = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
@@ -67,28 +129,16 @@ const PayslipOverviewPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadPayslipsAndEmployees();
     loadReportDesignSettings();
 
-    const handleMockDataUpdate = () => {
-      loadPayslipsAndEmployees();
-    };
     const handleReportDesignUpdate = () => {
       loadReportDesignSettings();
     };
-
-    window.addEventListener('allMockDataUpdated', handleMockDataUpdate);
-    window.addEventListener('payslipsUpdated', handleMockDataUpdate);
-    window.addEventListener('employeesUpdated', handleMockDataUpdate);
     window.addEventListener('reportDesignUpdated', handleReportDesignUpdate);
-
     return () => {
-      window.removeEventListener('allMockDataUpdated', handleMockDataUpdate);
-      window.removeEventListener('payslipsUpdated', handleMockDataUpdate);
-      window.removeEventListener('employeesUpdated', handleMockDataUpdate);
       window.removeEventListener('reportDesignUpdated', handleReportDesignUpdate);
     };
-  }, [loadPayslipsAndEmployees, loadReportDesignSettings]);
+  }, [loadReportDesignSettings]);
 
   useEffect(() => {
     if (!selectedEmployeeId || payslips.length === 0) {
@@ -113,13 +163,6 @@ const PayslipOverviewPage: React.FC = () => {
 
   const selectedPayslipForPreview = payslips.find(p => p.id === selectedPayslipId);
   const isLoadingPage = isLoadingCompanyDetails || isLoadingEmployees || isLoadingPayslips;
-
-  const totals = useMemo(() => {
-    const gross = payslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-    const net = payslips.reduce((sum, p) => sum + p.netPay, 0);
-    const count = payslips.length;
-    return { gross, net, count };
-  }, [payslips]);
 
   if (isLoadingPage) {
     return (
@@ -148,7 +191,81 @@ const PayslipOverviewPage: React.FC = () => {
     <div className="flex flex-col gap-4">
       <PayslipsHeader />
 
-      {/* Soft-accent stat cards */}
+      {/* Toolbar: Filters, Date range, Search, Refresh */}
+      <Card className="border rounded-xl">
+        <CardContent className="p-4 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={employeeFilterId} onValueChange={setEmployeeFilterId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All employees</SelectItem>
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={frequencyFilter} onValueChange={(v: "all" | "Monthly" | "Weekly" | "Bi-Weekly") => setFrequencyFilter(v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pay frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="Monthly">Monthly</SelectItem>
+                  <SelectItem value="Weekly">Weekly</SelectItem>
+                  <SelectItem value="Bi-Weekly">Bi-Weekly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="w-full" placeholder="Date from" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="w-full" placeholder="Date to" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by employee name or number..."
+                className="pl-8 rounded-full"
+                aria-label="Search payslips"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.dispatchEvent(new Event("appFocusRefresh"))}
+              className="rounded-full"
+              title="Refresh payslips"
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Showing {totals.filteredCount} of {totals.totalCount}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Soft-accent stat cards (filtered) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
           <SummaryAccent variant="sky" />
@@ -157,7 +274,7 @@ const PayslipOverviewPage: React.FC = () => {
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
                 <DollarSign className="h-4 w-4" />
               </span>
-              Total Gross Payroll
+              Total Gross Payroll (Filtered)
             </CardTitle>
             <CardDescription className="text-xs">Sum of gross earnings</CardDescription>
           </CardHeader>
@@ -173,7 +290,7 @@ const PayslipOverviewPage: React.FC = () => {
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
                 <Wallet className="h-4 w-4" />
               </span>
-              Total Net Payroll
+              Total Net Payroll (Filtered)
             </CardTitle>
             <CardDescription className="text-xs">Sum of net pay</CardDescription>
           </CardHeader>
@@ -189,9 +306,9 @@ const PayslipOverviewPage: React.FC = () => {
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
                 <ReceiptText className="h-4 w-4" />
               </span>
-              Payslips Generated
+              Payslips Shown
             </CardTitle>
-            <CardDescription className="text-xs">Total available payslips</CardDescription>
+            <CardDescription className="text-xs">Filtered count vs total</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totals.count}</div>
@@ -212,7 +329,7 @@ const PayslipOverviewPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Two-column layout: charts on the left, generator on the right */}
+      {/* Two-column layout: charts on the left (filtered), generator on the right */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <PayslipSummaryCharts
@@ -271,7 +388,7 @@ const PayslipOverviewPage: React.FC = () => {
       <div className="mt-4 p-4 border rounded-lg bg-green-50 text-green-800">
         <h3 className="font-semibold text-lg mb-2">Payslip Management Area</h3>
         <p className="text-sm">
-          Here you would find tools for selecting employees, defining pay periods, and initiating the payslip generation process. Historical payslips would also be accessible.
+          Use the filters above to explore payslips by employee, date range, or pay frequency. Charts and totals update to reflect your current filters.
         </p>
       </div>
     </div>
