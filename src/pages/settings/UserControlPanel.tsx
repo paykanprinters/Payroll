@@ -252,12 +252,13 @@ const UserControlPanel: React.FC = () => {
       }
 
       if (userData.password) {
-        const { data, error: passwordUpdateError } = await supabase.functions.invoke('update-user-password', {
+        const res = await supabase.functions.invoke('update-user-password', {
           body: JSON.stringify({ userId: userData.id, newPassword: userData.password }),
         });
-        if (passwordUpdateError) {
-          console.error("Error updating user password via Edge Function:", passwordUpdateError);
-          showError("Failed to update user password.");
+        if (res.error) {
+          console.error("Error updating user password via Edge Function:", res.error);
+          const serverMsg = typeof res.error?.message === 'string' ? res.error.message : (res.data as any)?.error;
+          showError(serverMsg || "Failed to update user password.");
         } else {
           showSuccess("User password updated successfully!");
         }
