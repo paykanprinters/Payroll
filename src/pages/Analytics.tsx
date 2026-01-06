@@ -15,17 +15,16 @@ import {
   Pie,
   Cell,
   BarChart,
-  Bar,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data-interfaces";
-import { format, differenceInMonths } from "date-fns";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { format, isSameMonth, isSameYear } from "date-fns";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c"];
 
 const Analytics: React.FC = () => {
-  const { employees, payslips, leaveRecords } = usePayrollProcessor(); // Use usePayrollProcessor
+  const { employees, payslips, leaveRecords } = usePayrollProcessor();
 
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [compensationBreakdown, setCompensationBreakdown] = useState<{ name: string; value: number }[]>([]);
@@ -36,8 +35,19 @@ const Analytics: React.FC = () => {
   const [overtimeCostTrend, setOvertimeCostTrend] = useState<{ name: string; overtime: number }[]>([]);
   const [employeeTenureDistribution, setEmployeeTenureDistribution] = useState<{ name: string; value: number }[]>([]);
 
-
   const dataVisualsFontSize = useDataVisualsFontSize();
+
+  const normalizeEarningName = (raw: string): string => {
+    const n = (raw || "").toLowerCase();
+    if (n.startsWith("regular hours")) return "Regular Hours";
+    if (n.startsWith("basic salary")) return "Basic Salary";
+    if (n.startsWith("overtime")) return "Overtime";
+    if (n.startsWith("weekend overtime")) return "Weekend Overtime";
+    if (n.startsWith("public holiday (worked")) return "Public Holiday (Worked)";
+    if (n.startsWith("public holiday (no timesheet")) return "Public Holiday (Not Worked)";
+    if (n.startsWith("bonus")) return "Bonus";
+    return raw;
+  };
 
   const loadAnalyticsData = useCallback(() => {
     // --- Monthly Payroll Cost Trend ---
@@ -62,17 +72,6 @@ const Analytics: React.FC = () => {
     setMonthlyPayrollTrend(trendData);
 
     // --- Compensation Type Breakdown ---
-    const normalizeEarningName = (raw: string) => {
-      const n = (raw || "").toLowerCase();
-      if (n.startsWith("regular hours")) return "Regular Hours";
-      if (n.startsWith("basic salary")) return "Basic Salary";
-      if (n.startsWith("overtime")) return "Overtime";
-      if (n.startsWith("weekend overtime")) return "Weekend Overtime";
-      if (n.startsWith("public holiday (worked")) return "Public Holiday (Worked)";
-      if (n.startsWith("public holiday (no timesheet") || n.startsWith("public holiday (not worked")) return "Public Holiday (Not Worked)";
-      if (n.startsWith("bonus")) return "Bonus";
-      return raw;
-    };
     const compensationMap = new Map<string, number>();
     payslips.forEach(p => {
       p.earningsBreakdown.forEach(e => {
@@ -81,7 +80,8 @@ const Analytics: React.FC = () => {
       });
     });
     setCompensationBreakdown(
-      Array.from(compensationMap.entries()).map(([name, value]) => ({ name, value }))
+      Array.from(compensationMap.entries())
+        .map(([name, value]) => ({ name, value }))
     );
 
     // --- Deduction Category Breakdown ---
@@ -104,30 +104,28 @@ const Analytics: React.FC = () => {
     setDeductionCategoryBreakdown(breakdown);
 
 
-    // --- Employee Turnover Trend (Mocked for simplicity) ---
+    // --- Employee Turnover Trend ---
     const turnoverMap = new Map<string, { newHires: number; terminations: number }>();
     const currentYear = new Date().getFullYear();
-    const months = Array.from({ length: 12 }, (_, i) => format(new Date(currentYear, i, 1), 'MMM yyyy'));
+    const months = Array.from({ length: 12 }, (_, i) => format(new Date(currentYear, i + 1, 1), 'MMM yyyy'));
 
     months.forEach(month => turnoverMap.set(month, { newHires: 0, terminations: 0 }));
 
     employees.forEach(emp => {
-      const hireMonth = format(new Date(emp.startDate), 'MMM yyyy');
+      const hireDate = new Date(emp.startDate);
+      const hireMonth = format(hireDate, 'MMM yyyy');
       if (turnoverMap.has(hireMonth)) {
         turnoverMap.get(hireMonth)!.newHires++;
       }
-      if (new Date(emp.startDate).getFullYear() < currentYear && parseInt(emp.id.replace('EMP', '')) % 5 === 0) {
-        const terminationMonthIndex = Math.floor(Math.random() * (new Date().getMonth() + 1));
-        const terminationMonth = format(new Date(currentYear, terminationMonthIndex, 1), 'MMM yyyy');
-        if (turnoverMap.has(terminationMonth)) {
-          turnoverMap.get(terminationMonth)!.terminations++;
-        }
+      const terminationMonth = emp.terminationDate ? format(new Date(emp.terminationDate), 'MMM yyyy') : null;
+      if (terminationMonth && turnoverMap.has(terminationMonth)) {
+        turnoverMap.get(terminationMonth)!.terminations++;
       }
     });
 
     setEmployeeTurnoverTrend(
       Array.from(turnoverMap.entries())
-        .map(([name, data]) => ({ name, ...data }))
+        .map(([monthYear, data]) => ({ name, ...data }))
         .sort((a, b) => months.indexOf(a.name) - months.indexOf(b.name))
     );
 
@@ -147,18 +145,19 @@ const Analytics: React.FC = () => {
       { range: "R40k - R60k", min: 40001, max: 60000, count: 0 },
       { range: "R60k+", min: 60001, max: Infinity, count: 0 },
     ];
+
     employees.forEach(emp => {
       const effectiveSalary = emp.salary || (emp.hourlyRate ? emp.hourlyRate * 160 : 0);
       for (const range of salaryRanges) {
         if (effectiveSalary >= range.min && effectiveSalary <= range.max) {
           range.count++;
-          break;
         }
       }
     });
+
     setEmployeeSalaryDistribution(salaryRanges.map(r => ({ range: r.range, count: r.count })));
 
-    // --- Overtime Cost Trend (New) ---
+    // --- Overtime Cost Trend (Fixed) ---
     const overtimeTrendMap = new Map<string, number>();
     payslips.forEach(p => {
       const monthYear = p.payPeriod.substring(0, 7);
@@ -167,7 +166,7 @@ const Analytics: React.FC = () => {
         return sum + (n.includes("overtime") ? e.amount : 0);
       }, 0);
       if (overtimeTotal > 0) {
-        overtimeTrendMap.set(monthYear, (overtimeTrendMap.get(monthYear) || 0) + overtimeTotal);
+        overtimeTrendMap.set(monthYear, overtimeTotal);
       }
     });
     const sortedOvertimeTrend = Array.from(overtimeTrendMap.entries())
@@ -180,52 +179,32 @@ const Analytics: React.FC = () => {
       .map(({ name, overtime }) => ({ name, overtime }));
     setOvertimeCostTrend(sortedOvertimeTrend);
 
-    // --- Employee Tenure Distribution (New) ---
+    // --- Employee Tenure Distribution ---
     const tenureRanges = [
       { name: "< 1 Year", minMonths: 0, maxMonths: 11, count: 0 },
       { name: "1-3 Years", minMonths: 12, maxMonths: 35, count: 0 },
       { name: "3-5 Years", minMonths: 36, maxMonths: 59, count: 0 },
       { name: "5+ Years", minMonths: 60, maxMonths: Infinity, count: 0 },
     ];
+
     const today = new Date();
+
     employees.forEach(emp => {
       const hireDate = new Date(emp.startDate);
       const monthsSinceHire = differenceInMonths(today, hireDate);
       for (const range of tenureRanges) {
         if (monthsSinceHire >= range.minMonths && monthsSinceHire <= range.maxMonths) {
           range.count++;
-          break;
         }
       }
     });
+
     setEmployeeTenureDistribution(tenureRanges.map(r => ({ name: r.name, value: r.count })));
-  }, [employees, payslips, leaveRecords]);
-
-  useEffect(() => {
-    loadAnalyticsData();
-    window.addEventListener('allMockDataUpdated', loadAnalyticsData); // Listen for allMockDataUpdated
-    window.addEventListener('employeesUpdated', loadAnalyticsData); // Listen for specific employee updates
-    window.addEventListener('payslipsUpdated', loadAnalyticsData); // Listen for specific payslip updates
-    window.addEventListener('leaveRecordsUpdated', loadAnalyticsData); // Listen for specific leave updates
-    window.addEventListener('appFocusRefresh', loadAnalyticsData); // Recompute when tab regains focus
-    return () => {
-      window.removeEventListener('allMockDataUpdated', loadAnalyticsData);
-      window.removeEventListener('employeesUpdated', loadAnalyticsData);
-      window.removeEventListener('payslipsUpdated', loadAnalyticsData);
-      window.removeEventListener('leaveRecordsUpdated', loadAnalyticsData);
-      window.removeEventListener('appFocusRefresh', loadAnalyticsData);
-    };
-  }, [loadAnalyticsData]);
-
-  const renderLegendText = (value: string, entry: any, total: number) => {
-    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
-    return `${value} (${percentage}%)`;
-  };
 
   const totalCompensation = compensationBreakdown.reduce((sum, entry) => sum + entry.value, 0);
-  const totalDeductionCategories = deductionCategoryBreakdown.reduce((sum, entry) => sum + entry.value, 0);
+  const totalDeductions = deductionCategoryBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const totalLeaveDays = leaveTypeDistribution.reduce((sum, entry) => sum + entry.value, 0);
-  const totalTenureDistribution = employeeTenureDistribution.reduce((sum, entry) => sum + entry.value, 0);
+  const totalTenure = employeeTenureDistribution.reduce((sum, entry) => sum + entry.value, 0);
 
 
   return (
@@ -239,7 +218,7 @@ const Analytics: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Monthly Payroll Cost Trend</CardTitle>
-            <CardDescription>Evolution of total gross and net pay over time.</CardDescription>
+            <CardDescription>Evolusion of total gross and net pay over time.</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -279,15 +258,16 @@ const Analytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number, entry) => {
+                  const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+                  return `${entry.name} (${percentage}%)`;
+                }} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalCompensation)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Deduction Category Breakdown</CardTitle>
@@ -311,8 +291,11 @@ const Analytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductionCategories)} />
+                <Tooltip formatter={(value: number, entry) => {
+                  const percentage = totalDeductions > 0 ? ((entry.payload.value / totalDeductions) * 100).toFixed(0) : 0;
+                  return `${entry.name} (${percentage}%)`;
+                }} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -337,9 +320,7 @@ const Analytics: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Leave Type Distribution</CardTitle>
@@ -363,7 +344,10 @@ const Analytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value} days`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Tooltip formatter={(value: number, entry) => {
+                  const percentage = totalLeaveDays > 0 ? ((entry.payload.value / totalLeaveDays) * 100).toFixed(0) : 0;
+                  return `${entry.name} (${percentage}%)`;
+                }} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalLeaveDays)} />
               </PieChart>
             </ResponsiveContainer>
@@ -375,11 +359,11 @@ const Analytics: React.FC = () => {
             <CardTitle>Employee Salary Distribution</CardTitle>
             <CardDescription>Number of employees within different salary ranges.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[350px]">
+          <CardContent className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={employeeSalaryDistribution}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
+                <XAxis dataKey="range" type="category" style={{ fontSize: dataVisualsFontSize }} />
                 <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
                 <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
                 <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
@@ -388,9 +372,7 @@ const Analytics: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Overtime Cost Trend</CardTitle>
@@ -433,8 +415,11 @@ const Analytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalTenureDistribution)} />
+                <Tooltip formatter={(value: number, entry) => {
+                  const percentage = totalTenure > 0 ? ((entry.payload.value / totalTenure) * 100).toFixed(0) : 0;
+                  return `${entry.name} (${percentage}%)`;
+                }} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalTenure)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -444,7 +429,7 @@ const Analytics: React.FC = () => {
       <div className="mt-4 p-4 border rounded-lg bg-purple-50 text-purple-800">
         <h3 className="font-semibold text-lg mb-2">Analytics Insights</h3>
         <p className="text-sm">
-          This section provides a high-level overview of various payroll metrics. For more detailed, filterable, and exportable data, please refer to the "Reports" section. The data presented here is derived from mock data stored in your browser's local storage.
+          This section provides a high-level overview of various payroll metrics. For more detailed, filterable, and exportable data, please refer to the "Reports" section.
         </p>
       </div>
     </div>
