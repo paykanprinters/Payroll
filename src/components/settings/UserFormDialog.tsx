@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
-import { Eye, EyeOff, RefreshCcw, Mail, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, RefreshCcw, Mail, ShieldCheck, Info } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
@@ -65,6 +65,8 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   });
 
   const [showPassword, setShowPassword] = React.useState(false);
+  const [emailConfirmedAt, setEmailConfirmedAt] = React.useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = React.useState(false);
   const { isMockDataEnabled } = usePayrollProcessor();
 
   React.useEffect(() => {
@@ -133,6 +135,36 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
       return;
     }
     showSuccess("User email confirmed successfully.");
+  };
+
+  const handleCheckAuthStatus = async () => {
+    if (isMockDataEnabled) {
+      showError("Cannot check status when mock data is enabled.");
+      return;
+    }
+    if (!initialUser?.id && !initialUser?.email) {
+      showError("No user reference available.");
+      return;
+    }
+    setCheckingStatus(true);
+    const res = await supabase.functions.invoke("get-auth-user-status", {
+      body: JSON.stringify({ userId: initialUser?.id, email: initialUser?.email }),
+    });
+    setCheckingStatus(false);
+    if (res.error) {
+      console.error("Check auth status error:", res.error);
+      const serverMsg = typeof res.error?.message === "string" ? res.error.message : (res.data as any)?.error;
+      showError(serverMsg || "Failed to check auth status.");
+      setEmailConfirmedAt(null);
+      return;
+    }
+    const payload = res.data as any;
+    setEmailConfirmedAt(payload?.email_confirmed_at ?? null);
+    if (payload?.email_confirmed_at) {
+      showSuccess("Email is confirmed in Auth.");
+    } else {
+      showError("Email is NOT confirmed in Auth.");
+    }
   };
 
   const onSubmit = (data: UserFormValues) => {
@@ -225,6 +257,10 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 <Button type="button" variant="outline" onClick={handleResendConfirmationEmail} disabled={isMockDataEnabled}>
                   <Mail className="mr-2 h-4 w-4" /> Resend Confirmation
                 </Button>
+                <Button type="button" variant="outline" onClick={handleCheckAuthStatus} disabled={isMockDataEnabled || checkingStatus}>
+                  {checkingStatus ? <Info className="mr-2 h-4 w-4 animate-pulse" /> : <Info className="mr-2 h-4 w-4" />}
+                  Check Status
+                </Button>
                 <Button type="button" variant="outline" onClick={handleForceConfirmEmail} disabled={isMockDataEnabled}>
                   <ShieldCheck className="mr-2 h-4 w-4" /> Force Confirm Email
                 </Button>
@@ -233,6 +269,16 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
             <Button type="submit" disabled={isMockDataEnabled}>{initialUser ? "Save Changes" : "Add User"}</Button>
           </DialogFooter>
         </form>
+
+        {/* Inline status indicator */}
+        {initialUser && (
+          <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+            <Info className="h-4 w-4" />
+            <span>
+              Email confirmed at: {emailConfirmedAt ? new Date(emailConfirmedAt).toLocaleString() : "Not confirmed"}
+            </span>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
