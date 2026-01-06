@@ -22,11 +22,13 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format, differenceInMonths } from "date-fns";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import AnalyticsHeader from "@/components/analytics/AnalyticsHeader";
+import { useAuth } from "@/context/AuthContext";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const Analytics: React.FC = () => {
   const { employees, payslips, leaveRecords } = usePayrollProcessor();
+  const { user } = useAuth();
 
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [compensationBreakdown, setCompensationBreakdown] = useState<{ name: string; value: number }[]>([]);
@@ -53,8 +55,23 @@ const Analytics: React.FC = () => {
   };
 
   const loadAnalyticsData = useCallback(() => {
+    // Scope to the logged-in Staff member; Admin/Manager remain company-wide
+    const staffScoped = user?.role === "Staff";
+    const scopedEmployees = staffScoped
+      ? employees.filter(emp => (emp as any).userId === user?.id)
+      : employees;
+
+    const employeeIds = new Set(scopedEmployees.map(e => e.id));
+    const scopedPayslips = staffScoped
+      ? payslips.filter(p => employeeIds.has(p.employeeId))
+      : payslips;
+    const scopedLeaveRecords = staffScoped
+      ? (leaveRecords || []).filter(record => employeeIds.has(record.employeeId))
+      : (leaveRecords || []);
+
+    // Monthly Payroll Cost Trend
     const monthlyDataMap = new Map<string, { gross: number; net: number }>();
-    payslips.forEach((p) => {
+    scopedPayslips.forEach((p) => {
       const monthYear = p.payPeriod.substring(0, 7);
       const current = monthlyDataMap.get(monthYear) || { gross: 0, net: 0 };
       monthlyDataMap.set(monthYear, {
@@ -73,8 +90,9 @@ const Analytics: React.FC = () => {
       .map(({ name, gross, net }) => ({ name, gross, net }));
     setMonthlyPayrollTrend(trendData);
 
+    // Compensation Type Breakdown
     const compensationMap = new Map<string, number>();
-    payslips.forEach((p) => {
+    scopedPayslips.forEach((p) => {
       (p.earningsBreakdown || []).forEach((e) => {
         const key = normalizeEarningName(e.name);
         compensationMap.set(key, (compensationMap.get(key) || 0) + (e.amount || 0));
@@ -82,10 +100,11 @@ const Analytics: React.FC = () => {
     });
     setCompensationBreakdown(Array.from(compensationMap.entries()).map(([name, value]) => ({ name, value })));
 
+    // Deduction Category Breakdown
     const statutoryDeductions = ["PAYE", "UIF", "SDL"];
     let totalStatutory = 0;
     let totalOtherDeductions = 0;
-    payslips.forEach((p) => {
+    scopedPayslips.forEach((p) => {
       (p.deductionsBreakdown || []).forEach((d) => {
         if (statutoryDeductions.includes(d.name)) totalStatutory += d.amount || 0;
         else totalOtherDeductions += d.amount || 0;
@@ -97,12 +116,13 @@ const Analytics: React.FC = () => {
     ].filter((x) => x.value > 0);
     setDeductionCategoryBreakdown(breakdown);
 
+    // Employee Turnover Trend
     const turnoverMap = new Map<string, { newHires: number; terminations: number }>();
     const currentYear = new Date().getFullYear();
     const months = Array.from({ length: 12 }, (_, i) => format(new Date(currentYear, i, 1), "MMM yyyy"));
 
     months.forEach((m) => turnoverMap.set(m, { newHires: 0, terminations: 0 }));
-    employees.forEach((emp) => {
+    scopedEmployees.forEach((emp) => {
       const hireMonth = format(new Date(emp.startDate), "MMM yyyy");
       if (turnoverMap.has(hireMonth)) {
         turnoverMap.get(hireMonth)!.newHires++;
@@ -120,20 +140,22 @@ const Analytics: React.FC = () => {
         .sort((a, b) => months.indexOf(a.name) - months.indexOf(b.name))
     );
 
+    // Leave Type Distribution
     const leaveTypeMap = new Map<string, number>();
-    (leaveRecords || []).forEach((record) => {
+    (scopedLeaveRecords || []).forEach((record) => {
       const prev = leaveTypeMap.get(record.leaveType) || 0;
       leaveTypeMap.set(record.leaveType, prev + (record.workingDays || 0));
     });
     setLeaveTypeDistribution(Array.from(leaveTypeMap.entries()).map(([name, value]) => ({ name, value })));
 
+    // Employee Salary Distribution
     const salaryRanges = [
       { range: "R0 - R20k", min: 0, max: 20000, count: 0 },
       { range: "R20k - R40k", min: 20001, max: 40000, count: 0 },
       { range: "R40k - R60k", min: 40001, max: 60000, count: 0 },
       { range: "R60k+", min: 60001, max: Infinity, count: 0 },
     ];
-    employees.forEach((emp) => {
+    scopedEmployees.forEach((emp) => {
       const effectiveSalary = emp.salary || (emp.hourlyRate ? emp.hourlyRate * 160 : 0);
       for (const range of salaryRanges) {
         if (effectiveSalary >= range.min && effectiveSalary <= range.max) {
@@ -144,8 +166,9 @@ const Analytics: React.FC = () => {
     });
     setEmployeeSalaryDistribution(salaryRanges.map((r) => ({ range: r.range, count: r.count })));
 
+    // Overtime Cost Trend
     const overtimeTrendMap = new Map<string, number>();
-    payslips.forEach((p) => {
+    scopedPayslips.forEach((p) => {
       const monthYear = p.payPeriod.substring(0, 7);
       const overtimeTotal = (p.earningsBreakdown || []).reduce((sum, e) => {
         const n = (e.name || "").toLowerCase();
@@ -163,6 +186,7 @@ const Analytics: React.FC = () => {
       .map(({ name, overtime }) => ({ name, overtime }));
     setOvertimeCostTrend(sortedOvertimeTrend);
 
+    // Employee Tenure Distribution
     const tenureRanges = [
       { name: "< 1 Year", minMonths: 0, maxMonths: 11, count: 0 },
       { name: "1-3 Years", minMonths: 12, maxMonths: 35, count: 0 },
@@ -170,7 +194,7 @@ const Analytics: React.FC = () => {
       { name: "5+ Years", minMonths: 60, maxMonths: Infinity, count: 0 },
     ];
     const today = new Date();
-    employees.forEach((emp) => {
+    scopedEmployees.forEach((emp) => {
       const hireDate = new Date(emp.startDate);
       const monthsSinceHire = differenceInMonths(today, hireDate);
       for (const range of tenureRanges) {
@@ -181,7 +205,7 @@ const Analytics: React.FC = () => {
       }
     });
     setEmployeeTenureDistribution(tenureRanges.map((r) => ({ name: r.name, value: r.count })));
-  }, [employees, payslips, leaveRecords]);
+  }, [employees, payslips, leaveRecords, user]);
 
   useEffect(() => {
     loadAnalyticsData();
