@@ -53,7 +53,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const [bulkGenerationMode, setBulkGenerationMode] = React.useState<"monthly" | "weekly">("monthly");
   const [auditLevel, setAuditLevel] = React.useState<"minimal" | "standard" | "detailed">("standard");
 
-  const { payCycleSettings } = usePayrollProcessor();
+  const { payCycleSettings, runPayrollProcess, refetchPayslips } = usePayrollProcessor();
   const { downloadPdf, openPdf } = usePdfVector();
   const { downloadZip } = useZipDownload();
 
@@ -114,6 +114,37 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await openPdf(doc, filename);
     }
   }, [selectedPayslip, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName]);
+
+  const handleGenerateSelectedPeriodPayslips = React.useCallback(async () => {
+    if (!selectedPayPeriodDate) {
+      showError("Please select a pay period date first.");
+      return;
+    }
+
+    const cutOffDay = payCycleSettings?.cutOffDay ?? 2; // Default Tuesday
+    const payDayOffset = payCycleSettings?.payDayOffset ?? 0;
+
+    let periodStart: Date;
+    let periodEnd: Date;
+
+    if (bulkGenerationMode === "weekly") {
+      const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
+        selectedPayPeriodDate,
+        "Weekly",
+        cutOffDay,
+        payDayOffset
+      );
+      periodStart = payPeriodStart;
+      periodEnd = payPeriodEnd;
+    } else {
+      periodStart = startOfMonth(selectedPayPeriodDate);
+      periodEnd = endOfMonth(selectedPayPeriodDate);
+    }
+
+    await runPayrollProcess(periodStart, periodEnd);
+    // Ensure live mode reflects new payslips immediately
+    refetchPayslips?.();
+  }, [selectedPayPeriodDate, bulkGenerationMode, payCycleSettings, runPayrollProcess, refetchPayslips]);
 
   const handlePrintOrDownloadAll = React.useCallback(async (action: 'print' | 'download', mode: "monthly" | "weekly", level: "minimal" | "standard" | "detailed") => {
     if (!selectedPayPeriodDate || !companyDetails) {
@@ -448,13 +479,20 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             auditLevel={auditLevel}
             setAuditLevel={setAuditLevel}
           />
-          <div className="md:col-span-2 lg:col-span-1 flex items-start">
+          <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
+            <Button
+              className="w-full"
+              onClick={handleGenerateSelectedPeriodPayslips}
+              disabled={!selectedPayPeriodDate || allEmployees.length === 0}
+            >
+              <FileStack className="mr-2 h-4 w-4" /> Generate Payslips for Selected Period
+            </Button>
             <Button
               className="w-full"
               onClick={() => handleGenerateAllCurrentPeriodPayslips('download')}
               disabled={allEmployees.length === 0 || payslips.length === 0}
             >
-              <FileStack className="mr-2 h-4 w-4" /> Generate All for Current Period
+              <FileStack className="mr-2 h-4 w-4" /> Generate All for Current Period (Download)
             </Button>
           </div>
         </div>
