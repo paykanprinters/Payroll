@@ -13,14 +13,13 @@ serve(async (req) => {
 
   try {
     const payload = await req.json().catch(() => ({}));
-    const userId = payload?.userId as string | undefined;
-    const email = payload?.email as string | undefined;
+    const userId = typeof payload?.userId === "string" ? payload.userId : undefined;
+    const email = typeof payload?.email === "string" ? payload.email : undefined;
 
     if (!userId && !email) {
       console.error("[confirm-user-email] Missing userId or email");
       return new Response(JSON.stringify({ error: "Provide userId or email." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
@@ -40,36 +39,42 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const { data: requesterProfile, error: profileErr } = await supabaseAdmin
+    // Admin gate
+    const { data: requesterProfile, error: roleErr } = await supabaseAdmin
       .from("users")
       .select("role")
       .eq("id", requestingUser.id)
       .maybeSingle();
 
-    if (profileErr || requesterProfile?.role !== "Admin") {
-      console.error("[confirm-user-email] Forbidden, caller not Admin", { profileErr, role: requesterProfile?.role });
+    if (roleErr || requesterProfile?.role !== "Admin") {
+      console.error("[confirm-user-email] Forbidden, caller not Admin", { roleErr, role: requesterProfile?.role });
       return new Response(JSON.stringify({ error: "Forbidden: Only Admins can confirm emails." }), {
         status: 403, headers: corsHeaders
       });
     }
 
-    // Resolve target user id if only email provided
+    // Resolve target user via Admin API
     let targetUserId = userId;
+
     if (!targetUserId && email) {
-      const { data: targetAuthUser, error: findErr } = await supabaseAdmin
-        .from("auth.users")
-        .select("id, email")
-        .eq("email", email)
-        .maybeSingle();
-      if (findErr || !targetAuthUser) {
-        console.error("[confirm-user-email] Could not resolve user by email", { findErr, email });
+      const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+      if (listErr || !list) {
+        console.error("[confirm-user-email] listUsers failed", { listErr });
+        return new Response(JSON.stringify({ error: "Failed to list users." }), {
+          status: 500, headers: corsHeaders
+        });
+      }
+      const match = list.users.find((u: any) => u.email === email);
+      if (!match) {
+        console.error("[confirm-user-email] No user found by email", { email });
         return new Response(JSON.stringify({ error: "User not found by email." }), {
           status: 404, headers: corsHeaders
         });
       }
-      targetUserId = targetAuthUser.id;
+      targetUserId = match.id;
     }
 
+    // Confirm email via Admin API
     const nowIso = new Date().toISOString();
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(targetUserId!, {
       email_confirmed_at: nowIso,
@@ -84,7 +89,11 @@ serve(async (req) => {
     }
 
     console.log("[confirm-user-email] Email confirmed", { userId: data.user?.id, at: nowIso });
-    return new Response(JSON.stringify({ message: "Email confirmed", user: data.user?.id, email_confirmed_at: nowIso }), {
+    return new Response(JSON.stringify({
+      message: "Email confirmed",
+      user: data.user?.id,
+      email_confirmed_at: nowIso
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

@@ -13,8 +13,8 @@ serve(async (req) => {
 
   try {
     const payload = await req.json().catch(() => ({}));
-    const userId = payload?.userId as string | undefined;
-    const email = payload?.email as string | undefined;
+    const userId = typeof payload?.userId === "string" ? payload.userId : undefined;
+    const email = typeof payload?.email === "string" ? payload.email : undefined;
 
     if (!userId && !email) {
       console.error("[get-auth-user-status] Missing userId/email");
@@ -58,46 +58,41 @@ serve(async (req) => {
       });
     }
 
-    // Resolve target user via auth schema
-    let targetId = userId;
-    if (!targetId && email) {
-      const { data: targetAuthUser, error: findErr } = await supabaseAdmin
-        .from("auth.users")
-        .select("id, email, email_confirmed_at")
-        .eq("email", email)
-        .maybeSingle();
-
-      if (findErr || !targetAuthUser) {
-        console.error("[get-auth-user-status] Not found by email", { findErr, email });
-        return new Response(JSON.stringify({ error: "User not found by email." }), {
+    // Resolve via Admin API
+    if (userId) {
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (error || !data?.user) {
+        console.error("[get-auth-user-status] getUserById failed", { error, userId });
+        return new Response(JSON.stringify({ error: "User not found by id." }), {
           status: 404, headers: corsHeaders
         });
       }
-
       return new Response(JSON.stringify({
-        id: targetAuthUser.id,
-        email: targetAuthUser.email,
-        email_confirmed_at: targetAuthUser.email_confirmed_at
+        id: data.user.id,
+        email: data.user.email,
+        email_confirmed_at: data.user.email_confirmed_at
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: byId, error: byIdErr } = await supabaseAdmin
-      .from("auth.users")
-      .select("id, email, email_confirmed_at")
-      .eq("id", targetId!)
-      .maybeSingle();
-
-    if (byIdErr || !byId) {
-      console.error("[get-auth-user-status] Not found by id", { byIdErr, targetId });
-      return new Response(JSON.stringify({ error: "User not found by id." }), {
+    // Resolve by email through listUsers
+    const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    if (listErr || !list) {
+      console.error("[get-auth-user-status] listUsers failed", { listErr });
+      return new Response(JSON.stringify({ error: "Failed to list users." }), {
+        status: 500, headers: corsHeaders
+      });
+    }
+    const match = list.users.find((u: any) => u.email === email);
+    if (!match) {
+      console.error("[get-auth-user-status] No user found by email", { email });
+      return new Response(JSON.stringify({ error: "User not found by email." }), {
         status: 404, headers: corsHeaders
       });
     }
-
     return new Response(JSON.stringify({
-      id: byId.id,
-      email: byId.email,
-      email_confirmed_at: byId.email_confirmed_at
+      id: match.id,
+      email: match.email,
+      email_confirmed_at: match.email_confirmed_at
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e) {
