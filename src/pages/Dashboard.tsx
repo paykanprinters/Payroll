@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { format } from "date-fns";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-// Import new modular components
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
 import ToDoList from "@/components/ToDoList";
@@ -48,7 +47,6 @@ const Dashboard: React.FC = () => {
   const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
   const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
 
-  // Live payslip design settings from Supabase
   const { settings: payslipDesignSettings, isLoading: isLoadingPayslipDesignSettings } = usePayslipDesignSettings();
 
   const loadDashboardData = React.useCallback(() => {
@@ -163,71 +161,84 @@ const Dashboard: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <DashboardHeader />
-      
-      {visibleWidgets.summaryCards && (
-        <DashboardSummaryCards
-          employeeCount={employeeCount}
-          recentPayslipCount={recentPayslipCount}
-        />
-      )}
 
-      {visibleWidgets.payrollRunCard && (
-        <PayrollRunCard
-          employees={employees}
-          companyDetails={companyDetails}
-          payCycleType={payCycleSettings?.payCycleType ?? 'Weekly'}
-          cutOffDay={payCycleSettings?.cutOffDay ?? 5}
-          payDayOffset={payCycleSettings?.payDayOffset ?? 0}
-          runPayrollProcess={runPayrollProcess}
-          calculateSinglePayslipPreview={calculateSinglePayslipPreview}
-          payslipDesignSettings={payslipDesignSettings}
-        />
-      )}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="w-full max-w-xl grid grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="payroll">Payroll</TabsTrigger>
+          <TabsTrigger value="workforce">Workforce</TabsTrigger>
+          <TabsTrigger value="leave">Leave</TabsTrigger>
+        </TabsList>
 
-      {visibleWidgets.toDoListCard && <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />}
+        <TabsContent value="overview" className="space-y-4">
+          {visibleWidgets.summaryCards && (
+            <DashboardSummaryCards
+              employeeCount={employeeCount}
+              recentPayslipCount={recentPayslipCount}
+              showUpcomingPayrollCard={visibleWidgets.upcomingPayrollCard}
+            />
+          )}
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        {visibleWidgets.monthlyPayrollOverviewChart && (
-          <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />
-        )}
+          {visibleWidgets.payrollRunCard && (
+            <PayrollRunCard
+              employees={employees}
+              companyDetails={companyDetails}
+              payCycleType={payCycleSettings?.payCycleType ?? 'Weekly'}
+              cutOffDay={payCycleSettings?.cutOffDay ?? 5}
+              payDayOffset={payCycleSettings?.payDayOffset ?? 0}
+              runPayrollProcess={runPayrollProcess}
+              calculateSinglePayslipPreview={calculateSinglePayslipPreview}
+              payslipDesignSettings={payslipDesignSettings}
+            />
+          )}
 
-        {visibleWidgets.currentDateCalendar && (
-          <DashboardCurrentDateCalendar />
-        )}
-      </div>
+          {visibleWidgets.quickActionsCard && <DashboardQuickActionsCard />}
+        </TabsContent>
 
+        <TabsContent value="payroll" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+            {visibleWidgets.monthlyPayrollOverviewChart && (
+              <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />
+            )}
+            {visibleWidgets.averageNetPayTrendChart && (
+              <DashboardAverageNetPayTrendChart averageNetPayTrend={averageNetPayTrend} />
+            )}
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        {visibleWidgets.employeeJobTitleDistributionChart && (
-          <DashboardEmployeeJobTitleDistributionChart employeeJobTitleData={employeeJobTitleData} />
-        )}
-      </div>
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+            {visibleWidgets.totalDeductionsBreakdownChart && (
+              <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={totalDeductionsBreakdown} />
+            )}
+            {visibleWidgets.toDoListCard && (
+              <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />
+            )}
+          </div>
+        </TabsContent>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        {visibleWidgets.totalDeductionsBreakdownChart && (
-          <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={totalDeductionsBreakdown} />
-        )}
+        <TabsContent value="workforce" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+            {visibleWidgets.employeeJobTitleDistributionChart && (
+              <DashboardEmployeeJobTitleDistributionChart employeeJobTitleData={employeeJobTitleData} />
+            )}
+            {visibleWidgets.employeeSalaryDistributionChart && (
+              <DashboardEmployeeSalaryDistributionChart employeeSalaryDistribution={employeeSalaryDistribution} />
+            )}
+          </div>
+        </TabsContent>
 
-        {visibleWidgets.averageNetPayTrendChart && (
-          <DashboardAverageNetPayTrendChart averageNetPayTrend={averageNetPayTrend} />
-        )}
-      </div>
+        <TabsContent value="leave" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+            {visibleWidgets.monthlyLeaveDaysTakenChart && (
+              <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTakenTrend} />
+            )}
+            {visibleWidgets.currentDateCalendar && (
+              <DashboardCurrentDateCalendar />
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        {visibleWidgets.employeeSalaryDistributionChart && (
-          <DashboardEmployeeSalaryDistributionChart employeeSalaryDistribution={employeeSalaryDistribution} />
-        )}
-
-        {visibleWidgets.monthlyLeaveDaysTakenChart && (
-          <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTakenTrend} />
-        )}
-      </div>
-
-      {visibleWidgets.quickActionsCard && (
-        <DashboardQuickActionsCard />
-      )}
-
-      <div className="mt-8 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
+      <div className="mt-4 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
         <h3 className="font-semibold text-lg mb-2">Important Note on South African Regulations:</h3>
         <p className="text-sm">
           This dashboard provides the user interface for a payroll system. The complex calculations required to meet full South African regulations for pay and deductions (such as PAYE, UIF, SDL, etc.) are highly specialized and typically handled by a robust backend system. This front-end setup provides the structure for managing and displaying payroll data, but the actual calculation logic would need to be implemented on the server-side.

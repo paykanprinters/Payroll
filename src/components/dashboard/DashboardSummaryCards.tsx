@@ -11,9 +11,14 @@ import { differenceInCalendarDays } from "date-fns";
 interface DashboardSummaryCardsProps {
   employeeCount: number;
   recentPayslipCount: number;
+  showUpcomingPayrollCard?: boolean;
 }
 
-const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeCount, recentPayslipCount }) => {
+const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
+  employeeCount,
+  recentPayslipCount,
+  showUpcomingPayrollCard = true,
+}) => {
   const { isMockDataEnabled, companyDetails, payCycleSettings, calculateSinglePayslipPreview, employees } = usePayrollProcessor();
   const [totalUpcomingPayrollAmount, setTotalUpcomingPayrollAmount] = React.useState<number>(0);
   const [upcomingPayrollDueText, setUpcomingPayrollDueText] = React.useState<string>("Loading...");
@@ -62,11 +67,15 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeC
           </p>
         </CardContent>
       </Card>
-      <UpcomingPayrollSummaryCard
-        totalUpcomingPayrollAmount={totalUpcomingPayrollAmount}
-        dueText={upcomingPayrollDueText}
-        isMockDataEnabled={isMockDataEnabled}
-      />
+
+      {showUpcomingPayrollCard && (
+        <UpcomingPayrollSummaryCard
+          totalUpcomingPayrollAmount={totalUpcomingPayrollAmount}
+          dueText={upcomingPayrollDueText}
+          isMockDataEnabled={isMockDataEnabled}
+        />
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Recent Payslips</CardTitle>
@@ -79,6 +88,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeC
           </p>
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Compliance Status</CardTitle>
