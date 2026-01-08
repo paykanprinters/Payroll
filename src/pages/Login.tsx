@@ -7,8 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import CloudHorizonBackground from "@/components/CloudHorizonBackground";
 import { Separator } from "@/components/ui/separator";
 import { ShieldCheck, Users, CreditCard, Sparkles, Zap } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
-import { useTheme } from "@/hooks/use-theme";
 
 function Login() {
   const [companyName, setCompanyName] = React.useState<string>("Your Company");
@@ -16,7 +14,6 @@ function Login() {
   const [logoWidth, setLogoWidth] = React.useState<number | undefined>(undefined);
   const [logoHeight, setLogoHeight] = React.useState<number | undefined>(undefined);
   const [logoFit, setLogoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
-  const { isDark } = useTheme();
 
   React.useEffect(() => {
     const loadBranding = async () => {
@@ -121,9 +118,6 @@ function Login() {
 
             {/* Right panel: sign in */}
             <div className="p-8 md:p-10 bg-white/90">
-              <div className="flex justify-end">
-                <ThemeToggle />
-              </div>
               {/* Keep logo in place (above the form) */}
               <div className="text-center mb-6">
                 {logoUrl && (
@@ -158,7 +152,7 @@ function Login() {
                       container: "space-y-3",
                     },
                   }}
-                  theme={isDark ? "dark" : "light"}
+                  theme="light"
                 />
               </div>
 
