@@ -45,6 +45,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
+  const staffPortalUrl = import.meta.env.VITE_STAFF_PORTAL_URL as string | undefined;
+  const adminPortalUrl = import.meta.env.VITE_ADMIN_PORTAL_URL as string | undefined;
+
   const prevIsLoadingAuthRef = useRef<boolean>(true);
   const mountedRef = useRef<boolean>(false);
 
@@ -157,7 +161,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             const onAuthPages = location.pathname === "/login" || location.pathname === "/";
             if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && onAuthPages) {
-              navigate("/dashboard", { replace: true });
+              if (portalType === "admin" && authUser.role === "Staff" && staffPortalUrl) {
+                // Staff should not stay in admin build
+                window.location.href = staffPortalUrl;
+              } else if (portalType === "staff" && (authUser.role === "Admin" || authUser.role === "Manager") && adminPortalUrl) {
+                // Admin/Manager should not stay in staff build
+                window.location.href = adminPortalUrl;
+              } else {
+                navigate("/dashboard", { replace: true });
+              }
             }
           } else {
             setUser(null);
@@ -207,7 +219,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const onAuthPages = location.pathname === "/login" || location.pathname === "/";
         if (session && onAuthPages) {
-          navigate("/dashboard", { replace: true });
+          const currentRole = user?.role || "Staff";
+          if (portalType === "admin" && currentRole === "Staff" && staffPortalUrl) {
+            window.location.href = staffPortalUrl;
+          } else if (portalType === "staff" && (currentRole === "Admin" || currentRole === "Manager") && adminPortalUrl) {
+            window.location.href = adminPortalUrl;
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
         }
       })
       .catch((err) => {
