@@ -195,6 +195,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     payrollSavingsEntries,
     workHoursSettings || null,
     publicHolidays || [],
+    companyDetails || null,
     setPayslips,
     updateLoan,
     updateSavingPlan,

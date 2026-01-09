@@ -81,7 +81,7 @@ const IndividualPayslipCard: React.FC<Props> = ({
     payslipLogoFit,
   } = payslipDesignSettings;
 
-  const logoSrc = payslipLogoUrl || companyDetails?.logoUrl || "";
+  const logoSrc = payslipLogoUrl || payslip.companyLogoUrl || companyDetails?.logoUrl || "";
 
   const earningsTotal = useMemo(
     () => payslip.earningsBreakdown.reduce((sum, e) => sum + (e?.amount || 0), 0),
@@ -114,7 +114,8 @@ const IndividualPayslipCard: React.FC<Props> = ({
         {showCompanyDetails ? (
           <div className="text-sm space-y-1">
             <div className="font-medium">
-              {companyDetails?.companyTradingName ||
+              {payslip.companyName ||
+                companyDetails?.companyTradingName ||
                 companyDetails?.companyLegalName ||
                 "Company"}
             </div>
@@ -138,8 +139,8 @@ const IndividualPayslipCard: React.FC<Props> = ({
                 VAT: {companyDetails.vatRegistrationNumber}
               </div>
             )}
-            {companyDetails?.physicalAddress && (
-              <div className="text-muted-foreground">{companyDetails.physicalAddress}</div>
+            {(payslip.companyAddress || companyDetails?.physicalAddress) && (
+              <div className="text-muted-foreground">{payslip.companyAddress || companyDetails?.physicalAddress}</div>
             )}
             {(companyDetails?.mainContactNumber || companyDetails?.companyEmail) && (
               <div className="text-muted-foreground">

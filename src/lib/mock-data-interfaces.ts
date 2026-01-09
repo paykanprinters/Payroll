@@ -149,6 +149,11 @@ export interface MockPayslip {
   leaveSummary: { annual: number; sick: number; unpaid: number };
   ytdGrossEarnings: number;
   ytdTotalDeductions: number;
+
+  // Snapshot branding for RLS-safe rendering
+  companyName?: string;
+  companyAddress?: string;
+  companyLogoUrl?: string;
 }
 
 export interface TimesheetEntry {

@@ -68,7 +68,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
     setPreviewPayslip(null); // Clear previous preview
 
     const employee = employees.find(emp => emp.id === employeeId);
-    if (employee && companyDetails) {
+    if (employee) {
     let periodStart: Date;
     let periodEnd: Date;
 
@@ -110,7 +110,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
   }, [employees, companyDetails, calculateSinglePayslipPreview, taxTables, payCycleSettings]);
 
   const handlePrintOrDownload = useCallback(async (action: 'print' | 'download') => {
-    if (!previewPayslip || !companyDetails || !currentPeriodStart || !currentPeriodEnd) {
+    if (!previewPayslip || !currentPeriodStart || !currentPeriodEnd) {
       showError("No payslip preview available to print or download.");
       return;
     }
@@ -188,7 +188,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
             </Alert>
           )}
 
-          {previewPayslip && companyDetails && currentPeriodStart && currentPeriodEnd ? (
+          {previewPayslip && currentPeriodStart && currentPeriodEnd ? (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold mt-4">
                 Payslip Preview for {getEmployeeName(previewPayslip.employeeId)} ({format(currentPeriodStart, 'PPP')} - {format(currentPeriodEnd, 'PPP')})
