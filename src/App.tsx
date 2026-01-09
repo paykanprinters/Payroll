@@ -19,6 +19,8 @@ import NotFound from "./pages/NotFound";
 import ToDosPage from "./pages/ToDosPage";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
+import StaffLogin from "./pages/StaffLogin";
+import RootHome from "./pages/RootHome";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React from "react";
@@ -44,6 +46,7 @@ const App = () => {
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/employee" element={<StaffLogin />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>}>
@@ -68,8 +71,8 @@ const App = () => {
                     </>
                   ) : (
                     <>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/" element={<RootHome />} />
+                      <Route path="/dashboard" element={<RootHome />} />
                       <Route path="/todos" element={<ToDosPage />} />
                       <Route path="/timesheet" element={<Timesheet />} />
                       <Route path="/payslips/*" element={<Payslips />} />
