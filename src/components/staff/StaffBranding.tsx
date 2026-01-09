@@ -7,6 +7,7 @@ import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
 import { supabase } from "@/integrations/supabase/client";
+import { getBranding } from "@/config/branding";
 
 type BrandingData = {
   name?: string;
@@ -63,8 +64,9 @@ const StaffBranding: React.FC = () => {
     return () => { cancelled = true; };
   }, [designBranding.name, triedEdge]);
 
-  const finalName = snapshotBranding?.name || designBranding.name || edgeBranding?.name || "Your Company";
-  const finalLogoUrl = snapshotBranding?.logoUrl || designBranding.logoUrl || edgeBranding?.logoUrl;
+  const brand = getBranding();
+  const finalName = brand.name || snapshotBranding?.name || designBranding.name || edgeBranding?.name || "Your Company";
+  const finalLogoUrl = brand.logoUrl || snapshotBranding?.logoUrl || designBranding.logoUrl || edgeBranding?.logoUrl;
 
   const logoWidth = (settings.payslipLogoWidth as number) || (companyDetails?.logoWidth as number) || 100;
   const logoHeight = (settings.payslipLogoHeight as number) || (companyDetails?.logoHeight as number) || 50;

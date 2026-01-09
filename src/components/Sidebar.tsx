@@ -24,6 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { getBranding } from "@/config/branding";
 
 interface NavLinkProps {
   to: string;
@@ -104,12 +105,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { isAuthenticated, isLoadingAuth, user } = useAuth();
 
   const displayCompanyDetails = React.useMemo(() => {
+    const b = getBranding();
     return {
-      name: companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
-      logoUrl: companyDetails?.logoUrl,
-      logoWidth: companyDetails?.logoWidth || 100,
-      logoHeight: companyDetails?.logoHeight || 50,
-      logoFit: companyDetails?.logoFit || "contain",
+      name: b.name || companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
+      logoUrl: b.logoUrl || companyDetails?.logoUrl,
+      logoWidth: b.logoWidth || companyDetails?.logoWidth || 100,
+      logoHeight: b.logoHeight || companyDetails?.logoHeight || 50,
+      logoFit: b.logoFit || (companyDetails?.logoFit as any) || "contain",
     };
   }, [companyDetails]);
 

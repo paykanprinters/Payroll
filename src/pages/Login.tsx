@@ -4,6 +4,7 @@ import React from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
+import { getBranding } from "@/config/branding";
 import CloudHorizonBackground from "@/components/CloudHorizonBackground";
 import { Separator } from "@/components/ui/separator";
 import { ShieldCheck, Users, CreditCard, Sparkles, Zap } from "lucide-react";
@@ -16,16 +17,23 @@ function Login() {
   const [logoFit, setLogoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
 
   React.useEffect(() => {
+    // First use embedded branding
+    const local = getBranding();
+    if (local.name) setCompanyName(local.name);
+    if (local.logoUrl) setLogoUrl(local.logoUrl);
+    if (typeof local.logoWidth === "number") setLogoWidth(local.logoWidth);
+    if (typeof local.logoHeight === "number") setLogoHeight(local.logoHeight);
+    if (local.logoFit) setLogoFit(local.logoFit);
+
+    // Optional: attempt edge function to override if needed
     const loadBranding = async () => {
       const { data, error } = await supabase.functions.invoke("get-branding");
-
       if (error) {
         console.warn("Login: Could not load branding:", error.message);
         return;
       }
-
       if (data) {
-        const name: string = (data.companyName as string) ?? "Your Company";
+        const name: string = (data.companyName as string) ?? local.name ?? "Your Company";
         setCompanyName(name);
 
         const url = data.logoUrl as string | null;
@@ -36,11 +44,10 @@ function Login() {
         if (typeof w === "number") setLogoWidth(w);
         if (typeof h === "number") setLogoHeight(h);
 
-        const fit = (data.logoFit as "contain" | "cover" | "fill" | "none" | "scale-down") ?? "contain";
+        const fit = (data.logoFit as "contain" | "cover" | "fill" | "none" | "scale-down") ?? local.logoFit ?? "contain";
         setLogoFit(fit);
       }
     };
-
     loadBranding();
   }, []);
 
