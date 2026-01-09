@@ -25,10 +25,14 @@ import React from "react";
 import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 import Profile from "./pages/Profile";
 import ErrorBoundary from "./components/ErrorBoundary";
+import StaffHome from "./pages/StaffHome";
 
 const queryClient = new QueryClient();
 
+const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
+
 const App = () => {
+  const isStaffPortal = portalType === "staff";
   console.log("App.tsx: Initial localStorage.isMockDataEnabled:", localStorage.getItem("isMockDataEnabled"));
   return (
     <QueryClientProvider client={queryClient}>
@@ -43,34 +47,57 @@ const App = () => {
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>}>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/todos" element={<ToDosPage />} />
-                  <Route path="/timesheet" element={<Timesheet />} />
-                  <Route path="/payslips/*" element={<Payslips />} />
-                  <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
-                  <Route path="/savings" element={<Savings />} />
-                  <Route path="/vacation-absence" element={<VacationAbsence />} />
-                  <Route path="/profile" element={<Profile />} />
-                  
-                  {/* Staff-only analytics route */}
-                  <Route element={<ProtectedRoute allowedRoles={['Staff']} />}>
-                    <Route path="/analytics/staff" element={<AnalyticsStaff />} />
-                  </Route>
+                  {isStaffPortal ? (
+                    <>
+                      <Route path="/" element={<StaffHome />} />
+                      <Route path="/dashboard" element={<StaffHome />} />
+                      <Route path="/timesheet" element={<Timesheet />} />
+                      <Route path="/payslips/*" element={<Payslips />} />
+                      <Route path="/savings" element={<Savings />} />
+                      <Route path="/vacation-absence" element={<VacationAbsence />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/analytics/staff" element={<AnalyticsStaff />} />
+                      {/* Block admin routes in staff portal */}
+                      <Route path="/employees" element={<Unauthorized />} />
+                      <Route path="/analytics" element={<Unauthorized />} />
+                      <Route path="/reports" element={<Unauthorized />} />
+                      <Route path="/settings/*" element={<Unauthorized />} />
+                      <Route path="/loans-advancements" element={<Unauthorized />} />
+                      <Route path="/todos" element={<Unauthorized />} />
+                      <Route path="*" element={<NotFound />} />
+                    </>
+                  ) : (
+                    <>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/todos" element={<ToDosPage />} />
+                      <Route path="/timesheet" element={<Timesheet />} />
+                      <Route path="/payslips/*" element={<Payslips />} />
+                      <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
+                      <Route path="/savings" element={<Savings />} />
+                      <Route path="/vacation-absence" element={<VacationAbsence />} />
+                      <Route path="/profile" element={<Profile />} />
+                      
+                      {/* Staff-only analytics route */}
+                      <Route element={<ProtectedRoute allowedRoles={['Staff']} />}>
+                        <Route path="/analytics/staff" element={<AnalyticsStaff />} />
+                      </Route>
 
-                  {/* Manager/Admin-only routes */}
-                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager']} />}>
-                    <Route path="/employees" element={<Employees />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/reports" element={<Reports />} />
-                  </Route>
+                      {/* Manager/Admin-only routes */}
+                      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager']} />}>
+                        <Route path="/employees" element={<Employees />} />
+                        <Route path="/analytics" element={<Analytics />} />
+                        <Route path="/reports" element={<Reports />} />
+                      </Route>
 
-                  {/* Admin-only settings */}
-                  <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
-                    <Route path="/settings/*" element={<Settings />} />
-                  </Route>
+                      {/* Admin-only settings */}
+                      <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
+                        <Route path="/settings/*" element={<Settings />} />
+                      </Route>
 
-                  <Route path="*" element={<NotFound />} />
+                      <Route path="*" element={<NotFound />} />
+                    </>
+                  )}
                 </Route>
               </Route>
             </Routes>
