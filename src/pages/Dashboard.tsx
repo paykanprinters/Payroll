@@ -20,8 +20,10 @@ import DashboardAverageNetPayTrendChart from "@/components/dashboard/DashboardAv
 import DashboardEmployeeSalaryDistributionChart from "@/components/dashboard/DashboardEmployeeSalaryDistributionChart";
 import DashboardMonthlyLeaveDaysTakenChart from "@/components/dashboard/DashboardMonthlyLeaveDaysTakenChart";
 import DashboardQuickActionsCard from "@/components/dashboard/DashboardQuickActionsCard";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Dashboard: React.FC = () => {
+  const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
   const {
     employees,
     payslips,
@@ -160,6 +162,12 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="mb-2">
+        <Alert className="border-blue-200 bg-blue-50 text-blue-900">
+          <AlertTitle>Active build</AlertTitle>
+          <AlertDescription>{portalType === "staff" ? "Staff Portal" : "Admin/Manager Console"}</AlertDescription>
+        </Alert>
+      </div>
       <RetroFunkHeader />
 
       <Tabs defaultValue="overview" className="w-full">
