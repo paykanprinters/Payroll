@@ -43,7 +43,7 @@ export const usePayrollProcessingLogic = (
   batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>,
   recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
   isMockDataEnabled: boolean,
-  // Optional Phase 3 inputs (currently not forwarded to generator to keep compatibility)
+  // Phase 3 inputs (forwarded to generator)
   earningComponents?: any[],
   deductionComponents?: any[],
   assignments?: any[],

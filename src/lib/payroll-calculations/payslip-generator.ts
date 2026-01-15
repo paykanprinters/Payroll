@@ -20,6 +20,7 @@ import { bankersRound } from "@/lib/utils";
 import { v4 as uuidv4 } from "uuid";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
+import type { OvertimePremiumRules } from "./helpers/earnings-helpers";
 
 import {
   getWeeklyThreshold,
@@ -124,7 +125,8 @@ export const generatePayslipsForPeriod = (
   holidays: PublicHoliday[] = [],
   earningComponents: any[] = [],
   deductionComponents: any[] = [],
-  assignments: any[] = []
+  assignments: any[] = [],
+  overtimeRules?: OvertimePremiumRules
 ): {
   payslips: MockPayslip[];
   updatedLoans: Loan[];
@@ -155,7 +157,8 @@ export const generatePayslipsForPeriod = (
       payPeriodStart,
       payPeriodEnd,
       workHoursSettings,
-      holidays
+      holidays,
+      overtimeRules
     );
 
     const { deductionsBreakdown, totalDeductions } = buildDeductions(
