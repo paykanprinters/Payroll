@@ -91,6 +91,8 @@ const App = () => {
                         <Route path="/employees" element={<Employees />} />
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/reports" element={<Reports />} />
+                        <Route path="/payroll/runs" element={<React.lazy(() => import('./pages/payroll/PayrollRuns')) as any} />
+                        <Route path="/payroll/runs/:id" element={<React.lazy(() => import('./pages/payroll/PayrollRunDetail')) as any} />
                       </Route>
 
                       {/* Admin-only settings */}
