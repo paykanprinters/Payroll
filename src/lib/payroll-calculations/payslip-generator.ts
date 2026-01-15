@@ -118,12 +118,15 @@ export const generatePayslipsForPeriod = (
   userTaxSettings: UserTaxSettings | null,
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
   workHoursSettings?: WorkHoursSettings | null,
-  holidays: PublicHoliday[] = []
-): { 
-  payslips: MockPayslip[]; 
-  updatedLoans: Loan[]; 
-  updatedSavingPlans: SavingPlan[]; 
-  savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] 
+  holidays: PublicHoliday[] = [],
+  earningComponents: any[] = [],
+  deductionComponents: any[] = [],
+  assignments: any[] = []
+): {
+  payslips: MockPayslip[];
+  updatedLoans: Loan[];
+  updatedSavingPlans: SavingPlan[];
+  savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[]
 } => {
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
@@ -162,7 +165,11 @@ export const generatePayslipsForPeriod = (
       payPeriodStart,
       payPeriodEnd,
       payPeriodString,
-      payrollSavingsEntries
+      payrollSavingsEntries,
+      // Phase 3 additions
+      earningComponents,
+      deductionComponents,
+      assignments
     );
 
     const netPay = bankersRound(grossEarnings - totalDeductions, 2);

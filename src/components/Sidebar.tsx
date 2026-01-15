@@ -131,6 +131,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     { to: "/payslips/overview", icon: ReceiptText, label: "Payslips", iconColor: "text-violet-600 dark:text-violet-400", activeAccentColor: "border-violet-500" },
     { to: "/payroll/runs", icon: ReceiptText, label: "Payroll Runs", iconColor: "text-purple-600 dark:text-purple-400", activeAccentColor: "border-purple-500" },
     { to: "/payroll/batches", icon: Landmark, label: "Payment Batches", iconColor: "text-green-700 dark:text-green-300", activeAccentColor: "border-green-600" },
+    { to: "/payroll/components", icon: ReceiptText, label: "Payroll Components", iconColor: "text-pink-700 dark:text-pink-300", activeAccentColor: "border-pink-600" },
+    { to: "/payroll/assignments", icon: Users, label: "Component Assignments", iconColor: "text-stone-700 dark:text-stone-300", activeAccentColor: "border-stone-600" },
     { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements", iconColor: "text-cyan-600 dark:text-cyan-400", activeAccentColor: "border-cyan-500" },
     { to: "/savings", icon: PiggyBank, label: "Savings", iconColor: "text-emerald-600 dark:text-emerald-400", activeAccentColor: "border-emerald-500" },
     { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence", iconColor: "text-fuchsia-600 dark:text-fuchsia-400", activeAccentColor: "border-fuchsia-500" },
@@ -208,7 +210,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <nav className="grid items-start gap-1 p-4">
               {navItems
                 .filter((item) => {
-                  if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches") {
+                  if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches" || item.to === "/payroll/components" || item.to === "/payroll/assignments") {
                     return user?.role === "Admin" || user?.role === "Manager";
                   }
                   if (item.to === "/settings") {
@@ -246,7 +248,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <nav className="grid items-start gap-1 p-4">
         {navItems
           .filter((item) => {
-            if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches") {
+            if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches" || item.to === "/payroll/components" || item.to === "/payroll/assignments") {
               return user?.role === "Admin" || user?.role === "Manager";
             }
             if (item.to === "/settings") {

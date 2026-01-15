@@ -28,6 +28,7 @@ import { usePublicHolidays } from "./use-public-holidays";
 import { usePayCycleSettings } from "./use-pay-cycle-settings";
 import { useUserTaxSettings } from "./use-user-tax-settings";
 import { useEmployeesData } from "./use-employees-data";
+import { useCompensationComponents } from "./use-compensation-components";
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -174,6 +175,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const { employees, isLoadingEmployees, isMutatingEmployee, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee, refetchEmployees } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
   const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { earningComponents, deductionComponents, assignments, isLoading: isLoadingComponents, refetch: refetchComponents } = useCompensationComponents();
   const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: mockLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: mockSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
   const { payrollSavingsEntries, isLoadingPayrollSavingsEntries, recordSavingsPayment, refetchPayrollSavingsEntries } = usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
@@ -203,6 +205,9 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     batchUpsertPayslips,
     recordSavingsPayment,
     isMockDataEnabled,
+    earningComponents,
+    deductionComponents,
+    assignments,
   );
 
   useEffect(() => {
@@ -295,6 +300,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
       refetchPayslips?.();
       refetchPayrollSavingsEntries?.();
       refetchToDosFnRef.current?.();
+      refetchComponents?.();
 
       // Ensure employees are also refetched
       try {

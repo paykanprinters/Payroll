@@ -1,4 +1,4 @@
-import { format, differenceInYears } from "date-fns";
+import { format, differenceInYears, parseISO } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LoanDeductionHistoryEntry } from "@/lib/mock-data-interfaces";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
@@ -62,7 +62,10 @@ export const buildDeductions = (
   periodStart: Date,
   periodEnd: Date,
   payPeriodString: string,
-  payrollSavingsEntries: PayrollSavingsEntry[] | null
+  payrollSavingsEntries: PayrollSavingsEntry[] | null,
+  earningComponents?: any[],
+  deductionComponents?: any[],
+  assignments?: any[]
 ) => {
   let totalDeductions = 0;
   const deductionsBreakdown: { name: string; amount: number }[] = [];
@@ -188,6 +191,37 @@ export const buildDeductions = (
       totalDeductions += rounded;
     }
   });
+
+  // Apply assigned deduction components (effective within this period)
+  if (assignments && deductionComponents) {
+    const isEffective = (start?: string | null, end?: string | null) => {
+      const s = start ? parseISO(start as any) : null;
+      const e = end ? parseISO(end as any) : null;
+      const inStart = !s || s <= periodEnd;
+      const inEnd = !e || e >= periodStart;
+      return inStart && inEnd;
+    };
+    const computeAmount = (base: number, type: string) => {
+      if (type === "fixed") return base;
+      if (type === "percent_of_salary") return ((emp.salary || 0) * base) / 100;
+      if (type === "percent_of_hourly") return ((emp.hourlyRate || 0) * base) / 100;
+      if (type === "percent_of_gross") return (grossEarnings * base) / 100;
+      return base;
+    };
+    assignments
+      .filter(a => a.componentType === "deduction" && a.employeeId === emp.id && isEffective(a.effectiveStart, a.effectiveEnd))
+      .forEach(a => {
+        const comp = deductionComponents.find((c: any) => c.id === a.componentId);
+        if (comp) {
+          const amountBase = typeof a.overrideAmount === "number" ? a.overrideAmount : Number(comp.amount || 0);
+          const amt = bankersRound(computeAmount(amountBase, comp.amountType), 2);
+          if (amt > 0) {
+            deductionsBreakdown.push({ name: comp.name || "Deduction", amount: amt });
+            totalDeductions += amt;
+          }
+        }
+      });
+  }
 
   totalDeductions = bankersRound(totalDeductions, 2);
   return { deductionsBreakdown, totalDeductions };

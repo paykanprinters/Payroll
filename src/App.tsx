@@ -30,6 +30,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import StaffHome from "./pages/StaffHome";
 import PaymentBatches from "./pages/payroll/PaymentBatches";
 import PaymentBatchDetail from "./pages/payroll/PaymentBatchDetail";
+import CompensationComponents from "./pages/payroll/CompensationComponents";
+import EmployeeAssignments from "./pages/payroll/EmployeeAssignments";
 import PayrollRuns from "./pages/payroll/PayrollRuns";
 import PayrollRunDetail from "./pages/payroll/PayrollRunDetail";
 
@@ -99,6 +101,8 @@ const App = () => {
                         <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
                         <Route path="/payroll/batches" element={<PaymentBatches />} />
                         <Route path="/payroll/batches/:id" element={<PaymentBatchDetail />} />
+                        <Route path="/payroll/components" element={<CompensationComponents />} />
+                        <Route path="/payroll/assignments" element={<EmployeeAssignments />} />
                       </Route>
 
                       {/* Admin-only settings */}

@@ -21,7 +21,6 @@ import { TaxTables } from "./use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
-
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
 
 export const usePayrollProcessingLogic = (
@@ -41,9 +40,13 @@ export const usePayrollProcessingLogic = (
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
   updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>,
-  batchUpsertPayslips: (payslips: MockPayslips[]) => Promise<boolean>,
+  batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>,
   recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
   isMockDataEnabled: boolean,
+  // Optional Phase 3 inputs (currently not forwarded to generator to keep compatibility)
+  earningComponents?: any[],
+  deductionComponents?: any[],
+  assignments?: any[],
 ) => {
 
   const runPayrollProcess = useCallback(
@@ -96,7 +99,6 @@ export const usePayrollProcessingLogic = (
         const currentStart = parsePeriodStart(newPayslip.payPeriod);
         const employeePayslips = payslips.filter(p => p.employeeId === newPayslip.employeeId);
 
-        // Only include payslips strictly before this period
         const previousPayslips = employeePayslips.filter(p => parsePeriodStart(p.payPeriod) < currentStart);
 
         const prevYtdGross = previousPayslips.reduce((sum, p) => sum + (p.grossEarnings || 0), 0);
