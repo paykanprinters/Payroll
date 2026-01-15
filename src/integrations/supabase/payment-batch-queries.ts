@@ -148,19 +148,6 @@ export const updateBatchStatus = async (batchId: string, status: PaymentBatchSta
   return true;
 };
 
-export const updateBatchFormat = async (batchId: string, bankFormat: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from("payment_batches")
-    .update(toSnake({ bankFormat }))
-    .eq("id", batchId);
-
-  if (error) {
-    console.error("payment-batch-queries: updateBatchFormat error", error);
-    showError(`Failed to update batch format: ${error.message}`);
-    return false;
-  }
-  return true;
-};
 
 export const updateItemStatus = async (itemId: string, status: PaymentItemStatus, errorMessage?: string | null): Promise<boolean> => {
   const { error } = await supabase
