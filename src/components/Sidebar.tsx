@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { getBranding } from "@/config/branding";
+import LogoBrand from "@/components/LogoBrand";
 
 interface NavLinkProps {
   to: string;
@@ -109,9 +110,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     return {
       name: b.name || companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
       logoUrl: b.logoUrl || companyDetails?.logoUrl,
-      logoWidth: b.logoWidth || companyDetails?.logoWidth || 100,
-      logoHeight: b.logoHeight || companyDetails?.logoHeight || 50,
-      logoFit: b.logoFit || (companyDetails?.logoFit as any) || "contain",
     };
   }, [companyDetails]);
 
@@ -131,11 +129,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     { to: "/payslips/overview", icon: ReceiptText, label: "Payslips", iconColor: "text-violet-600 dark:text-violet-400", activeAccentColor: "border-violet-500" },
     { to: "/payroll/runs", icon: ReceiptText, label: "Payroll Runs", iconColor: "text-purple-600 dark:text-purple-400", activeAccentColor: "border-purple-500" },
     { to: "/payroll/batches", icon: Landmark, label: "Payment Batches", iconColor: "text-green-700 dark:text-green-300", activeAccentColor: "border-green-600" },
-    { to: "/payroll/components", icon: ReceiptText, label: "Payroll Components", iconColor: "text-pink-700 dark:text-pink-300", activeAccentColor: "border-pink-600" },
-    { to: "/payroll/assignments", icon: Users, label: "Component Assignments", iconColor: "text-stone-700 dark:text-stone-300", activeAccentColor: "border-stone-600" },
-    { to: "/payroll/overtime-rules", icon: Clock, label: "Overtime Rules", iconColor: "text-amber-700 dark:text-amber-300", activeAccentColor: "border-amber-600" },
-    { to: "/payroll/exceptions", icon: LineChart, label: "Exceptions", iconColor: "text-red-700 dark:text-red-300", activeAccentColor: "border-red-600" },
-    { to: "/loans-advancements", icon: Landmark, label: "Loans & Advancements", iconColor: "text-cyan-600 dark:text-cyan-400", activeAccentColor: "border-cyan-500" },
     { to: "/savings", icon: PiggyBank, label: "Savings", iconColor: "text-emerald-600 dark:text-emerald-400", activeAccentColor: "border-emerald-500" },
     { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence", iconColor: "text-fuchsia-600 dark:text-fuchsia-400", activeAccentColor: "border-fuchsia-500" },
     { to: "/analytics", icon: LineChart, label: "Analytics", iconColor: "text-indigo-600 dark:text-indigo-400", activeAccentColor: "border-indigo-500" },
@@ -147,44 +140,34 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div
       className={cn(
         "relative overflow-hidden",
-        currentIsCollapsed ? "h-16" : "h-24"
+        currentIsCollapsed ? "h-20" : "h-28"
       )}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500" />
       <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
       <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-      <div className={cn("relative z-10 flex items-center border-b px-4 lg:px-6", currentIsCollapsed ? "justify-center" : "justify-between py-4 lg:py-6 text-white")}>
+      <div className={cn("relative z-10 flex items-center border-b px-4 lg:px-6", currentIsCollapsed ? "justify-center" : "justify-between py-5 lg:py-7 text-white")}>
         {currentIsCollapsed ? (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => toggleCollapse(!currentIsCollapsed)}
             className="mx-auto bg-white/20 hover:bg-white/30 z-10"
+            aria-label="Toggle sidebar"
           >
             <Menu className="h-5 w-5 text-white" />
           </Button>
         ) : (
           <>
             <Link to="/" className="flex flex-col items-center flex-grow-0">
-              {displayCompanyDetails.logoUrl && (
-                <img
-                  src={displayCompanyDetails.logoUrl}
-                  alt="Company Logo"
-                  style={{
-                    width: displayCompanyDetails.logoWidth,
-                    height: displayCompanyDetails.logoHeight,
-                    objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
-                  }}
-                  className="mb-1 drop-shadow-sm"
-                />
-              )}
-              <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
+              <LogoBrand size="md" align="center" showName />
             </Link>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => toggleCollapse(!currentIsCollapsed)}
               className="ml-auto bg-white/20 hover:bg-white/30 z-10"
+              aria-label="Collapse sidebar"
             >
               <Menu className="h-5 w-5 text-white" />
             </Button>
@@ -202,7 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return (
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50">
+          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50" aria-label="Open sidebar">
             <Menu className="h-6 w-6 text-primary" />
           </Button>
         </SheetTrigger>
@@ -212,7 +195,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <nav className="grid items-start gap-1 p-4">
               {navItems
                 .filter((item) => {
-                  if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches" || item.to === "/payroll/components" || item.to === "/payroll/assignments" || item.to === "/payroll/overtime-rules" || item.to === "/payroll/exceptions") {
+                  if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches") {
                     return user?.role === "Admin" || user?.role === "Manager";
                   }
                   if (item.to === "/settings") {
@@ -243,14 +226,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div
       className={cn(
         "flex h-full max-h-screen flex-col gap-2 border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
-        isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[240px]"
+        isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[260px]"
       )}
     >
       {renderSidebarHeader(isCollapsed, setIsCollapsed)}
       <nav className="grid items-start gap-1 p-4">
         {navItems
           .filter((item) => {
-            if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches" || item.to === "/payroll/components" || item.to === "/payroll/assignments" || item.to === "/payroll/overtime-rules" || item.to === "/payroll/exceptions") {
+            if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches") {
               return user?.role === "Admin" || user?.role === "Manager";
             }
             if (item.to === "/settings") {
