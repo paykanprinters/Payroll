@@ -65,6 +65,7 @@ const toSnake = (obj: any) => {
   return out;
 };
 
+/* Fetchers */
 export const fetchEarningComponents = async (): Promise<EarningComponent[]> => {
   const { data, error } = await supabase.from("earning_components").select("*").order("name", { ascending: true });
   if (error) {
@@ -97,4 +98,81 @@ export const fetchEmployeeAssignments = async (): Promise<EmployeeComponentAssig
     return [];
   }
   return (data || []).map(toCamel) as EmployeeComponentAssignment[];
+};
+
+/* Upserts */
+export const upsertEarningComponent = async (payload: Partial<EarningComponent>): Promise<EarningComponent | null> => {
+  const { data: userRes } = await supabase.auth.getUser();
+  const userId = userRes?.user?.id || null;
+  const snake = toSnake({ ...payload, userId });
+  const { data, error } = await supabase.from("earning_components").upsert(snake, { onConflict: "id" }).select();
+
+  if (error) {
+    console.error("compensation-queries: upsertEarningComponent", error);
+    showError(`Failed to save earning component: ${error.message}`);
+    return null;
+  }
+  return data && data[0] ? (toCamel(data[0]) as EarningComponent) : null;
+};
+
+export const upsertDeductionComponent = async (payload: Partial<DeductionComponent>): Promise<DeductionComponent | null> => {
+  const { data: userRes } = await supabase.auth.getUser();
+  const userId = userRes?.user?.id || null;
+  const snake = toSnake({ ...payload, userId });
+  const { data, error } = await supabase.from("deduction_components").upsert(snake, { onConflict: "id" }).select();
+
+  if (error) {
+    console.error("compensation-queries: upsertDeductionComponent", error);
+    showError(`Failed to save deduction component: ${error.message}`);
+    return null;
+  }
+  return data && data[0] ? (toCamel(data[0]) as DeductionComponent) : null;
+};
+
+export const upsertEmployeeAssignment = async (payload: Partial<EmployeeComponentAssignment>): Promise<EmployeeComponentAssignment | null> => {
+  const { data: userRes } = await supabase.auth.getUser();
+  const userId = userRes?.user?.id || null;
+  const snake = toSnake({ ...payload, userId });
+  const { data, error } = await supabase
+    .from("employee_component_assignments")
+    .upsert(snake, { onConflict: "id" })
+    .select();
+
+  if (error) {
+    console.error("compensation-queries: upsertEmployeeAssignment", error);
+    showError(`Failed to save assignment: ${error.message}`);
+    return null;
+  }
+  return data && data[0] ? (toCamel(data[0]) as EmployeeComponentAssignment) : null;
+};
+
+/* Deletes */
+export const deleteEarningComponent = async (id: string): Promise<boolean> => {
+  const { error } = await supabase.from("earning_components").delete().eq("id", id);
+  if (error) {
+    console.error("compensation-queries: deleteEarningComponent", error);
+    showError(`Failed to delete earning component: ${error.message}`);
+    return false;
+  }
+  return true;
+};
+
+export const deleteDeductionComponent = async (id: string): Promise<boolean> => {
+  const { error } = await supabase.from("deduction_components").delete().eq("id", id);
+  if (error) {
+    console.error("compensation-queries: deleteDeductionComponent", error);
+    showError(`Failed to delete deduction component: ${error.message}`);
+    return false;
+  }
+  return true;
+};
+
+export const deleteEmployeeAssignment = async (id: string): Promise<boolean> => {
+  const { error } = await supabase.from("employee_component_assignments").delete().eq("id", id);
+  if (error) {
+    console.error("compensation-queries: deleteEmployeeAssignment", error);
+    showError(`Failed to delete assignment: ${error.message}`);
+    return false;
+  }
+  return true;
 };
