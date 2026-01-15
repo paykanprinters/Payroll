@@ -25,7 +25,6 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { getBranding } from "@/config/branding";
-import LogoBrand from "@/components/LogoBrand";
 
 interface NavLinkProps {
   to: string;
@@ -176,16 +175,19 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <>
             <Link to="/" className="flex flex-col items-center flex-grow-0">
-              <LogoBrand
-                size="md"
-                align="center"
-                showName
-                name={displayCompanyDetails.name}
-                logoUrl={displayCompanyDetails.logoUrl || "/logonscreen_for_workflow.png"}
-                logoWidthPx={displayCompanyDetails.logoWidth}
-                logoHeightPx={displayCompanyDetails.logoHeight}
-                logoFit={displayCompanyDetails.logoFit}
-              />
+              {displayCompanyDetails.logoUrl && (
+                <img
+                  src={displayCompanyDetails.logoUrl}
+                  alt="Company Logo"
+                  style={{
+                    width: displayCompanyDetails.logoWidth,
+                    height: displayCompanyDetails.logoHeight,
+                    objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
+                  }}
+                  className="mb-1 drop-shadow-sm"
+                />
+              )}
+              <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
             </Link>
             <Button
               variant="ghost"
