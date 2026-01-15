@@ -28,6 +28,8 @@ import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 import Profile from "./pages/Profile";
 import ErrorBoundary from "./components/ErrorBoundary";
 import StaffHome from "./pages/StaffHome";
+import PayrollRuns from "./pages/payroll/PayrollRuns";
+import PayrollRunDetail from "./pages/payroll/PayrollRunDetail";
 
 const queryClient = new QueryClient();
 
@@ -91,8 +93,8 @@ const App = () => {
                         <Route path="/employees" element={<Employees />} />
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/reports" element={<Reports />} />
-                        <Route path="/payroll/runs" element={<React.lazy(() => import('./pages/payroll/PayrollRuns')) as any} />
-                        <Route path="/payroll/runs/:id" element={<React.lazy(() => import('./pages/payroll/PayrollRunDetail')) as any} />
+                        <Route path="/payroll/runs" element={<PayrollRuns />} />
+                        <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
                       </Route>
 
                       {/* Admin-only settings */}
