@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { format, addDays, subDays, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, getDay, getDate, setDate, setDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import CalculatePaycheckDialog from "./CalculatePaycheckDialog";
 import { PayslipDesignSettings, MockEmployee, MockCompanyDetails, MockPayslip } from "@/lib/mock-data-interfaces";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
@@ -39,6 +40,8 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
   const [payPeriodStart, setPayPeriodStart] = useState<Date>(new Date());
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date>(new Date());
   const [isCalculatePaycheckDialogOpen, setIsCalculatePaycheckDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const isAdminManager = user?.role === "Admin" || user?.role === "Manager";
 
   // Effect to update pay period and check date when settings or current date change
   useEffect(() => {
@@ -78,11 +81,6 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
     setCurrentDateForCalculation(newCurrentDate);
   };
 
-  const handleRunPayroll = () => {
-    runPayrollProcess(payPeriodStart, payPeriodEnd);
-    // After running payroll, advance to the next period for display
-    handleNextPeriod();
-  };
 
   const handleNewOffCyclePayroll = () => {
     showSuccess("Starting new off-cycle payroll. Redirecting to Payslips page.");
@@ -104,7 +102,7 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
     <Card>
       <CardHeader>
         <CardTitle>Payroll Run</CardTitle>
-        <CardDescription>Manage your upcoming payroll cycle and perform quick actions.</CardDescription>
+        <CardDescription>Review your upcoming payroll cycle; use Payroll Runs for processing and approvals.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -135,9 +133,11 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
               </Button>
             </div>
 
-            <Button onClick={handleRunPayroll} className="w-full">
-              Run payroll
-            </Button>
+            {isAdminManager && (
+              <Button onClick={() => navigate('/payroll/runs')} className="w-full">
+                Go to Payroll Runs
+              </Button>
+            )}
           </div>
 
           <div className="lg:col-span-1 space-y-4 border-t lg:border-t-0 lg:border-l pt-6 lg:pt-0 lg:pl-6 border-gray-200 dark:border-gray-700">
