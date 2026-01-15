@@ -5,6 +5,17 @@ import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import { calculateWorkingDays } from "@/lib/payroll-calculations";
 import { bankersRound } from "@/lib/utils";
 
+export type OvertimePremiumRules = {
+  weekdayOtMultiplier?: number;
+  saturdayOtMultiplier?: number;
+  sundayOtMultiplier?: number;
+  holidayWorkedMultiplier?: number;
+  holidayNonWorkedMultiplier?: number;
+  nightShiftStart?: string | null;
+  nightShiftEnd?: string | null;
+  nightShiftMultiplier?: number | null;
+};
+
 /* Internal utilities */
 const timeToMinutes = (time: string): number => {
   const [h, m] = time.split(":").map(Number);
@@ -260,10 +271,13 @@ export const computeBasicSalary = (
 export const computeHolidayAmounts = (
   holidayWorkedHours: number,
   holidayNonWorkedHours: number,
-  hourlyRate: number
+  hourlyRate: number,
+  rules?: OvertimePremiumRules
 ) => {
-  const workedAmount = bankersRound(hourlyRate > 0 ? holidayWorkedHours * hourlyRate * 2.0 : 0, 2);
-  const nonWorkedAmount = bankersRound(hourlyRate > 0 ? holidayNonWorkedHours * hourlyRate * 1.5 : 0, 2);
+  const workedMult = rules?.holidayWorkedMultiplier ?? 2.0;
+  const nonWorkedMult = rules?.holidayNonWorkedMultiplier ?? 1.5;
+  const workedAmount = bankersRound(hourlyRate > 0 ? holidayWorkedHours * hourlyRate * workedMult : 0, 2);
+  const nonWorkedAmount = bankersRound(hourlyRate > 0 ? holidayNonWorkedHours * hourlyRate * nonWorkedMult : 0, 2);
   return { workedAmount, nonWorkedAmount };
 };
 
@@ -271,11 +285,15 @@ export const computeOvertimeAmounts = (
   hourlyRate: number,
   overtimeWeekdayHours: number,
   overtimeSaturdayHours: number,
-  overtimeSundayHours: number
+  overtimeSundayHours: number,
+  rules?: OvertimePremiumRules
 ) => {
-  const weekdayAmount = bankersRound(hourlyRate > 0 ? overtimeWeekdayHours * hourlyRate * 1.5 : 0, 2);
-  const saturdayAmount = bankersRound(hourlyRate > 0 ? overtimeSaturdayHours * hourlyRate * 1.5 : 0, 2);
-  const sundayAmount = bankersRound(hourlyRate > 0 ? overtimeSundayHours * hourlyRate * 2.0 : 0, 2);
+  const wkMult = rules?.weekdayOtMultiplier ?? 1.5;
+  const satMult = rules?.saturdayOtMultiplier ?? 1.5;
+  const sunMult = rules?.sundayOtMultiplier ?? 2.0;
+  const weekdayAmount = bankersRound(hourlyRate > 0 ? overtimeWeekdayHours * hourlyRate * wkMult : 0, 2);
+  const saturdayAmount = bankersRound(hourlyRate > 0 ? overtimeSaturdayHours * hourlyRate * satMult : 0, 2);
+  const sundayAmount = bankersRound(hourlyRate > 0 ? overtimeSundayHours * hourlyRate * sunMult : 0, 2);
   return { weekdayAmount, saturdayAmount, sundayAmount };
 };
 

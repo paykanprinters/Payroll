@@ -32,6 +32,8 @@ import PaymentBatches from "./pages/payroll/PaymentBatches";
 import PaymentBatchDetail from "./pages/payroll/PaymentBatchDetail";
 import CompensationComponents from "./pages/payroll/CompensationComponents";
 import EmployeeAssignments from "./pages/payroll/EmployeeAssignments";
+import OvertimeRules from "./pages/payroll/OvertimeRules";
+import ExceptionsDashboard from "./pages/payroll/ExceptionsDashboard";
 import PayrollRuns from "./pages/payroll/PayrollRuns";
 import PayrollRunDetail from "./pages/payroll/PayrollRunDetail";
 
@@ -103,6 +105,8 @@ const App = () => {
                         <Route path="/payroll/batches/:id" element={<PaymentBatchDetail />} />
                         <Route path="/payroll/components" element={<CompensationComponents />} />
                         <Route path="/payroll/assignments" element={<EmployeeAssignments />} />
+                        <Route path="/payroll/overtime-rules" element={<OvertimeRules />} />
+                        <Route path="/payroll/exceptions" element={<ExceptionsDashboard />} />
                       </Route>
 
                       {/* Admin-only settings */}

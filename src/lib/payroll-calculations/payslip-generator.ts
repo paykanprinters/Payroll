@@ -44,7 +44,8 @@ const calculateEarnings = (
   payPeriodStart: Date,
   payPeriodEnd: Date,
   workHoursSettings?: WorkHoursSettings | null,
-  holidays: PublicHoliday[] = []
+  holidays: PublicHoliday[] = [],
+  overtimeRules?: OvertimePremiumRules
 ) => {
   const weeklyThreshold = getWeeklyThreshold(workHoursSettings);
   const hourlyRate = deriveHourlyRate(emp, workHoursSettings);
@@ -76,14 +77,16 @@ const calculateEarnings = (
   const holidayAmounts = computeHolidayAmounts(
     holidayBuckets.holidayWorkedHours,
     holidayBuckets.holidayNonWorkedHours,
-    hourlyRate
+    hourlyRate,
+    overtimeRules
   );
 
   const overtimeAmounts = computeOvertimeAmounts(
     hourlyRate,
     overtimeAlloc.overtimeWeekdayHours,
     overtimeAlloc.overtimeSaturdayHours,
-    overtimeAlloc.overtimeSundayHours
+    overtimeAlloc.overtimeSundayHours,
+    overtimeRules
   );
 
   return buildEarningsBreakdown(

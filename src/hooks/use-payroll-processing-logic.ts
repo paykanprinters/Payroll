@@ -76,7 +76,10 @@ export const usePayrollProcessingLogic = (
         userTaxSettings,
         payrollSavingsEntries,
         workHoursSettings,
-        publicHolidays || []
+        publicHolidays || [],
+        earningComponents || [],
+        deductionComponents || [],
+        assignments || []
       );
       const newPayslipsWithBranding = newPayslips.map(p => ({
         ...p,
@@ -193,7 +196,10 @@ export const usePayrollProcessingLogic = (
         userTaxSettings,
         payrollSavingsEntries,
         workHoursSettings,
-        publicHolidays || []
+        publicHolidays || [],
+        earningComponents || [],
+        deductionComponents || [],
+        assignments || []
       );
       const previewPayslipsWithBranding = previewPayslips.map(p => ({
         ...p,
