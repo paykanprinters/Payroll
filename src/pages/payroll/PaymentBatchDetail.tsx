@@ -7,14 +7,18 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { fetchPaymentBatchById, fetchBatchItems, updateBatchStatus, updateItemStatus, PaymentBatch, PaymentBatchItem } from "@/integrations/supabase/payment-batch-queries";
+import { fetchPaymentBatchById, fetchBatchItems, updateBatchStatus, updateItemStatus, updateBatchFormat, PaymentBatch, PaymentBatchItem } from "@/integrations/supabase/payment-batch-queries";
+import { isValidAccountNumber, isValidBranchCode } from "@/lib/payments/validators";
+import { generateEftCsv, generateNachaAch, generateSepaXml } from "@/lib/payments/formats";
 
 const PaymentBatchDetailPage: React.FC = () => {
   const { id } = useParams();
   const [batch, setBatch] = useState<PaymentBatch | null>(null);
   const [items, setItems] = useState<PaymentBatchItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [format, setFormat] = useState<string>("EFT-CSV");
 
   useEffect(() => {
     const load = async () => {
@@ -23,38 +27,58 @@ const PaymentBatchDetailPage: React.FC = () => {
       const its = await fetchBatchItems(id);
       setBatch(b);
       setItems(its);
+      setFormat(b?.bankFormat || "EFT-CSV");
       setLoading(false);
     };
     load();
   }, [id]);
 
-  const csvContent = useMemo(() => {
-    // Simple EFT CSV: account_number,branch_code,amount,account_holder,employee_id
-    const headers = ["account_number","branch_code","amount","account_holder","employee_id"];
-    const lines = [headers.join(",")];
-    items.forEach(it => {
-      const line = [
-        (it.accountNumber || "").replace(/,/g, ""),
-        (it.branchCode || "").replace(/,/g, ""),
-        Number(it.netPay).toFixed(2),
-        `"${(it.accountHolder || "").replace(/"/g, '""')}"`,
-        it.employeeId
-      ].join(",");
-      lines.push(line);
-    });
-    return lines.join("\n");
+  const controlTotals = useMemo(() => {
+    const count = items.length;
+    const total = items.reduce((s, it) => s + Number(it.netPay || 0), 0);
+    return { count, total };
   }, [items]);
 
-  const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const validations = useMemo(() => {
+    return items.map(it => {
+      const accOk = isValidAccountNumber(it.accountNumber);
+      const brOk = isValidBranchCode(it.branchCode);
+      return { id: it.id, employeeId: it.employeeId, accountOk: accOk, branchOk: brOk };
+    });
+  }, [items]);
+
+  const invalidCount = useMemo(() => validations.filter(v => !v.accountOk || !v.branchOk).length, [validations]);
+
+  const exportContent = useMemo(() => {
+    const mapped = items.map(it => ({
+      employeeId: it.employeeId,
+      accountHolder: it.accountHolder || "",
+      bankName: it.bankName || "",
+      accountNumber: it.accountNumber || "",
+      branchCode: it.branchCode || "",
+      amount: Number(it.netPay || 0),
+    }));
+    if (format === "EFT-CSV") return { data: generateEftCsv(mapped), filename: `payment-batch-${batch?.id || "unknown"}.csv`, mime: "text/csv" };
+    if (format === "NACHA-ACH") return { data: generateNachaAch(mapped), filename: `payment-batch-${batch?.id || "unknown"}.ach`, mime: "text/plain" };
+    if (format === "SEPA-XML") return { data: generateSepaXml(mapped), filename: `payment-batch-${batch?.id || "unknown"}.xml`, mime: "application/xml" };
+    return { data: generateEftCsv(mapped), filename: `payment-batch-${batch?.id || "unknown"}.csv`, mime: "text/csv" };
+  }, [items, format, batch]);
+
+  const handleDownload = async () => {
+    if (!id) return;
+    // Basic guard: warn if invalid items exist
+    if (invalidCount > 0) {
+      showError(`Validation failed for ${invalidCount} item(s). Fix data before export.`);
+      return;
+    }
+    const blob = new Blob([exportContent.data], { type: `${exportContent.mime};charset=utf-8;` });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const fname = `payment-batch-${batch?.id || "unknown"}.csv`;
     a.href = url;
-    a.download = fname;
+    a.download = exportContent.filename;
     a.click();
     URL.revokeObjectURL(url);
-    showSuccess("Bank file downloaded.");
+    showSuccess(`Bank file (${format}) downloaded.`);
   };
 
   const markExported = async () => {
@@ -94,6 +118,17 @@ const PaymentBatchDetailPage: React.FC = () => {
     }
   };
 
+  const updateFormat = async (newFormat: string) => {
+    setFormat(newFormat);
+    if (!id) return;
+    const ok = await updateBatchFormat(id, newFormat);
+    if (!ok) {
+      showError("Failed to update batch format.");
+    } else {
+      setBatch(prev => prev ? { ...prev, bankFormat: newFormat } : prev);
+    }
+  };
+
   if (loading || !batch) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -109,7 +144,7 @@ const PaymentBatchDetailPage: React.FC = () => {
           <CardTitle>Payment Batch</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <div className="text-sm text-muted-foreground">Batch ID</div>
               <div className="font-mono text-xs">{batch.id}</div>
@@ -122,10 +157,65 @@ const PaymentBatchDetailPage: React.FC = () => {
               <div className="text-sm text-muted-foreground">Status</div>
               <Badge variant="outline">{batch.status}</Badge>
             </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Bank Format</div>
+              <Select value={format} onValueChange={updateFormat}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EFT-CSV">EFT-CSV (South Africa)</SelectItem>
+                  <SelectItem value="NACHA-ACH">NACHA/ACH (US)</SelectItem>
+                  <SelectItem value="SEPA-XML">SEPA XML (EU pain.001)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Validation & control totals */}
+          <div className="mt-2 p-3 border rounded-md bg-blue-50 text-blue-900 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="font-medium">Validation & Control Totals</div>
+              <Badge variant="outline" className={invalidCount === 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                {invalidCount === 0 ? "All good" : `${invalidCount} issue(s)`}
+              </Badge>
+            </div>
+            <div className="text-sm">
+              <div>Items: {controlTotals.count}</div>
+              <div>Total Amount: R{Number(controlTotals.total).toFixed(2)}</div>
+            </div>
+            {invalidCount > 0 && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Account OK</TableHead>
+                    <TableHead>Branch/Routing OK</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {validations.filter(v => !v.accountOk || !v.branchOk).map(v => (
+                    <TableRow key={v.id}>
+                      <TableCell className="font-mono text-xs">{v.employeeId}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={v.accountOk ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                          {v.accountOk ? "Yes" : "No"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={v.branchOk ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                          {v.branchOk ? "Yes" : "No"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={handleDownload}>Download bank file (CSV)</Button>
+            <Button onClick={handleDownload} disabled={invalidCount > 0}>Download ({format})</Button>
             <Button variant="outline" onClick={markExported}>Mark Exported</Button>
             <Button variant="outline" onClick={markReconciled}>Mark Reconciled</Button>
           </div>
@@ -137,7 +227,7 @@ const PaymentBatchDetailPage: React.FC = () => {
                   <TableHead>Employee</TableHead>
                   <TableHead>Account Holder</TableHead>
                   <TableHead>Account</TableHead>
-                  <TableHead>Branch</TableHead>
+                  <TableHead>Branch/Routing</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Exception</TableHead>
@@ -160,7 +250,6 @@ const PaymentBatchDetailPage: React.FC = () => {
                           onBlur={(e) => {
                             const msg = e.currentTarget.value;
                             if (msg && msg.trim().length > 0) {
-                              // Store on element for reuse in buttons
                               (e.currentTarget as any).__msg__ = msg.trim();
                             }
                           }}
@@ -191,8 +280,7 @@ const PaymentBatchDetailPage: React.FC = () => {
                 ))}
                 {items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">No items in this batch.</TableCell>
-                  </TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">No items in this batch.</TableRow>
                 )}
               </TableBody>
             </Table>
