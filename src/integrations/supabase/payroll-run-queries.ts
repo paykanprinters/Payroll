@@ -109,12 +109,15 @@ export const fetchPayrollRunById = async (id: string): Promise<PayrollRun | null
   return toCamel(data) as PayrollRun;
 };
 
-export const updatePayrollRunStatus = async (id: string, status: PayrollRunStatus, approverId?: string | null): Promise<boolean> => {
+export const updatePayrollRunStatus = async (id: string, status: PayrollRunStatus, actorId?: string | null): Promise<boolean> => {
   const patch: any = { status };
   const now = new Date().toISOString();
 
-  if (status === "Approved") {
-    patch.approvedBy = approverId ?? null;
+  if (status === "Reviewed") {
+    patch.reviewedBy = actorId ?? null;
+    patch.reviewedAt = now;
+  } else if (status === "Approved") {
+    patch.approvedBy = actorId ?? null;
     patch.approvedAt = now;
   } else if (status === "Locked") {
     patch.lockedAt = now;
