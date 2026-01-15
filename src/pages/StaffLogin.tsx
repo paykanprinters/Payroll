@@ -19,27 +19,38 @@ const StaffLogin: React.FC = () => {
     (typeof window !== "undefined" && localStorage.getItem("companyLogoWidth")) || null;
   const lsLogoHeightRaw =
     (typeof window !== "undefined" && localStorage.getItem("companyLogoHeight")) || null;
+  const lsLogoFitRaw =
+    (typeof window !== "undefined" && localStorage.getItem("companyLogoFit")) || null;
 
   const name = lsName || b.name || "Your Company Name";
   const logoUrl = lsLogoUrl || b.logoUrl || "/logonscreen_for_workflow.png";
   const logoWidth = lsLogoWidthRaw ? Number(lsLogoWidthRaw) : (b.logoWidth ?? 140);
   const logoHeight = lsLogoHeightRaw ? Number(lsLogoHeightRaw) : (b.logoHeight ?? 56);
+  const logoFit = (lsLogoFitRaw as React.CSSProperties["objectFit"]) || b.logoFit || "contain";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950 p-4">
       <div className="w-full max-w-md mx-auto">
+        {/* Gradient accent header (matches payroll theme) */}
+        <div className="mb-6">
+          <div className="h-20 rounded-2xl bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500 shadow-sm" />
+        </div>
+
+        {/* Company branding */}
         <div className="flex flex-col items-center mb-6">
           {logoUrl && (
             <img
               src={logoUrl}
               alt={`${name} Logo`}
-              className="object-contain"
-              style={{ width: logoWidth, height: logoHeight }}
+              className="object-contain drop-shadow-sm"
+              style={{ width: logoWidth, height: logoHeight, objectFit: logoFit }}
             />
           )}
           <span className="mt-2 font-semibold">{name}</span>
         </div>
-        <div className="rounded-md border bg-white dark:bg-gray-900 p-4 shadow-sm">
+
+        {/* Auth card */}
+        <div className="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-sm">
           <Auth
             supabaseClient={supabase}
             providers={[]}
