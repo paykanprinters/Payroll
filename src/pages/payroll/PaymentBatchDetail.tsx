@@ -66,7 +66,6 @@ const PaymentBatchDetailPage: React.FC = () => {
 
   const handleDownload = async () => {
     if (!id) return;
-    // Basic guard: warn if invalid items exist
     if (invalidCount > 0) {
       showError(`Validation failed for ${invalidCount} item(s). Fix data before export.`);
       return;
@@ -172,7 +171,6 @@ const PaymentBatchDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Validation & control totals */}
           <div className="mt-2 p-3 border rounded-md bg-blue-50 text-blue-900 space-y-2">
             <div className="flex items-center justify-between">
               <div className="font-medium">Validation & Control Totals</div>
@@ -280,7 +278,10 @@ const PaymentBatchDetailPage: React.FC = () => {
                 ))}
                 {items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">No items in this batch.</TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      No items in this batch.
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
