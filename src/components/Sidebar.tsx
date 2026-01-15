@@ -108,8 +108,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const displayCompanyDetails = React.useMemo(() => {
     const b = getBranding();
     return {
-      name: b.name || companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
-      logoUrl: b.logoUrl || companyDetails?.logoUrl,
+      name: companyDetails?.companyTradingName || companyDetails?.companyLegalName || b.name || "Your Company Name",
+      logoUrl: companyDetails?.logoUrl || b.logoUrl,
+      logoWidth: companyDetails?.logoWidth || b.logoWidth || 120,
+      logoHeight: companyDetails?.logoHeight || b.logoHeight || 48,
+      logoFit: (companyDetails?.logoFit as any) || b.logoFit || "contain",
     };
   }, [companyDetails]);
 
@@ -160,14 +163,17 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <>
             <Link to="/" className="flex flex-col items-center flex-grow-0">
-            <LogoBrand
-              size="md"
-              align="center"
-              showName
-              name={displayCompanyDetails.name}
-              logoUrl={displayCompanyDetails.logoUrl || "/logonscreen_for_workflow.png"}
-            />
-          </Link>
+              <LogoBrand
+                size="md"
+                align="center"
+                showName
+                name={displayCompanyDetails.name}
+                logoUrl={displayCompanyDetails.logoUrl || "/logonscreen_for_workflow.png"}
+                logoWidthPx={displayCompanyDetails.logoWidth}
+                logoHeightPx={displayCompanyDetails.logoHeight}
+                logoFit={displayCompanyDetails.logoFit}
+              />
+            </Link>
             <Button
               variant="ghost"
               size="icon"

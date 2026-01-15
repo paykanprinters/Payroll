@@ -10,6 +10,9 @@ type LogoBrandProps = {
   showName?: boolean;
   name?: string;
   logoUrl?: string;
+  logoWidthPx?: number;
+  logoHeightPx?: number;
+  logoFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
 };
 
 const sizeMap = {
@@ -25,6 +28,9 @@ const LogoBrand: React.FC<LogoBrandProps> = ({
   showName = true,
   name,
   logoUrl,
+  logoWidthPx,
+  logoHeightPx,
+  logoFit,
 }) => {
   const env = getBranding();
   const finalName = name || env.name || "Your Company Name";
@@ -40,7 +46,13 @@ const LogoBrand: React.FC<LogoBrandProps> = ({
           <img
             src={finalLogoUrl}
             alt={`${finalName} Logo`}
-            className={`object-contain ${s.img} w-auto drop-shadow-sm`}
+            className={`drop-shadow-sm`}
+            style={{
+              maxHeight: s.img.replace("max-h-", "") ? undefined : undefined,
+              width: logoWidthPx ? `${logoWidthPx}px` : "auto",
+              height: logoHeightPx ? `${logoHeightPx}px` : undefined,
+              objectFit: logoFit || "contain",
+            }}
           />
         ) : (
           <div className={`flex items-center ${alignClass} ${s.container}`}>
