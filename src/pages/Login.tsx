@@ -16,7 +16,15 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md mx-auto">
         <div className="flex flex-col items-center mb-6">
-          <LogoBrand size="lg" align="center" showName name={name} logoUrl={logoUrl} />
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt={`${name} Logo`}
+              className="object-contain"
+              style={{ width: 140, height: 56 }}
+            />
+          )}
+          <span className="mt-2 font-semibold">{name}</span>
         </div>
         <div className="rounded-md border bg-white dark:bg-gray-900 p-4 shadow-sm">
           <Auth

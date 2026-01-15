@@ -9,8 +9,12 @@ import { getBranding } from "@/config/branding";
 
 const StaffLogin: React.FC = () => {
   const b = getBranding();
-  const name = b.name || "Your Company Name";
-  const logoUrl = b.logoUrl || "/logonscreen_for_workflow.png";
+  const lsName =
+    (typeof window !== "undefined" && (localStorage.getItem("companyTradingName") || localStorage.getItem("companyLegalName"))) || null;
+  const lsLogoUrl = typeof window !== "undefined" ? (localStorage.getItem("companyLogoUrl") || null) : null;
+
+  const name = lsName || b.name || "Your Company Name";
+  const logoUrl = lsLogoUrl || b.logoUrl || "/logonscreen_for_workflow.png";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
