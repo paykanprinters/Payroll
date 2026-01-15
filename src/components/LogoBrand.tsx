@@ -15,10 +15,10 @@ type LogoBrandProps = {
   logoFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
 };
 
-const sizeMap = {
-  sm: { container: "min-h-10", img: "max-h-10", name: "text-base" },
-  md: { container: "min-h-14", img: "max-h-14", name: "text-lg" },
-  lg: { container: "min-h-20", img: "max-h-20", name: "text-xl" },
+const sizeHeightClass = {
+  sm: "h-10",
+  md: "h-14",
+  lg: "h-20",
 };
 
 const LogoBrand: React.FC<LogoBrandProps> = ({
@@ -36,32 +36,29 @@ const LogoBrand: React.FC<LogoBrandProps> = ({
   const finalName = name || env.name || "Your Company Name";
   const finalLogoUrl = logoUrl || env.logoUrl || "/logonscreen_for_workflow.png";
 
-  const alignClass = align === "center" ? "justify-center text-center" : "justify-start text-left";
-  const s = sizeMap[size];
+  const containerAlign = align === "center" ? "justify-center text-center" : "justify-start text-left";
+  const imgDefaultHeight = sizeHeightClass[size];
 
   return (
-    <div className={`flex flex-col items-center ${alignClass} ${className}`}>
-      <div className={`flex items-center ${alignClass} ${s.container}`}>
+    <div className={`flex flex-col items-center ${containerAlign} ${className}`}>
+      <div className={`flex items-center ${containerAlign}`}>
         {finalLogoUrl ? (
           <img
             src={finalLogoUrl}
             alt={`${finalName} Logo`}
-            className={`drop-shadow-sm`}
+            className={`object-contain w-auto ${logoHeightPx ? "" : imgDefaultHeight}`}
             style={{
-              maxHeight: s.img.replace("max-h-", "") ? undefined : undefined,
-              width: logoWidthPx ? `${logoWidthPx}px` : "auto",
+              width: logoWidthPx ? `${logoWidthPx}px` : undefined,
               height: logoHeightPx ? `${logoHeightPx}px` : undefined,
               objectFit: logoFit || "contain",
             }}
           />
         ) : (
-          <div className={`flex items-center ${alignClass} ${s.container}`}>
-            <div className="h-full aspect-[2.5/1] rounded-md bg-gradient-to-r from-sky-400 via-indigo-500 to-fuchsia-500" />
-          </div>
+          <div className={`flex items-center ${containerAlign} ${imgDefaultHeight} w-[160px] rounded-md bg-gradient-to-r from-sky-400 via-indigo-500 to-fuchsia-500`} />
         )}
       </div>
       {showName && (
-        <span className={`mt-2 font-semibold ${s.name}`}>
+        <span className="mt-2 font-semibold">
           {finalName}
         </span>
       )}
