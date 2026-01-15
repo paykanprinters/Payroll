@@ -28,6 +28,8 @@ import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 import Profile from "./pages/Profile";
 import ErrorBoundary from "./components/ErrorBoundary";
 import StaffHome from "./pages/StaffHome";
+import PaymentBatches from "./pages/payroll/PaymentBatches";
+import PaymentBatchDetail from "./pages/payroll/PaymentBatchDetail";
 import PayrollRuns from "./pages/payroll/PayrollRuns";
 import PayrollRunDetail from "./pages/payroll/PayrollRunDetail";
 
@@ -95,6 +97,8 @@ const App = () => {
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/payroll/runs" element={<PayrollRuns />} />
                         <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
+                        <Route path="/payroll/batches" element={<PaymentBatches />} />
+                        <Route path="/payroll/batches/:id" element={<PaymentBatchDetail />} />
                       </Route>
 
                       {/* Admin-only settings */}

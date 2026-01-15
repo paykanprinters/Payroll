@@ -21,6 +21,8 @@ import {
   PayrollRunItem,
   PayrollRunStatus,
 } from "@/integrations/supabase/payroll-run-queries";
+import { createPaymentBatch, addBatchItems } from "@/integrations/supabase/payment-batch-queries";
+import { useEmployeesData } from "@/hooks/use-employees-data";
 
 const statusFlow: Record<PayrollRunStatus, PayrollRunStatus[]> = {
   Draft: ["Reviewed"],
@@ -34,6 +36,7 @@ const PayrollRunDetailPage: React.FC = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { runPayrollProcess, isMockDataEnabled } = usePayrollProcessor({ silent: true });
+  const { employees } = useEmployeesData({ isMockDataEnabled: false, companyName: "Company", isAuthenticated: true, isLoadingAuth: false });
 
   const [run, setRun] = useState<PayrollRun | null>(null);
   const [items, setItems] = useState<PayrollRunItem[]>([]);
@@ -153,6 +156,50 @@ const PayrollRunDetailPage: React.FC = () => {
             ))}
             <Button variant="outline" onClick={handleProcessPeriod}>
               Generate items from payslips
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (!run || !id) return;
+                if (isMockDataEnabled) {
+                  showError("Disable mock data to create live payment batches.");
+                  return;
+                }
+                const toastId = showLoading("Creating payment batch...") as string;
+                try {
+                  const runItems = await fetchRunItems(id);
+                  if (runItems.length === 0) {
+                    showError("No run items found. Generate items from payslips first.");
+                    return;
+                  }
+                  const totalAmount = runItems.reduce((sum, it) => sum + Number(it.netPay || 0), 0);
+                  const batch = await createPaymentBatch(id, "EFT-CSV", runItems.length, totalAmount);
+                  if (!batch) return;
+
+                  // Snapshot bank info from employees
+                  const itemsToInsert = runItems.map(ri => {
+                    const emp = employees.find(e => e.id === ri.employeeId);
+                    return {
+                      employeeId: ri.employeeId,
+                      netPay: Number(ri.netPay),
+                      accountHolder: emp?.bankAccountHolder || `${emp?.firstName || ""} ${emp?.lastName || ""}`.trim(),
+                      bankName: emp?.bankName || null,
+                      accountNumber: emp?.accountNumber || null,
+                      branchCode: emp?.branchCode || null,
+                      status: "Pending" as const,
+                      errorMessage: null,
+                    };
+                  });
+                  const ok = await addBatchItems(batch.id, itemsToInsert);
+                  if (ok) {
+                    showSuccess(`Payment batch ${batch.id} created with ${itemsToInsert.length} items.`);
+                  }
+                } finally {
+                  dismissToast(toastId);
+                }
+              }}
+            >
+              Create payment batch
             </Button>
           </div>
 
