@@ -160,8 +160,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <>
             <Link to="/" className="flex flex-col items-center flex-grow-0">
-              <LogoBrand size="md" align="center" showName />
-            </Link>
+            <LogoBrand
+              size="md"
+              align="center"
+              showName
+              name={displayCompanyDetails.name}
+              logoUrl={displayCompanyDetails.logoUrl || "/logonscreen_for_workflow.png"}
+            />
+          </Link>
             <Button
               variant="ghost"
               size="icon"
