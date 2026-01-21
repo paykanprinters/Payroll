@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { supabase } from "@/integrations/supabase/client";
+import { getBranding } from "@/config/branding";
 
 interface MainLayoutProps {}
 
@@ -41,14 +42,13 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
   React.useEffect(() => {
     const titleElement = document.getElementById("app-title");
     if (titleElement) {
-      if (companyDetails?.companyLegalName || companyDetails?.companyTradingName) {
-        titleElement.innerText =
-          companyDetails.companyLegalName ||
-          companyDetails.companyTradingName ||
-          "Payroll App";
-      } else {
-        titleElement.innerText = "Payroll App";
-      }
+      const b = getBranding();
+      const name =
+        b.name ||
+        companyDetails?.companyLegalName ||
+        companyDetails?.companyTradingName ||
+        "Payroll App";
+      titleElement.innerText = name;
     }
   }, [companyDetails]);
 

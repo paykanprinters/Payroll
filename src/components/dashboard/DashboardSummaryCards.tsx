@@ -7,21 +7,27 @@ import UpcomingPayrollSummaryCard from "@/components/payroll/UpcomingPayrollSumm
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { differenceInCalendarDays } from "date-fns";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
 
 interface DashboardSummaryCardsProps {
   employeeCount: number;
   recentPayslipCount: number;
+  showUpcomingPayrollCard?: boolean;
 }
 
-const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeCount, recentPayslipCount }) => {
-  const { isMockDataEnabled, companyDetails, payCycleSettings, calculateSinglePayslipPreview, employees } = usePayrollProcessor();
+const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
+  employeeCount,
+  recentPayslipCount,
+  showUpcomingPayrollCard = true,
+}) => {
+  const { isMockDataEnabled, payCycleSettings, calculateSinglePayslipPreview, employees } = usePayrollProcessor();
   const [totalUpcomingPayrollAmount, setTotalUpcomingPayrollAmount] = React.useState<number>(0);
   const [upcomingPayrollDueText, setUpcomingPayrollDueText] = React.useState<string>("Loading...");
 
   React.useEffect(() => {
     if (payCycleSettings && employees.length > 0) {
       const today = new Date();
-      const { checkDate: currentCheckDate, payPeriodStart: currentPeriodStart, payPeriodEnd: currentPeriodEnd } =
+      const { checkDate: currentCheckDate } =
         calculatePayPeriodDetails(today, payCycleSettings.payCycleType, payCycleSettings.cutOffDay, payCycleSettings.payDayOffset);
 
       let totalGross = 0;
@@ -50,10 +56,16 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeC
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+      {/* Employees */}
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="sky" />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
+              <Users className="h-4 w-4" />
+            </span>
+            Total Employees
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{employeeCount}</div>
@@ -62,15 +74,26 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeC
           </p>
         </CardContent>
       </Card>
-      <UpcomingPayrollSummaryCard
-        totalUpcomingPayrollAmount={totalUpcomingPayrollAmount}
-        dueText={upcomingPayrollDueText}
-        isMockDataEnabled={isMockDataEnabled}
-      />
-      <Card>
+
+      {/* Upcoming Payroll */}
+      {showUpcomingPayrollCard && (
+        <UpcomingPayrollSummaryCard
+          totalUpcomingPayrollAmount={totalUpcomingPayrollAmount}
+          dueText={upcomingPayrollDueText}
+          isMockDataEnabled={isMockDataEnabled}
+        />
+      )}
+
+      {/* Recent Payslips */}
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="emerald" />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Recent Payslips</CardTitle>
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+              <CreditCard className="h-4 w-4" />
+            </span>
+            Recent Payslips
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{recentPayslipCount}</div>
@@ -79,10 +102,17 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ employeeC
           </p>
         </CardContent>
       </Card>
-      <Card>
+
+      {/* Compliance */}
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="orange" />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Compliance Status</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
+              <Activity className="h-4 w-4" />
+            </span>
+            Compliance Status
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">Good</div>

@@ -33,7 +33,7 @@ import { useEmployeesData } from "./use-employees-data";
 export type { TaxTables } from "./use-tax-tables";
 
 export const usePayrollProcessor = (options?: { silent?: boolean }) => {
-  const { isAuthenticated, isLoadingAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, user } = useAuth();
   const silent = options?.silent === true;
 
   const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
@@ -63,6 +63,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const triggerGenerateToDos = useCallback(async () => {
     if (isMockDataEnabled) return;
     if (!isAuthenticated) return;
+    // Only Admins may generate To-Dos (edge function enforces Admin)
+    if (user?.role !== 'Admin') return;
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-todos');
@@ -75,7 +77,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     } catch (error: any) {
       showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
     }
-  }, [isMockDataEnabled, isAuthenticated]);
+  }, [isMockDataEnabled, isAuthenticated, user?.role]);
 
   const safeTriggerGenerateToDos = useCallback(async () => {
     if (isGeneratingToDosRef.current) return;
@@ -193,6 +195,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     payrollSavingsEntries,
     workHoursSettings || null,
     publicHolidays || [],
+    companyDetails || null,
     setPayslips,
     updateLoan,
     updateSavingPlan,

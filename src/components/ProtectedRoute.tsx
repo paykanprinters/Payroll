@@ -11,6 +11,9 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const { isAuthenticated, user, isLoadingAuth } = useAuth();
+  const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
+  const staffPortalUrl = import.meta.env.VITE_STAFF_PORTAL_URL as string | undefined;
+  const adminPortalUrl = import.meta.env.VITE_ADMIN_PORTAL_URL as string | undefined;
 
   if (isLoadingAuth) {
     return (
@@ -22,6 +25,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Cross-portal enforcement: redirect users to the correct portal domain
+  if (user) {
+    if (portalType === "admin" && user.role === "Staff" && staffPortalUrl) {
+      // Staff in admin build → send to staff portal domain
+      window.location.href = staffPortalUrl;
+      return null;
+    }
+    if (portalType === "staff" && (user.role === "Admin" || user.role === "Manager") && adminPortalUrl) {
+      // Admin/Manager in staff build → send to admin portal domain
+      window.location.href = adminPortalUrl;
+      return null;
+    }
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {

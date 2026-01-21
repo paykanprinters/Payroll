@@ -15,7 +15,8 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size"; // Import the new hook
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
 
 interface LeaveAnalyticsProps {
   leaveTypeDistribution: { name: string; value: number }[];
@@ -25,9 +26,8 @@ interface LeaveAnalyticsProps {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, monthlyLeaveData }) => {
-  const dataVisualsFontSize = useDataVisualsFontSize(); // Use the new hook
+  const dataVisualsFontSize = useDataVisualsFontSize();
 
-  // Helper for PieChart legend formatter
   const renderLegendText = (value: string, entry: any, total: number) => {
     const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
     return `${value} (${percentage}%)`;
@@ -37,7 +37,8 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
 
   return (
     <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 mt-6">
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="sky" />
         <CardHeader>
           <CardTitle>Leave Type Distribution</CardTitle>
           <CardDescription>Breakdown of total working days taken by leave type.</CardDescription>
@@ -49,11 +50,11 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
                 data={leaveTypeDistribution}
                 cx="50%"
                 cy="50%"
-                innerRadius={60} // Added for Doughnut
+                innerRadius={60}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
-                labelLine={false} // Ensure no lines to labels
+                labelLine={false}
                 style={{ fontSize: dataVisualsFontSize }}
               >
                 {leaveTypeDistribution.map((entry, index) => (
@@ -67,7 +68,8 @@ const LeaveAnalytics: React.FC<LeaveAnalyticsProps> = ({ leaveTypeDistribution, 
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="emerald" />
         <CardHeader>
           <CardTitle>Monthly Leave Trends</CardTitle>
           <CardDescription>Total working days taken per month.</CardDescription>

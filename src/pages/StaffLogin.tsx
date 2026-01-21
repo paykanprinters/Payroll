@@ -1,0 +1,183 @@
+"use client";
+
+import React from "react";
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
+import { supabase } from "@/integrations/supabase/client";
+import { getBranding } from "@/config/branding";
+import CloudHorizonBackground from "@/components/CloudHorizonBackground";
+import { Separator } from "@/components/ui/separator";
+import { ShieldCheck, Users, CreditCard, Sparkles, Zap } from "lucide-react";
+
+const StaffLogin: React.FC = () => {
+  const [companyName, setCompanyName] = React.useState<string>("Your Company");
+  const [logoUrl, setLogoUrl] = React.useState<string>("");
+  const [logoWidth, setLogoWidth] = React.useState<number | undefined>(undefined);
+  const [logoHeight, setLogoHeight] = React.useState<number | undefined>(undefined);
+  const [logoFit, setLogoFit] = React.useState<"contain" | "cover" | "fill" | "none" | "scale-down">("contain");
+
+  React.useEffect(() => {
+    // First use embedded branding
+    const local = getBranding();
+    if (local.name) setCompanyName(local.name);
+    if (local.logoUrl) setLogoUrl(local.logoUrl);
+    if (typeof local.logoWidth === "number") setLogoWidth(local.logoWidth);
+    if (typeof local.logoHeight === "number") setLogoHeight(local.logoHeight);
+    if (local.logoFit) setLogoFit(local.logoFit);
+
+    // Optional: attempt edge function to override if needed
+    const loadBranding = async () => {
+      const { data, error } = await supabase.functions.invoke("get-branding");
+      if (error) {
+        console.warn("StaffLogin: Could not load branding:", error.message);
+        return;
+      }
+      if (data) {
+        const name: string = (data.companyName as string) ?? local.name ?? "Your Company";
+        setCompanyName(name);
+
+        const url = data.logoUrl as string | null;
+        if (url) setLogoUrl(url);
+
+        const w = data.logoWidth as number | null;
+        const h = data.logoHeight as number | null;
+        if (typeof w === "number") setLogoWidth(w);
+        if (typeof h === "number") setLogoHeight(h);
+
+        const fit = (data.logoFit as "contain" | "cover" | "fill" | "none" | "scale-down") ?? local.logoFit ?? "contain";
+        setLogoFit(fit);
+      }
+    };
+    loadBranding();
+  }, []);
+
+  return (
+    <div className="min-h-screen w-full relative">
+      <CloudHorizonBackground />
+
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+        <div className="w-full max-w-5xl rounded-2xl overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl ring-1 ring-muted">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Left panel: retro-funk gradient banner */}
+            <div className="relative p-8 md:p-10 bg-gradient-to-br from-sky-300 via-indigo-400 to-fuchsia-500 text-white">
+              {/* Decorative glow orbs */}
+              <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/25 blur-2xl" />
+              <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-white/20 p-3">
+                    <Sparkles className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold">Staff Portal</h2>
+                    <p className="text-white/90">Secure access for employees</p>
+                  </div>
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-white/20 p-2">
+                      <Users className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Payslips & Timesheets</p>
+                      <p className="text-white/80 text-sm">View payslips, manage hours, request leave</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-white/20 p-2">
+                      <CreditCard className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Savings</p>
+                      <p className="text-white/80 text-sm">Track and manage savings plans</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-white/20 p-2">
+                      <ShieldCheck className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Role-based Security</p>
+                      <p className="text-white/80 text-sm">Employee-only portal access</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-white/20 p-2">
+                      <Zap className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Retro-Funk UX</p>
+                      <p className="text-white/80 text-sm">Rounded controls, colorful accents</p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-10 text-xs text-white/75">
+                  © {new Date().getFullYear()} {companyName}. All rights reserved.
+                </p>
+              </div>
+            </div>
+
+            {/* Right panel: sign in */}
+            <div className="p-8 md:p-10 bg-white/90">
+              <div className="text-center mb-6">
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt={`${companyName} Logo`}
+                    className="mx-auto"
+                    style={{
+                      width: logoWidth ? `${logoWidth}px` : "auto",
+                      height: logoHeight ? `${logoHeight}px` : "auto",
+                      objectFit: logoFit,
+                    }}
+                  />
+                )}
+              </div>
+
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Employee Sign In</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Use your staff account to access your portal
+              </p>
+
+              <div className="mt-6">
+                <Auth
+                  supabaseClient={supabase}
+                  providers={[]}
+                  appearance={{
+                    theme: ThemeSupa,
+                    className: {
+                      input: "bg-white/85 rounded-full",
+                      button: "rounded-full bg-indigo-600 hover:bg-indigo-700 text-white",
+                      label: "text-gray-700",
+                      container: "space-y-3",
+                    },
+                  }}
+                  theme="light"
+                />
+              </div>
+
+              <div className="mt-6">
+                <div className="flex items-center gap-3">
+                  <Separator className="flex-1" />
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <Separator className="flex-1" />
+                </div>
+                <p className="text-xs text-center text-muted-foreground mt-3">
+                  Admins/Managers must sign in via the Admin Console login.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StaffLogin;

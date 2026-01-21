@@ -4,7 +4,6 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, DollarSign, Scale, CalendarDays, Clock, Building2, Banknote, UserPlus, Users, Wallet, ScrollText } from "lucide-react";
-import { showSuccess } from "@/utils/toast";
 import ReportPreviewDialog from "./ReportPreviewDialog";
 import {
   generatePayrollSummaryReportContent,
@@ -21,13 +20,14 @@ import {
 } from "@/lib/report-generators";
 import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { MockCompanyDetails } from "@/lib/mock-data-interfaces"; // Import MockCompanyDetails
+import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
 
 interface ReportItemProps {
   icon: React.ElementType;
   title: string;
   description: string;
-  onGenerate: (reportTitle: string, reportContent: string, documentType: 'payslip' | 'report') => void; // Added documentType
+  onGenerate: (reportTitle: string, reportContent: string, documentType: 'payslip' | 'report') => void;
   reportContentGenerator: (employees: MockEmployee[], payslips: MockPayslip[], leaveRecords: LeaveEntry[], selectedDate: Date | undefined, periodType: "monthly" | "yearly") => string;
   employees: MockEmployee[];
   payslips: MockPayslip[];
@@ -50,20 +50,23 @@ const ReportItem: React.FC<ReportItemProps> = ({
 }) => {
   const handleGenerateClick = () => {
     const content = reportContentGenerator(employees, payslips, leaveRecords, selectedReportDate, reportPeriodType);
-    onGenerate(title, content, 'report'); // Pass 'report' as documentType
+    onGenerate(title, content, 'report');
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow flex flex-col">
+      <SummaryAccent variant="emerald" />
       <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
-        <Icon className="h-6 w-6 text-primary" />
+        <div className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-indigo-100 text-indigo-600">
+          <Icon className="h-5 w-5" />
+        </div>
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
       <CardContent className="flex-1">
         <CardDescription className="text-sm text-muted-foreground mb-4">
           {description}
         </CardDescription>
-        <Button onClick={handleGenerateClick} variant="outline" className="w-full">
+        <Button onClick={handleGenerateClick} variant="outline" className="w-full rounded-full">
           Generate Report
         </Button>
       </CardContent>
@@ -75,8 +78,8 @@ interface CorePayrollReportsSectionProps {
   employees: MockEmployee[];
   payslips: MockPayslip[];
   leaveRecords: LeaveEntry[];
-  companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
-  reportDesignSettings: ReportDesignSettings; // Prop for report design settings
+  companyDetails: MockCompanyDetails | null;
+  reportDesignSettings: ReportDesignSettings;
   selectedReportDate: Date | undefined;
   reportPeriodType: "monthly" | "yearly";
 }
@@ -85,26 +88,27 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
   employees,
   payslips,
   leaveRecords,
-  companyDetails, // Destructure companyDetails
-  reportDesignSettings, // Destructure reportDesignSettings
+  companyDetails,
+  reportDesignSettings,
   selectedReportDate,
   reportPeriodType,
 }) => {
   const [isReportPreviewOpen, setIsReportPreviewOpen] = React.useState(false);
   const [currentReportTitle, setCurrentReportTitle] = React.useState("");
   const [currentReportContent, setCurrentReportContent] = React.useState("");
-  const [currentDocumentType, setCurrentDocumentType] = React.useState<'payslip' | 'report'>('report'); // New state for document type
+  const [currentDocumentType, setCurrentDocumentType] = React.useState<'payslip' | 'report'>('report');
 
   const handleOpenReportPreview = (title: string, content: string, documentType: 'payslip' | 'report') => {
     setCurrentReportTitle(title);
     setCurrentReportContent(content);
-    setCurrentDocumentType(documentType); // Set document type
+    setCurrentDocumentType(documentType);
     setIsReportPreviewOpen(true);
   };
 
   return (
     <>
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="sky" />
         <CardHeader>
           <CardTitle>Core Payroll Reports</CardTitle>
           <CardDescription>
@@ -197,7 +201,6 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
               selectedReportDate={selectedReportDate}
               reportPeriodType={reportPeriodType}
             />
-            {/* Additional Reports */}
             <ReportItem
               icon={UserPlus}
               title="New Hires & Terminations Report"
@@ -213,7 +216,7 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
             <ReportItem
               icon={Users}
               title="Employee Demographics Report"
-              description="Provides insights into workforce composition by job title and salary range."
+              description="Insights into workforce composition by job title and salary range."
               onGenerate={handleOpenReportPreview}
               reportContentGenerator={(emps, pslps, lvs, date, type) => generateEmployeeDemographicsReportContent(emps, date, type)}
               employees={employees}
@@ -255,9 +258,9 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
         onClose={() => setIsReportPreviewOpen(false)}
         reportTitle={currentReportTitle}
         reportContent={currentReportContent}
-        companyDetails={companyDetails} // Pass companyDetails directly
+        companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
-        documentType={currentDocumentType} // Pass document type to dialog
+        documentType={currentDocumentType}
       />
     </>
   );

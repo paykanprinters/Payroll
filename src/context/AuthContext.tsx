@@ -46,7 +46,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
 
   const prevIsLoadingAuthRef = useRef<boolean>(true);
-  const mountedRef = useRef<boolean>(false);
 
   // Debounce/guard refresh cycles
   const isRefreshingRef = useRef<boolean>(false);
@@ -61,14 +60,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (error || !profile) return null;
 
+    // Admin allowlist bootstrap (kept as-is)
+    const ADMIN_ALLOWLIST = ["info@kanprinters.co.za"];
+    let role: UserRole = (profile.role || "Staff") as UserRole;
+    const email = profile.email as string;
+
+    if (ADMIN_ALLOWLIST.includes(email) && role !== "Admin") {
+      try {
+        const { data: resp, error: fnError } = await supabase.functions.invoke("bootstrap-admins", {
+          body: JSON.stringify({ emails: ADMIN_ALLOWLIST }),
+        });
+        if (!fnError) {
+          const { data: refreshed, error: refErr } = await supabase
+            .from("users")
+            .select("id, email, name, role")
+            .eq("id", userId)
+            .single();
+          if (!refErr && refreshed) {
+            role = (refreshed.role || "Staff") as UserRole;
+          }
+        }
+      } catch (e) {
+        console.error("AuthContext: bootstrap-admins exception", e);
+      }
+    }
+
     const authUser: AuthUser = {
       id: profile.id,
-      email: profile.email,
-      role: (profile.role || "Staff") as UserRole,
+      email,
+      role,
       name: profile.name ?? profile.email,
     };
     return authUser;
   }, []);
+
+  const redirectAfterLogin = useCallback((role: UserRole) => {
+    const onAuthPages =
+      location.pathname === "/login" || location.pathname === "/employee" || location.pathname === "/";
+    if (!onAuthPages) return;
+
+    if (role === "Staff") {
+      // Staff must use /employee; then land on /dashboard (RootHome chooses StaffHome)
+      if (location.pathname === "/login") {
+        navigate("/employee", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    } else {
+      // Admin/Manager must use /login; then land on /dashboard
+      if (location.pathname === "/employee") {
+        navigate("/login", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  }, [location.pathname, navigate]);
 
   const refreshSession = useCallback(async (opts?: { silent?: boolean; force?: boolean }) => {
     // Throttle rapid focus/visibility changes and prevent concurrent refreshes
@@ -116,8 +162,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchProfile]);
 
   useEffect(() => {
-    mountedRef.current = true;
-
     const handleAuthStateChange = async (event: string, session: any | null) => {
       console.groupCollapsed(`AuthContext: onAuthStateChange event: ${event}`);
       try {
@@ -127,9 +171,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(authUser);
             setIsAuthenticated(true);
 
-            const onAuthPages = location.pathname === "/login" || location.pathname === "/";
-            if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && onAuthPages) {
-              navigate("/dashboard", { replace: true });
+            if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+              redirectAfterLogin(authUser.role);
             }
           } else {
             setUser(null);
@@ -166,6 +209,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (authUser) {
             setUser(authUser);
             setIsAuthenticated(true);
+            // Initial navigation if already on an auth page
+            redirectAfterLogin(authUser.role);
           } else {
             setUser(null);
             setIsAuthenticated(false);
@@ -176,11 +221,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         setIsLoadingAuth(false);
-
-        const onAuthPages = location.pathname === "/login" || location.pathname === "/";
-        if (session && onAuthPages) {
-          navigate("/dashboard", { replace: true });
-        }
       })
       .catch((err) => {
         console.error("AuthContext: Initial session error:", err);
@@ -192,11 +232,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
     return () => {
-      mountedRef.current = false;
       authListener.subscription.unsubscribe();
       console.log("AuthContext: Unsubscribed auth listener.");
     };
-  }, [fetchProfile, navigate]);
+  }, [fetchProfile, navigate, location.pathname, redirectAfterLogin]);
 
   useEffect(() => {
     const focusHandler = () => {

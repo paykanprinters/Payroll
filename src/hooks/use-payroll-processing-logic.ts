@@ -13,6 +13,7 @@ import {
   SavingPlan,
   LeaveEntry,
   TimesheetEntry,
+  MockCompanyDetails,
 } from "@/lib/mock-data-interfaces";
 import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator";
 import { showError, showSuccess } from "@/utils/toast";
@@ -35,11 +36,12 @@ export const usePayrollProcessingLogic = (
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
   workHoursSettings: WorkHoursSettings | null,
   publicHolidays: PublicHoliday[] | null,
+  companyDetails: MockCompanyDetails | null,
   setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>,
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
   updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>,
-  batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>,
+  batchUpsertPayslips: (payslips: MockPayslips[]) => Promise<boolean>,
   recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
   isMockDataEnabled: boolean,
 ) => {
@@ -73,6 +75,12 @@ export const usePayrollProcessingLogic = (
         workHoursSettings,
         publicHolidays || []
       );
+      const newPayslipsWithBranding = newPayslips.map(p => ({
+        ...p,
+        companyName: companyDetails ? (companyDetails.companyTradingName || companyDetails.companyLegalName) : undefined,
+        companyAddress: companyDetails?.physicalAddress,
+        companyLogoUrl: companyDetails?.logoUrl,
+      }));
 
       if (newPayslips.length === 0) {
         showError("No payslips generated for this period. Check employee data and timesheets.");
@@ -84,7 +92,7 @@ export const usePayrollProcessingLogic = (
         return parseISO(startStr);
       };
 
-      const updatedPayslipsWithYTD = newPayslips.map(newPayslip => {
+      const updatedPayslipsWithYTD = newPayslipsWithBranding.map(newPayslip => {
         const currentStart = parsePeriodStart(newPayslip.payPeriod);
         const employeePayslips = payslips.filter(p => p.employeeId === newPayslip.employeeId);
 
@@ -152,7 +160,7 @@ export const usePayrollProcessingLogic = (
 
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, companyDetails, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -185,9 +193,15 @@ export const usePayrollProcessingLogic = (
         workHoursSettings,
         publicHolidays || []
       );
+      const previewPayslipsWithBranding = previewPayslips.map(p => ({
+        ...p,
+        companyName: companyDetails ? (companyDetails.companyTradingName || companyDetails.companyLegalName) : undefined,
+        companyAddress: companyDetails?.physicalAddress,
+        companyLogoUrl: companyDetails?.logoUrl,
+      }));
 
-      if (previewPayslips.length > 0) {
-        const previewPayslip = previewPayslips[0];
+      if (previewPayslipsWithBranding.length > 0) {
+        const previewPayslip = previewPayslipsWithBranding[0];
 
         const parsePeriodStart = (period: string) => {
           const [startStr] = period.split(' - ');
@@ -208,7 +222,7 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, isMockDataEnabled]
+    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, companyDetails, isMockDataEnabled]
   );
 
   return {

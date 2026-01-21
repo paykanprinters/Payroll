@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ResponsiveContainer,
@@ -14,7 +14,6 @@ import {
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection";
-import { MockEmployee, MockPayslip, LeaveEntry } from "@/lib/mock-data";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,8 +22,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, isSameMonth, isSameYear } from "date-fns";
-import { Label } from "@/components/ui/label"; // Added Label import
+import { format, startOfYear } from "date-fns";
+import { Label } from "@/components/ui/label";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import ReportsHeader from "@/components/reports/ReportsHeader";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -39,13 +40,12 @@ const Reports: React.FC = () => {
 
   const [monthlyPayrollTrend, setMonthlyPayrollTrend] = useState<{ name: string; gross: number; net: number }[]>([]);
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
-  const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(new Date()); // For month/year selection
-  const [reportPeriodType, setReportPeriodType] = useState<"monthly" | "yearly">("monthly"); // New state for period type
+  const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(new Date());
+  const [reportPeriodType, setReportPeriodType] = useState<"monthly" | "yearly">("monthly");
 
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   const loadReportData = React.useCallback(() => {
-    // Aggregate payroll data by month (simplified for mock data)
     const monthlyDataMap = new Map<string, { gross: number; net: number }>();
     payslips.forEach(p => {
       const month = p.payPeriod.substring(5, 7);
@@ -59,7 +59,6 @@ const Reports: React.FC = () => {
       });
     });
 
-    // Convert map to array and sort by month
     const trendData = Array.from(monthlyDataMap.entries())
       .map(([monthYear, data]) => ({
         name: new Date(monthYear).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
@@ -70,21 +69,19 @@ const Reports: React.FC = () => {
 
     setMonthlyPayrollTrend(trendData);
 
-    // Load report design settings
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     if (savedReportDesignSettings) {
       setReportDesignSettings(JSON.parse(savedReportDesignSettings));
     } else {
-      // If no settings saved, initialize with defaults and save them
       localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
       setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
     }
-  }, [payslips]); // Depend only on payslips
+  }, [payslips]);
 
   useEffect(() => {
     loadReportData();
-    window.addEventListener('allMockDataUpdated', loadReportData); // Listen for allMockDataUpdated
-    window.addEventListener('payslipsUpdated', loadReportData); // Listen for specific payslip updates
+    window.addEventListener('allMockDataUpdated', loadReportData);
+    window.addEventListener('payslipsUpdated', loadReportData);
     window.addEventListener('companyDetailsUpdated', loadReportData);
     window.addEventListener('reportDesignUpdated', loadReportData);
     return () => {
@@ -97,24 +94,20 @@ const Reports: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Payroll Reports & Analytics</h1>
-      <p className="text-lg text-muted-foreground">
-        Access various payroll reports, including tax summaries, deduction reports, and financial overviews.
-      </p>
-      
-      <Card>
+      <ReportsHeader />
+
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="sky" />
         <CardHeader>
           <CardTitle>Report Period Selection</CardTitle>
-          <CardDescription>
-            Choose the period for which you want to generate reports.
-          </CardDescription>
+          <CardDescription>Choose the period for which you want to generate reports.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <Label htmlFor="report-period-type">Report Type</Label>
               <Select onValueChange={(value: "monthly" | "yearly") => setReportPeriodType(value)} value={reportPeriodType}>
-                <SelectTrigger id="report-period-type" className="mt-1">
+                <SelectTrigger id="report-period-type" className="mt-1 rounded-full">
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -128,9 +121,9 @@ const Reports: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
-                    variant={"outline"}
+                    variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal mt-1",
+                      "w-full justify-start text-left font-normal mt-1 rounded-full",
                       !selectedReportDate && "text-muted-foreground"
                     )}
                   >
@@ -152,14 +145,9 @@ const Reports: React.FC = () => {
                     fromYear={2020}
                     toYear={new Date().getFullYear() + 1}
                     {...(reportPeriodType === "yearly" && {
-                      // For yearly, we want to select a year, not a specific day.
-                      // The onSelect is already adjusted above to set the start of the year.
-                      // The formatters prop can be used to display only the year in the caption.
                       formatters: {
-                        formatCaption: (date) => format(date, 'yyyy'),
+                        formatCaption: (date: Date) => format(date, "yyyy"),
                       },
-                      // No need for custom Caption component, as dropdown-buttons handles year selection.
-                      // Removing custom components to avoid type errors and rely on default behavior.
                     })}
                   />
                 </PopoverContent>
@@ -179,7 +167,8 @@ const Reports: React.FC = () => {
         reportPeriodType={reportPeriodType}
       />
 
-      <Card>
+      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <SummaryAccent variant="emerald" />
         <CardHeader>
           <CardTitle>Monthly Payroll Trend</CardTitle>
           <CardDescription>Gross and Net Pay trends over recent months.</CardDescription>

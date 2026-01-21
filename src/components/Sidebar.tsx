@@ -17,12 +17,14 @@ import {
   LineChart,
   Clock,
   ListTodo,
+  User as UserIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { getBranding } from "@/config/branding";
 
 interface NavLinkProps {
   to: string;
@@ -51,9 +53,9 @@ const NavLink: React.FC<NavLinkProps> = ({
       asChild
       variant="ghost"
       className={cn(
-        "justify-start group",
+        "justify-start group rounded-lg",
         isCollapsed ? "h-9 w-9 p-1.5" : "w-full px-4 py-2",
-        isActive ? "bg-muted hover:bg-muted" : "hover:bg-transparent"
+        isActive ? "bg-white/40 hover:bg-white/50 dark:bg-white/10 dark:hover:bg-white/15" : "hover:bg-transparent"
       )}
     >
       <Link
@@ -100,19 +102,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   pendingToDosCount,
 }) => {
   const isMobile = useIsMobile();
-  const { isAuthenticated, isLoadingAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, user } = useAuth();
 
   const displayCompanyDetails = React.useMemo(() => {
+    const b = getBranding();
     return {
-      name: companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
-      logoUrl: companyDetails?.logoUrl,
-      logoWidth: companyDetails?.logoWidth || 100,
-      logoHeight: companyDetails?.logoHeight || 50,
-      logoFit: companyDetails?.logoFit || "contain",
+      name: b.name || companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name",
+      logoUrl: b.logoUrl || companyDetails?.logoUrl,
+      logoWidth: b.logoWidth || companyDetails?.logoWidth || 100,
+      logoHeight: b.logoHeight || companyDetails?.logoHeight || 50,
+      logoFit: b.logoFit || (companyDetails?.logoFit as any) || "contain",
     };
   }, [companyDetails]);
 
-  // Assign tasteful, theme-friendly colors for icons and matching active accents
   const navItems: Array<{
     to: string;
     icon: React.ElementType;
@@ -122,6 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     activeAccentColor: string;
   }> = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", iconColor: "text-sky-600 dark:text-sky-400", activeAccentColor: "border-sky-500" },
+    { to: "/profile", icon: UserIcon, label: "My Profile", iconColor: "text-gray-700 dark:text-gray-300", activeAccentColor: "border-gray-500" },
     { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount, iconColor: "text-rose-600 dark:text-rose-400", activeAccentColor: "border-rose-500" },
     { to: "/employees", icon: Users, label: "Employees", iconColor: "text-teal-600 dark:text-teal-400", activeAccentColor: "border-teal-500" },
     { to: "/timesheet", icon: Clock, label: "Timesheet", iconColor: "text-amber-600 dark:text-amber-400", activeAccentColor: "border-amber-500" },
@@ -137,46 +140,51 @@ const Sidebar: React.FC<SidebarProps> = ({
   const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
     <div
       className={cn(
-        "flex items-center border-b px-4 lg:px-6",
-        currentIsCollapsed ? "h-16 justify-center" : "h-24 justify-between py-4 lg:py-6"
+        "relative overflow-hidden",
+        currentIsCollapsed ? "h-16" : "h-24"
       )}
     >
-      {currentIsCollapsed ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => toggleCollapse(!currentIsCollapsed)}
-          className="mx-auto bg-gray-100 dark:bg-gray-700 z-10"
-        >
-          <Menu className="h-5 w-5 text-primary" />
-        </Button>
-      ) : (
-        <>
-          <Link to="/" className="flex flex-col items-center flex-grow-0">
-            {displayCompanyDetails.logoUrl && (
-              <img
-                src={displayCompanyDetails.logoUrl}
-                alt="Company Logo"
-                style={{
-                  width: displayCompanyDetails.logoWidth,
-                  height: displayCompanyDetails.logoHeight,
-                  objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
-                }}
-                className="mb-1"
-              />
-            )}
-            <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
-          </Link>
+      <div className="absolute inset-0 bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500" />
+      <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
+      <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+      <div className={cn("relative z-10 flex items-center border-b px-4 lg:px-6", currentIsCollapsed ? "justify-center" : "justify-between py-4 lg:py-6 text-white")}>
+        {currentIsCollapsed ? (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => toggleCollapse(!currentIsCollapsed)}
-            className="ml-auto bg-gray-100 dark:bg-gray-700 z-10"
+            className="mx-auto bg-white/20 hover:bg-white/30 z-10"
           >
-            <Menu className="h-5 w-5 text-primary" />
+            <Menu className="h-5 w-5 text-white" />
           </Button>
-        </>
-      )}
+        ) : (
+          <>
+            <Link to="/" className="flex flex-col items-center flex-grow-0">
+              {displayCompanyDetails.logoUrl && (
+                <img
+                  src={displayCompanyDetails.logoUrl}
+                  alt="Company Logo"
+                  style={{
+                    width: displayCompanyDetails.logoWidth,
+                    height: displayCompanyDetails.logoHeight,
+                    objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
+                  }}
+                  className="mb-1 drop-shadow-sm"
+                />
+              )}
+              <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => toggleCollapse(!currentIsCollapsed)}
+              className="ml-auto bg-white/20 hover:bg-white/30 z-10"
+            >
+              <Menu className="h-5 w-5 text-white" />
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 
@@ -196,7 +204,17 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
             {renderSidebarHeader(false, setIsCollapsed)}
             <nav className="grid items-start gap-1 p-4">
-              {navItems.map((item) => (
+              {navItems
+                .filter((item) => {
+                  if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports") {
+                    return user?.role === "Admin" || user?.role === "Manager";
+                  }
+                  if (item.to === "/settings") {
+                    return user?.role === "Admin";
+                  }
+                  return true;
+                })
+                .map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -224,7 +242,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     >
       {renderSidebarHeader(isCollapsed, setIsCollapsed)}
       <nav className="grid items-start gap-1 p-4">
-        {navItems.map((item) => (
+        {navItems
+          .filter((item) => {
+            if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports") {
+              return user?.role === "Admin" || user?.role === "Manager";
+            }
+            if (item.to === "/settings") {
+              return user?.role === "Admin";
+            }
+            return true;
+          })
+          .map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

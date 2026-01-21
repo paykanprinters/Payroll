@@ -99,7 +99,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
               {selectedPayPeriodDate ? format(selectedPayPeriodDate, bulkGenerationMode === "monthly" ? "MMM yyyy" : "PPP") : <span>Pick a {bulkGenerationMode === "monthly" ? "month" : "date"}</span>}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
+          <PopoverContent className="w-auto p-0 z-50">
             <Calendar
               mode="single"
               selected={selectedPayPeriodDate}
@@ -140,7 +140,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
             Bulk Payslips
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="z-50">
           <DropdownMenuItem onClick={() => onPrintAll('print', bulkGenerationMode, auditLevel)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
             <Printer className="mr-2 h-4 w-4" /> Print All Payslips
           </DropdownMenuItem>

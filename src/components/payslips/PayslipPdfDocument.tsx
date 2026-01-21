@@ -39,15 +39,18 @@ const PayslipPdfDocument: React.FC<Props> = ({
   payslipDesignSettings,
   getEmployeeName,
 }) => {
-  const logoSrc = payslipDesignSettings.payslipLogoUrl || companyDetails?.logoUrl || undefined;
-  const logoW = (payslipDesignSettings.payslipLogoWidth as number) || (companyDetails?.logoWidth as number) || 100;
-  const logoH = (payslipDesignSettings.payslipLogoHeight as number) || (companyDetails?.logoHeight as number) || 50;
+  // Per-payslip branding is computed inside the map
 
   return (
     <Document>
       {payslips.map((p) => {
         const employee = employees.find((e) => e.id === p.employeeId);
         const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : getEmployeeName(p.employeeId);
+        const pCompanyName = p.companyName || companyDetails?.companyTradingName || companyDetails?.companyLegalName || "Company";
+        const pCompanyAddress = p.companyAddress || companyDetails?.physicalAddress;
+        const pLogoSrc = payslipDesignSettings.payslipLogoUrl || p.companyLogoUrl || companyDetails?.logoUrl || undefined;
+        const pLogoW = (payslipDesignSettings.payslipLogoWidth as number) || (companyDetails?.logoWidth as number) || 100;
+        const pLogoH = (payslipDesignSettings.payslipLogoHeight as number) || (companyDetails?.logoHeight as number) || 50;
 
         return (
           <Page size="A4" style={styles.page} key={p.id}>
@@ -104,13 +107,13 @@ const PayslipPdfDocument: React.FC<Props> = ({
                   )}
                 </View>
                 <View style={[styles.col, styles.card]}>
-                  {(payslipDesignSettings.showCompanyLogo && logoSrc) && (
-                    <Image src={logoSrc as string} style={[styles.logo, { width: logoW, height: logoH, marginBottom: 6 }]} />
+                  {(payslipDesignSettings.showCompanyLogo && pLogoSrc) && (
+                    <Image src={pLogoSrc as string} style={[styles.logo, { width: pLogoW, height: pLogoH, marginBottom: 6 }]} />
                   )}
                   {!!payslipDesignSettings.showCompanyDetails && (
                     <>
                       <Text style={styles.text}>
-                        {companyDetails?.companyTradingName || companyDetails?.companyLegalName || "Company"}
+                        {pCompanyName}
                       </Text>
                       {!!companyDetails?.companyLegalName && (
                         <Text style={styles.text}>{`Legal: ${companyDetails.companyLegalName}`}</Text>
@@ -124,8 +127,8 @@ const PayslipPdfDocument: React.FC<Props> = ({
                       {!!companyDetails?.vatRegistrationNumber && (
                         <Text style={styles.text}>{`VAT: ${companyDetails.vatRegistrationNumber}`}</Text>
                       )}
-                      {!!companyDetails?.physicalAddress && (
-                        <Text style={styles.text}>{companyDetails.physicalAddress}</Text>
+                      {!!pCompanyAddress && (
+                        <Text style={styles.text}>{pCompanyAddress}</Text>
                       )}
                       {(companyDetails?.mainContactNumber || companyDetails?.companyEmail) && (
                         <Text style={styles.text}>

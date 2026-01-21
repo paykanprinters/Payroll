@@ -1,46 +1,26 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import { PlusCircle, Edit, Trash2, Download, Loader2, Search, X } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
-import { showSuccess, showError } from "@/utils/toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
-import html2pdf from 'html2pdf.js';
+import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import EmployeesHeader from "@/components/employees/EmployeesHeader";
+import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import EmployeesToolbar from "@/components/employees/EmployeesToolbar";
+import EmployeesStats from "@/components/employees/EmployeesStats";
+import JobTitleDistributionChart from "@/components/employees/JobTitleDistributionChart";
+import AverageSalaryChart from "@/components/employees/AverageSalaryChart";
+import EmployeesTable from "@/components/employees/EmployeesTable";
+import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
+type SortField = "name" | "jobTitle" | "startDate" | "customEmployeeId";
+type SortDir = "asc" | "desc";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -51,7 +31,16 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const Employees: React.FC = () => {
-  const { employees, addOrUpdateEmployee, deleteEmployee, companyDetails, isLoadingEmployees, isMutatingEmployee } = usePayrollProcessor(); // Get isMutatingEmployee
+  const {
+    employees,
+    addOrUpdateEmployee,
+    deleteEmployee,
+    companyDetails,
+    isLoadingEmployees,
+    isMutatingEmployee,
+    refetchEmployees,
+  } = usePayrollProcessor();
+
   const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
   const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -60,22 +49,40 @@ const Employees: React.FC = () => {
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
   const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
-  // Search state (with debounce)
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Filters and sorting state
+  const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [payBasisFilter, setPayBasisFilter] = useState<"all" | "salary" | "hourly">("all");
+  const [portalAccessFilter, setPortalAccessFilter] = useState<"all" | "true" | "false">("all");
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  const filteredEmployees = React.useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    if (!q) return employees;
+  const jobTitles = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach(e => e.jobTitle && set.add(e.jobTitle));
+    return Array.from(set).sort();
+  }, [employees]);
 
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach(e => e.department && set.add(e.department));
+    return Array.from(set).sort();
+  }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
     const normalize = (v: unknown) => (v ?? "").toString().toLowerCase();
 
-    return employees.filter((emp) => {
+    const matchesSearch = (emp: MockEmployee) => {
+      if (!q) return true;
       const fields = [
         emp.customEmployeeId,
         emp.personalId,
@@ -89,13 +96,57 @@ const Employees: React.FC = () => {
         emp.hourlyRate != null ? `rate ${emp.hourlyRate}` : "",
       ];
       return fields.some((f) => normalize(f).includes(q));
-    });
-  }, [employees, debouncedSearch]);
+    };
+
+    const matchesFilters = (emp: MockEmployee) => {
+      if (jobTitleFilter !== "all" && emp.jobTitle !== jobTitleFilter) return false;
+      if (departmentFilter !== "all" && (emp.department || "N/A") !== departmentFilter) return false;
+
+      const hasSalary = emp.salary != null && emp.salary > 0;
+      const hasHourly = emp.hourlyRate != null && emp.hourlyRate > 0;
+      if (payBasisFilter === "salary" && !hasSalary) return false;
+      if (payBasisFilter === "hourly" && !hasHourly) return false;
+
+      if (portalAccessFilter !== "all") {
+        const access = emp.portalAccess === true ? "true" : "false";
+        if (access !== portalAccessFilter) return false;
+      }
+
+      return true;
+    };
+
+    const sorted = (list: MockEmployee[]) => {
+      const compare = (a: MockEmployee, b: MockEmployee) => {
+        let av = "";
+        let bv = "";
+        if (sortField === "name") {
+          av = `${a.firstName} ${a.lastName}`.toLowerCase();
+          bv = `${b.firstName} ${b.lastName}`.toLowerCase();
+        } else if (sortField === "jobTitle") {
+          av = (a.jobTitle || "").toLowerCase();
+          bv = (b.jobTitle || "").toLowerCase();
+        } else if (sortField === "startDate") {
+          av = a.startDate || "";
+          bv = b.startDate || "";
+        } else if (sortField === "customEmployeeId") {
+          av = (a.customEmployeeId || "").toLowerCase();
+          bv = (b.customEmployeeId || "").toLowerCase();
+        }
+        if (av < bv) return sortDir === "asc" ? -1 : 1;
+        if (av > bv) return sortDir === "asc" ? 1 : -1;
+        return 0;
+      };
+      return [...list].sort(compare);
+    };
+
+    const base = employees.filter(e => matchesSearch(e) && matchesFilters(e));
+    return sorted(base);
+  }, [employees, debouncedSearch, jobTitleFilter, departmentFilter, payBasisFilter, portalAccessFilter, sortField, sortDir]);
 
   const dataVisualsFontSize = useDataVisualsFontSize();
   const { generatePdf } = usePdfGenerator();
 
-  const loadEmployeeDataAndCharts = React.useCallback(() => {
+  const loadEmployeeDataAndCharts = useCallback(() => {
     if (employees.length > 0) {
       const jobTitleMap = new Map<string, number>();
       employees.forEach((emp) => {
@@ -125,7 +176,7 @@ const Employees: React.FC = () => {
     }
   }, [employees]);
 
-  const loadReportSettings = React.useCallback(() => {
+  const loadReportSettings = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     if (savedReportDesignSettings) {
       setReportDesignSettings(JSON.parse(savedReportDesignSettings));
@@ -138,7 +189,6 @@ const Employees: React.FC = () => {
   useEffect(() => {
     loadEmployeeDataAndCharts();
     loadReportSettings();
-    // Listen for employeesUpdated event from usePayrollProcessor
     window.addEventListener('employeesUpdated', loadEmployeeDataAndCharts as EventListener);
     window.addEventListener('reportDesignUpdated', loadReportSettings);
     return () => {
@@ -178,7 +228,6 @@ const Employees: React.FC = () => {
 
   const handleDownloadProfile = async (employee: MockEmployee) => {
     if (!companyDetails || !reportDesignSettings) {
-      showError("Company details or report design settings not loaded. Cannot generate profile.");
       return;
     }
 
@@ -202,15 +251,18 @@ const Employees: React.FC = () => {
     await generatePdf(renderComponent, options);
   };
 
-  const renderLegendText = (value: string, entry: any, total: number) => {
-    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
-    return `${value} (${percentage}%)`;
-  };
+  const salaryCount = useMemo(
+    () => employees.filter(e => e.salary != null && e.salary > 0).length,
+    [employees]
+  );
+  const hourlyCount = useMemo(
+    () => employees.filter(e => e.hourlyRate != null && e.hourlyRate > 0).length,
+    [employees]
+  );
 
-  const totalJobTitles = jobTitleDistribution.reduce((sum, entry) => sum + entry.value, 0);
+  // Call this hook once at the top-level to avoid varying hook calls across renders
+  const chartFontSize = useDataVisualsFontSize();
 
-  // Only show full-page loader if initially loading employees AND no employees are currently displayed
-  // This prevents the full-page loader from appearing during updates/deletions if there's already data.
   if (isLoadingEmployees && employees.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -222,162 +274,54 @@ const Employees: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Employees Management</h1>
-      <p className="text-lg text-muted-foreground">
-        Manage all employee records, personal details, and employment information here.
-      </p>
-      
+      <EmployeesHeader />
+
+      <EmployeesToolbar
+        jobTitles={jobTitles}
+        departments={departments}
+        jobTitleFilter={jobTitleFilter}
+        setJobTitleFilter={setJobTitleFilter}
+        departmentFilter={departmentFilter}
+        setDepartmentFilter={setDepartmentFilter}
+        payBasisFilter={payBasisFilter}
+        setPayBasisFilter={setPayBasisFilter}
+        portalAccessFilter={portalAccessFilter}
+        setPortalAccessFilter={setPortalAccessFilter}
+        sortField={sortField}
+        setSortField={setSortField}
+        sortDir={sortDir}
+        setSortDir={setSortDir}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        onRefresh={() => refetchEmployees?.()}
+        totalCount={employees.length}
+        filteredCount={filteredEmployees.length}
+      />
+
+      <EmployeesStats
+        totalCount={employees.length}
+        salaryCount={salaryCount}
+        hourlyCount={hourlyCount}
+      />
+
       <div className="flex justify-end">
-        <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee}>
+        <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee} className="rounded-full">
           {isMutatingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add New Employee
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee Distribution by Job Title</CardTitle>
-            <CardDescription>Visual breakdown of employees across different roles.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={jobTitleDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  labelLine={false}
-                  style={{ fontSize: dataVisualsFontSize }}
-                >
-                  {jobTitleDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalJobTitles)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Average Salary by Job Title</CardTitle>
-            <CardDescription>Comparison of average salaries across different job titles.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={averageSalaryByJobTitle}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-                <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-                <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-                <Bar dataKey="salary" fill="#82ca9d" name="Average Salary" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <JobTitleDistributionChart data={jobTitleDistribution} fontSize={chartFontSize} />
+        <AverageSalaryChart data={averageSalaryByJobTitle} fontSize={chartFontSize} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Employee List</CardTitle>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative w-full sm:w-80">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by ID, name, title, department, email..."
-                  className="pl-8"
-                  aria-label="Search employees"
-                />
-              </div>
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchTerm("")}
-                  aria-label="Clear search"
-                  className="px-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {employees.length > 0 ? (
-            filteredEmployees.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee ID</TableHead>
-                      <TableHead>Personal ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Job Title</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Mobile</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead className="text-right">Salary/Rate</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEmployees.map((employee) => (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.customEmployeeId}</TableCell>
-                        <TableCell>{employee.personalId || "N/A"}</TableCell>
-                        <TableCell>{employee.firstName} {employee.lastName}</TableCell>
-                        <TableCell>{employee.jobTitle}</TableCell>
-                        <TableCell>{employee.department || "N/A"}</TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
-                        <TableCell>{employee.startDate}</TableCell>
-                        <TableCell className="text-right">
-                          {employee.salary ? `R ${employee.salary.toLocaleString('en-ZA')}` :
-                           employee.hourlyRate ? `R ${employee.hourlyRate.toLocaleString('en-ZA')} / hr` : "N/A"}
-                        </TableCell>
-                        <TableCell className="flex justify-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => handleEditEmployeeClick(employee)} disabled={isMutatingEmployee}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" onClick={() => handleDownloadProfile(employee)} disabled={isMutatingEmployee}>
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button variant="destructive" size="icon" onClick={() => handleDeleteEmployeeClick(employee)} disabled={isMutatingEmployee}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="text-xs text-muted-foreground mt-3">
-                  Showing {filteredEmployees.length} of {employees.length} employees
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No matching employees for “{debouncedSearch}”.
-              </div>
-            )
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No employee data available. Please add employees using the button above or {isLoadingEmployees ? "loading..." : "add employees to the database."}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <EmployeesTable
+        employees={filteredEmployees}
+        isMutatingEmployee={isMutatingEmployee}
+        onEdit={handleEditEmployeeClick}
+        onDownloadProfile={handleDownloadProfile}
+        onDelete={handleDeleteEmployeeClick}
+      />
 
       <EmployeeFormDialog
         isOpen={isFormOpen}
@@ -386,29 +330,18 @@ const Employees: React.FC = () => {
         initialEmployee={editingEmployee}
       />
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently remove the employee{" "}
-              <span className="font-semibold">{employeeToDelete?.firstName} {employeeToDelete?.lastName}</span>{" "}
-              and their associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isMutatingEmployee}>
-              {isMutatingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteEmployeeDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        employee={employeeToDelete}
+        onConfirm={confirmDeleteEmployee}
+        isMutatingEmployee={isMutatingEmployee}
+      />
 
       <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">Employee Data Section</h3>
         <p className="text-sm">
-          This section allows for full CRUD operations on employee records. In a real application, these actions would interact with a backend database.
+          Filter, sort, add, edit, delete, and download employee profiles. Use Refresh to reload from the database when live mode is enabled.
         </p>
       </div>
     </div>

@@ -1,46 +1,131 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLeaveData } from "@/hooks/use-leave-data";
 import VacationAbsenceForm from "@/components/vacation-absence/VacationAbsenceForm";
 import AbsenceCalendar from "@/components/vacation-absence/AbsenceCalendar";
 import LeaveAnalytics from "@/components/vacation-absence/LeaveAnalytics";
 import LeaveRecordsTable from "@/components/vacation-absence/LeaveRecordsTable";
-import { LeaveEntry } from "@/lib/mock-data-interfaces"; // Updated import
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { LeaveEntry } from "@/lib/mock-data-interfaces";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import VacationAbsenceHeader from "@/components/vacation-absence/VacationAbsenceHeader";
+import SummaryAccent from "@/components/dashboard/SummaryAccent";
+import { CalendarDays, CheckCircle, Activity } from "lucide-react";
 
 const VacationAbsence: React.FC = () => {
-  const { employees, leaveRecords: initialLeaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor(); // Get employees, initialLeaveRecords, isMockDataEnabled from usePayrollProcessor
+  const { employees, leaveRecords: initialLeaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
 
   const {
     leaveRecords,
     leaveTypeDistribution,
     monthlyLeaveData,
     getEmployeeName,
-    getEmployeeCustomId, // Get new helper
+    getEmployeeCustomId,
     addLeaveRecord,
-  } = useLeaveData({ initialLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }); // Pass initialLeaveRecords, employees, isMockDataEnabled to useLeaveData
+  } = useLeaveData({ initialLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
   const handleAddLeave = (newLeaveData: Omit<LeaveEntry, 'id'>) => {
     const newRecordWithId = { ...newLeaveData, id: `LEAVE-${Date.now()}` };
     addLeaveRecord(newRecordWithId);
   };
 
+  // KPI calculations
+  const totalRecords = leaveRecords.length;
+  const totalWorkingDaysThisMonth = useMemo(
+    () => monthlyLeaveData.reduce((sum, m) => sum + (m.days || 0), 0),
+    [monthlyLeaveData]
+  );
+  const annualLeaveCount = useMemo(
+    () => leaveTypeDistribution.find(d => d.name === "Annual Leave")?.value || 0,
+    [leaveTypeDistribution]
+  );
+  const sickLeaveCount = useMemo(
+    () => leaveTypeDistribution.find(d => d.name === "Sick Leave")?.value || 0,
+    [leaveTypeDistribution]
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Vacation & Absence Calendar</h1>
-      <p className="text-lg text-muted-foreground">
-        Manage employee vacation, sick leave, and other absences.
-      </p>
+      <VacationAbsenceHeader />
 
+      {/* KPI row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
+                <CalendarDays className="h-4 w-4" />
+              </span>
+              Total Leave Records
+            </CardTitle>
+            <CardDescription className="text-xs">All recorded absences</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalRecords}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="emerald" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+                <CheckCircle className="h-4 w-4" />
+              </span>
+              Working Days Taken (Monthly)
+            </CardTitle>
+            <CardDescription className="text-xs">Sum for the selected period</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalWorkingDaysThisMonth}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="orange" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
+                <CalendarDays className="h-4 w-4" />
+              </span>
+              Annual Leave
+            </CardTitle>
+            <CardDescription className="text-xs">Total working days taken</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{annualLeaveCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="amber" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-100 text-amber-600">
+                <Activity className="h-4 w-4" />
+              </span>
+              Sick Leave
+            </CardTitle>
+            <CardDescription className="text-xs">Total working days taken</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{sickLeaveCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Analytics */}
       <LeaveAnalytics
         leaveTypeDistribution={leaveTypeDistribution}
         monthlyLeaveData={monthlyLeaveData}
       />
 
+      {/* Form + Calendar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+          <SummaryAccent variant="sky" />
           <CardHeader>
             <CardTitle>Record New Absence</CardTitle>
             <CardDescription>

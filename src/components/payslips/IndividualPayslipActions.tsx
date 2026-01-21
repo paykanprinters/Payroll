@@ -28,7 +28,7 @@ const IndividualPayslipActions: React.FC<IndividualPayslipActionsProps> = ({
             Generate Payslip
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="z-50">
           <DropdownMenuItem onClick={onPrint} disabled={!selectedPayslip}>
             <Printer className="mr-2 h-4 w-4" /> Print Payslip
           </DropdownMenuItem>
