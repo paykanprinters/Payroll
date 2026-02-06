@@ -440,7 +440,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         </div>
 
         {/* Right: individual actions panel */}
-        <div className="md:col-span-1 lg:col-span-1">
+        <div className="md:col-span-1 lg:col-span-1 md:mt-6">
           <IndividualActionsPanel
             selectedPayslip={selectedPayslip}
             selectedEmployeeId={selectedEmployeeId}
@@ -471,7 +471,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         </div>
 
         {/* Right: generation buttons panel */}
-        <div className="md:col-span-1 lg:col-span-1">
+        <div className="md:col-span-1 lg:col-span-1 md:mt-6">
           <GenerationButtonsPanel
             onGenerateSelectedPeriod={handleGenerateSelectedPeriodPayslips}
             onGenerateAllCurrentPeriodDownload={() => handleGenerateAllCurrentPeriodPayslips('download')}

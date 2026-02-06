@@ -33,7 +33,7 @@ const EmployeePayslipSelector: React.FC<EmployeePayslipSelectorProps> = ({
           <SelectTrigger id="employee-select" className="mt-1">
             <SelectValue placeholder="Select an employee" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent side="bottom" align="start" sideOffset={8}>
             {employees.length > 0 ? (
               employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
@@ -57,7 +57,7 @@ const EmployeePayslipSelector: React.FC<EmployeePayslipSelectorProps> = ({
           <SelectTrigger id="payslip-select" className="mt-1">
             <SelectValue placeholder="Select a payslip" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent side="bottom" align="start" sideOffset={8}>
             {filteredPayslipsForEmployee.length > 0 ? (
               filteredPayslipsForEmployee.map((payslip) => (
                 <SelectItem key={payslip.id} value={payslip.id}>

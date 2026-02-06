@@ -74,7 +74,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           <SelectTrigger id="bulk-mode-select" className="mt-1">
             <SelectValue placeholder="Select mode" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent side="bottom" align="start" sideOffset={8}>
             <SelectItem value="monthly">Monthly</SelectItem>
             <SelectItem value="weekly">Weekly</SelectItem>
           </SelectContent>
@@ -99,7 +99,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
               {selectedPayPeriodDate ? format(selectedPayPeriodDate, bulkGenerationMode === "monthly" ? "MMM yyyy" : "PPP") : <span>Pick a {bulkGenerationMode === "monthly" ? "month" : "date"}</span>}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-50">
+          <PopoverContent className="w-auto p-0 z-50" sideOffset={8}>
             <Calendar
               mode="single"
               selected={selectedPayPeriodDate}
@@ -125,7 +125,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           <SelectTrigger id="audit-level-select" className="mt-1">
             <SelectValue placeholder="Select level" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent side="bottom" align="start" sideOffset={8}>
             <SelectItem value="minimal">Minimal</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
             <SelectItem value="detailed">Detailed</SelectItem>
