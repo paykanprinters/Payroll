@@ -2,7 +2,7 @@
 
 import React from "react";
 
-type AccentVariant = "sky" | "amber" | "emerald" | "orange";
+type AccentVariant = "sky" | "amber" | "emerald" | "orange" | "rose";
 
 interface SummaryAccentProps {
   variant?: AccentVariant;
@@ -14,6 +14,7 @@ const variantClasses: Record<AccentVariant, string> = {
   amber: "from-amber-300/70 to-yellow-500/70",
   emerald: "from-emerald-300/70 to-green-500/70",
   orange: "from-orange-300/70 to-red-500/70",
+  rose: "from-rose-300/70 to-rose-500/70",
 };
 
 const SummaryAccent: React.FC<SummaryAccentProps> = ({ variant = "sky", className = "" }) => {

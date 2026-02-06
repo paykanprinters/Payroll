@@ -57,7 +57,7 @@ const PayslipPdfDocument: React.FC<Props> = ({
             <Text style={styles.headerTitle}>{`Payslip • ${employeeName} — ${p.payPeriod}`}</Text>
             <Text style={styles.headerSub}>{`Pay Date: ${p.payDate}`}</Text>
 
-            {(payslipDesignSettings.showEmployeeDetails || payslipDesignSettings.showBankDetails || payslipDesignSettings.showCompanyDetails || (payslipDesignSettings.showCompanyLogo && logoSrc)) && (
+            {(payslipDesignSettings.showEmployeeDetails || payslipDesignSettings.showBankDetails || payslipDesignSettings.showCompanyDetails || (payslipDesignSettings.showCompanyLogo && pLogoSrc)) && (
               <View style={styles.row}>
                 <View style={[styles.col, styles.card]}>
                   {payslipDesignSettings.showEmployeeDetails && (

@@ -22,6 +22,7 @@ import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queri
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
+import type { OvertimePremiumRules } from "@/lib/payroll-calculations/helpers/earnings-helpers";
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
@@ -47,6 +48,7 @@ export const usePayrollProcessingLogic = (
   earningComponents?: any[],
   deductionComponents?: any[],
   assignments?: any[],
+  overtimeRules?: OvertimePremiumRules
 ) => {
 
   const runPayrollProcess = useCallback(
@@ -79,7 +81,8 @@ export const usePayrollProcessingLogic = (
         publicHolidays || [],
         earningComponents || [],
         deductionComponents || [],
-        assignments || []
+        assignments || [],
+        overtimeRules
       );
       const newPayslipsWithBranding = newPayslips.map(p => ({
         ...p,
@@ -165,7 +168,31 @@ export const usePayrollProcessingLogic = (
 
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, companyDetails, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
+    [
+      employees,
+      payslips,
+      loans,
+      savingPlans,
+      leaveRecords,
+      timesheets,
+      taxTables,
+      userTaxSettings,
+      payrollSavingsEntries,
+      workHoursSettings,
+      publicHolidays,
+      companyDetails,
+      setPayslips,
+      updateLoan,
+      updateSavingPlan,
+      updateTimesheetStatus,
+      batchUpsertPayslips,
+      recordSavingsPayment,
+      isMockDataEnabled,
+      earningComponents,
+      deductionComponents,
+      assignments,
+      overtimeRules,
+    ]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -199,7 +226,8 @@ export const usePayrollProcessingLogic = (
         publicHolidays || [],
         earningComponents || [],
         deductionComponents || [],
-        assignments || []
+        assignments || [],
+        overtimeRules
       );
       const previewPayslipsWithBranding = previewPayslips.map(p => ({
         ...p,
@@ -230,7 +258,25 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, companyDetails, isMockDataEnabled]
+    [
+      employees,
+      payslips,
+      loans,
+      savingPlans,
+      leaveRecords,
+      timesheets,
+      taxTables,
+      userTaxSettings,
+      payrollSavingsEntries,
+      workHoursSettings,
+      publicHolidays,
+      companyDetails,
+      isMockDataEnabled,
+      earningComponents,
+      deductionComponents,
+      assignments,
+      overtimeRules,
+    ]
   );
 
   return {
