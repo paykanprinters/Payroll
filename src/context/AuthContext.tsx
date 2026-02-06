@@ -37,6 +37,24 @@ AuthContext.displayName = "AuthContext";
 
 export const useAuth = () => useContext(AuthContext);
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = window.setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+
+    promise
+      .then((value) => {
+        window.clearTimeout(id);
+        resolve(value);
+      })
+      .catch((err) => {
+        window.clearTimeout(id);
+        reject(err);
+      });
+  });
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -67,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (ADMIN_ALLOWLIST.includes(email) && role !== "Admin") {
       try {
-        const { data: resp, error: fnError } = await supabase.functions.invoke("bootstrap-admins", {
+        const { error: fnError } = await supabase.functions.invoke("bootstrap-admins", {
           body: JSON.stringify({ emails: ADMIN_ALLOWLIST }),
         });
         if (!fnError) {
@@ -94,72 +112,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return authUser;
   }, []);
 
-  const redirectAfterLogin = useCallback((role: UserRole) => {
-    const onAuthPages =
-      location.pathname === "/login" || location.pathname === "/employee" || location.pathname === "/";
+  const redirectAfterLogin = useCallback(() => {
+    // If user is on an auth screen and becomes authenticated, send them to the app.
+    const onAuthPages = location.pathname === "/login" || location.pathname === "/employee";
     if (!onAuthPages) return;
-
-    if (role === "Staff") {
-      // Staff must use /employee; then land on /dashboard (RootHome chooses StaffHome)
-      if (location.pathname === "/login") {
-        navigate("/employee", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
-    } else {
-      // Admin/Manager must use /login; then land on /dashboard
-      if (location.pathname === "/employee") {
-        navigate("/login", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
-    }
+    navigate("/dashboard", { replace: true });
   }, [location.pathname, navigate]);
 
-  const refreshSession = useCallback(async (opts?: { silent?: boolean; force?: boolean }) => {
-    // Throttle rapid focus/visibility changes and prevent concurrent refreshes
-    const now = Date.now();
-    const silent = !!opts?.silent;
-    const force = !!opts?.force;
-    const MIN_REFRESH_INTERVAL_MS = 60000;
+  const refreshSession = useCallback(
+    async (opts?: { silent?: boolean; force?: boolean }) => {
+      // Throttle rapid focus/visibility changes and prevent concurrent refreshes
+      const now = Date.now();
+      const silent = !!opts?.silent;
+      const force = !!opts?.force;
+      const MIN_REFRESH_INTERVAL_MS = 60000;
 
-    if (isRefreshingRef.current) {
-      console.log("AuthContext: refreshSession skipped (already refreshing).");
-      return;
-    }
-    if (!force && now - lastRefreshTsRef.current < MIN_REFRESH_INTERVAL_MS) {
-      console.log("AuthContext: refreshSession skipped (throttled).");
-      return;
-    }
+      if (isRefreshingRef.current) {
+        console.log("AuthContext: refreshSession skipped (already refreshing).");
+        return;
+      }
+      if (!force && now - lastRefreshTsRef.current < MIN_REFRESH_INTERVAL_MS) {
+        console.log("AuthContext: refreshSession skipped (throttled).");
+        return;
+      }
 
-    isRefreshingRef.current = true;
-    if (!silent) setIsLoadingAuth(true);
-    console.log("AuthContext: refreshSession invoked.", { silent, force });
+      isRefreshingRef.current = true;
+      if (!silent) setIsLoadingAuth(true);
+      console.log("AuthContext: refreshSession invoked.", { silent, force });
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data } = await withTimeout(supabase.auth.getSession(), 8000, "supabase.auth.getSession");
+        const session = data.session;
 
-      if (session) {
-        const authUser = await fetchProfile(session.user.id);
-        if (authUser) {
-          setUser(authUser);
-          setIsAuthenticated(true);
+        if (session) {
+          const authUser = await withTimeout(fetchProfile(session.user.id), 8000, "fetchProfile");
+          if (authUser) {
+            setUser(authUser);
+            setIsAuthenticated(true);
+          } else {
+            console.warn("AuthContext: Profile missing; clearing auth.");
+            setUser(null);
+            setIsAuthenticated(false);
+          }
         } else {
-          console.warn("AuthContext: Profile missing; clearing auth.");
+          console.log("AuthContext: No session; clearing auth.");
           setUser(null);
           setIsAuthenticated(false);
         }
-      } else {
-        console.log("AuthContext: No session; clearing auth.");
+      } catch (err) {
+        console.error("AuthContext: refreshSession failed", err);
         setUser(null);
         setIsAuthenticated(false);
+      } finally {
+        if (!silent) setIsLoadingAuth(false);
+        isRefreshingRef.current = false;
+        lastRefreshTsRef.current = Date.now();
       }
-    } finally {
-      if (!silent) setIsLoadingAuth(false);
-      isRefreshingRef.current = false;
-      lastRefreshTsRef.current = Date.now();
-    }
-  }, [fetchProfile]);
+    },
+    [fetchProfile]
+  );
 
   useEffect(() => {
     const handleAuthStateChange = async (event: string, session: any | null) => {
@@ -172,7 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsAuthenticated(true);
 
             if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-              redirectAfterLogin(authUser.role);
+              redirectAfterLogin();
             }
           } else {
             setUser(null);
@@ -201,16 +212,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    supabase.auth
-      .getSession()
+    withTimeout(supabase.auth.getSession(), 8000, "initial supabase.auth.getSession")
       .then(async ({ data: { session } }) => {
         if (session) {
-          const authUser = await fetchProfile(session.user.id);
+          const authUser = await withTimeout(fetchProfile(session.user.id), 8000, "initial fetchProfile");
           if (authUser) {
             setUser(authUser);
             setIsAuthenticated(true);
-            // Initial navigation if already on an auth page
-            redirectAfterLogin(authUser.role);
+            redirectAfterLogin();
           } else {
             setUser(null);
             setIsAuthenticated(false);
@@ -268,9 +277,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (prevIsLoadingAuthRef.current !== isLoadingAuth) {
-      console.log(
-        `AuthContext: isLoadingAuth changed from ${prevIsLoadingAuthRef.current} to ${isLoadingAuth}`
-      );
+      console.log(`AuthContext: isLoadingAuth changed from ${prevIsLoadingAuthRef.current} to ${isLoadingAuth}`);
       prevIsLoadingAuthRef.current = isLoadingAuth;
     }
   }, [isLoadingAuth]);
