@@ -11,7 +11,6 @@ import React, {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { showError } from "@/utils/toast";
 
 type UserRole = "Admin" | "Manager" | "Staff" | "Viewer";
 
@@ -63,57 +62,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const prevIsLoadingAuthRef = useRef<boolean>(true);
-
   // Debounce/guard refresh cycles
   const isRefreshingRef = useRef<boolean>(false);
   const lastRefreshTsRef = useRef<number>(0);
+
+  const buildAuthUserFromSession = useCallback((sessionUser: any): AuthUser => {
+    const email = (sessionUser?.email as string) || "";
+    const meta = (sessionUser?.user_metadata || {}) as any;
+    const role = (meta?.role || "Staff") as UserRole;
+    const name = (meta?.name || meta?.full_name || email) as string;
+
+    return {
+      id: sessionUser.id,
+      email,
+      role,
+      name,
+    };
+  }, []);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
       .from("users")
       .select("id, email, name, role")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error || !profile) return null;
 
-    // Admin allowlist bootstrap (kept as-is)
-    const ADMIN_ALLOWLIST = ["info@kanprinters.co.za"];
-    let role: UserRole = (profile.role || "Staff") as UserRole;
-    const email = profile.email as string;
-
-    if (ADMIN_ALLOWLIST.includes(email) && role !== "Admin") {
-      try {
-        const { error: fnError } = await supabase.functions.invoke("bootstrap-admins", {
-          body: JSON.stringify({ emails: ADMIN_ALLOWLIST }),
-        });
-        if (!fnError) {
-          const { data: refreshed, error: refErr } = await supabase
-            .from("users")
-            .select("id, email, name, role")
-            .eq("id", userId)
-            .single();
-          if (!refErr && refreshed) {
-            role = (refreshed.role || "Staff") as UserRole;
-          }
-        }
-      } catch (e) {
-        console.error("AuthContext: bootstrap-admins exception", e);
-      }
-    }
-
     const authUser: AuthUser = {
       id: profile.id,
-      email,
-      role,
-      name: profile.name ?? profile.email,
+      email: profile.email as string,
+      role: (profile.role || "Staff") as UserRole,
+      name: (profile.name as string) ?? (profile.email as string),
     };
+
     return authUser;
   }, []);
 
   const redirectAfterLogin = useCallback(() => {
-    // If user is on an auth screen and becomes authenticated, send them to the app.
     const onAuthPages = location.pathname === "/login" || location.pathname === "/employee";
     if (!onAuthPages) return;
     navigate("/dashboard", { replace: true });
@@ -121,46 +107,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshSession = useCallback(
     async (opts?: { silent?: boolean; force?: boolean }) => {
-      // Throttle rapid focus/visibility changes and prevent concurrent refreshes
       const now = Date.now();
       const silent = !!opts?.silent;
       const force = !!opts?.force;
       const MIN_REFRESH_INTERVAL_MS = 60000;
 
-      if (isRefreshingRef.current) {
-        console.log("AuthContext: refreshSession skipped (already refreshing).");
-        return;
-      }
-      if (!force && now - lastRefreshTsRef.current < MIN_REFRESH_INTERVAL_MS) {
-        console.log("AuthContext: refreshSession skipped (throttled).");
-        return;
-      }
+      if (isRefreshingRef.current) return;
+      if (!force && now - lastRefreshTsRef.current < MIN_REFRESH_INTERVAL_MS) return;
 
       isRefreshingRef.current = true;
       if (!silent) setIsLoadingAuth(true);
-      console.log("AuthContext: refreshSession invoked.", { silent, force });
 
       try {
-        const { data } = await withTimeout(supabase.auth.getSession(), 8000, "supabase.auth.getSession");
+        const { data } = await withTimeout(supabase.auth.getSession(), 12000, "supabase.auth.getSession");
         const session = data.session;
 
-        if (session) {
-          const authUser = await withTimeout(fetchProfile(session.user.id), 8000, "fetchProfile");
-          if (authUser) {
-            setUser(authUser);
-            setIsAuthenticated(true);
-          } else {
-            console.warn("AuthContext: Profile missing; clearing auth.");
-            setUser(null);
-            setIsAuthenticated(false);
-          }
-        } else {
-          console.log("AuthContext: No session; clearing auth.");
+        if (!session) {
           setUser(null);
           setIsAuthenticated(false);
+          return;
         }
-      } catch (err) {
-        console.error("AuthContext: refreshSession failed", err);
+
+        const dbProfile = await withTimeout(fetchProfile(session.user.id), 12000, "fetchProfile");
+        setUser(dbProfile ?? buildAuthUserFromSession(session.user));
+        setIsAuthenticated(true);
+      } catch (err: any) {
+        // Important: do NOT block login UX if session check fails.
+        console.error("AuthContext: refreshSession failed", { message: err?.message, err });
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -169,40 +142,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         lastRefreshTsRef.current = Date.now();
       }
     },
-    [fetchProfile]
+    [buildAuthUserFromSession, fetchProfile]
   );
 
   useEffect(() => {
     const handleAuthStateChange = async (event: string, session: any | null) => {
       console.groupCollapsed(`AuthContext: onAuthStateChange event: ${event}`);
       try {
-        if (session) {
-          const authUser = await fetchProfile(session.user.id);
-          if (authUser) {
-            setUser(authUser);
-            setIsAuthenticated(true);
-
-            if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-              redirectAfterLogin();
-            }
-          } else {
-            setUser(null);
-            setIsAuthenticated(false);
-            showError("Failed to load user profile. Please try logging in again.");
-            if (location.pathname !== "/login") navigate("/login", { replace: true });
-          }
-        } else {
+        if (!session) {
           setUser(null);
           setIsAuthenticated(false);
           if (event === "SIGNED_OUT" && location.pathname !== "/login") {
             navigate("/login", { replace: true });
           }
+          return;
         }
-      } catch (err) {
-        console.error("AuthContext: Error handling auth change:", err);
+
+        const dbProfile = await fetchProfile(session.user.id);
+        setUser(dbProfile ?? buildAuthUserFromSession(session.user));
+        setIsAuthenticated(true);
+
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          redirectAfterLogin();
+        }
+      } catch (err: any) {
+        console.error("AuthContext: Error handling auth change", { message: err?.message, err });
         setUser(null);
         setIsAuthenticated(false);
-        showError("Authentication error occurred.");
         if (location.pathname !== "/login") navigate("/login", { replace: true });
       } finally {
         setIsLoadingAuth(false);
@@ -212,75 +178,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    withTimeout(supabase.auth.getSession(), 8000, "initial supabase.auth.getSession")
+    // Initial session check: do NOT show a blocking error if this fails.
+    withTimeout(supabase.auth.getSession(), 12000, "initial supabase.auth.getSession")
       .then(async ({ data: { session } }) => {
         if (session) {
-          const authUser = await withTimeout(fetchProfile(session.user.id), 8000, "initial fetchProfile");
-          if (authUser) {
-            setUser(authUser);
-            setIsAuthenticated(true);
-            redirectAfterLogin();
-          } else {
-            setUser(null);
-            setIsAuthenticated(false);
-          }
+          const dbProfile = await fetchProfile(session.user.id);
+          setUser(dbProfile ?? buildAuthUserFromSession(session.user));
+          setIsAuthenticated(true);
+          redirectAfterLogin();
         } else {
           setUser(null);
           setIsAuthenticated(false);
         }
-
         setIsLoadingAuth(false);
       })
-      .catch((err) => {
-        console.error("AuthContext: Initial session error:", err);
+      .catch((err: any) => {
+        console.warn("AuthContext: Initial session check failed; continuing unauthenticated.", {
+          message: err?.message,
+        });
         setIsLoadingAuth(false);
         setIsAuthenticated(false);
         setUser(null);
-        showError("Failed to check session. Please log in.");
-        if (location.pathname !== "/login") navigate("/login", { replace: true });
       });
 
     return () => {
       authListener.subscription.unsubscribe();
       console.log("AuthContext: Unsubscribed auth listener.");
     };
-  }, [fetchProfile, navigate, location.pathname, redirectAfterLogin]);
+  }, [buildAuthUserFromSession, fetchProfile, location.pathname, navigate, redirectAfterLogin]);
 
   useEffect(() => {
-    const focusHandler = () => {
-      console.log("AuthContext: Window focus; refreshing session silently.");
-      refreshSession({ silent: true });
-    };
+    const focusHandler = () => refreshSession({ silent: true });
     const visibilityHandler = () => {
-      if (document.visibilityState === "visible") {
-        console.log("AuthContext: Tab visible; refreshing session silently.");
-        refreshSession({ silent: true });
-      }
+      if (document.visibilityState === "visible") refreshSession({ silent: true });
     };
     window.addEventListener("focus", focusHandler);
     document.addEventListener("visibilitychange", visibilityHandler);
 
-    let safetyTimer: number | undefined;
-    if (isLoadingAuth) {
-      safetyTimer = window.setTimeout(() => {
-        console.warn("AuthContext: Safety timer triggered; forcing session refresh.");
-        refreshSession({ force: true });
-      }, 8000);
-    }
-
     return () => {
       window.removeEventListener("focus", focusHandler);
       document.removeEventListener("visibilitychange", visibilityHandler);
-      if (safetyTimer) window.clearTimeout(safetyTimer);
     };
-  }, [isLoadingAuth, refreshSession]);
-
-  useEffect(() => {
-    if (prevIsLoadingAuthRef.current !== isLoadingAuth) {
-      console.log(`AuthContext: isLoadingAuth changed from ${prevIsLoadingAuthRef.current} to ${isLoadingAuth}`);
-      prevIsLoadingAuthRef.current = isLoadingAuth;
-    }
-  }, [isLoadingAuth]);
+  }, [refreshSession]);
 
   const value: AuthContextValue = {
     user,
