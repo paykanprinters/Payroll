@@ -3,37 +3,36 @@
 import React from "react";
 import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { Sparkles } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 const RetroFunkHeader: React.FC = () => {
   const { companyDetails, isMockDataEnabled } = usePayrollProcessor();
   const companyLegalName =
-    companyDetails?.companyLegalName ||
-    companyDetails?.companyTradingName ||
-    "Your Company Name";
+    companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company";
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-6 md:p-8 bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500 text-white">
-      <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
-      <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+    <div className="relative overflow-hidden rounded-2xl border bg-[#0B253A] p-8 text-white shadow-xl">
+      {/* subtle texture */}
+      <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_20%_10%,rgba(122,186,72,0.18),transparent_55%)]" />
+      <div className="pointer-events-none absolute -bottom-16 -right-16 h-64 w-64 rounded-full bg-white/5 blur-2xl" />
 
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-start md:items-center gap-3">
-          <div className="rounded-xl bg-white/20 p-3">
-            <Sparkles className="h-6 w-6 text-white" />
+      <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="rounded-2xl bg-white/10 p-3">
+            <ShieldCheck className="h-6 w-6 text-white" />
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold leading-tight">
-              <span className="text-white/80 mr-2">{companyLegalName}</span>
+          <div className="min-w-0">
+            <div className="text-sm text-white/70">{companyLegalName}</div>
+            <h1 className="mt-1 text-3xl font-semibold -tracking-tight md:text-4xl">
               Payroll Dashboard
             </h1>
-            <p className="text-white/85 text-sm">
-              A fresher, retro-funk perspective for insights and actions
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75 md:text-base">
+              Review key metrics, run payroll, and keep an auditable trail—built for scale.
             </p>
           </div>
         </div>
 
-        <div className="self-start md:self-auto">
+        <div className="self-start lg:self-auto">
           <DashboardVisibilityDropdown isMockDataEnabled={isMockDataEnabled} />
         </div>
       </div>

@@ -32,52 +32,42 @@ interface NavLinkProps {
   label: string;
   isCollapsed: boolean;
   badgeCount?: number;
-  iconColor?: string;
-  activeAccentColor?: string;
 }
 
-const NavLink: React.FC<NavLinkProps> = ({
-  to,
-  icon: Icon,
-  label,
-  isCollapsed,
-  badgeCount,
-  iconColor = "text-muted-foreground",
-  activeAccentColor = "border-primary",
-}) => {
+const NavLink: React.FC<NavLinkProps> = ({ to, icon: Icon, label, isCollapsed, badgeCount }) => {
   const location = useLocation();
-  const isActive = location.pathname.startsWith(to);
+  const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
 
   return (
     <Button
       asChild
       variant="ghost"
       className={cn(
-        "justify-start group rounded-lg",
-        isCollapsed ? "h-9 w-9 p-1.5" : "w-full px-4 py-2",
-        isActive ? "bg-white/40 hover:bg-white/50 dark:bg-white/10 dark:hover:bg-white/15" : "hover:bg-transparent"
+        "group w-full justify-start rounded-xl px-3 py-2 text-sidebar-foreground/90 hover:bg-white/5 hover:text-sidebar-foreground",
+        isCollapsed ? "h-10 w-10 justify-center p-0" : ""
       )}
     >
       <Link
         to={to}
         className={cn(
-          "flex items-center w-full rounded-md transition-colors",
-          isActive ? `border-l-2 ${activeAccentColor} pl-3` : ""
+          "flex w-full items-center rounded-xl transition-colors",
+          isActive && !isCollapsed ? "bg-white/10" : "",
+          isActive && !isCollapsed ? "border-l-2 border-sidebar-primary pl-3" : ""
         )}
       >
         <Icon
           className={cn(
-            "h-5 w-5 transition-transform duration-200 drop-shadow-sm",
-            iconColor,
+            "h-5 w-5 transition-transform duration-200",
+            isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70",
             !isCollapsed && "mr-3",
             "group-hover:scale-110"
           )}
         />
-        <span className={cn("flex-1 whitespace-nowrap", isCollapsed && "hidden")}>
+        <span className={cn("flex-1 whitespace-nowrap text-sm", isCollapsed && "hidden")}>
           {label}
         </span>
         {badgeCount !== undefined && badgeCount > 0 && !isCollapsed && (
-          <Badge className="ml-auto h-5 w-5 flex items-center justify-center p-0">
+          <Badge className="ml-auto h-5 min-w-5 justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
             {badgeCount}
           </Badge>
         )}
@@ -109,8 +99,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     // LocalStorage fallback (used by Settings mock mode and persisted values)
     const lsName =
-      (typeof window !== "undefined" && (localStorage.getItem("companyTradingName") || localStorage.getItem("companyLegalName"))) || null;
-    const lsLogoUrl = typeof window !== "undefined" ? (localStorage.getItem("companyLogoUrl") || null) : null;
+      (typeof window !== "undefined" &&
+        (localStorage.getItem("companyTradingName") || localStorage.getItem("companyLegalName"))) ||
+      null;
+    const lsLogoUrl = typeof window !== "undefined" ? localStorage.getItem("companyLogoUrl") || null : null;
     const lsLogoWidthRaw = typeof window !== "undefined" ? localStorage.getItem("companyLogoWidth") : null;
     const lsLogoHeightRaw = typeof window !== "undefined" ? localStorage.getItem("companyLogoHeight") : null;
     const lsLogoFitRaw = typeof window !== "undefined" ? localStorage.getItem("companyLogoFit") : null;
@@ -120,7 +112,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     const lsLogoFit = lsLogoFitRaw as React.CSSProperties["objectFit"] | undefined;
 
     return {
-      name: companyDetails?.companyTradingName || companyDetails?.companyLegalName || lsName || b.name || "Your Company Name",
+      name:
+        companyDetails?.companyTradingName ||
+        companyDetails?.companyLegalName ||
+        lsName ||
+        b.name ||
+        "Your Company",
       logoUrl: companyDetails?.logoUrl || lsLogoUrl || b.logoUrl || "/logonscreen_for_workflow.png",
       logoWidth: companyDetails?.logoWidth || lsLogoWidth || b.logoWidth || 120,
       logoHeight: companyDetails?.logoHeight || lsLogoHeight || b.logoHeight || 48,
@@ -133,48 +130,47 @@ const Sidebar: React.FC<SidebarProps> = ({
     icon: React.ElementType;
     label: string;
     badgeCount?: number;
-    iconColor: string;
-    activeAccentColor: string;
   }> = [
-    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", iconColor: "text-sky-600 dark:text-sky-400", activeAccentColor: "border-sky-500" },
-    { to: "/profile", icon: UserIcon, label: "My Profile", iconColor: "text-gray-700 dark:text-gray-300", activeAccentColor: "border-gray-500" },
-    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount, iconColor: "text-rose-600 dark:text-rose-400", activeAccentColor: "border-rose-500" },
-    { to: "/employees", icon: Users, label: "Employees", iconColor: "text-teal-600 dark:text-teal-400", activeAccentColor: "border-teal-500" },
-    { to: "/timesheet", icon: Clock, label: "Timesheet", iconColor: "text-amber-600 dark:text-amber-400", activeAccentColor: "border-amber-500" },
-    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips", iconColor: "text-violet-600 dark:text-violet-400", activeAccentColor: "border-violet-500" },
-    { to: "/payroll/runs", icon: ReceiptText, label: "Payroll Runs", iconColor: "text-purple-600 dark:text-purple-400", activeAccentColor: "border-purple-500" },
-    { to: "/payroll/batches", icon: Landmark, label: "Payment Batches", iconColor: "text-green-700 dark:text-green-300", activeAccentColor: "border-green-600" },
-    { to: "/savings", icon: PiggyBank, label: "Savings", iconColor: "text-emerald-600 dark:text-emerald-400", activeAccentColor: "border-emerald-500" },
-    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence", iconColor: "text-fuchsia-600 dark:text-fuchsia-400", activeAccentColor: "border-fuchsia-500" },
-    { to: "/analytics", icon: LineChart, label: "Analytics", iconColor: "text-indigo-600 dark:text-indigo-400", activeAccentColor: "border-indigo-500" },
-    { to: "/reports", icon: BarChart, label: "Reports", iconColor: "text-blue-600 dark:text-blue-400", activeAccentColor: "border-blue-500" },
-    { to: "/settings", icon: Settings, label: "Settings", iconColor: "text-orange-600 dark:text-orange-400", activeAccentColor: "border-orange-500" },
+    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { to: "/profile", icon: UserIcon, label: "My Profile" },
+    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
+    { to: "/employees", icon: Users, label: "Employees" },
+    { to: "/timesheet", icon: Clock, label: "Timesheet" },
+    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },
+    { to: "/payroll/runs", icon: ReceiptText, label: "Payroll Runs" },
+    { to: "/payroll/batches", icon: Landmark, label: "Payment Batches" },
+    { to: "/savings", icon: PiggyBank, label: "Savings" },
+    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
+    { to: "/analytics", icon: LineChart, label: "Analytics" },
+    { to: "/reports", icon: BarChart, label: "Reports" },
+    { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
   const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
-    <div
-      className={cn(
-        "relative overflow-hidden",
-        currentIsCollapsed ? "h-20" : "h-28"
-      )}
-    >
-      <div className="absolute inset-0 bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500" />
-      <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
-      <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-      <div className={cn("relative z-10 flex items-center border-b px-4 lg:px-6", currentIsCollapsed ? "justify-center" : "justify-between py-5 lg:py-7 text-white")}>
+    <div className={cn("relative overflow-hidden", currentIsCollapsed ? "h-20" : "h-28")}>
+      <div className="absolute inset-0 bg-sidebar" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(122,186,72,0.22),transparent_55%)]" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-white/10" />
+
+      <div
+        className={cn(
+          "relative z-10 flex items-center px-4 lg:px-6",
+          currentIsCollapsed ? "h-full justify-center" : "h-full justify-between"
+        )}
+      >
         {currentIsCollapsed ? (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => toggleCollapse(!currentIsCollapsed)}
-            className="mx-auto bg-white/20 hover:bg-white/30 z-10"
+            className="bg-white/10 text-white hover:bg-white/15"
             aria-label="Toggle sidebar"
           >
-            <Menu className="h-5 w-5 text-white" />
+            <Menu className="h-5 w-5" />
           </Button>
         ) : (
           <>
-            <Link to="/" className="flex flex-col items-center flex-grow-0">
+            <Link to="/" className="flex items-center gap-3">
               {displayCompanyDetails.logoUrl && (
                 <img
                   src={displayCompanyDetails.logoUrl}
@@ -184,19 +180,24 @@ const Sidebar: React.FC<SidebarProps> = ({
                     height: displayCompanyDetails.logoHeight,
                     objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
                   }}
-                  className="mb-1 drop-shadow-sm"
+                  className="shrink-0 rounded-md bg-white/5 p-1"
                 />
               )}
-              <span className="text-lg whitespace-nowrap">{displayCompanyDetails.name}</span>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold tracking-tight text-white">
+                  {displayCompanyDetails.name}
+                </div>
+                <div className="text-xs text-white/70">Payroll Console</div>
+              </div>
             </Link>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => toggleCollapse(!currentIsCollapsed)}
-              className="ml-auto bg-white/20 hover:bg-white/30 z-10"
+              className="bg-white/10 text-white hover:bg-white/15"
               aria-label="Collapse sidebar"
             >
-              <Menu className="h-5 w-5 text-white" />
+              <Menu className="h-5 w-5" />
             </Button>
           </>
         )}
@@ -208,29 +209,40 @@ const Sidebar: React.FC<SidebarProps> = ({
     return null;
   }
 
+  const filteredItems = navItems.filter((item) => {
+    if (
+      item.to === "/employees" ||
+      item.to === "/analytics" ||
+      item.to === "/reports" ||
+      item.to === "/payroll/runs" ||
+      item.to === "/payroll/batches"
+    ) {
+      return user?.role === "Admin" || user?.role === "Manager";
+    }
+    if (item.to === "/settings") {
+      return user?.role === "Admin";
+    }
+    return true;
+  });
+
   if (isMobile) {
     return (
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50" aria-label="Open sidebar">
-            <Menu className="h-6 w-6 text-primary" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="fixed left-4 top-4 z-50 rounded-xl border bg-background/70 shadow-sm backdrop-blur-md"
+            aria-label="Open sidebar"
+          >
+            <Menu className="h-6 w-6 text-foreground" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-64">
+        <SheetContent side="left" className="w-72 p-0">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
             {renderSidebarHeader(false, setIsCollapsed)}
             <nav className="grid items-start gap-1 p-4">
-              {navItems
-                .filter((item) => {
-                  if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches") {
-                    return user?.role === "Admin" || user?.role === "Manager";
-                  }
-                  if (item.to === "/settings") {
-                    return user?.role === "Admin";
-                  }
-                  return true;
-                })
-                .map((item) => (
+              {filteredItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -238,8 +250,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   label={item.label}
                   isCollapsed={false}
                   badgeCount={item.badgeCount}
-                  iconColor={item.iconColor}
-                  activeAccentColor={item.activeAccentColor}
                 />
               ))}
             </nav>
@@ -252,23 +262,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div
       className={cn(
-        "flex h-full max-h-screen flex-col gap-2 border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
+        "flex h-full max-h-screen flex-col gap-2 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300",
         isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[260px]"
       )}
     >
       {renderSidebarHeader(isCollapsed, setIsCollapsed)}
       <nav className="grid items-start gap-1 p-4">
-        {navItems
-          .filter((item) => {
-            if (item.to === "/employees" || item.to === "/analytics" || item.to === "/reports" || item.to === "/payroll/runs" || item.to === "/payroll/batches") {
-              return user?.role === "Admin" || user?.role === "Manager";
-            }
-            if (item.to === "/settings") {
-              return user?.role === "Admin";
-            }
-            return true;
-          })
-          .map((item) => (
+        {filteredItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -276,8 +276,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             label={item.label}
             isCollapsed={isCollapsed}
             badgeCount={item.badgeCount}
-            iconColor={item.iconColor}
-            activeAccentColor={item.activeAccentColor}
           />
         ))}
       </nav>
