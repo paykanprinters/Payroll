@@ -18,6 +18,7 @@ import {
   Clock,
   ListTodo,
   User as UserIcon,
+  BookOpen,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -133,6 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }> = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/profile", icon: UserIcon, label: "My Profile" },
+    { to: "/docs", icon: BookOpen, label: "Docs" },
     { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
     { to: "/employees", icon: Users, label: "Employees" },
     { to: "/timesheet", icon: Clock, label: "Timesheet" },

@@ -36,6 +36,7 @@ import OvertimeRules from "./pages/payroll/OvertimeRules";
 import ExceptionsDashboard from "./pages/payroll/ExceptionsDashboard";
 import PayrollRuns from "./pages/payroll/PayrollRuns";
 import PayrollRunDetail from "./pages/payroll/PayrollRunDetail";
+import Docs from "./pages/Docs";
 
 const queryClient = new QueryClient();
 
@@ -57,7 +58,7 @@ const App = () => {
               <Route path="/employee" element={<StaffLogin />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
-                <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>}>
+                <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>} >
                   {isStaffPortal ? (
                     <>
                       <Route path="/" element={<StaffHome />} />
@@ -67,6 +68,7 @@ const App = () => {
                       <Route path="/savings" element={<Savings />} />
                       <Route path="/vacation-absence" element={<VacationAbsence />} />
                       <Route path="/profile" element={<Profile />} />
+                      <Route path="/docs" element={<Docs />} />
                       <Route path="/analytics/staff" element={<AnalyticsStaff />} />
                       {/* Block admin routes in staff portal */}
                       <Route path="/employees" element={<Unauthorized />} />
@@ -88,6 +90,7 @@ const App = () => {
                       <Route path="/savings" element={<Savings />} />
                       <Route path="/vacation-absence" element={<VacationAbsence />} />
                       <Route path="/profile" element={<Profile />} />
+                      <Route path="/docs" element={<Docs />} />
                       
                       {/* Staff-only analytics route */}
                       <Route element={<ProtectedRoute allowedRoles={['Staff']} />}>
