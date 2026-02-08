@@ -427,7 +427,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       {/* Row 1: Employee & payslip selection + actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
         {/* Left: selectors */}
-        <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-2">
+        <div className="md:col-span-1 lg:col-span-2 grid gap-3">
           <EmployeePayslipSelector
             employees={employees}
             payslips={payslips}
@@ -456,7 +456,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       {/* Row 2: Bulk actions + generation buttons */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
         {/* Left: bulk controls */}
-        <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-3">
+        <div className="md:col-span-1 lg:col-span-2 grid gap-3">
           <BulkPayslipActions
             payslips={payslips}
             selectedPayPeriodDate={selectedPayPeriodDate}

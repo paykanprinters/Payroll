@@ -19,23 +19,24 @@ const IndividualPayslipActions: React.FC<IndividualPayslipActionsProps> = ({
   onDownload,
 }) => {
   const [showBreakdown, setShowBreakdown] = React.useState(false);
+  const disabled = !selectedPayslip;
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button className="w-full" disabled={!selectedPayslip}>
+          <Button className="w-full" disabled={disabled}>
             Generate Payslip
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="z-50">
-          <DropdownMenuItem onClick={onPrint} disabled={!selectedPayslip}>
+        <DropdownMenuContent side="bottom" align="start" sideOffset={8} className="z-50">
+          <DropdownMenuItem disabled={disabled} onSelect={onPrint}>
             <Printer className="mr-2 h-4 w-4" /> Print Payslip
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onDownload} disabled={!selectedPayslip}>
+          <DropdownMenuItem disabled={disabled} onSelect={onDownload}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowBreakdown(true)} disabled={!selectedPayslip}>
+          <DropdownMenuItem disabled={disabled} onSelect={() => setShowBreakdown(true)}>
             <Calculator className="mr-2 h-4 w-4" /> PAYE Breakdown
           </DropdownMenuItem>
         </DropdownMenuContent>
