@@ -158,8 +158,8 @@ const PayslipOverviewPage: React.FC = () => {
       )}
 
       {/* Two-column layout: charts on the left (filtered), generator on the right */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(460px,1fr)]">
+        <div className="space-y-4">
           <PayslipSummaryCharts
             payrollSummaryData={payrollSummaryData}
             deductionsBreakdownData={deductionsBreakdownData}
@@ -187,7 +187,7 @@ const PayslipOverviewPage: React.FC = () => {
           )}
         </div>
 
-        <div className="space-y-4 lg:col-span-1">
+        <div className="space-y-4">
           {/* Inline admin/manager warning if company details are missing */}
           {!companyDetails && (user?.role === "Admin" || user?.role === "Manager") && (
             <Card className="border-amber-500 bg-amber-50 text-amber-900">
