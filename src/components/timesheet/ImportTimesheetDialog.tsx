@@ -23,12 +23,15 @@ import FiltersBar from "./FiltersBar";
 import QuickFixTools from "./QuickFixTools";
 import AggregationErrorsPanel from "./AggregationErrorsPanel";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
+import { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
+import { parse, isValid } from "date-fns";
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (timesheets: ImportableTimesheetEntry[]) => void;
   employees: MockEmployee[];
+  workHoursSettings?: WorkHoursSettings | null;
 }
 
 const hhmmRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -36,7 +39,13 @@ const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" | "personalDesc";
 
-const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, onClose, onImport, employees }) => {
+const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
+  isOpen,
+  onClose,
+  onImport,
+  employees,
+  workHoursSettings,
+}) => {
   const safeEmployees: MockEmployee[] = Array.isArray(employees) ? employees : [];
 
   const {
@@ -62,6 +71,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
   }, [validatedData]);
 
   const [compact, setCompact] = useState<boolean>(false);
+  const [groupByEmployee, setGroupByEmployee] = useState<boolean>(true);
 
   const [showAggErrors, setShowAggErrors] = useState<boolean>(false);
   useEffect(() => {
@@ -256,16 +266,27 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
       return;
     }
 
-    const timesheetsToImport: ImportableTimesheetEntry[] = validEntries.map((row) => ({
-      employeeId: row.employeeId,
-      date: new Date(row.date.replace(/\//g, "-")),
-      timeIn: row.timeIn,
-      teaStart: row.teaStart,
-      teaEnd: row.teaEnd,
-      lunchStart: row.lunchStart,
-      lunchEnd: row.lunchEnd,
-      timeOut: row.timeOut,
-    }));
+    const timesheetsToImport: ImportableTimesheetEntry[] = validEntries
+      .map((row) => {
+        const parsed = parse(row.date.replace(/\//g, "-"), "yyyy-MM-dd", new Date());
+        if (!isValid(parsed)) return null;
+        return {
+          employeeId: row.employeeId,
+          date: parsed,
+          timeIn: row.timeIn,
+          teaStart: row.teaStart,
+          teaEnd: row.teaEnd,
+          lunchStart: row.lunchStart,
+          lunchEnd: row.lunchEnd,
+          timeOut: row.timeOut,
+        } satisfies ImportableTimesheetEntry;
+      })
+      .filter(Boolean) as ImportableTimesheetEntry[];
+
+    if (timesheetsToImport.length === 0) {
+      showError("No valid timesheet entries to import (date parsing failed).");
+      return;
+    }
 
     onImport(timesheetsToImport);
     showSuccess(`${timesheetsToImport.length} timesheet entries imported successfully!`);
@@ -363,6 +384,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                 employees={safeEmployees}
                 compact={compact}
                 setCompact={setCompact}
+                groupByEmployee={groupByEmployee}
+                setGroupByEmployee={setGroupByEmployee}
                 filterEmployeeId={filterEmployeeId}
                 setFilterEmployeeId={setFilterEmployeeId}
                 filterEmployeeName={filterEmployeeName}
@@ -414,6 +437,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({ isOpen, o
                   employees={safeEmployees}
                   allRowsValid={filteredRows.every((r) => r._isValid)}
                   compact={compact}
+                  groupByEmployee={groupByEmployee}
+                  workHoursSettings={workHoursSettings}
                   onEditRow={updateRow}
                   onResolveEmployee={resolveEmployee}
                 />

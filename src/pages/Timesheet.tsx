@@ -322,6 +322,7 @@ const Timesheet: React.FC = () => {
           onClose={() => setIsImportDialogOpen(false)}
           onImport={handleImportTimesheets}
           employees={employees || []}
+          workHoursSettings={workHoursSettings}
         />
       )}
 
