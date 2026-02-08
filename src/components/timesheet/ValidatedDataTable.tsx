@@ -169,10 +169,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
     const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : "N/A";
 
     return (
-      <TableRow
-        key={originalIndex}
-        className={`${row._isValid ? "" : "bg-red-50/50"} ${rowClass}`}
-      >
+      <TableRow key={originalIndex} className={`${row._isValid ? "" : "bg-red-50/50"} ${rowClass}`}>
         <TableCell className={`${cellClass} text-center`}>
           {row._isValid ? (
             <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
@@ -180,7 +177,6 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
             <div className="flex items-center justify-center text-red-500" title={row._errors.join("; ")}>
               <XCircle className="h-4 w-4" />
             </div>
-
           )}
         </TableCell>
 
@@ -320,11 +316,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
           {isEditing ? (
             <ButtonIcon icon={<Save className="h-4 w-4" />} label="Save" onClick={() => setEditingIndex(null)} />
           ) : (
-            <ButtonIcon
-              icon={<PencilLine className="h-4 w-4" />}
-              label="Edit"
-              onClick={() => setEditingIndex(originalIndex)}
-            />
+            <ButtonIcon icon={<PencilLine className="h-4 w-4" />} label="Edit" onClick={() => setEditingIndex(originalIndex)} />
           )}
         </TableCell>
       </TableRow>
@@ -353,8 +345,12 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
             <TableBody>
               {groups
                 ? groups.flatMap((g) => {
-                    const validHoursSum = g.items.reduce((sum, i) => sum + (i.row._isValid ? i.workHours : 0), 0);
-                    const invalidCount = g.items.filter((i) => !i.row._isValid).length;
+                    const validItems = g.items.filter((i) => i.row._isValid);
+                    const validHoursSum = validItems.reduce((sum, i) => sum + i.workHours, 0);
+                    const validDaysCount = validItems.length;
+                    const totalRows = g.items.length;
+                    const invalidCount = totalRows - validDaysCount;
+
                     return [
                       <TableRow key={`group-${g.employeeId}`} className="bg-slate-50/80">
                         <TableCell colSpan={10} className={compact ? "p-2" : "p-3"}>
@@ -367,11 +363,12 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                               ) : null}
                             </div>
                             <div className="flex items-center gap-3 text-xs">
-                              <span className="text-muted-foreground">{g.items.length} day(s)</span>
+                              <span className="text-muted-foreground">
+                                {validDaysCount} valid day(s)
+                                {invalidCount > 0 ? ` (of ${totalRows})` : ""}
+                              </span>
                               <span className="font-medium text-slate-900">Total: {formatWorkHours(validHoursSum)}</span>
-                              {invalidCount > 0 ? (
-                                <span className="text-red-600">{invalidCount} invalid</span>
-                              ) : null}
+                              {invalidCount > 0 ? <span className="text-red-600">{invalidCount} invalid</span> : null}
                             </div>
                           </div>
                         </TableCell>

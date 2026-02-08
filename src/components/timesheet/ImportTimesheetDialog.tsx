@@ -244,10 +244,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
     employeesById,
   ]);
 
-  const localAllRowsValid = useMemo(
-    () => filteredRows.length > 0 && filteredRows.every((r) => r._isValid),
-    [filteredRows]
-  );
+  const canImportFromCurrentView = useMemo(() => {
+    const sourceRows = importFilteredOnly ? filteredRows : editableRows;
+    return sourceRows.some((r) => r._isValid);
+  }, [importFilteredOnly, filteredRows, editableRows]);
 
   const clearFilters = () => {
     setFilterEmployeeId("");
@@ -406,11 +406,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
               />
 
               {/* Quick-fix tools */}
-              <QuickFixTools
-                onNormalizeDates={bulkNormalizeDates}
-                onClampTimeIn={clampTimeInToStart}
-                onClearMissingBreaks={clearMissingBreaks}
-              />
+              <QuickFixTools onNormalizeDates={bulkNormalizeDates} onClampTimeIn={clampTimeInToStart} onClearMissingBreaks={clearMissingBreaks} />
 
               {/* Aggregation Errors with auto-dismiss */}
               <AggregationErrorsPanel
@@ -452,7 +448,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleImportData} disabled={!localAllRowsValid}>
+          <Button type="button" onClick={handleImportData} disabled={!canImportFromCurrentView}>
             Import {importFilteredOnly ? "Filtered" : "Valid"} Entries
           </Button>
         </DialogFooter>
