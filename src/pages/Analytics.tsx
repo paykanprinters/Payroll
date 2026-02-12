@@ -210,13 +210,11 @@ const Analytics: React.FC = () => {
   useEffect(() => {
     loadAnalyticsData();
     const handler = () => loadAnalyticsData();
-    window.addEventListener("allMockDataUpdated", handler);
     window.addEventListener("employeesUpdated", handler);
     window.addEventListener("payslipsUpdated", handler);
     window.addEventListener("leaveRecordsUpdated", handler);
     window.addEventListener("appFocusRefresh", handler);
     return () => {
-      window.removeEventListener("allMockDataUpdated", handler);
       window.removeEventListener("employeesUpdated", handler);
       window.removeEventListener("payslipsUpdated", handler);
       window.removeEventListener("leaveRecordsUpdated", handler);

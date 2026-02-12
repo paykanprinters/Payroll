@@ -14,7 +14,6 @@ const sidebarNavItems = [
   { title: "Tax Liabilities", href: "/settings/tax-liabilities" },
   { title: "Payslip Design", href: "/settings/payslip-design" },
   { title: "Report Design", href: "/settings/report-design" },
-  { title: "Mock Data", href: "/settings/mock-data" },
   { title: "Data Visuals", href: "/settings/data-visuals" },
   { title: "User Control Panel", href: "/settings/user-control-panel" },
 ];

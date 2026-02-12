@@ -81,7 +81,6 @@ interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
   companyDetails: MockCompanyDetails | null;
-  isMockDataEnabled: boolean;
   pendingToDosCount: number;
 }
 
@@ -89,7 +88,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   setIsCollapsed,
   companyDetails,
-  isMockDataEnabled,
   pendingToDosCount,
 }) => {
   const isMobile = useIsMobile();
@@ -98,31 +96,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const displayCompanyDetails = React.useMemo(() => {
     const b = getBranding();
 
-    // LocalStorage fallback (used by Settings mock mode and persisted values)
-    const lsName =
-      (typeof window !== "undefined" &&
-        (localStorage.getItem("companyTradingName") || localStorage.getItem("companyLegalName"))) ||
-      null;
-    const lsLogoUrl = typeof window !== "undefined" ? localStorage.getItem("companyLogoUrl") || null : null;
-    const lsLogoWidthRaw = typeof window !== "undefined" ? localStorage.getItem("companyLogoWidth") : null;
-    const lsLogoHeightRaw = typeof window !== "undefined" ? localStorage.getItem("companyLogoHeight") : null;
-    const lsLogoFitRaw = typeof window !== "undefined" ? localStorage.getItem("companyLogoFit") : null;
-
-    const lsLogoWidth = lsLogoWidthRaw ? Number(lsLogoWidthRaw) : undefined;
-    const lsLogoHeight = lsLogoHeightRaw ? Number(lsLogoHeightRaw) : undefined;
-    const lsLogoFit = lsLogoFitRaw as React.CSSProperties["objectFit"] | undefined;
-
+    // Fallback to branding defaults if company details aren't loaded yet.
     return {
-      name:
-        companyDetails?.companyTradingName ||
-        companyDetails?.companyLegalName ||
-        lsName ||
-        b.name ||
-        "Your Company",
-      logoUrl: companyDetails?.logoUrl || lsLogoUrl || b.logoUrl || "/logonscreen_for_workflow.png",
-      logoWidth: companyDetails?.logoWidth || lsLogoWidth || b.logoWidth || 120,
-      logoHeight: companyDetails?.logoHeight || lsLogoHeight || b.logoHeight || 48,
-      logoFit: (companyDetails?.logoFit as any) || lsLogoFit || b.logoFit || "contain",
+      name: companyDetails?.companyTradingName || companyDetails?.companyLegalName || b.name || "Your Company",
+      logoUrl: companyDetails?.logoUrl || b.logoUrl || "/logonscreen_for_workflow.png",
+      logoWidth: companyDetails?.logoWidth || b.logoWidth || 120,
+      logoHeight: companyDetails?.logoHeight || b.logoHeight || 48,
+      logoFit: (companyDetails?.logoFit as any) || b.logoFit || "contain",
     };
   }, [companyDetails]);
 

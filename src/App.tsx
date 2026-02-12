@@ -44,8 +44,8 @@ const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
 
 const App = () => {
   const isStaffPortal = portalType === "staff";
-  console.log("App.tsx: Initial localStorage.isMockDataEnabled:", localStorage.getItem("isMockDataEnabled"));
   return (
+
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />

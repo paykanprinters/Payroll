@@ -25,10 +25,11 @@ interface MainLayoutProps {}
 
 const MainLayout: React.FC<MainLayoutProps> = () => {
   const { isAuthenticated, user, isLoadingAuth } = useAuth();
-  const { companyDetails, isLoadingCompanyDetails, isMockDataEnabled, pendingCount } = usePayrollProcessor();
+  const { companyDetails, isLoadingCompanyDetails, pendingCount } = usePayrollProcessor();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const navigate = useNavigate();
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/login");
@@ -43,11 +44,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
     const titleElement = document.getElementById("app-title");
     if (titleElement) {
       const b = getBranding();
-      const name =
-        b.name ||
-        companyDetails?.companyLegalName ||
-        companyDetails?.companyTradingName ||
-        "Payroll App";
+      const name = b.name || companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Payroll App";
       titleElement.innerText = name;
     }
   }, [companyDetails]);
@@ -72,7 +69,6 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
           companyDetails={companyDetails}
-          isMockDataEnabled={isMockDataEnabled}
           pendingToDosCount={pendingCount}
         />
       )}
@@ -138,7 +134,6 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
           companyDetails={companyDetails}
-          isMockDataEnabled={isMockDataEnabled}
           pendingToDosCount={pendingCount}
         />
       )}

@@ -1,35 +1,36 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import {
-  MockPayslip,
-  Loan,
-  SavingPlan,
-  LeaveEntry,
-  TimesheetEntry,
-  MockCompanyDetails,
-  ToDoEntry,
-} from "@/lib/mock-data-interfaces";
-import { useCompanyDetails } from "./use-company-details";
-import { useTaxTables } from "./use-tax-tables";
-import { usePayrollProcessingLogic } from "./use-payroll-processing-logic";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+
+import { useCompanyDetails } from "./use-company-details";
+import { useTaxTables } from "./use-tax-tables";
+import { useWorkHoursSettings } from "./use-work-hours-settings";
+import { usePublicHolidays } from "./use-public-holidays";
+import { usePayCycleSettings } from "./use-pay-cycle-settings";
+import { useUserTaxSettings } from "./use-user-tax-settings";
+import { useEmployeesData } from "./use-employees-data";
+import { usePayslipsData } from "./use-payslips-data";
 import { useLoansData } from "./use-loans-data";
 import { useSavingPlansData } from "./use-saving-plans-data";
 import usePayrollSavingsEntries from "./use-payroll-savings-entries";
 import { useLeaveData } from "./use-leave-data";
 import { useTimesheetData } from "./use-timesheet-data";
 import { useToDosData } from "./use-todos-data";
-import { usePayslipsData } from "./use-payslips-data";
-import { useAuth } from "@/context/AuthContext";
-import { useWorkHoursSettings } from "./use-work-hours-settings";
-import { usePublicHolidays } from "./use-public-holidays";
-import { usePayCycleSettings } from "./use-pay-cycle-settings";
-import { useUserTaxSettings } from "./use-user-tax-settings";
-import { useEmployeesData } from "./use-employees-data";
 import { useCompensationComponents } from "./use-compensation-components";
 import { useOvertimeRules } from "./use-overtime-rules";
+import { usePayrollProcessingLogic } from "./use-payroll-processing-logic";
+
+import {
+  MockPayslip,
+  Loan,
+  SavingPlan,
+  LeaveEntry,
+  TimesheetEntry,
+  ToDoEntry,
+} from "@/lib/mock-data-interfaces";
 
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
@@ -38,38 +39,22 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
   const { isAuthenticated, isLoadingAuth, user } = useAuth();
   const silent = options?.silent === true;
 
-  const [isMockDataEnabled, setIsMockDataEnabled] = useState<boolean>(() => {
-    return localStorage.getItem("isMockDataEnabled") === "true";
-  });
+  // Mock mode removed: always live-only
+  const isMockDataEnabled = false;
 
   const [activeTaxYearForCalculations, setActiveTaxYearState] = useState<number>(new Date().getFullYear());
-
-  const mockLoansRef = useRef<string | null>(null);
-  const mockSavingPlansRef = useRef<string | null>(null);
-  const mockLeaveRecordsRef = useRef<string | null>(null);
-  const mockTimesheetsRef = useRef<string | null>(null);
-  const mockToDosRef = useRef<string | null>(null);
-  const mockPayslipsRef = useRef<string | null>(null);
-
-  const [mockLoans, setMockLoans] = useState<Loan[]>([]);
-  const [mockSavingPlans, setMockSavingPlans] = useState<SavingPlan[]>([]);
-  const [mockLeaveRecords, setMockLeaveRecords] = useState<LeaveEntry[]>([]);
-  const [mockTimesheets, setMockTimesheets] = useState<TimesheetEntry[]>([]);
-  const [mockToDos, setMockToDos] = useState<ToDoEntry[]>([]);
-  const [mockPayslips, setMockPayslips] = useState<MockPayslip[]>([]);
 
   const hasTriggeredGenerateToDosRef = useRef(false);
   const isGeneratingToDosRef = useRef(false);
   const refetchToDosFnRef = useRef<(() => void) | null>(null);
 
   const triggerGenerateToDos = useCallback(async () => {
-    if (isMockDataEnabled) return;
     if (!isAuthenticated) return;
     // Only Admins may generate To-Dos (edge function enforces Admin)
-    if (user?.role !== 'Admin') return;
+    if (user?.role !== "Admin") return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-todos');
+      const { error } = await supabase.functions.invoke("generate-todos");
       if (error) {
         showError(`Failed to generate To-Dos: ${error.message}`);
       } else {
@@ -79,7 +64,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     } catch (error: any) {
       showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
     }
-  }, [isMockDataEnabled, isAuthenticated, user?.role]);
+  }, [isAuthenticated, user?.role]);
 
   const safeTriggerGenerateToDos = useCallback(async () => {
     if (isGeneratingToDosRef.current) return;
@@ -92,66 +77,39 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     }
   }, [triggerGenerateToDos]);
 
-  useEffect(() => {
-    if (isMockDataEnabled) {
-      const currentLoans = localStorage.getItem("mockLoans");
-      if (currentLoans !== mockLoansRef.current) {
-        setMockLoans(JSON.parse(currentLoans || "[]"));
-        mockLoansRef.current = currentLoans;
-      }
+  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails, upsertCompanyDetails } =
+    useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-      const currentSavingPlans = localStorage.getItem("mockSavingPlans");
-      if (currentSavingPlans !== mockSavingPlansRef.current) {
-        setMockSavingPlans(JSON.parse(currentSavingPlans || "[]"));
-        mockSavingPlansRef.current = currentSavingPlans;
-      }
+  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+    activeTaxYear: activeTaxYearForCalculations,
+  });
 
-      const currentLeaveRecords = localStorage.getItem("mockLeaveRecords");
-      if (currentLeaveRecords !== mockLeaveRecordsRef.current) {
-        setMockLeaveRecords(JSON.parse(currentLeaveRecords || "[]"));
-        mockLeaveRecordsRef.current = currentLeaveRecords;
-      }
+  const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
 
-      const currentTimesheets = localStorage.getItem("mockTimesheets");
-      if (currentTimesheets !== mockTimesheetsRef.current) {
-        setMockTimesheets(JSON.parse(currentTimesheets || "[]"));
-        mockTimesheetsRef.current = currentTimesheets;
-      }
+  const { publicHolidays, isLoadingPublicHolidays, saveHoliday, deleteHoliday, importDefaultSouthAfricanHolidays } = usePublicHolidays({
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
 
-      const currentToDos = localStorage.getItem("mockToDos");
-      if (currentToDos !== mockToDosRef.current) {
-        setMockToDos(JSON.parse(currentToDos || "[]"));
-        mockToDosRef.current = currentToDos;
-      }
+  const { payCycleSettings, isLoadingPayCycleSettings, savePayCycleSettings, refetchPayCycleSettings } = usePayCycleSettings({
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
 
-      const currentPayslips = localStorage.getItem("mockPayslips");
-      if (currentPayslips !== mockPayslipsRef.current) {
-        setMockPayslips(JSON.parse(currentPayslips || "[]"));
-        mockPayslipsRef.current = currentPayslips;
-      }
-    } else {
-      setMockLoans([]);
-      setMockSavingPlans([]);
-      setMockLeaveRecords([]);
-      setMockTimesheets([]);
-      setMockToDos([]);
-      setMockPayslips([]);
-
-      mockLoansRef.current = null;
-      mockSavingPlansRef.current = null;
-      mockLeaveRecordsRef.current = null;
-      mockTimesheetsRef.current = null;
-      mockToDosRef.current = null;
-      mockPayslipsRef.current = null;
-    }
-  }, [isMockDataEnabled]);
-
-  const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails, upsertCompanyDetails } = useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear: activeTaxYearForCalculations });
-  const { workHoursSettings, isLoadingWorkHoursSettings, saveWorkHoursSettings, refetchWorkHoursSettings } = useWorkHoursSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { publicHolidays, isLoadingPublicHolidays, saveHoliday, deleteHoliday, importDefaultSouthAfricanHolidays } = usePublicHolidays({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { payCycleSettings, isLoadingPayCycleSettings, savePayCycleSettings, refetchPayCycleSettings } = usePayCycleSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings, refetchUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings, refetchUserTaxSettings } = useUserTaxSettings({
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
 
   const companyDetails = supabaseCompanyDetails;
 
@@ -162,28 +120,87 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     }
   }, [companyDetails, activeTaxYearForCalculations]);
 
-  const setActiveTaxYearForCalculations = useCallback((year: number) => {
-    setActiveTaxYearState(year);
-    if (!isMockDataEnabled) {
+  const setActiveTaxYearForCalculations = useCallback(
+    (year: number) => {
+      setActiveTaxYearState(year);
       upsertCompanyDetails({ activeTaxYear: year });
-    }
-  }, [isMockDataEnabled, upsertCompanyDetails]);
+    },
+    [upsertCompanyDetails]
+  );
 
   const companyNameForEmployeeId = useMemo(() => {
-    return companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
+    return companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Company";
   }, [companyDetails]);
 
-  const { employees, isLoadingEmployees, isMutatingEmployee, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee, refetchEmployees } = useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
+  // Live collections. (initial* are ignored when not in mock mode)
+  const { employees, isLoadingEmployees, isMutatingEmployee, addOrUpdateEmployee: baseAddOrUpdateEmployee, deleteEmployee: baseDeleteEmployee, refetchEmployees } =
+    useEmployeesData({ isMockDataEnabled, companyName: companyNameForEmployeeId, isAuthenticated, isLoadingAuth });
 
-  const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({ initialPayslips: mockPayslips, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+  const emptyPayslips = useMemo<MockPayslip[]>(() => [], []);
+  const emptyLoans = useMemo<Loan[]>(() => [], []);
+  const emptySavingPlans = useMemo<SavingPlan[]>(() => [], []);
+  const emptyLeaveRecords = useMemo<LeaveEntry[]>(() => [], []);
+  const emptyTimesheets = useMemo<TimesheetEntry[]>(() => [], []);
+  const emptyToDos = useMemo<ToDoEntry[]>(() => [], []);
+
+  const { payslips, setPayslips, isLoadingPayslips, upsertPayslip, batchUpsertPayslips, refetchPayslips } = usePayslipsData({
+    initialPayslips: emptyPayslips,
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
+
   const { earningComponents, deductionComponents, assignments, isLoading: isLoadingComponents, refetch: refetchComponents } = useCompensationComponents();
   const { rules: overtimeRules, isLoading: isLoadingOvertimeRules, refetch: refetchOvertimeRules } = useOvertimeRules();
-  const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({ initialLoans: mockLoans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({ initialSavingPlans: mockSavingPlans, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { payrollSavingsEntries, isLoadingPayrollSavingsEntries, recordSavingsPayment, refetchPayrollSavingsEntries } = usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({ initialLeaveRecords: mockLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
-  const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({ initialTimesheets: mockTimesheets, employees, leaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth, workHoursSettings });
-  const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({ initialToDos: mockToDos, isMockDataEnabled, employees, addOrUpdateEmployee: baseAddOrUpdateEmployee, isAuthenticated, isLoadingAuth });
+
+  const { loans, isLoadingLoans, addLoan, updateLoan, deleteLoan, togglePauseDeduction, applyManualPayment } = useLoansData({
+    initialLoans: emptyLoans,
+    employees,
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
+
+  const { savingPlans, isLoadingSavingPlans, addSavingPlan, updateSavingPlan } = useSavingPlansData({
+    initialSavingPlans: emptySavingPlans,
+    employees,
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
+
+  const { payrollSavingsEntries, isLoadingPayrollSavingsEntries, recordSavingsPayment, refetchPayrollSavingsEntries } = usePayrollSavingsEntries({
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
+
+  const { leaveRecords, isLoadingLeaveRecords, addLeaveRecord } = useLeaveData({
+    initialLeaveRecords: emptyLeaveRecords,
+    employees,
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+  });
+
+  const { timesheets, isLoadingTimesheets, addOrUpdateTimesheet, deleteTimesheet, updateTimesheetStatus, addTimesheetBatch } = useTimesheetData({
+    initialTimesheets: emptyTimesheets,
+    employees,
+    leaveRecords,
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+    workHoursSettings,
+  });
+
+  const { toDos, pendingCount, isLoadingToDos, markToDoAsDone, refetchToDos } = useToDosData({
+    initialToDos: emptyToDos,
+    isMockDataEnabled,
+    employees,
+    addOrUpdateEmployee: baseAddOrUpdateEmployee,
+    isAuthenticated,
+    isLoadingAuth,
+  });
 
   refetchToDosFnRef.current = refetchToDos;
 
@@ -210,69 +227,18 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     earningComponents,
     deductionComponents,
     assignments,
-    overtimeRules || undefined,
+    overtimeRules || undefined
   );
 
+  // Initial To-Do generation when live + authenticated
   useEffect(() => {
     if (silent) return;
+    if (!isAuthenticated || isLoadingAuth) return;
 
-    const handleMockDataToggleEvent = () => {
-      const mockEnabled = localStorage.getItem("isMockDataEnabled") === "true";
-      setIsMockDataEnabled(mockEnabled);
-      if (!mockEnabled && isAuthenticated && !isLoadingAuth) {
-        safeTriggerGenerateToDos();
-      }
-    };
-
-    window.addEventListener("allMockDataUpdated", handleMockDataToggleEvent);
-
-    if (!isMockDataEnabled && isAuthenticated && !isLoadingAuth && !hasTriggeredGenerateToDosRef.current) {
+    if (!hasTriggeredGenerateToDosRef.current) {
       safeTriggerGenerateToDos();
     }
-
-    return () => {
-      window.removeEventListener("allMockDataUpdated", handleMockDataToggleEvent);
-    };
-  }, [isAuthenticated, isLoadingAuth, isMockDataEnabled, safeTriggerGenerateToDos, silent]);
-
-  useEffect(() => {
-    if (silent) return;
-
-    const handleLoansUpdated = (event: CustomEvent<Loan[]>) => {
-      if (isMockDataEnabled) setMockLoans(event.detail);
-    };
-    const handleSavingPlansUpdated = (event: CustomEvent<SavingPlan[]>) => {
-      if (isMockDataEnabled) setMockSavingPlans(event.detail);
-    };
-    const handleLeaveRecordsUpdated = (event: CustomEvent<LeaveEntry[]>) => {
-      if (isMockDataEnabled) setMockLeaveRecords(event.detail);
-    };
-    const handleTimesheetsUpdated = (event: CustomEvent<TimesheetEntry[]>) => {
-      if (isMockDataEnabled) setMockTimesheets(event.detail);
-    };
-    const handleToDosUpdated = (event: CustomEvent<ToDoEntry[]>) => {
-      if (isMockDataEnabled) setMockToDos(event.detail);
-    };
-    const handlePayslipsUpdated = (event: CustomEvent<MockPayslip[]>) => {
-      if (isMockDataEnabled) setMockPayslips(event.detail);
-    };
-
-    window.addEventListener("loansUpdated", handleLoansUpdated as EventListener);
-    window.addEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
-    window.addEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
-    window.addEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
-    window.addEventListener("toDosUpdated", handleToDosUpdated as EventListener);
-    window.addEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
-
-    return () => {
-      window.removeEventListener("loansUpdated", handleLoansUpdated as EventListener);
-      window.removeEventListener("savingPlansUpdated", handleSavingPlansUpdated as EventListener);
-      window.removeEventListener("leaveRecordsUpdated", handleLeaveRecordsUpdated as EventListener);
-      window.removeEventListener("timesheetsUpdated", handleTimesheetsUpdated as EventListener);
-      window.removeEventListener("toDosUpdated", handleToDosUpdated as EventListener);
-      window.removeEventListener("payslipsUpdated", handlePayslipsUpdated as EventListener);
-    };
-  }, [isMockDataEnabled, silent]);
+  }, [isAuthenticated, isLoadingAuth, safeTriggerGenerateToDos, silent]);
 
   // Central soft-refresh when app regains focus/visibility
   useEffect(() => {
@@ -284,20 +250,19 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
       if (now - lastRefetchTsRef.current < MIN_INTERVAL) return;
       lastRefetchTsRef.current = now;
 
-      if (isMockDataEnabled || !isAuthenticated || isLoadingAuth) return;
+      if (!isAuthenticated || isLoadingAuth) return;
 
       // Prevent re-entrancy across pages for a few seconds
       const w = window as any;
       if (w.__appRefreshInProgress) return;
       w.__appRefreshInProgress = true;
-      setTimeout(() => { w.__appRefreshInProgress = false; }, 5000);
+      setTimeout(() => {
+        w.__appRefreshInProgress = false;
+      }, 5000);
 
-      // Refetch all live data collections to recover from backgrounded tab
       refetchCompanyDetails?.();
       refetchTaxTables?.(activeTaxYearForCalculations);
       refetchWorkHoursSettings?.();
-      // public holidays also refresh on focus
-      try { typeof importDefaultSouthAfricanHolidays === "function" && null; } catch {}
       refetchPayCycleSettings?.();
       refetchUserTaxSettings?.();
       refetchPayslips?.();
@@ -306,9 +271,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
       refetchComponents?.();
       refetchOvertimeRules?.();
 
-      // Ensure employees are also refetched
       try {
-        typeof (refetchEmployees) === "function" && (refetchEmployees as () => void)();
+        typeof refetchEmployees === "function" && refetchEmployees();
       } catch {
         // allow hook-level errors to surface
       }
@@ -319,7 +283,6 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
       window.removeEventListener("appFocusRefresh", handler);
     };
   }, [
-    isMockDataEnabled,
     isAuthenticated,
     isLoadingAuth,
     refetchCompanyDetails,
@@ -329,8 +292,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     refetchUserTaxSettings,
     refetchPayslips,
     refetchPayrollSavingsEntries,
-    // @ts-ignore include to stabilize effect if present
     refetchEmployees,
+    activeTaxYearForCalculations,
   ]);
 
   return {
@@ -365,6 +328,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     isLoadingToDos,
     isLoadingPayslips,
     isLoadingPayrollSavingsEntries,
+    isLoadingComponents,
+    isLoadingOvertimeRules,
     runPayrollProcess,
     calculateSinglePayslipPreview,
     triggerGenerateToDos,
