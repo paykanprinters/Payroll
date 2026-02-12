@@ -1,4 +1,4 @@
-import { MockEmployee, MockPayslip } from "../mock-data";
+import { MockEmployee, MockPayslip } from "../mock-data-interfaces";
 import { getEmployeeName } from "../utils";
 import { format, isSameMonth, isSameYear, parseISO, isSameWeek } from "date-fns";
 

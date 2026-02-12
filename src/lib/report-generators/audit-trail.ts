@@ -1,4 +1,4 @@
-import { MockEmployee } from "../mock-data"; // Keep import for consistency, though not directly used here
+import { MockEmployee } from "../mock-data-interfaces"; // kept for compatibility with existing typings
 import { getEmployeeName } from "../utils"; // Keep import for consistency
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { getAuditEvents } from "@/utils/audit";

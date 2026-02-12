@@ -1,3 +1,5 @@
+export type { MockEmployee, MockPayslip, LeaveEntry } from "../mock-data-interfaces";
+
 export { generatePayrollSummaryReportContent } from "./payroll-summary";
 export { generateEmployeePayslipReportContent } from "./employee-payslip";
 export { generateTaxStatutoryReportContent } from "./tax-statutory";

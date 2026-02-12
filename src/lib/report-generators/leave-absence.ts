@@ -1,6 +1,16 @@
-import { MockEmployee, LeaveEntry } from "../mock-data";
+import { MockEmployee, LeaveEntry } from "../mock-data-interfaces";
 import { getEmployeeName } from "../utils"; // Import from shared utils
-import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from "date-fns";
+import {
+  format,
+  isSameMonth,
+  isSameYear,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  isWithinInterval,
+} from "date-fns";
 
 export const generateLeaveAbsenceReportContent = (
   leaveRecords: LeaveEntry[],
