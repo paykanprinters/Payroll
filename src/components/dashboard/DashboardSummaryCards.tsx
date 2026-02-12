@@ -70,7 +70,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         <CardContent>
           <div className="text-2xl font-bold">{employeeCount}</div>
           <p className="text-xs text-muted-foreground">
-            {isMockDataEnabled ? "+20.1% from last month (mock)" : (employeeCount > 0 ? "+20.1% from last month" : "No employees")}
+            {employeeCount > 0 ? "Active workforce" : "No employees"}
           </p>
         </CardContent>
       </Card>
@@ -92,14 +92,12 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
               <CreditCard className="h-4 w-4" />
             </span>
-            Recent Payslips
+            Payslips (Total)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{recentPayslipCount}</div>
-          <p className="text-xs text-muted-foreground">
-            {isMockDataEnabled ? "Generated this month (mock)" : "Generated this month"}
-          </p>
+          <p className="text-xs text-muted-foreground">Generated in the system</p>
         </CardContent>
       </Card>
 
@@ -116,9 +114,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">Good</div>
-          <p className="text-xs text-muted-foreground">
-            {isMockDataEnabled ? "All regulations met (mock)" : "All regulations met"}
-          </p>
+          <p className="text-xs text-muted-foreground">Key statutory fields captured</p>
         </CardContent>
       </Card>
     </div>
