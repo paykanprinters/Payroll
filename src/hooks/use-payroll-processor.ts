@@ -327,6 +327,7 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     isLoadingTimesheets,
     isLoadingToDos,
     isLoadingPayslips,
+    payrollSavingsEntries,
     isLoadingPayrollSavingsEntries,
     isLoadingComponents,
     isLoadingOvertimeRules,

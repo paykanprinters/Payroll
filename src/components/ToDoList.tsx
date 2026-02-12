@@ -6,25 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, Info, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
 
 interface ToDoListProps {
   toDos: ToDoEntry[];
   pendingCount: number;
-  markToDoAsDone: (id: string) => Promise<void>; // Updated prop type
+  markToDoAsDone: (id: string) => Promise<void>;
 }
 
-const ToDoList: React.FC<ToDoListProps> = ({ toDos, pendingCount, markToDoAsDone }) => {
-
-  const pendingToDos = toDos.filter(todo => todo.status === "pending");
+const ToDoList: React.FC<ToDoListProps> = ({ toDos, markToDoAsDone }) => {
+  const pendingToDos = toDos.filter((todo) => todo.status === "pending");
 
   const getLevelBadge = (level: ToDoEntry["level"]) => {
     switch (level) {
       case "critical":
-        return <Badge variant="destructive" className="bg-red-500 text-white">Critical</Badge>;
+        return (
+          <Badge variant="destructive" className="bg-red-500 text-white">
+            Critical
+          </Badge>
+        );
       case "warning":
-        return <Badge variant="outline" className="bg-yellow-500 text-white border-yellow-500">Warning</Badge>;
+        return (
+          <Badge variant="outline" className="bg-yellow-500 text-white border-yellow-500">
+            Warning
+          </Badge>
+        );
       case "info":
         return <Badge variant="secondary">Info</Badge>;
       default:
@@ -46,62 +52,72 @@ const ToDoList: React.FC<ToDoListProps> = ({ toDos, pendingCount, markToDoAsDone
   };
 
   return (
-    <Card className="col-span-full lg:col-span-2">
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className="text-xl font-bold">📋 Top Payroll To-Dos</span>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          Payroll To-Dos
           {pendingToDos.length > 0 && (
-            <Badge className="ml-2 bg-primary text-primary-foreground">
+            <Badge className="ml-1 bg-primary text-primary-foreground">
               {pendingToDos.length} Pending
             </Badge>
           )}
         </CardTitle>
         <CardDescription>
-          High-priority tasks and alerts across your payroll modules.
+          High-priority tasks and alerts across employees, timesheets, payroll and compliance.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {pendingToDos.length > 0 ? (
           <div className="space-y-4">
-            {pendingToDos.slice(0, 5).map((todo) => (
-              <div key={todo.id} className="flex items-start justify-between p-3 border rounded-md bg-muted/50">
-                <div className="flex items-center gap-3 flex-1">
-                  {getLevelIcon(todo.level)}
-                  <div>
-                    <p className="font-medium text-sm">{todo.message}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+            {pendingToDos.slice(0, 6).map((todo) => (
+              <div
+                key={todo.id}
+                className="flex items-start justify-between gap-4 rounded-xl border bg-muted/50 p-3"
+              >
+                <div className="flex flex-1 items-start gap-3">
+                  <div className="mt-0.5">{getLevelIcon(todo.level)}</div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium leading-snug">{todo.message}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       {getLevelBadge(todo.level)}
                       <span>Module: {todo.module}</span>
                       {todo.relatedField && (
-                        <span className="ml-2">Field: {todo.relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        <span>
+                          Field: {todo.relatedField.replace(/([A-Z])/g, " $1").trim()}
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex shrink-0 items-center gap-2">
                   {todo.actionUrl && (
                     <Button asChild variant="outline" size="sm">
                       <Link to={todo.actionUrl}>
-                        Go <ArrowRight className="ml-1 h-3 w-3" />
+                        Open <ArrowRight className="ml-1 h-3 w-3" />
                       </Link>
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" onClick={() => markToDoAsDone(todo.id)} title="Mark as Done">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => markToDoAsDone(todo.id)}
+                    title="Mark as done"
+                  >
+                    <CheckCircle className="h-4 w-4 text-green-600" />
                   </Button>
                 </div>
               </div>
             ))}
-            {pendingToDos.length > 5 && (
-              <p className="text-sm text-muted-foreground text-center mt-4">
-                And {pendingToDos.length - 5} more pending to-dos...
+            {pendingToDos.length > 6 && (
+              <p className="pt-1 text-center text-sm text-muted-foreground">
+                And {pendingToDos.length - 6} more pending items…
               </p>
             )}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <CheckCircle className="h-10 w-10 mx-auto mb-3 text-green-500" />
-            <p className="text-lg font-semibold">All caught up!</p>
+          <div className="py-8 text-center text-muted-foreground">
+            <CheckCircle className="mx-auto mb-3 h-10 w-10 text-green-600" />
+            <p className="text-base font-semibold text-slate-900">All caught up</p>
             <p className="text-sm">No pending payroll tasks at the moment.</p>
           </div>
         )}

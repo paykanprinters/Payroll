@@ -8,32 +8,38 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Settings, Eye } from "lucide-react";
 import { useDashboardSettings, DashboardWidgetVisibility } from "@/hooks/use-dashboard-settings";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DashboardVisibilityDropdownProps {
-  isMockDataEnabled: boolean; // New prop
+  isMockDataEnabled: boolean;
 }
 
 const widgetLabels: Record<keyof DashboardWidgetVisibility, string> = {
   summaryCards: "Summary Cards (Top Row)",
   upcomingPayrollCard: "Upcoming Payroll Card",
   toDoListCard: "To-Do List Card",
+  payrollRunCard: "Payroll Run Card",
+
   monthlyPayrollOverviewChart: "Monthly Payroll Overview Chart",
-  currentDateCalendar: "Current Date Calendar",
-  employeeJobTitleDistributionChart: "Employee Job Title Distribution Chart",
-  totalDeductionsBreakdownChart: "Total Deductions Breakdown Chart",
   averageNetPayTrendChart: "Average Net Pay Trend Chart",
+  totalDeductionsBreakdownChart: "Total Deductions Breakdown Chart",
+
+  employeeJobTitleDistributionChart: "Employee Job Title Distribution Chart",
   employeeSalaryDistributionChart: "Employee Salary Distribution Chart",
   monthlyLeaveDaysTakenChart: "Monthly Leave Days Taken Chart",
+
+  timesheetStatusChart: "Timesheet Status Chart",
+  savingsStatusChart: "Savings Status Chart",
+  loansOverviewCard: "Loans Overview Card",
+
+  currentDateCalendar: "Current Date Calendar",
   quickActionsCard: "Quick Actions Card",
-  payrollRunCard: "Payroll Run Card", // NEW: Added label
 };
 
 const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = ({ isMockDataEnabled }) => {
@@ -48,8 +54,7 @@ const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = 
     );
   }
 
-  // Determine if the current user is an Admin to enable/disable reset button
-  const isAdmin = user?.role === 'Admin';
+  const isAdmin = user?.role === "Admin";
 
   return (
     <DropdownMenu>
@@ -59,8 +64,8 @@ const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = 
           Customize View
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <ScrollArea className="h-64 max-h-[calc(100vh-100px)]"> {/* Added ScrollArea with fixed height and max-height */}
+      <DropdownMenuContent align="end" className="w-72">
+        <ScrollArea className="h-72 max-h-[calc(100vh-120px)]">
           <DropdownMenuLabel>Dashboard Widgets</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {Object.entries(widgetLabels).map(([key, label]) => (
@@ -74,11 +79,16 @@ const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = 
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuCheckboxItem
-            checked={false} // This is a dummy item for the button, always unchecked
+            checked={false}
             onCheckedChange={resetToDefaults}
-            disabled={!isAdmin} // Only Admin can reset to defaults
+            disabled={!isAdmin}
           >
-            <Button variant="ghost" size="sm" className="w-full justify-start p-0 h-auto" disabled={!isAdmin}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start p-0 h-auto"
+              disabled={!isAdmin}
+            >
               <Settings className="mr-2 h-4 w-4" /> Reset to Default
             </Button>
           </DropdownMenuCheckboxItem>

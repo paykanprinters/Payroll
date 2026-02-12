@@ -17,7 +17,11 @@ export interface DashboardWidgetVisibility {
   employeeSalaryDistributionChart: boolean;
   monthlyLeaveDaysTakenChart: boolean;
   quickActionsCard: boolean;
-  payrollRunCard: boolean; // NEW: Added for the Payroll Run Card
+  payrollRunCard: boolean;
+  // Cross-module insights
+  timesheetStatusChart: boolean;
+  savingsStatusChart: boolean;
+  loansOverviewCard: boolean;
 }
 
 // Define default visibility settings based on user roles
@@ -34,7 +38,10 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     employeeSalaryDistributionChart: true,
     monthlyLeaveDaysTakenChart: true,
     quickActionsCard: true,
-    payrollRunCard: true, // NEW: Default to visible for Admin
+    payrollRunCard: true,
+    timesheetStatusChart: true,
+    savingsStatusChart: true,
+    loansOverviewCard: true,
   },
   Manager: {
     summaryCards: true,
@@ -45,10 +52,13 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     employeeJobTitleDistributionChart: true,
     totalDeductionsBreakdownChart: true,
     averageNetPayTrendChart: true,
-    employeeSalaryDistributionChart: false, // Managers might not need detailed salary distribution
+    employeeSalaryDistributionChart: false,
     monthlyLeaveDaysTakenChart: true,
     quickActionsCard: true,
-    payrollRunCard: true, // NEW: Default to visible for Manager
+    payrollRunCard: true,
+    timesheetStatusChart: true,
+    savingsStatusChart: true,
+    loansOverviewCard: true,
   },
   Staff: {
     summaryCards: true,
@@ -61,8 +71,11 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     averageNetPayTrendChart: false,
     employeeSalaryDistributionChart: false,
     monthlyLeaveDaysTakenChart: false,
-    quickActionsCard: false, // Staff might not need quick actions for payroll
-    payrollRunCard: false, // NEW: Default to hidden for Staff
+    quickActionsCard: false,
+    payrollRunCard: false,
+    timesheetStatusChart: true,
+    savingsStatusChart: true,
+    loansOverviewCard: true,
   },
   Viewer: {
     summaryCards: true,
@@ -76,7 +89,10 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     employeeSalaryDistributionChart: true,
     monthlyLeaveDaysTakenChart: true,
     quickActionsCard: false,
-    payrollRunCard: false, // NEW: Default to hidden for Viewer
+    payrollRunCard: false,
+    timesheetStatusChart: true,
+    savingsStatusChart: true,
+    loansOverviewCard: true,
   },
 };
 
@@ -98,7 +114,10 @@ const widgetLabels: Record<keyof DashboardWidgetVisibility, string> = {
   employeeSalaryDistributionChart: "Employee Salary Distribution Chart",
   monthlyLeaveDaysTakenChart: "Monthly Leave Days Taken Chart",
   quickActionsCard: "Quick Actions Card",
-  payrollRunCard: "Payroll Run Card", // NEW: Added label
+  payrollRunCard: "Payroll Run Card",
+  timesheetStatusChart: "Timesheet Status Chart",
+  savingsStatusChart: "Savings Status Chart",
+  loansOverviewCard: "Loans Overview Card",
 };
 
 export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettingsProps) => {
@@ -154,7 +173,7 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
     }
   }, [user, getRoleBasedDefaults, visibleWidgets]);
 
-  // NEW: Define saveLiveSetting
+  // Define saveLiveSetting
   const saveLiveSetting = useCallback(async (widgetKey: keyof DashboardWidgetVisibility, isVisible: boolean) => {
     if (!user?.id) return;
 
@@ -168,7 +187,7 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
             is_visible: isVisible,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: 'user_id, widget_key' } // Upsert based on user_id and widget_key
+          { onConflict: 'user_id, widget_key' }
         );
 
       if (error) {
@@ -181,7 +200,7 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
       console.error("useDashboardSettings: Unhandled error saving live setting:", e);
       showError("An unexpected error occurred while saving dashboard setting.");
     }
-  }, [user]); // Dependency: user
+  }, [user]);
 
   // Load settings from localStorage or Supabase on mount/auth/mockData change
   useEffect(() => {
@@ -219,14 +238,14 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
     }
   }, [isLoadingAuth, user, isMockDataEnabled, getRoleBasedDefaults, fetchLiveSettings, visibleWidgets]);
 
-  // Save settings to localStorage (for mock data) or Supabase (for live data) whenever they change
+  // Save settings to localStorage (for mock data) whenever they change
   useEffect(() => {
-    if (visibleWidgets && !isLoadingSettings) { // Only save if not currently loading and widgets are defined
+    if (visibleWidgets && !isLoadingSettings) {
       if (isMockDataEnabled) {
         console.log("useDashboardSettings: Saving to localStorage:", visibleWidgets);
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(visibleWidgets));
       }
-      // Live data saving is handled by saveLiveSetting in toggleWidgetVisibility and resetToDefaults
+      // Live data saving is handled by saveLiveSetting
     }
   }, [visibleWidgets, isMockDataEnabled, isLoadingSettings]);
 
@@ -237,13 +256,20 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
         ...prev,
         [widgetKey]: !prev[widgetKey],
       };
-      console.log("useDashboardSettings: Toggling widget. New state for", widgetKey, ":", newState[widgetKey], "Full new state:", newState);
+      console.log(
+        "useDashboardSettings: Toggling widget. New state for",
+        widgetKey,
+        ":",
+        newState[widgetKey],
+        "Full new state:",
+        newState
+      );
       if (!isMockDataEnabled) {
-        saveLiveSetting(widgetKey, newState[widgetKey]); // This call will now work
+        saveLiveSetting(widgetKey, newState[widgetKey]);
       }
       return newState;
     });
-  }, [isMockDataEnabled, saveLiveSetting]); // saveLiveSetting is correctly in dependencies
+  }, [isMockDataEnabled, saveLiveSetting]);
 
   const resetToDefaults = useCallback(async () => {
     const defaults = getRoleBasedDefaults();
@@ -251,9 +277,9 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
     if (JSON.stringify(defaults) !== JSON.stringify(visibleWidgets)) {
       setVisibleWidgets(defaults);
     }
-    
+
     if (isMockDataEnabled) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(defaults)); // Explicitly save defaults
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(defaults));
       console.log("useDashboardSettings: Resetting to defaults (mock):", defaults);
     } else {
       // Delete all existing settings for the user to effectively reset to defaults
@@ -287,6 +313,6 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
     visibleWidgets,
     toggleWidgetVisibility,
     resetToDefaults,
-    isLoadingSettings: isLoadingSettings || visibleWidgets === null, // Ensure loading state is accurate
+    isLoadingSettings: isLoadingSettings || visibleWidgets === null,
   };
 };
