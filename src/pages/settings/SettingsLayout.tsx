@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import SettingsHeader from "@/components/settings/SettingsHeader";
+import SetupHealthCard from "@/components/settings/SetupHealthCard";
 
 const sidebarNavItems = [
   { title: "Company Details", href: "/settings/company-details" },
@@ -24,6 +25,8 @@ const SettingsLayout: React.FC = () => {
   return (
     <div className="space-y-6 p-4 pb-16">
       <SettingsHeader />
+
+      <SetupHealthCard />
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <aside className="lg:w-1/4">
