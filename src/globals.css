@@ -2,128 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 @layer base {
-  :root {
-    /* Workpay-inspired light theme */
-    --background: 210 20% 98%; /* #F9FAFB */
-    --foreground: 204 68% 14%; /* #0B253A */
-
-    --card: 0 0% 100%;
-    --card-foreground: 204 68% 14%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 204 68% 14%;
-
-    /* Lime primary for CTAs */
-    --primary: 91 44% 51%; /* #7ABA48 */
-    --primary-foreground: 204 68% 14%;
-
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 204 68% 14%;
-
-    --muted: 210 25% 96%;
-    --muted-foreground: 215 16% 45%;
-
-    --accent: 210 25% 96%;
-    --accent-foreground: 204 68% 14%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214 25% 90%;
-    --input: 214 25% 90%;
-    --ring: 91 44% 51%;
-
-    /* Softer, friendlier rounding */
-    --radius: 0.85rem;
-
-    /* Sidebar tokens */
-    --sidebar-background: 204 68% 14%; /* brand navy */
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 91 44% 51%; /* lime */
-    --sidebar-primary-foreground: 204 68% 14%;
-    --sidebar-accent: 204 55% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 204 55% 18%;
-    --sidebar-ring: 91 44% 51%;
-  }
-
-  .dark {
-    /* Dark mode kept minimal but aligned with brand */
-    --background: 204 68% 10%;
-    --foreground: 210 40% 98%;
-
-    --card: 204 68% 12%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 204 68% 12%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 91 44% 51%;
-    --primary-foreground: 204 68% 10%;
-
-    --secondary: 204 40% 16%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 204 40% 16%;
-    --muted-foreground: 215 20% 70%;
-
-    --accent: 204 40% 16%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 204 35% 18%;
-    --input: 204 35% 18%;
-    --ring: 91 44% 51%;
-
-    --sidebar-background: 204 68% 10%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 91 44% 51%;
-    --sidebar-primary-foreground: 204 68% 10%;
-    --sidebar-accent: 204 40% 16%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 204 35% 18%;
-    --sidebar-ring: 91 44% 51%;
+  /*
+    Phase 6 (Motion & Interaction):
+    - Provide consistent, subtle transitions across interactive elements.
+    - Keep it lightweight and non-intrusive for dense admin UIs.
+  */
+  a,
+  button {
+    @apply transition-colors duration-200;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
+@layer components {
+  /*
+    Buttons
+    - Add a gentle lift + shadow to primary / bordered buttons.
+    - Scoped to button elements to avoid impacting bordered layout containers.
+  */
+  button.bg-primary {
+    @apply transition-all duration-200;
+  }
+  button.bg-primary:hover {
+    @apply -translate-y-0.5 shadow-md;
   }
 
-  html {
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-      Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  button.border {
+    @apply transition-all duration-200;
+  }
+  button.border:hover {
+    @apply -translate-y-0.5 shadow-sm;
   }
 
-  body {
-    @apply bg-background text-foreground antialiased;
+  /*
+    Cards / tiles
+    - Any element that already opts into hover shadow gets consistent timing + lift.
+    - This avoids changing truly static cards.
+  */
+  .hover\:shadow-md,
+  .hover\:shadow-lg,
+  .hover\:shadow-2xl {
+    @apply transition-all duration-300;
   }
-}
-
-/* Styles for react-day-picker modifiers */
-.rdp-day_leaveDays {
-  @apply bg-blue-200 text-blue-900;
-}
-
-.rdp-day_leaveDays.rdp-day_range_start {
-  @apply rounded-l-md;
-}
-
-.rdp-day_leaveDays.rdp-day_range_end {
-  @apply rounded-r-md;
-}
-
-.rdp-day_leaveDays.rdp-day_range_middle {
-  @apply rounded-none;
-}
-
-/* If a single day is a range, it gets both start and end */
-.rdp-day_leaveDays.rdp-day_range_start.rdp-day_range_end {
-  @apply rounded-md;
+  .hover\:shadow-md:hover,
+  .hover\:shadow-lg:hover,
+  .hover\:shadow-2xl:hover {
+    @apply -translate-y-0.5;
+  }
 }

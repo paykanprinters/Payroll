@@ -28,7 +28,15 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
   const { companyDetails, isLoadingCompanyDetails, pendingCount } = usePayrollProcessor();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isScrolled, setIsScrolled] = React.useState(false);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -73,7 +81,12 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
         />
       )}
       <div className="flex min-w-0 flex-col bg-background">
-        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/70 px-4 backdrop-blur-md lg:px-6">
+        <header
+          className={cn(
+            "sticky top-0 z-40 flex h-16 items-center gap-4 border-b px-4 backdrop-blur-md lg:px-6",
+            isScrolled ? "bg-background/90 shadow-sm" : "bg-background/70"
+          )}
+        >
           <div className="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
