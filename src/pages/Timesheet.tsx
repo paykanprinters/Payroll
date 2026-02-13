@@ -6,7 +6,7 @@ import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button";
-import { UploadCloud, Clock, Send, CheckCircle, Filter, RefreshCcw, CalendarDays } from "lucide-react";
+import { Clock, Send, CheckCircle, Filter, RefreshCcw, CalendarDays, X } from "lucide-react";
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -68,6 +68,15 @@ const Timesheet: React.FC = () => {
     addTimesheetBatch(importedEntries);
   };
 
+  const openWeeklyEditor = React.useCallback(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const employeeIdToUse = employeeFilterId !== "all" ? employeeFilterId : (employees?.[0]?.id || "");
+    if (!employeeIdToUse) return;
+    setSelectedEmployeeIdForWeeklyEditor(employeeIdToUse);
+    setSelectedDateForWeeklyEditor(todayIso);
+    setIsWeeklyEditorOpen(true);
+  }, [employeeFilterId, employees]);
+
   const handleEmployeeClick = (employeeId: string, date: string) => {
     setSelectedEmployeeIdForWeeklyEditor(employeeId);
     setSelectedDateForWeeklyEditor(date);
@@ -76,39 +85,42 @@ const Timesheet: React.FC = () => {
 
   const employeesById = React.useMemo(() => {
     const map = new Map<string, { name: string; customId: string }>();
-    (employees || []).forEach(e => {
-      map.set(e.id, { name: `${e.firstName} ${e.lastName}`.trim(), customId: e.customEmployeeId || "N/A" });
+    (employees || []).forEach((e) => {
+      map.set(e.id, {
+        name: `${e.firstName} ${e.lastName}`.trim(),
+        customId: e.customEmployeeId || "N/A",
+      });
     });
     return map;
   }, [employees]);
 
   const totalEntries = React.useMemo(() => timesheets.length, [timesheets]);
-  const submittedCount = React.useMemo(() => timesheets.filter(ts => ts.status === "Submitted").length, [timesheets]);
-  const approvedCount = React.useMemo(() => timesheets.filter(ts => ts.status === "Approved").length, [timesheets]);
-  const draftCount = React.useMemo(() => timesheets.filter(ts => ts.status === "Draft").length, [timesheets]);
-  const lockedCount = React.useMemo(() => timesheets.filter(ts => ts.status === "Locked").length, [timesheets]);
+  const submittedCount = React.useMemo(() => timesheets.filter((ts) => ts.status === "Submitted").length, [timesheets]);
+  const approvedCount = React.useMemo(() => timesheets.filter((ts) => ts.status === "Approved").length, [timesheets]);
+  const draftCount = React.useMemo(() => timesheets.filter((ts) => ts.status === "Draft").length, [timesheets]);
+  const lockedCount = React.useMemo(() => timesheets.filter((ts) => ts.status === "Locked").length, [timesheets]);
 
   const filteredTimesheets = React.useMemo(() => {
     let list = [...timesheets];
 
     if (statusFilter !== "all") {
-      list = list.filter(ts => ts.status === statusFilter);
+      list = list.filter((ts) => ts.status === statusFilter);
     }
 
     if (employeeFilterId !== "all") {
-      list = list.filter(ts => ts.employeeId === employeeFilterId);
+      list = list.filter((ts) => ts.employeeId === employeeFilterId);
     }
 
     if (dateStart) {
-      list = list.filter(ts => ts.date >= dateStart);
+      list = list.filter((ts) => ts.date >= dateStart);
     }
     if (dateEnd) {
-      list = list.filter(ts => ts.date <= dateEnd);
+      list = list.filter((ts) => ts.date <= dateEnd);
     }
 
     const q = search.trim().toLowerCase();
     if (q) {
-      list = list.filter(ts => {
+      list = list.filter((ts) => {
         const details = employeesById.get(ts.employeeId);
         const haystack = `${details?.name || ""} ${details?.customId || ""}`.toLowerCase();
         return haystack.includes(q);
@@ -120,18 +132,34 @@ const Timesheet: React.FC = () => {
     return list;
   }, [timesheets, statusFilter, employeeFilterId, dateStart, dateEnd, search, employeesById]);
 
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setEmployeeFilterId("all");
+    setDateStart("");
+    setDateEnd("");
+    setSearch("");
+  };
+
   return (
     <div className="flex flex-col gap-4">
-      <TimesheetHeader onOpenImport={() => setIsImportDialogOpen(true)} importDisabled={!!isLoadingEmployees} />
+      <TimesheetHeader
+        onOpenImport={() => setIsImportDialogOpen(true)}
+        onOpenWeeklyEditor={openWeeklyEditor}
+        importDisabled={!!isLoadingEmployees}
+        weeklyDisabled={!employees || employees.length === 0}
+      />
 
       {/* Toolbar: Filters and Refresh */}
-      <Card className="border rounded-xl">
+      <Card className="rounded-2xl border bg-white shadow-sm">
         <CardContent className="p-4 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={(v: "all" | "Draft" | "Submitted" | "Approved" | "Locked") => setStatusFilter(v)}>
-                <SelectTrigger className="w-full">
+              <Select
+                value={statusFilter}
+                onValueChange={(v: "all" | "Draft" | "Submitted" | "Approved" | "Locked") => setStatusFilter(v)}
+              >
+                <SelectTrigger className="w-full rounded-xl">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,16 +174,13 @@ const Timesheet: React.FC = () => {
 
             <div>
               <Label className="text-xs">Employee</Label>
-              <Select
-                value={employeeFilterId}
-                onValueChange={(v) => setEmployeeFilterId(v)}
-              >
-                <SelectTrigger className="mt-1">
+              <Select value={employeeFilterId} onValueChange={(v) => setEmployeeFilterId(v)}>
+                <SelectTrigger className="mt-1 rounded-xl">
                   <SelectValue placeholder="All employees" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All employees</SelectItem>
-                  {(employees || []).map(emp => (
+                  {(employees || []).map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
                       {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
                     </SelectItem>
@@ -166,55 +191,61 @@ const Timesheet: React.FC = () => {
 
             <div>
               <Label className="text-xs">Date From</Label>
-              <div className="flex items-center gap-1 mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="flex-1" />
+                <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="flex-1 rounded-xl" />
               </div>
             </div>
 
             <div>
               <Label className="text-xs">Date To</Label>
-              <div className="flex items-center gap-1 mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="flex-1" />
+                <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="flex-1 rounded-xl" />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by employee name or employee number..."
-              className="rounded-full"
+              placeholder="Search by name or employee number..."
+              className="rounded-xl"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.dispatchEvent(new Event("appFocusRefresh"))}
-              className="rounded-full"
-              title="Refresh timesheets"
-            >
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              Showing {filteredTimesheets.length} of {timesheets.length}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.dispatchEvent(new Event("appFocusRefresh"))}
+                className="rounded-xl"
+                title="Refresh timesheets"
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm" onClick={clearFilters} className="rounded-xl">
+                <X className="mr-2 h-4 w-4" />
+                Clear
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Showing {filteredTimesheets.length} of {timesheets.length}
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Compact stats row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
           <SummaryAccent variant="sky" />
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
                 <Clock className="h-4 w-4" />
               </span>
-              Total Entries
+              Total entries
             </CardTitle>
             <CardDescription className="text-xs">All recorded timesheets</CardDescription>
           </CardHeader>
@@ -223,7 +254,7 @@ const Timesheet: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
           <SummaryAccent variant="emerald" />
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -239,7 +270,7 @@ const Timesheet: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
           <SummaryAccent variant="orange" />
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -255,32 +286,31 @@ const Timesheet: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
           <SummaryAccent variant="rose" />
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-rose-100 text-rose-600">
-                <UploadCloud className="h-4 w-4" />
-              </span>
-              Draft/Locked
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Draft / Locked</CardTitle>
             <CardDescription className="text-xs">Work in progress or locked</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">Draft: {draftCount}</div>
-            <div className="text-lg font-semibold">Locked: {lockedCount}</div>
+          <CardContent className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Draft</span>
+              <span className="font-semibold">{draftCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Locked</span>
+              <span className="font-semibold">{lockedCount}</span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Timesheet entry form */}
-      <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+      <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
         <SummaryAccent variant="sky" />
         <CardHeader>
-          <CardTitle>{isEditing ? "Edit Timesheet Entry" : "Record Daily Time"}</CardTitle>
-          <CardDescription>
-            Enter daily clock-in/out times and breaks for an employee.
-          </CardDescription>
+          <CardTitle className="text-xl">{isEditing ? "Edit timesheet entry" : "Record daily time"}</CardTitle>
+          <CardDescription>Enter daily clock-in/out times and breaks for an employee.</CardDescription>
         </CardHeader>
         <CardContent>
           <TimesheetForm
@@ -303,17 +333,6 @@ const Timesheet: React.FC = () => {
         onStatusChange={updateTimesheetStatus}
         onEmployeeClick={handleEmployeeClick}
       />
-
-      {/* Module notes */}
-      <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
-        <h3 className="font-semibold text-lg mb-2">Timesheet Module Notes:</h3>
-        <ul className="list-disc list-inside text-sm space-y-1">
-          <li>Automated Calculations: Total work hours, overtime, late/early flags, and absenteeism are calculated dynamically based on entered times.</li>
-          <li>Approval Workflow: Timesheets can transition through Draft, Submitted, Approved, and Locked states. Only Draft and Submitted entries are editable.</li>
-          <li>Integration Points: In a full system, this module would feed data directly into the payroll engine for accurate salary and overtime calculations. It would also check against the leave module for approved absences.</li>
-          <li>Mock Data: Data can be stored locally or fetched live; use the Refresh button above to reload when using live mode.</li>
-        </ul>
-      </div>
 
       {/* Import dialog modal */}
       {isImportDialogOpen && (

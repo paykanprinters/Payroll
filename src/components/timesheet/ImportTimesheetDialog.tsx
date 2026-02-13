@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, Eye } from "lucide-react";
+import { UploadCloud, Eye, FileUp } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
@@ -24,7 +24,11 @@ import QuickFixTools from "./QuickFixTools";
 import AggregationErrorsPanel from "./AggregationErrorsPanel";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
-import { parse, isValid } from "date-fns";
+
+const hhmmRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" | "personalDesc";
 
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
@@ -33,11 +37,6 @@ interface ImportTimesheetDialogProps {
   employees: MockEmployee[];
   workHoursSettings?: WorkHoursSettings | null;
 }
-
-const hhmmRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
-
-type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" | "personalDesc";
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   isOpen,
@@ -258,45 +257,34 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
     setSortKey("dateAsc");
   };
 
-  const handleImportData = () => {
-    const sourceRows = importFilteredOnly ? filteredRows : editableRows.length ? editableRows : validatedData;
-    const validEntries = sourceRows.filter((row) => row._isValid);
-    if (validEntries.length === 0) {
-      showError("No valid timesheet entries to import.");
-      return;
-    }
-
-    const timesheetsToImport: ImportableTimesheetEntry[] = validEntries
-      .map((row) => {
-        const parsed = parse(row.date.replace(/\//g, "-"), "yyyy-MM-dd", new Date());
-        if (!isValid(parsed)) return null;
-        return {
-          employeeId: row.employeeId,
-          date: parsed,
-          timeIn: row.timeIn,
-          teaStart: row.teaStart,
-          teaEnd: row.teaEnd,
-          lunchStart: row.lunchStart,
-          lunchEnd: row.lunchEnd,
-          timeOut: row.timeOut,
-        } satisfies ImportableTimesheetEntry;
-      })
-      .filter(Boolean) as ImportableTimesheetEntry[];
-
-    if (timesheetsToImport.length === 0) {
-      showError("No valid timesheet entries to import (date parsing failed).");
-      return;
-    }
-
-    onImport(timesheetsToImport);
-    showSuccess(`${timesheetsToImport.length} timesheet entries imported successfully!`);
+  const handleCancel = () => {
     reset();
     onClose();
   };
 
-  const handleCancel = () => {
-    reset();
-    onClose();
+  const handleImportData = () => {
+    const sourceRows = importFilteredOnly ? filteredRows : editableRows;
+
+    const rowsToImport = sourceRows.filter((r) => r._isValid);
+    if (rowsToImport.length === 0) {
+      showError("No valid rows to import.");
+      return;
+    }
+
+    const timesheetsToImport: ImportableTimesheetEntry[] = rowsToImport.map((r) => ({
+      employeeId: r.employeeId,
+      date: new Date(`${r.date.replace(/\//g, "-")}T00:00:00`),
+      timeIn: r.timeIn,
+      timeOut: r.timeOut,
+      teaStart: r.teaStart || "",
+      teaEnd: r.teaEnd || "",
+      lunchStart: r.lunchStart || "",
+      lunchEnd: r.lunchEnd || "",
+    }));
+
+    onImport(timesheetsToImport);
+    showSuccess(`Imported ${timesheetsToImport.length} row(s).`);
+    handleCancel();
   };
 
   return (
@@ -307,7 +295,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
       }}
     >
       <DialogContent
-        className="w-[98vw] max-w-[1600px] h-[95vh] flex flex-col overflow-hidden sm:rounded-lg"
+        className="w-[98vw] max-w-[1600px] h-[95vh] flex flex-col overflow-hidden rounded-2xl"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
           if (isParsing) e.preventDefault();
@@ -320,19 +308,25 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
         }}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <DialogTitle>Import Clock Times</DialogTitle>
-          <DialogDescription>
-            Upload a CSV of punches. We aggregate the earliest as Time In and latest as Time Out per employee/day.
-            <br />
-            <span className="font-semibold text-blue-600">Note:</span> Time Out must be strictly later than Time In.
-          </DialogDescription>
+        <DialogHeader className="space-y-2">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <FileUp className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl">Import clock times</DialogTitle>
+              <DialogDescription>
+                Upload a CSV of punches. We aggregate the earliest as Time In and latest as Time Out per employee/day.
+                <div className="mt-1 text-xs text-muted-foreground">Time Out must be strictly later than Time In.</div>
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto pr-1">
           {safeEmployees.length === 0 ? (
-            <Card className="border-amber-300 bg-amber-50 text-amber-900">
+            <Card className="rounded-2xl border-amber-300 bg-amber-50 text-amber-900">
               <CardHeader>
                 <CardTitle>No employees available</CardTitle>
                 <CardDescription>
@@ -349,7 +343,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
             <>
               {/* Upload and parse */}
               <div className="flex flex-col gap-4 py-4">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
                   <Label htmlFor="timesheet-file" className="sr-only">
                     Upload CSV
                   </Label>
@@ -366,7 +360,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                     className="flex-1"
                   />
                   <Button type="button" onClick={handleParseFile} disabled={!file || isParsing}>
-                    <UploadCloud className="mr-2 h-4 w-4" /> {isParsing ? "Parsing..." : "Parse File"}
+                    <UploadCloud className="h-4 w-4" /> {isParsing ? "Parsing..." : "Parse file"}
                   </Button>
                 </div>
 
@@ -406,7 +400,11 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
               />
 
               {/* Quick-fix tools */}
-              <QuickFixTools onNormalizeDates={bulkNormalizeDates} onClampTimeIn={clampTimeInToStart} onClearMissingBreaks={clearMissingBreaks} />
+              <QuickFixTools
+                onNormalizeDates={bulkNormalizeDates}
+                onClampTimeIn={clampTimeInToStart}
+                onClearMissingBreaks={clearMissingBreaks}
+              />
 
               {/* Aggregation Errors with auto-dismiss */}
               <AggregationErrorsPanel
@@ -418,10 +416,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
 
               {/* Slim banner to restore errors after auto-dismiss */}
               {aggregationErrors.length > 0 && !showAggErrors && (
-                <div className="mt-3 flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
-                  <span className="text-sm">Aggregation Errors hidden to free space.</span>
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
+                  <span className="text-sm">Aggregation errors hidden to free space.</span>
                   <Button variant="outline" size="sm" onClick={() => setShowAggErrors(true)}>
-                    <Eye className="h-4 w-4 mr-1" /> Show errors
+                    <Eye className="mr-1 h-4 w-4" /> Show errors
                   </Button>
                 </div>
               )}
@@ -444,12 +442,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
         </div>
 
         {/* Sticky footer */}
-        <DialogFooter className="sticky bottom-0 bg-background border-t pt-4">
+        <DialogFooter className="sticky bottom-0 border-t bg-background/90 backdrop-blur px-2 pt-4">
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button type="button" onClick={handleImportData} disabled={!canImportFromCurrentView}>
-            Import {importFilteredOnly ? "Filtered" : "Valid"} Entries
+            <UploadCloud className="h-4 w-4" />
+            Import {importFilteredOnly ? "filtered" : "valid"} entries
           </Button>
         </DialogFooter>
       </DialogContent>
