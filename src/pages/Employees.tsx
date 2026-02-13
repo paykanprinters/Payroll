@@ -143,7 +143,6 @@ const Employees: React.FC = () => {
     return sorted(base);
   }, [employees, debouncedSearch, jobTitleFilter, departmentFilter, payBasisFilter, portalAccessFilter, sortField, sortDir]);
 
-  const dataVisualsFontSize = useDataVisualsFontSize();
   const { generatePdf } = usePdfGenerator();
 
   const loadEmployeeDataAndCharts = useCallback(() => {
@@ -273,44 +272,49 @@ const Employees: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="space-y-4">
       <EmployeesHeader />
 
-      <EmployeesToolbar
-        jobTitles={jobTitles}
-        departments={departments}
-        jobTitleFilter={jobTitleFilter}
-        setJobTitleFilter={setJobTitleFilter}
-        departmentFilter={departmentFilter}
-        setDepartmentFilter={setDepartmentFilter}
-        payBasisFilter={payBasisFilter}
-        setPayBasisFilter={setPayBasisFilter}
-        portalAccessFilter={portalAccessFilter}
-        setPortalAccessFilter={setPortalAccessFilter}
-        sortField={sortField}
-        setSortField={setSortField}
-        sortDir={sortDir}
-        setSortDir={setSortDir}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        onRefresh={() => refetchEmployees?.()}
-        totalCount={employees.length}
-        filteredCount={filteredEmployees.length}
-      />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex-1">
+          <EmployeesToolbar
+            jobTitles={jobTitles}
+            departments={departments}
+            jobTitleFilter={jobTitleFilter}
+            setJobTitleFilter={setJobTitleFilter}
+            departmentFilter={departmentFilter}
+            setDepartmentFilter={setDepartmentFilter}
+            payBasisFilter={payBasisFilter}
+            setPayBasisFilter={setPayBasisFilter}
+            portalAccessFilter={portalAccessFilter}
+            setPortalAccessFilter={setPortalAccessFilter}
+            sortField={sortField}
+            setSortField={setSortField}
+            sortDir={sortDir}
+            setSortDir={setSortDir}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            onRefresh={() => refetchEmployees?.()}
+            totalCount={employees.length}
+            filteredCount={filteredEmployees.length}
+          />
+        </div>
 
-      <EmployeesStats
-        totalCount={employees.length}
-        salaryCount={salaryCount}
-        hourlyCount={hourlyCount}
-      />
-
-      <div className="flex justify-end">
-        <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee} className="rounded-full">
-          {isMutatingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add New Employee
-        </Button>
+        <div className="flex justify-end">
+          <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee}>
+            {isMutatingEmployee ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <PlusCircle className="h-4 w-4" />
+            )}
+            Add employee
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+      <EmployeesStats totalCount={employees.length} salaryCount={salaryCount} hourlyCount={hourlyCount} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <JobTitleDistributionChart data={jobTitleDistribution} fontSize={chartFontSize} />
         <AverageSalaryChart data={averageSalaryByJobTitle} fontSize={chartFontSize} />
       </div>
@@ -337,13 +341,6 @@ const Employees: React.FC = () => {
         onConfirm={confirmDeleteEmployee}
         isMutatingEmployee={isMutatingEmployee}
       />
-
-      <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
-        <h3 className="font-semibold text-lg mb-2">Employee Data Section</h3>
-        <p className="text-sm">
-          Filter, sort, add, edit, delete, and download employee profiles. Use Refresh to reload from the database when live mode is enabled.
-        </p>
-      </div>
     </div>
   );
 };
