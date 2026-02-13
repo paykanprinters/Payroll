@@ -25,7 +25,7 @@ const GenerationButtonsPanel: React.FC<GenerationButtonsPanelProps> = ({
         disabled={disabledSelectedPeriod}
       >
         <FileStack className="mr-2 h-4 w-4 shrink-0" />
-        <span>Generate Payslips for Selected Period</span>
+        <span>Generate payslips for selected period</span>
       </Button>
       <Button
         className="w-full h-auto whitespace-normal py-3 text-sm leading-snug"
@@ -33,7 +33,7 @@ const GenerationButtonsPanel: React.FC<GenerationButtonsPanelProps> = ({
         disabled={disabledCurrentPeriod}
       >
         <FileStack className="mr-2 h-4 w-4 shrink-0" />
-        <span>Generate All for Current Period (Download)</span>
+        <span>Export current period (ZIP)</span>
       </Button>
     </div>
   );

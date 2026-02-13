@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, ReceiptText, Sparkles } from "lucide-react";
 
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
@@ -15,6 +15,8 @@ import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOver
 import { useAuth } from "@/context/AuthContext";
 import PayslipsSummaryCards from "@/components/payslips/overview/PayslipsSummaryCards";
 import { usePayslipsOverviewSelectors, PayslipsOverviewFilters } from "@/hooks/selectors/usePayslipsOverviewSelectors";
+import { Button } from "@/components/ui/button";
+import CalculatePaycheckDialog from "@/components/payroll/CalculatePaycheckDialog";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -32,6 +34,7 @@ const PayslipOverviewPage: React.FC = () => {
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPayslipId, setSelectedPayslipId] = useState<string>("");
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
 
   // Filters (canonical state lives in page)
   const [filters, setFilters] = useState<PayslipsOverviewFilters>({
@@ -53,6 +56,14 @@ const PayslipOverviewPage: React.FC = () => {
       }
     }
   }, [user, employees]); // intentionally not including filters to avoid loops
+
+  // Keep generation selection aligned with the current employee filter (when not "all")
+  useEffect(() => {
+    if (filters.employeeFilterId !== "all" && filters.employeeFilterId !== selectedEmployeeId) {
+      setSelectedEmployeeId(filters.employeeFilterId);
+      setSelectedPayslipId("");
+    }
+  }, [filters.employeeFilterId, selectedEmployeeId]);
 
   const {
     filteredPayslips,
@@ -108,11 +119,10 @@ const PayslipOverviewPage: React.FC = () => {
     );
   }
 
-  // Do not block the page if company details are missing.
-  // Staff should be able to view their own payslips; Admin/Manager will see a soft warning near generation actions.
+  const isAdminOrManager = user?.role === "Admin" || user?.role === "Manager";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="space-y-4">
       <PayslipsHeader />
 
       {/* Toolbar: Filters, Date range, Search (debounced), Refresh */}
@@ -145,15 +155,37 @@ const PayslipOverviewPage: React.FC = () => {
       <PayslipsSummaryCards gross={totals.gross} net={totals.net} count={totals.count} />
 
       {payslips.length === 0 && (
-        <Card className="border-yellow-500 bg-yellow-50 text-yellow-800">
-          <CardHeader>
-            <CardTitle>No Payslips Found</CardTitle>
-            <CardDescription>
-              It looks like there are no payslips available. Please ensure "Mock Data" is enabled in{" "}
-              <a href="/settings/mock-data" className="underline font-semibold">Settings &gt; Mock Data</a>{" "}
-              to populate the system with sample payslips.
-            </CardDescription>
-          </CardHeader>
+        <Card className="rounded-2xl border bg-white p-10 shadow-sm">
+          <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
+            <div className="rounded-2xl bg-muted p-3 ring-1 ring-border">
+              <ReceiptText className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="mt-4 text-xl font-semibold">No payslips yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Once payslips are generated for a pay period, they'll show up here for review, export, and employee self-service.
+            </p>
+
+            {isAdminOrManager ? (
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                <Button onClick={() => setIsPreviewDialogOpen(true)} variant="outline" className="bg-white">
+                  <Sparkles className="h-4 w-4" />
+                  Preview paycheck
+                </Button>
+                <Button
+                  onClick={() => {
+                    const el = document.getElementById("payslip-generator");
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >
+                  Generate payslips
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-6 text-sm text-muted-foreground">
+                If you believe you're missing a payslip, please contact your payroll administrator.
+              </div>
+            )}
+          </div>
         </Card>
       )}
 
@@ -166,11 +198,11 @@ const PayslipOverviewPage: React.FC = () => {
           />
 
           {selectedPayslipForPreview && (
-            <Card className="relative overflow-hidden border rounded-xl bg-white">
+            <Card className="relative overflow-hidden border rounded-2xl bg-white shadow-sm">
               <CardHeader>
-                <CardTitle>Payslip Preview</CardTitle>
+                <CardTitle>Payslip preview</CardTitle>
                 <CardDescription>
-                  Preview of the selected payslip for {getEmployeeName(selectedPayslipForPreview.employeeId)} - {selectedPayslipForPreview.payPeriod}.
+                  {getEmployeeName(selectedPayslipForPreview.employeeId)} • {selectedPayslipForPreview.payPeriod}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center">
@@ -189,25 +221,41 @@ const PayslipOverviewPage: React.FC = () => {
 
         <div className="space-y-4">
           {/* Inline admin/manager warning if company details are missing */}
-          {!companyDetails && (user?.role === "Admin" || user?.role === "Manager") && (
+          {!companyDetails && isAdminOrManager && (
             <Card className="border-amber-500 bg-amber-50 text-amber-900">
               <CardHeader className="flex flex-row items-start gap-3">
                 <AlertTriangle className="h-5 w-5 mt-0.5" />
                 <div>
-                  <CardTitle className="text-amber-900">Company Details Missing</CardTitle>
+                  <CardTitle className="text-amber-900">Company details required for exports</CardTitle>
                   <CardDescription className="text-amber-800">
-                    Company details are required for generating and exporting payslips. Please set them up in{" "}
-                    <a href="/settings/company-details" className="underline font-semibold">Settings &gt; Company Details</a>.
+                    Set up company details to generate and export payslips.
+                    {" "}
+                    <a href="/settings/company-details" className="underline font-semibold">Settings → Company Details</a>.
                   </CardDescription>
                 </div>
               </CardHeader>
             </Card>
           )}
 
-          <Card className="relative overflow-hidden border rounded-xl bg-white">
+          {isAdminOrManager && (
+            <Card className="relative overflow-hidden border rounded-2xl bg-white shadow-sm">
+              <CardHeader>
+                <CardTitle>Preview before you generate</CardTitle>
+                <CardDescription>Quickly verify the current period calculation for a single employee.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => setIsPreviewDialogOpen(true)} variant="outline" className="w-full bg-white">
+                  <Sparkles className="h-4 w-4" />
+                  Preview paycheck
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card id="payslip-generator" className="relative overflow-hidden border rounded-2xl bg-white shadow-sm">
             <CardHeader>
-              <CardTitle>Generate / Select Payslip</CardTitle>
-              <CardDescription>Choose an employee and manage payslip periods.</CardDescription>
+              <CardTitle>Generate and export</CardTitle>
+              <CardDescription>Select an employee, choose a period, then export PDFs and reports.</CardDescription>
             </CardHeader>
             <CardContent>
               <PayslipGenerationSection
@@ -227,12 +275,11 @@ const PayslipOverviewPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-4 p-4 border rounded-lg bg-green-50 text-green-800">
-        <h3 className="font-semibold text-lg mb-2">Payslip Management Area</h3>
-        <p className="text-sm">
-          Use the filters above to explore payslips by employee, date range, or pay frequency. Charts and totals update to reflect your current filters.
-        </p>
-      </div>
+      <CalculatePaycheckDialog
+        isOpen={isPreviewDialogOpen}
+        onClose={() => setIsPreviewDialogOpen(false)}
+        payslipDesignSettings={payslipDesignSettings}
+      />
     </div>
   );
 };

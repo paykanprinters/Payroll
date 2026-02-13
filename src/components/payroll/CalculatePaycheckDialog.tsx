@@ -150,14 +150,14 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Calculate Paycheck Preview</DialogTitle>
+          <DialogTitle>Preview paycheck</DialogTitle>
           <DialogDescription>
-            Select an employee to preview their payslip for the current upcoming pay period.
+            Select an employee to preview their payslip calculation for the current pay period.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 flex-grow overflow-y-auto">
           <div className="space-y-2">
-            <Label htmlFor="employee-select">Select Employee</Label>
+            <Label htmlFor="employee-select">Employee</Label>
             <Select onValueChange={handleEmployeeSelect} value={selectedEmployeeId}>
               <SelectTrigger id="employee-select">
                 <SelectValue placeholder="Select an employee" />
@@ -166,12 +166,12 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
                 {employees.length > 0 ? (
                   employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName} ({emp.id})
+                      {emp.firstName} {emp.lastName}{emp.customEmployeeId ? ` • ${emp.customEmployeeId}` : ""}
                     </SelectItem>
                   ))
                 ) : (
                   <SelectItem value="no-employees" disabled>
-                    No employees available (enable mock data)
+                    No employees available
                   </SelectItem>
                 )}
               </SelectContent>
@@ -215,15 +215,15 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
 
               <div className="flex justify-end gap-2 mt-4">
                 <Button variant="outline" onClick={() => handlePrintOrDownload('print')} disabled={!previewPayslip}>
-                  <Printer className="mr-2 h-4 w-4" /> Print Preview
+                  <Printer className="mr-2 h-4 w-4" /> Print preview
                 </Button>
                 <Button onClick={() => handlePrintOrDownload('download')} disabled={!previewPayslip}>
-                  <Download className="mr-2 h-4 w-4" /> Download Preview PDF
+                  <Download className="mr-2 h-4 w-4" /> Download preview PDF
                 </Button>
               </div>
             </div>
           ) : (
-            selectedEmployeeId && !isTaxTablesMissing && <p className="text-center text-muted-foreground mt-8">Select an employee to see their paycheck preview.</p>
+            selectedEmployeeId && !isTaxTablesMissing && <p className="text-center text-muted-foreground mt-8">Select an employee to see a preview.</p>
           )}
         </div>
         <DialogFooter>

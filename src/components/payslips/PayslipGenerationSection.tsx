@@ -177,7 +177,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     });
 
     if (payslipsForPeriod.length === 0) {
-      showError(`No ${mode} payslips found for the selected period (${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}).`);
+      showError(`No ${mode} payslips found for the selected period (${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}). Generate payslips for that period first.`);
       return;
     }
 
@@ -293,7 +293,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     });
 
     if (payslipsForCurrentPeriod.length === 0) {
-      showError("No payslips found for the current period for any employee. Ensure mock data is up-to-date.");
+      showError("No payslips found for the current period. Generate payslips first, then export.");
       return;
     }
 

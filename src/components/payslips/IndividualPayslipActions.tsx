@@ -26,18 +26,18 @@ const IndividualPayslipActions: React.FC<IndividualPayslipActionsProps> = ({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="w-full" disabled={disabled}>
-            Generate Payslip
+            Export payslip
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="bottom" align="start" sideOffset={8} className="z-50">
           <DropdownMenuItem disabled={disabled} onSelect={onPrint}>
-            <Printer className="mr-2 h-4 w-4" /> Print Payslip
+            <Printer className="mr-2 h-4 w-4" /> Print payslip
           </DropdownMenuItem>
           <DropdownMenuItem disabled={disabled} onSelect={onDownload}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
           </DropdownMenuItem>
           <DropdownMenuItem disabled={disabled} onSelect={() => setShowBreakdown(true)}>
-            <Calculator className="mr-2 h-4 w-4" /> PAYE Breakdown
+            <Calculator className="mr-2 h-4 w-4" /> PAYE breakdown
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
