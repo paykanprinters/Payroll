@@ -30,7 +30,7 @@ const StaffHome: React.FC = () => {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Link
-            to="/payslips"
+            to="/payslips/overview"
             className="group rounded-2xl border bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
             <div className="font-semibold">Payslips</div>

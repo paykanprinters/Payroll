@@ -7,13 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { fetchPayrollRuns, createPayrollRun, PayrollRun } from "@/integrations/supabase/payroll-run-queries";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CalendarDays, Plus } from "lucide-react";
 
 const PayrollRunsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { isMockDataEnabled, payCycleSettings } = usePayrollProcessor({ silent: true });
   const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [periodStart, setPeriodStart] = useState<string>("");
@@ -33,10 +34,12 @@ const PayrollRunsPage: React.FC = () => {
       const today = new Date();
       const y = today.getFullYear();
       const m = (today.getMonth() + 1).toString().padStart(2, "0");
-      const d = today.getDate().toString().padStart(2, "0");
       if (payCycleSettings.payCycleType === "Monthly") {
         const start = `${y}-${m}-01`;
-        const end = `${y}-${m}-${new Date(y, today.getMonth() + 1, 0).getDate().toString().padStart(2, "0")}`;
+        const end = `${y}-${m}-${new Date(y, today.getMonth() + 1, 0)
+          .getDate()
+          .toString()
+          .padStart(2, "0")}`;
         setPeriodStart(start);
         setPeriodEnd(end);
       } else {
@@ -49,8 +52,18 @@ const PayrollRunsPage: React.FC = () => {
         sunday.setDate(monday.getDate() + 6);
         const ms = monday.getMonth() + 1;
         const me = sunday.getMonth() + 1;
-        setPeriodStart(`${monday.getFullYear()}-${ms.toString().padStart(2, "0")}-${monday.getDate().toString().padStart(2, "0")}`);
-        setPeriodEnd(`${sunday.getFullYear()}-${me.toString().padStart(2, "0")}-${sunday.getDate().toString().padStart(2, "0")}`);
+        setPeriodStart(
+          `${monday.getFullYear()}-${ms.toString().padStart(2, "0")}-${monday
+            .getDate()
+            .toString()
+            .padStart(2, "0")}`
+        );
+        setPeriodEnd(
+          `${sunday.getFullYear()}-${me.toString().padStart(2, "0")}-${sunday
+            .getDate()
+            .toString()
+            .padStart(2, "0")}`
+        );
       }
     }
   }, [payCycleSettings]);
@@ -73,7 +86,7 @@ const PayrollRunsPage: React.FC = () => {
         notes: null,
       });
       if (run) {
-        setRuns(prev => [run, ...prev]);
+        setRuns((prev) => [run, ...prev]);
         showSuccess("Payroll run created!");
         navigate(`/payroll/runs/${run.id}`);
       }
@@ -84,66 +97,71 @@ const PayrollRunsPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="rounded-2xl border bg-card shadow-sm">
         <CardHeader>
-          <CardTitle>Payroll Runs</CardTitle>
+          <CardTitle className="text-2xl -tracking-tight">Payroll Runs</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="md:col-span-1">
-              <label className="text-sm text-muted-foreground">Period start</label>
-              <input
-                type="date"
-                value={periodStart}
-                onChange={(e) => setPeriodStart(e.target.value)}
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              />
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 rounded-2xl border bg-background p-4 md:grid-cols-5">
+            <div className="md:col-span-2">
+              <Label className="text-xs">Period start</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
+              </div>
             </div>
-            <div className="md:col-span-1">
-              <label className="text-sm text-muted-foreground">Period end</label>
-              <input
-                type="date"
-                value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              />
+            <div className="md:col-span-2">
+              <Label className="text-xs">Period end</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
+              </div>
             </div>
-            <div className="md:col-span-2 flex items-end justify-end">
-              <Button onClick={handleCreateRun} className="w-full md:w-auto">Create run</Button>
+            <div className="md:col-span-1 flex items-end">
+              <Button onClick={handleCreateRun} className="w-full">
+                <Plus className="h-4 w-4" />
+                Create run
+              </Button>
             </div>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Period</TableHead>
-                <TableHead>Cycle</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {runs.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.periodStart} → {r.periodEnd}</TableCell>
-                  <TableCell>{r.payCycleType}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{r.status}</Badge>
-                  </TableCell>
-                  <TableCell>{new Date(r.createdAt || "").toLocaleString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" onClick={() => navigate(`/payroll/runs/${r.id}`)}>Open</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {runs.length === 0 && (
+          <div className="rounded-2xl border bg-white">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">No runs yet.</TableCell>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Cycle</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {runs.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.periodStart} → {r.periodEnd}</TableCell>
+                    <TableCell>{r.payCycleType}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{r.status}</Badge>
+                    </TableCell>
+                    <TableCell>{r.createdAt ? new Date(r.createdAt).toLocaleString() : "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" onClick={() => navigate(`/payroll/runs/${r.id}`)}>
+                        Open
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {runs.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      No runs yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

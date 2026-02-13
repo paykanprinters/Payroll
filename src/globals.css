@@ -3,11 +3,99 @@
 @tailwind utilities;
 
 @layer base {
-  /*
-    Phase 6 (Motion & Interaction):
-    - Provide consistent, subtle transitions across interactive elements.
-    - Keep it lightweight and non-intrusive for dense admin UIs.
-  */
+  :root {
+    /* Workpay-inspired light theme */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Brand */
+    --primary: 94 45% 51%; /* #7ABA48 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 94 45% 51%;
+
+    /* Friendly rounding */
+    --radius: 0.9rem;
+
+    /* Sidebar (deep navy) */
+    --sidebar-background: 207 68% 14%; /* #0B253A */
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 94 45% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 207 55% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 207 45% 20%;
+    --sidebar-ring: 94 45% 51%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 94 45% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 94 45% 51%;
+
+    --sidebar-background: 207 68% 14%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 94 45% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 207 55% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 207 45% 20%;
+    --sidebar-ring: 94 45% 51%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Motion & interaction defaults */
   a,
   button {
     @apply transition-colors duration-200;
@@ -15,11 +103,7 @@
 }
 
 @layer components {
-  /*
-    Buttons
-    - Add a gentle lift + shadow to primary / bordered buttons.
-    - Scoped to button elements to avoid impacting bordered layout containers.
-  */
+  /* Buttons: gentle lift + shadow */
   button.bg-primary {
     @apply transition-all duration-200;
   }
@@ -34,11 +118,7 @@
     @apply -translate-y-0.5 shadow-sm;
   }
 
-  /*
-    Cards / tiles
-    - Any element that already opts into hover shadow gets consistent timing + lift.
-    - This avoids changing truly static cards.
-  */
+  /* Cards / tiles: opt-in hover lift */
   .hover\:shadow-md,
   .hover\:shadow-lg,
   .hover\:shadow-2xl {

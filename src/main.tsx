@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./globals.css";
+import "./App.css";
 import React from "react";
 // Removed: import { usePayrollProcessor } from "./hooks/use-payroll-processor.ts";
 
