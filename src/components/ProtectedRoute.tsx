@@ -14,6 +14,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
   const staffPortalUrl = import.meta.env.VITE_STAFF_PORTAL_URL as string | undefined;
   const adminPortalUrl = import.meta.env.VITE_ADMIN_PORTAL_URL as string | undefined;
+  const isLocalhost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
   if (isLoadingAuth) {
     return (
@@ -28,7 +31,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   }
 
   // Cross-portal enforcement: redirect users to the correct portal domain
-  if (user) {
+  // NOTE: Disable hard redirects on localhost (e.g. Dyad preview / local dev), otherwise navigation can break.
+  if (!isLocalhost && user) {
     if (portalType === "admin" && user.role === "Staff" && staffPortalUrl) {
       // Staff in admin build → send to staff portal domain
       window.location.href = staffPortalUrl;
