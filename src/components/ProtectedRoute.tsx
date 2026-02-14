@@ -17,6 +17,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const isLocalhost =
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const isEmbedded = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.self !== window.top;
+    } catch {
+      // If we can't access window.top due to cross-origin restrictions, assume embedded.
+      return true;
+    }
+  })();
 
   if (isLoadingAuth) {
     return (
@@ -31,8 +40,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   }
 
   // Cross-portal enforcement: redirect users to the correct portal domain
-  // NOTE: Disable hard redirects on localhost (e.g. Dyad preview / local dev), otherwise navigation can break.
-  if (!isLocalhost && user) {
+  // NOTE: Disable hard redirects when embedded (Dyad preview) or on localhost, otherwise navigation can break.
+  if (!isLocalhost && !isEmbedded && user) {
     if (portalType === "admin" && user.role === "Staff" && staffPortalUrl) {
       // Staff in admin build → send to staff portal domain
       window.location.href = staffPortalUrl;

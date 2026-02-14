@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
@@ -44,14 +44,27 @@ const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
 
 const App = () => {
   const isStaffPortal = portalType === "staff";
-  return (
 
+  // Dyad preview runs the app embedded in an iframe. HashRouter is more reliable there,
+  // because some hosts block or interfere with history.pushState-based navigation.
+  const isEmbedded = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+
+  const Router = isEmbedded ? HashRouter : BrowserRouter;
+
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <AutoRefreshOnFocus />
-        <BrowserRouter>
+        <Router>
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -124,7 +137,7 @@ const App = () => {
               </Route>
             </Routes>
           </AuthProvider>
-        </BrowserRouter>
+        </Router>
       </TooltipProvider>
     </QueryClientProvider>
   );
