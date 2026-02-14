@@ -18,8 +18,8 @@ export default function DashboardTimesheetStatusChart({
   const total = statusCounts.reduce((sum, x) => sum + (x.value || 0), 0);
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Timesheet Workflow Status</CardTitle>
         <CardDescription>Distribution of timesheets by workflow stage.</CardDescription>
       </CardHeader>

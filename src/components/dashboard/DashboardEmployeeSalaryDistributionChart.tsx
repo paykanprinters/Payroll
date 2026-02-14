@@ -20,12 +20,12 @@ const DashboardEmployeeSalaryDistributionChart: React.FC<DashboardEmployeeSalary
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Employee Salary Distribution</CardTitle>
         <CardDescription>Number of employees within different salary ranges.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[300px]">
+      <CardContent className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={employeeSalaryDistribution}>
             <CartesianGrid strokeDasharray="3 3" />

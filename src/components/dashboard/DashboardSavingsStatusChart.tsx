@@ -21,8 +21,8 @@ export default function DashboardSavingsStatusChart({ data }: { data: Row[] }) {
   const total = data.reduce((sum, x) => sum + (x.value || 0), 0);
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Savings Plans Status</CardTitle>
         <CardDescription>Active savings entries grouped by status.</CardDescription>
       </CardHeader>

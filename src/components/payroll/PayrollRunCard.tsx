@@ -81,7 +81,6 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
     setCurrentDateForCalculation(newCurrentDate);
   };
 
-
   const handleNewOffCyclePayroll = () => {
     showSuccess("Starting new off-cycle payroll. Redirecting to Payslips page.");
     navigate("/payslips/overview");
@@ -99,8 +98,8 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
   const dueText = daysUntilDue > 0 ? `Due in ${daysUntilDue} days` : (daysUntilDue === 0 ? "Due Today" : "Overdue");
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Payroll Run</CardTitle>
         <CardDescription>Review your upcoming payroll cycle; use Payroll Runs for processing and approvals.</CardDescription>
       </CardHeader>
@@ -115,20 +114,20 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
             </div>
 
             <div className="flex items-center justify-between">
-              <Button variant="ghost" size="icon" onClick={handlePreviousPeriod}>
+              <Button variant="ghost" size="icon" onClick={handlePreviousPeriod} className="rounded-full">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="flex gap-4">
-                <div className="p-3 bg-muted rounded-md text-center">
+                <div className="p-3 bg-muted rounded-xl text-center">
                   <p className="text-sm text-muted-foreground">Check date</p>
                   <p className="font-semibold text-lg">{format(checkDate, "MM/dd/yyyy")}</p>
                 </div>
-                <div className="p-3 bg-muted rounded-md text-center">
+                <div className="p-3 bg-muted rounded-xl text-center">
                   <p className="text-sm text-muted-foreground">Pay period</p>
-                  <p className="font-semibold text-lg">{format(payPeriodStart, "MM/dd")} &rarr; {format(payPeriodEnd, "MM/dd")}</p>
+                  <p className="font-semibold text-lg">{format(payPeriodStart, "MM/dd")} → {format(payPeriodEnd, "MM/dd")}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleNextPeriod}>
+              <Button variant="ghost" size="icon" onClick={handleNextPeriod} className="rounded-full">
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -140,13 +139,13 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
             )}
           </div>
 
-          <div className="lg:col-span-1 space-y-4 border-t lg:border-t-0 lg:border-l pt-6 lg:pt-0 lg:pl-6 border-gray-200 dark:border-gray-700">
+          <div className="lg:col-span-1 space-y-4 border-t lg:border-t-0 lg:border-l pt-6 lg:pt-0 lg:pl-6 border-border">
             <h4 className="text-lg font-semibold">Payroll actions</h4>
-            <Button variant="outline" onClick={handleNewOffCyclePayroll} className="w-full">
+            <Button variant="outline" onClick={handleNewOffCyclePayroll} className="w-full bg-white">
               New off-cycle payroll
             </Button>
-            <Button variant="outline" onClick={handleCalculatePaycheck} className="w-full">
-              Calculate paycheck
+            <Button variant="outline" onClick={handleCalculatePaycheck} className="w-full bg-white">
+              Preview paycheck
             </Button>
           </div>
         </div>

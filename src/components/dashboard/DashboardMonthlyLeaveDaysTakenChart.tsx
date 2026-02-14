@@ -20,12 +20,12 @@ const DashboardMonthlyLeaveDaysTakenChart: React.FC<DashboardMonthlyLeaveDaysTak
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Monthly Leave Days Taken</CardTitle>
         <CardDescription>Total working days taken as leave per month.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[300px]">
+      <CardContent className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={leaveDaysTakenTrend}>
             <CartesianGrid strokeDasharray="3 3" />

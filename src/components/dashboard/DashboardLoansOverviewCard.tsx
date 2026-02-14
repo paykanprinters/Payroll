@@ -22,14 +22,16 @@ export default function DashboardLoansOverviewCard({
   const hasAny = activeCount > 0;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Loans & Advancements</CardTitle>
         <CardDescription>Outstanding exposure and repayment progress.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="h-[320px]">
         {!hasAny ? (
-          <div className="py-6 text-sm text-muted-foreground">No active loans.</div>
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            No active loans.
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">

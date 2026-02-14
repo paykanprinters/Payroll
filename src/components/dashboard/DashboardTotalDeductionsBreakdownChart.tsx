@@ -26,12 +26,12 @@ const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsB
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Total Deductions Breakdown</CardTitle>
         <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[300px]">
+      <CardContent className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

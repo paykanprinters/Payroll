@@ -18,12 +18,12 @@ const DashboardAverageNetPayTrendChart: React.FC<DashboardAverageNetPayTrendChar
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Average Net Pay Trend</CardTitle>
         <CardDescription>Average net pay per employee over recent months.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[300px]">
+      <CardContent className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={averageNetPayTrend}>
             <CartesianGrid strokeDasharray="3 3" />
