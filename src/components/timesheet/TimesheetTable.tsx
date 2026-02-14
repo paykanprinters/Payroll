@@ -14,8 +14,6 @@ import {
   PaginationContent,
   PaginationItem,
   PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
 } from "@/components/ui/pagination";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 
@@ -75,6 +73,21 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   };
+
+  const handleFirstPage = () => setCurrentPage(1);
+  const handleLastPage = () => setCurrentPage(totalPages);
+
+  const pageBlock = React.useMemo(() => {
+    const blockStart = Math.floor((currentPage - 1) / 10) * 10 + 1;
+    const blockEnd = Math.min(totalPages, blockStart + 9);
+    return { blockStart, blockEnd };
+  }, [currentPage, totalPages]);
+
+  const pageNumbers = React.useMemo(() => {
+    const list: number[] = [];
+    for (let p = pageBlock.blockStart; p <= pageBlock.blockEnd; p++) list.push(p);
+    return list;
+  }, [pageBlock.blockStart, pageBlock.blockEnd]);
 
   React.useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
@@ -173,25 +186,74 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
 
             {totalPages > 1 && (
               <Pagination className="my-4">
-                <PaginationContent>
+                <PaginationContent className="flex-wrap gap-1">
                   <PaginationItem>
-                    <PaginationPrevious
-                      onClick={handlePreviousPage}
-                      className={cn(currentPage === 1 && "pointer-events-none opacity-50")}
-                    />
+                    <PaginationLink
+                      size="default"
+                      onClick={handleFirstPage}
+                      className={cn(
+                        "rounded-full bg-white",
+                        currentPage === 1 && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to first page"
+                    >
+                      First
+                    </PaginationLink>
                   </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <PaginationItem key={i}>
-                      <PaginationLink onClick={() => setCurrentPage(i + 1)} isActive={currentPage === i + 1}>
-                        {i + 1}
+                  <PaginationItem>
+                    <PaginationLink
+                      size="default"
+                      onClick={handlePreviousPage}
+                      className={cn(
+                        "rounded-full bg-white",
+                        currentPage === 1 && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to previous page"
+                    >
+                      Back
+                    </PaginationLink>
+                  </PaginationItem>
+
+                  {pageNumbers.map((p) => (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(p)}
+                        isActive={currentPage === p}
+                        className={cn(
+                          "rounded-full",
+                          currentPage === p ? "bg-white" : "hover:bg-muted/50"
+                        )}
+                      >
+                        {p}
                       </PaginationLink>
                     </PaginationItem>
                   ))}
+
                   <PaginationItem>
-                    <PaginationNext
+                    <PaginationLink
+                      size="default"
                       onClick={handleNextPage}
-                      className={cn(currentPage === totalPages && "pointer-events-none opacity-50")}
-                    />
+                      className={cn(
+                        "rounded-full bg-white",
+                        currentPage === totalPages && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to next page"
+                    >
+                      Next
+                    </PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink
+                      size="default"
+                      onClick={handleLastPage}
+                      className={cn(
+                        "rounded-full bg-white",
+                        currentPage === totalPages && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to last page"
+                    >
+                      Last
+                    </PaginationLink>
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
