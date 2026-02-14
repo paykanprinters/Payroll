@@ -140,10 +140,6 @@ const Dashboard: React.FC = () => {
                 repaidPct={loansOverview.repaidPct}
               />
             )}
-            {visibleWidgets?.savingsStatusChart && (
-              <DashboardSavingsStatusChart data={savingsStatus.chartData} />
-            )}
-            {visibleWidgets?.currentDateCalendar && <DashboardCurrentDateCalendar />}
           </div>
         </div>
 
@@ -162,6 +158,14 @@ const Dashboard: React.FC = () => {
               payslipDesignSettings={payslipDesignSettings}
             />
           )}
+
+          {/* Fill the right-column whitespace with secondary widgets */}
+          <div className="space-y-6">
+            {visibleWidgets?.savingsStatusChart && (
+              <DashboardSavingsStatusChart data={savingsStatus.chartData} />
+            )}
+            {visibleWidgets?.currentDateCalendar && <DashboardCurrentDateCalendar />}
+          </div>
         </div>
       </div>
 
