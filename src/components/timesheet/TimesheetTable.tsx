@@ -6,7 +6,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock as ClockIcon, CheckCircle, XCircle, Edit, Trash2 } from "lucide-react";
+import {
+  Clock as ClockIcon,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Trash2,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import {
@@ -192,12 +202,13 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       size="default"
                       onClick={handleFirstPage}
                       className={cn(
-                        "rounded-full bg-white",
+                        "rounded-full bg-white gap-1 pl-2.5 pr-3",
                         currentPage === 1 && "pointer-events-none opacity-50"
                       )}
                       aria-label="Go to first page"
                     >
-                      First
+                      <ChevronsLeft className="h-4 w-4" />
+                      <span>First</span>
                     </PaginationLink>
                   </PaginationItem>
                   <PaginationItem>
@@ -205,12 +216,13 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       size="default"
                       onClick={handlePreviousPage}
                       className={cn(
-                        "rounded-full bg-white",
+                        "rounded-full bg-white gap-1 pl-2.5 pr-3",
                         currentPage === 1 && "pointer-events-none opacity-50"
                       )}
                       aria-label="Go to previous page"
                     >
-                      Back
+                      <ChevronLeft className="h-4 w-4" />
+                      <span>Back</span>
                     </PaginationLink>
                   </PaginationItem>
 
@@ -220,8 +232,9 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                         onClick={() => setCurrentPage(p)}
                         isActive={currentPage === p}
                         className={cn(
-                          "rounded-full",
-                          currentPage === p ? "bg-white" : "hover:bg-muted/50"
+                          "rounded-full bg-white",
+                          currentPage === p &&
+                            "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:text-primary-foreground"
                         )}
                       >
                         {p}
@@ -234,12 +247,13 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       size="default"
                       onClick={handleNextPage}
                       className={cn(
-                        "rounded-full bg-white",
+                        "rounded-full bg-white gap-1 pl-3 pr-2.5",
                         currentPage === totalPages && "pointer-events-none opacity-50"
                       )}
                       aria-label="Go to next page"
                     >
-                      Next
+                      <span>Next</span>
+                      <ChevronRight className="h-4 w-4" />
                     </PaginationLink>
                   </PaginationItem>
                   <PaginationItem>
@@ -247,12 +261,13 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                       size="default"
                       onClick={handleLastPage}
                       className={cn(
-                        "rounded-full bg-white",
+                        "rounded-full bg-white gap-1 pl-3 pr-2.5",
                         currentPage === totalPages && "pointer-events-none opacity-50"
                       )}
                       aria-label="Go to last page"
                     >
-                      Last
+                      <span>Last</span>
+                      <ChevronsRight className="h-4 w-4" />
                     </PaginationLink>
                   </PaginationItem>
                 </PaginationContent>
