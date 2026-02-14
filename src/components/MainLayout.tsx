@@ -128,7 +128,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
         </header>
 
         <main className="flex flex-1 flex-col px-4 py-6 lg:px-6">
-          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 lg:gap-6">
+          <div className="flex w-full flex-1 flex-col gap-4 lg:gap-6">
             {/* Render content even if company details are loading; pages can gate their own content */}
             {isLoadingCompanyDetails && (
               <div className="flex items-center gap-2 text-muted-foreground">
