@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
   } = usePayrollProcessor();
 
   const { settings: payslipDesignSettings, isLoading: isLoadingPayslipDesign } = usePayslipDesignSettings();
-  const { visibleWidgets, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled });
+  const { visibleWidgets, isLoadingSettings, getSectionOrder } = useDashboardSettings({ isMockDataEnabled });
 
   const isLoadingPage =
     isLoadingCompanyDetails ||
@@ -96,6 +96,69 @@ const Dashboard: React.FC = () => {
   );
   const loansOverview = useMemo(() => computeLoansOverview(loans || []), [loans]);
 
+  const mainOrder = useMemo(() => getSectionOrder("main"), [getSectionOrder]);
+  const sideOrder = useMemo(() => getSectionOrder("side"), [getSectionOrder]);
+  const chartsOrder = useMemo(() => getSectionOrder("charts"), [getSectionOrder]);
+
+  const renderWidget = (key: keyof typeof visibleWidgets) => {
+    if (!visibleWidgets || !visibleWidgets[key]) return null;
+
+    switch (key) {
+      case "toDoListCard":
+        return (
+          <ToDoList
+            toDos={toDos}
+            pendingCount={pendingCount}
+            markToDoAsDone={markToDoAsDone}
+          />
+        );
+      case "timesheetStatusChart":
+        return <DashboardTimesheetStatusChart statusCounts={timesheetStatus.chartData} />;
+      case "loansOverviewCard":
+        return (
+          <DashboardLoansOverviewCard
+            activeCount={loansOverview.activeCount}
+            totalLoanAmount={loansOverview.totalLoanAmount}
+            totalRemaining={loansOverview.totalRemaining}
+            repaidPct={loansOverview.repaidPct}
+          />
+        );
+      case "payrollRunCard":
+        return companyDetails && payCycleSettings ? (
+          <PayrollRunCard
+            employees={employees}
+            companyDetails={companyDetails}
+            payCycleType={payCycleSettings.payCycleType}
+            cutOffDay={payCycleSettings.cutOffDay}
+            payDayOffset={payCycleSettings.payDayOffset}
+            runPayrollProcess={runPayrollProcess}
+            calculateSinglePayslipPreview={calculateSinglePayslipPreview}
+            payslipDesignSettings={payslipDesignSettings}
+          />
+        ) : null;
+      case "savingsStatusChart":
+        return <DashboardSavingsStatusChart data={savingsStatus.chartData} />;
+      case "currentDateCalendar":
+        return <DashboardCurrentDateCalendar />;
+
+      case "monthlyPayrollOverviewChart":
+        return <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />;
+      case "averageNetPayTrendChart":
+        return <DashboardAverageNetPayTrendChart averageNetPayTrend={avgNetPayTrend} />;
+      case "totalDeductionsBreakdownChart":
+        return <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={deductionsBreakdown} />;
+      case "employeeJobTitleDistributionChart":
+        return <DashboardEmployeeJobTitleDistributionChart employeeJobTitleData={jobTitleDist} />;
+      case "employeeSalaryDistributionChart":
+        return <DashboardEmployeeSalaryDistributionChart employeeSalaryDistribution={salaryDist} />;
+      case "monthlyLeaveDaysTakenChart":
+        return <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTrend} />;
+
+      default:
+        return null;
+    }
+  };
+
   if (isLoadingPage) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -120,75 +183,24 @@ const Dashboard: React.FC = () => {
 
       <div className="grid items-start gap-6 md:grid-cols-12">
         <div className="md:col-span-7 space-y-6">
-          {visibleWidgets?.toDoListCard && (
-            <ToDoList
-              toDos={toDos}
-              pendingCount={pendingCount}
-              markToDoAsDone={markToDoAsDone}
-            />
-          )}
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {visibleWidgets?.timesheetStatusChart && (
-              <DashboardTimesheetStatusChart statusCounts={timesheetStatus.chartData} />
-            )}
-            {visibleWidgets?.loansOverviewCard && (
-              <DashboardLoansOverviewCard
-                activeCount={loansOverview.activeCount}
-                totalLoanAmount={loansOverview.totalLoanAmount}
-                totalRemaining={loansOverview.totalRemaining}
-                repaidPct={loansOverview.repaidPct}
-              />
-            )}
-          </div>
+          {mainOrder.map((k) => (
+            <React.Fragment key={k}>{renderWidget(k)}</React.Fragment>
+          ))}
         </div>
 
         <div className="md:col-span-5 space-y-6">
           <SetupHealthSummaryCard />
 
-          {visibleWidgets?.payrollRunCard && companyDetails && payCycleSettings && (
-            <PayrollRunCard
-              employees={employees}
-              companyDetails={companyDetails}
-              payCycleType={payCycleSettings.payCycleType}
-              cutOffDay={payCycleSettings.cutOffDay}
-              payDayOffset={payCycleSettings.payDayOffset}
-              runPayrollProcess={runPayrollProcess}
-              calculateSinglePayslipPreview={calculateSinglePayslipPreview}
-              payslipDesignSettings={payslipDesignSettings}
-            />
-          )}
-
-          {/* Fill the right-column whitespace with secondary widgets */}
-          <div className="space-y-6">
-            {visibleWidgets?.savingsStatusChart && (
-              <DashboardSavingsStatusChart data={savingsStatus.chartData} />
-            )}
-            {visibleWidgets?.currentDateCalendar && <DashboardCurrentDateCalendar />}
-          </div>
+          {sideOrder.map((k) => (
+            <React.Fragment key={k}>{renderWidget(k)}</React.Fragment>
+          ))}
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {visibleWidgets?.monthlyPayrollOverviewChart && (
-          <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />
-        )}
-        {visibleWidgets?.averageNetPayTrendChart && (
-          <DashboardAverageNetPayTrendChart averageNetPayTrend={avgNetPayTrend} />
-        )}
-        {visibleWidgets?.totalDeductionsBreakdownChart && (
-          <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={deductionsBreakdown} />
-        )}
-
-        {visibleWidgets?.employeeJobTitleDistributionChart && (
-          <DashboardEmployeeJobTitleDistributionChart employeeJobTitleData={jobTitleDist} />
-        )}
-        {visibleWidgets?.employeeSalaryDistributionChart && (
-          <DashboardEmployeeSalaryDistributionChart employeeSalaryDistribution={salaryDist} />
-        )}
-        {visibleWidgets?.monthlyLeaveDaysTakenChart && (
-          <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTrend} />
-        )}
+        {chartsOrder.map((k) => (
+          <React.Fragment key={k}>{renderWidget(k)}</React.Fragment>
+        ))}
       </div>
     </div>
   );
