@@ -28,18 +28,26 @@ export default function DashboardSavingsStatusChart({ data }: { data: Row[] }) {
       </CardHeader>
       <CardContent className="h-[320px]">
         {total === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-full items-center justify-center py-10 text-sm text-muted-foreground">
             No savings entries yet.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data}>
+            <BarChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
               <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
-              <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-              <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-              <Bar dataKey="value" fill="#7ABA48" name="Entries" />
+              <Tooltip
+                contentStyle={{ fontSize: dataVisualsFontSize }}
+                labelStyle={{ fontSize: dataVisualsFontSize }}
+              />
+              <Legend
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="center"
+                wrapperStyle={{ fontSize: dataVisualsFontSize }}
+              />
+              <Bar dataKey="value" fill="#7ABA48" name="Entries" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

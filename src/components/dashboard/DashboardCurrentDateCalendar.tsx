@@ -13,7 +13,7 @@ const DashboardCurrentDateCalendar: React.FC = () => {
         <CardTitle>Current Date</CardTitle>
         <CardDescription>A quick view of the current date.</CardDescription>
       </CardHeader>
-      <CardContent className="flex h-[320px] items-center justify-center">
+      <CardContent className="flex items-center justify-center py-4">
         <Calendar
           mode="single"
           selected={date}

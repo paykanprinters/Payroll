@@ -27,11 +27,9 @@ export default function DashboardLoansOverviewCard({
         <CardTitle>Loans & Advancements</CardTitle>
         <CardDescription>Outstanding exposure and repayment progress.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[320px]">
+      <CardContent>
         {!hasAny ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            No active loans.
-          </div>
+          <div className="py-10 text-center text-sm text-muted-foreground">No active loans.</div>
         ) : (
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">

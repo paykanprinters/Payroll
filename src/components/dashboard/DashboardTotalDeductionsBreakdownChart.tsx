@@ -20,10 +20,20 @@ const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsB
   const dataVisualsFontSize = useDataVisualsFontSize();
   const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
 
-  const renderLegendText = (value: string, entry: any, total: number) => {
-    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
-    return `${value} (${percentage}%)`;
-  };
+  const WrappedLegend = ({ payload }: any) => (
+    <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
+      {(payload || []).map((entry: any) => {
+        const pct = totalDeductions > 0 ? Math.round((entry.payload?.value / totalDeductions) * 100) : 0;
+        return (
+          <div key={entry.value} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />
+            <span className="text-foreground/80">{entry.value}</span>
+            <span>({pct}%)</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <Card className="h-full rounded-2xl border bg-white shadow-sm">
@@ -31,15 +41,15 @@ const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsB
         <CardTitle>Total Deductions Breakdown</CardTitle>
         <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[320px]">
+      <CardContent className="h-[380px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={totalDeductionsBreakdown}
               cx="50%"
-              cy="50%"
+              cy="46%"
               innerRadius={60}
-              outerRadius={80}
+              outerRadius={90}
               fill="#8884d8"
               dataKey="value"
               labelLine={false}
@@ -49,8 +59,12 @@ const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsB
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-            <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: dataVisualsFontSize }} formatter={(value, entry) => renderLegendText(value, entry, totalDeductions)} />
+            <Tooltip
+              formatter={(value: number) => `R ${value.toLocaleString("en-ZA")}`}
+              contentStyle={{ fontSize: dataVisualsFontSize }}
+              labelStyle={{ fontSize: dataVisualsFontSize }}
+            />
+            <Legend verticalAlign="bottom" align="center" content={<WrappedLegend />} />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>
