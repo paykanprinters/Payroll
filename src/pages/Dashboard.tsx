@@ -4,8 +4,13 @@ import React, { useMemo } from "react";
 import { Loader2 } from "lucide-react";
 
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import RetroFunkHeader from "@/components/dashboard/RetroFunkHeader";
+import DashboardPrimaryActions from "@/components/dashboard/DashboardPrimaryActions";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
+import SetupHealthSummaryCard from "@/components/dashboard/SetupHealthSummaryCard";
+import PayrollRunCard from "@/components/payroll/PayrollRunCard";
+import ToDoList from "@/components/ToDoList";
+
 import DashboardMonthlyPayrollOverviewChart from "@/components/dashboard/DashboardMonthlyPayrollOverviewChart";
 import DashboardTotalDeductionsBreakdownChart from "@/components/dashboard/DashboardTotalDeductionsBreakdownChart";
 import DashboardAverageNetPayTrendChart from "@/components/dashboard/DashboardAverageNetPayTrendChart";
@@ -13,9 +18,6 @@ import DashboardEmployeeJobTitleDistributionChart from "@/components/dashboard/D
 import DashboardEmployeeSalaryDistributionChart from "@/components/dashboard/DashboardEmployeeSalaryDistributionChart";
 import DashboardMonthlyLeaveDaysTakenChart from "@/components/dashboard/DashboardMonthlyLeaveDaysTakenChart";
 import DashboardCurrentDateCalendar from "@/components/dashboard/DashboardCurrentDateCalendar";
-import DashboardQuickActionsCard from "@/components/dashboard/DashboardQuickActionsCard";
-import PayrollRunCard from "@/components/payroll/PayrollRunCard";
-import ToDoList from "@/components/ToDoList";
 import DashboardTimesheetStatusChart from "@/components/dashboard/DashboardTimesheetStatusChart";
 import DashboardSavingsStatusChart from "@/components/dashboard/DashboardSavingsStatusChart";
 import DashboardLoansOverviewCard from "@/components/dashboard/DashboardLoansOverviewCard";
@@ -104,7 +106,9 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <DashboardHeader />
+      <RetroFunkHeader />
+
+      <DashboardPrimaryActions />
 
       {visibleWidgets?.summaryCards && (
         <DashboardSummaryCards
@@ -115,18 +119,38 @@ const Dashboard: React.FC = () => {
       )}
 
       <div className="grid gap-6 lg:grid-cols-12">
-        {visibleWidgets?.toDoListCard && (
-          <div className="lg:col-span-7">
+        <div className="lg:col-span-7 space-y-6">
+          {visibleWidgets?.toDoListCard && (
             <ToDoList
               toDos={toDos}
               pendingCount={pendingCount}
               markToDoAsDone={markToDoAsDone}
             />
-          </div>
-        )}
+          )}
 
-        {visibleWidgets?.payrollRunCard && companyDetails && payCycleSettings && (
-          <div className={visibleWidgets?.toDoListCard ? "lg:col-span-5" : "lg:col-span-12"}>
+          <div className="grid gap-6 md:grid-cols-2">
+            {visibleWidgets?.timesheetStatusChart && (
+              <DashboardTimesheetStatusChart statusCounts={timesheetStatus.chartData} />
+            )}
+            {visibleWidgets?.loansOverviewCard && (
+              <DashboardLoansOverviewCard
+                activeCount={loansOverview.activeCount}
+                totalLoanAmount={loansOverview.totalLoanAmount}
+                totalRemaining={loansOverview.totalRemaining}
+                repaidPct={loansOverview.repaidPct}
+              />
+            )}
+            {visibleWidgets?.savingsStatusChart && (
+              <DashboardSavingsStatusChart data={savingsStatus.chartData} />
+            )}
+            {visibleWidgets?.currentDateCalendar && <DashboardCurrentDateCalendar />}
+          </div>
+        </div>
+
+        <div className="lg:col-span-5 space-y-6">
+          <SetupHealthSummaryCard />
+
+          {visibleWidgets?.payrollRunCard && companyDetails && payCycleSettings && (
             <PayrollRunCard
               employees={employees}
               companyDetails={companyDetails}
@@ -137,8 +161,8 @@ const Dashboard: React.FC = () => {
               calculateSinglePayslipPreview={calculateSinglePayslipPreview}
               payslipDesignSettings={payslipDesignSettings}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -161,24 +185,6 @@ const Dashboard: React.FC = () => {
         {visibleWidgets?.monthlyLeaveDaysTakenChart && (
           <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTrend} />
         )}
-
-        {visibleWidgets?.timesheetStatusChart && (
-          <DashboardTimesheetStatusChart statusCounts={timesheetStatus.chartData} />
-        )}
-        {visibleWidgets?.savingsStatusChart && (
-          <DashboardSavingsStatusChart data={savingsStatus.chartData} />
-        )}
-        {visibleWidgets?.loansOverviewCard && (
-          <DashboardLoansOverviewCard
-            activeCount={loansOverview.activeCount}
-            totalLoanAmount={loansOverview.totalLoanAmount}
-            totalRemaining={loansOverview.totalRemaining}
-            repaidPct={loansOverview.repaidPct}
-          />
-        )}
-
-        {visibleWidgets?.currentDateCalendar && <DashboardCurrentDateCalendar />}
-        {visibleWidgets?.quickActionsCard && <DashboardQuickActionsCard />}
       </div>
     </div>
   );
