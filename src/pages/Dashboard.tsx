@@ -118,7 +118,7 @@ const Dashboard: React.FC = () => {
         />
       )}
 
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid items-start gap-6 lg:grid-cols-12">
         <div className="lg:col-span-7 space-y-6">
           {visibleWidgets?.toDoListCard && (
             <ToDoList
