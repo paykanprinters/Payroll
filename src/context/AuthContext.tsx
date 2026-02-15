@@ -25,12 +25,14 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
+  refreshAuth: (opts?: { silent?: boolean; force?: boolean }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   isAuthenticated: false,
   isLoadingAuth: true,
+  refreshAuth: async () => {},
 });
 AuthContext.displayName = "AuthContext";
 
@@ -221,6 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     isAuthenticated,
     isLoadingAuth,
+    refreshAuth: refreshSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     badgeCount?: number;
   }> = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/profile", icon: UserIcon, label: "My Profile" },
+    { to: "/profile", icon: UserIcon, label: user?.role === "Staff" ? "My Profile" : "My Account" },
     { to: "/docs", icon: BookOpen, label: "Docs" },
     { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
     { to: "/employees", icon: Users, label: "Employees" },
