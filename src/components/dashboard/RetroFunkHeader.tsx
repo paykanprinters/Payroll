@@ -1,21 +1,39 @@
 "use client";
 
 import React from "react";
+import { ShieldCheck } from "lucide-react";
+
 import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown";
 import DashboardLayoutDialog from "@/components/dashboard/DashboardLayoutDialog";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { ShieldCheck } from "lucide-react";
-import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
 
-const RetroFunkHeader: React.FC = () => {
-  const { companyDetails, isMockDataEnabled } = usePayrollProcessor();
-  const { visibleWidgets, getSectionOrder, moveWidget, isLoadingSettings } = useDashboardSettings({
-    isMockDataEnabled,
-  });
+import {
+  DashboardWidgetKey,
+  DashboardWidgetSection,
+  DashboardWidgetVisibility,
+} from "@/hooks/use-dashboard-settings";
 
-  const companyLegalName =
-    companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company";
+interface RetroFunkHeaderProps {
+  companyLegalName: string;
+  isMockDataEnabled: boolean;
+  // Pass the dashboard settings instance down from the Dashboard page so actions immediately affect the widgets.
+  visibleWidgets: DashboardWidgetVisibility | null;
+  isLoadingSettings: boolean;
+  getSectionOrder: (section: DashboardWidgetSection) => DashboardWidgetKey[];
+  moveWidget: (key: DashboardWidgetKey, section: DashboardWidgetSection, toIndex: number) => void;
+  toggleWidgetVisibility: (key: DashboardWidgetKey) => void;
+  resetToDefaults: () => void | Promise<void>;
+}
 
+const RetroFunkHeader: React.FC<RetroFunkHeaderProps> = ({
+  companyLegalName,
+  isMockDataEnabled,
+  visibleWidgets,
+  isLoadingSettings,
+  getSectionOrder,
+  moveWidget,
+  toggleWidgetVisibility,
+  resetToDefaults,
+}) => {
   return (
     <div className="relative overflow-hidden rounded-2xl border bg-[#0B253A] p-8 text-white shadow-xl">
       {/* subtle texture */}
@@ -44,7 +62,13 @@ const RetroFunkHeader: React.FC = () => {
               onMove={moveWidget}
             />
           )}
-          <DashboardVisibilityDropdown isMockDataEnabled={isMockDataEnabled} />
+          <DashboardVisibilityDropdown
+            isMockDataEnabled={isMockDataEnabled}
+            visibleWidgets={visibleWidgets}
+            isLoadingSettings={isLoadingSettings}
+            toggleWidgetVisibility={toggleWidgetVisibility}
+            resetToDefaults={resetToDefaults}
+          />
         </div>
       </div>
     </div>

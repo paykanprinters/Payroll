@@ -65,7 +65,14 @@ const Dashboard: React.FC = () => {
   } = usePayrollProcessor();
 
   const { settings: payslipDesignSettings, isLoading: isLoadingPayslipDesign } = usePayslipDesignSettings();
-  const { visibleWidgets, isLoadingSettings, getSectionOrder } = useDashboardSettings({ isMockDataEnabled });
+  const {
+    visibleWidgets,
+    isLoadingSettings,
+    getSectionOrder,
+    moveWidget,
+    toggleWidgetVisibility,
+    resetToDefaults,
+  } = useDashboardSettings({ isMockDataEnabled });
 
   const isLoadingPage =
     isLoadingCompanyDetails ||
@@ -169,7 +176,16 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <RetroFunkHeader />
+      <RetroFunkHeader
+        companyLegalName={companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company"}
+        isMockDataEnabled={isMockDataEnabled}
+        visibleWidgets={visibleWidgets}
+        isLoadingSettings={isLoadingSettings}
+        getSectionOrder={getSectionOrder}
+        moveWidget={moveWidget}
+        toggleWidgetVisibility={toggleWidgetVisibility}
+        resetToDefaults={resetToDefaults}
+      />
 
       <DashboardPrimaryActions />
 
