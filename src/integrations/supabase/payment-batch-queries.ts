@@ -3,8 +3,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 
-export type PaymentBatchStatus = 'Pending' | 'Exported' | 'Reconciled' | 'Failed';
-export type PaymentItemStatus = 'Pending' | 'Paid' | 'Failed' | 'Returned';
+export type PaymentBatchStatus = "Pending" | "Exported" | "Reconciled" | "Failed";
+export type PaymentItemStatus = "Pending" | "Paid" | "Failed" | "Returned";
 
 export interface PaymentBatch {
   id: string;
@@ -65,11 +65,7 @@ export const fetchPaymentBatches = async (): Promise<PaymentBatch[]> => {
 };
 
 export const fetchPaymentBatchById = async (id: string): Promise<PaymentBatch | null> => {
-  const { data, error } = await supabase
-    .from("payment_batches")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("payment_batches").select("*").eq("id", id).single();
 
   if (error) {
     console.error("payment-batch-queries: fetchPaymentBatchById error", error);
@@ -79,7 +75,29 @@ export const fetchPaymentBatchById = async (id: string): Promise<PaymentBatch | 
   return toCamel(data) as PaymentBatch;
 };
 
-export const createPaymentBatch = async (runId: string, bankFormat: string, totalItems: number, totalAmount: number): Promise<PaymentBatch | null> => {
+export const fetchPaymentBatchByRunId = async (runId: string): Promise<PaymentBatch | null> => {
+  const { data, error } = await supabase
+    .from("payment_batches")
+    .select("*")
+    .eq("run_id", runId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error("payment-batch-queries: fetchPaymentBatchByRunId error", error);
+    showError("Failed to load payment batch for this run.");
+    return null;
+  }
+
+  return data && data[0] ? (toCamel(data[0]) as PaymentBatch) : null;
+};
+
+export const createPaymentBatch = async (
+  runId: string,
+  bankFormat: string,
+  totalItems: number,
+  totalAmount: number
+): Promise<PaymentBatch | null> => {
   const { data: userRes } = await supabase.auth.getUser();
   const userId = userRes?.user?.id || null;
 
@@ -92,10 +110,7 @@ export const createPaymentBatch = async (runId: string, bankFormat: string, tota
     status: "Pending",
   });
 
-  const { data, error } = await supabase
-    .from("payment_batches")
-    .insert(payload)
-    .select();
+  const { data, error } = await supabase.from("payment_batches").insert(payload).select();
 
   if (error) {
     console.error("payment-batch-queries: createPaymentBatch error", error);
@@ -120,11 +135,12 @@ export const fetchBatchItems = async (batchId: string): Promise<PaymentBatchItem
   return (data || []).map(toCamel) as PaymentBatchItem[];
 };
 
-export const addBatchItems = async (batchId: string, items: Omit<PaymentBatchItem, "id"|"batchId"|"createdAt"|"updatedAt">[]): Promise<boolean> => {
+export const addBatchItems = async (
+  batchId: string,
+  items: Omit<PaymentBatchItem, "id" | "batchId" | "createdAt" | "updatedAt">[]
+): Promise<boolean> => {
   const payloads = items.map((it) => toSnake({ ...it, batchId }));
-  const { error } = await supabase
-    .from("payment_batch_items")
-    .insert(payloads);
+  const { error } = await supabase.from("payment_batch_items").insert(payloads);
 
   if (error) {
     console.error("payment-batch-queries: addBatchItems error", error);
@@ -135,10 +151,7 @@ export const addBatchItems = async (batchId: string, items: Omit<PaymentBatchIte
 };
 
 export const updateBatchStatus = async (batchId: string, status: PaymentBatchStatus): Promise<boolean> => {
-  const { error } = await supabase
-    .from("payment_batches")
-    .update(toSnake({ status }))
-    .eq("id", batchId);
+  const { error } = await supabase.from("payment_batches").update(toSnake({ status })).eq("id", batchId);
 
   if (error) {
     console.error("payment-batch-queries: updateBatchStatus error", error);
@@ -148,8 +161,11 @@ export const updateBatchStatus = async (batchId: string, status: PaymentBatchSta
   return true;
 };
 
-
-export const updateItemStatus = async (itemId: string, status: PaymentItemStatus, errorMessage?: string | null): Promise<boolean> => {
+export const updateItemStatus = async (
+  itemId: string,
+  status: PaymentItemStatus,
+  errorMessage?: string | null
+): Promise<boolean> => {
   const { error } = await supabase
     .from("payment_batch_items")
     .update(toSnake({ status, errorMessage: errorMessage ?? null }))

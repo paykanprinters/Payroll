@@ -20,7 +20,12 @@ import {
   PayrollRunItem,
   PayrollRunStatus,
 } from "@/integrations/supabase/payroll-run-queries";
-import { createPaymentBatch, addBatchItems } from "@/integrations/supabase/payment-batch-queries";
+import {
+  createPaymentBatch,
+  addBatchItems,
+  fetchPaymentBatchByRunId,
+  PaymentBatch,
+} from "@/integrations/supabase/payment-batch-queries";
 import { insertAuditLog, fetchAuditLogsForEntity } from "@/integrations/supabase/audit-queries";
 import { createRunSnapshot } from "@/integrations/supabase/run-snapshot-queries";
 import { useOvertimeRules } from "@/hooks/use-overtime-rules";
@@ -77,6 +82,7 @@ const PayrollRunDetailPage: React.FC = () => {
   const [audits, setAudits] = useState<any[]>([]);
   const [blockers, setBlockers] = useState<ReadinessBlocker[]>([]);
   const [activeTab, setActiveTab] = useState<"workflow" | "items" | "audit">("workflow");
+  const [paymentBatch, setPaymentBatch] = useState<PaymentBatch | null>(null);
 
   const targetPeriod = useMemo(() => {
     if (!run) return null;
@@ -92,6 +98,7 @@ const PayrollRunDetailPage: React.FC = () => {
       setItems(its);
       const logs = await fetchAuditLogsForEntity("payroll_run", id);
       setAudits(logs);
+      setPaymentBatch(await fetchPaymentBatchByRunId(id));
       setLoading(false);
     };
     load();
@@ -225,6 +232,14 @@ const PayrollRunDetailPage: React.FC = () => {
       if (isMockDataEnabled) showError("Disable mock data to create live payment batches.");
       return;
     }
+
+    const existing = await fetchPaymentBatchByRunId(id);
+    if (existing) {
+      setPaymentBatch(existing);
+      navigate(`/payroll/batches/${existing.id}`);
+      return;
+    }
+
     const toastId = showLoading("Creating payment batch...") as string;
     try {
       const runItems = await fetchRunItems(id);
@@ -252,6 +267,7 @@ const PayrollRunDetailPage: React.FC = () => {
       });
       const ok = await addBatchItems(batch.id, itemsToInsert);
       if (ok) {
+        setPaymentBatch(batch);
         showSuccess(`Payment batch ${batch.id} created.`);
         await insertAuditLog("payroll_run", id, `Payment batch created`, {
           batchId: batch.id,
@@ -309,9 +325,25 @@ const PayrollRunDetailPage: React.FC = () => {
   };
 
   const actionLinkForBlocker = (b: ReadinessBlocker) => {
-    if (b.type === "BANK_INFO") return "/employees";
-    if (b.type === "TAX_INFO") return "/settings/tax-liabilities";
-    if (b.type === "TIMESHEET_DRAFT" || b.type === "MISSING_TIMESHEET") return "/timesheet";
+    if (b.type === "BANK_INFO" && b.employeeId) {
+      return `/employees?employeeId=${encodeURIComponent(b.employeeId)}&focus=bank`;
+    }
+    if (b.type === "EMPLOYEE_TAX_INFO" && b.employeeId) {
+      return `/employees?employeeId=${encodeURIComponent(b.employeeId)}&focus=tax`;
+    }
+    if (b.type === "COMPANY_TAX_INFO") {
+      return `/settings/company-details?focus=tax`;
+    }
+
+    if ((b.type === "TIMESHEET_DRAFT" || b.type === "MISSING_TIMESHEET") && b.employeeId && run) {
+      const start = run.periodStart;
+      const end = run.periodEnd;
+      const status = b.type === "TIMESHEET_DRAFT" ? "Draft" : "all";
+      return `/timesheet?employeeId=${encodeURIComponent(b.employeeId)}&dateStart=${encodeURIComponent(
+        start
+      )}&dateEnd=${encodeURIComponent(end)}&status=${encodeURIComponent(status)}`;
+    }
+
     return null;
   };
 
@@ -326,6 +358,14 @@ const PayrollRunDetailPage: React.FC = () => {
   const nextStatuses = statusFlow[run.status];
   const cutOffReached = targetPeriod ? isPastCutOff(targetPeriod.end) : false;
   const canGenerateItems = blockers.filter((b) => b.severity === "error").length === 0;
+
+  const paymentBadgeClass = (status: string) => {
+    if (status === "Reconciled") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (status === "Exported") return "bg-sky-50 text-sky-700 border-sky-200";
+    if (status === "Pending") return "bg-amber-50 text-amber-700 border-amber-200";
+    if (status === "Failed") return "bg-rose-50 text-rose-700 border-rose-200";
+    return "bg-background";
+  };
 
   return (
     <div className="space-y-4">
@@ -376,28 +416,81 @@ const PayrollRunDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={handleProcessPeriod} disabled={!canGenerateItems} title={!canGenerateItems ? "Resolve error blockers before generating items." : ""}>
-                  <Play className="h-4 w-4" />
-                  Generate items
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/payslips/overview")}
-                  className="bg-white"
-                >
-                  <FileText className="h-4 w-4" />
-                  View payslips
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleCreatePaymentBatch}
-                  disabled={items.length === 0}
-                  title={items.length === 0 ? "Generate items first." : ""}
-                >
-                  <Landmark className="h-4 w-4" />
-                  Create payment batch
-                </Button>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border bg-white p-4">
+                  <div className="text-xs text-muted-foreground">Run items</div>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <div className="text-sm">
+                      <span className="font-semibold">{items.length}</span> item(s)
+                    </div>
+                    <Button
+                      onClick={handleProcessPeriod}
+                      disabled={!canGenerateItems}
+                      title={!canGenerateItems ? "Resolve error blockers before generating items." : ""}
+                      size="sm"
+                    >
+                      <Play className="h-4 w-4" />
+                      Generate
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border bg-white p-4">
+                  <div className="text-xs text-muted-foreground">Payslips</div>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <div className="text-sm text-muted-foreground">Open payslips filtered to this run period.</div>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate(`/payslips/overview?dateStart=${run.periodStart}&dateEnd=${run.periodEnd}`)}
+                      className="bg-white"
+                      size="sm"
+                    >
+                      <FileText className="h-4 w-4" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border bg-white p-4">
+                  <div className="text-xs text-muted-foreground">Payment batch</div>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <div className="flex flex-col">
+                      <div className="text-sm">
+                        {paymentBatch ? (
+                          <Badge variant="outline" className={cn("w-fit", paymentBadgeClass(paymentBatch.status))}>
+                            {paymentBatch.status}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not created</span>
+                        )}
+                      </div>
+                      {paymentBatch && <div className="text-xs font-mono text-muted-foreground">{paymentBatch.id}</div>}
+                    </div>
+
+                    {paymentBatch ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/payroll/batches/${paymentBatch.id}`)}
+                        className="bg-white"
+                        size="sm"
+                      >
+                        <Landmark className="h-4 w-4" />
+                        Open
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={handleCreatePaymentBatch}
+                        disabled={items.length === 0}
+                        title={items.length === 0 ? "Generate items first." : ""}
+                        size="sm"
+                      >
+                        <Landmark className="h-4 w-4" />
+                        Create
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="rounded-2xl border bg-amber-50 p-4 text-amber-900">
@@ -410,7 +503,9 @@ const PayrollRunDetailPage: React.FC = () => {
                     variant="outline"
                     className={cn(
                       "bg-white",
-                      blockers.length === 0 ? "border-emerald-200 text-emerald-800" : "border-amber-200 text-amber-900"
+                      blockers.length === 0
+                        ? "border-emerald-200 text-emerald-800"
+                        : "border-amber-200 text-amber-900"
                     )}
                   >
                     {blockers.length === 0 ? "No blockers" : `${blockers.length} blocker(s)`}
@@ -432,13 +527,13 @@ const PayrollRunDetailPage: React.FC = () => {
                         </TableHeader>
                         <TableBody>
                           {blockers.map((b, idx) => {
-                            const emp = employees.find((e) => e.id === b.employeeId);
+                            const emp = b.employeeId ? employees.find((e) => e.id === b.employeeId) : null;
                             const link = actionLinkForBlocker(b);
                             return (
-                              <TableRow key={`${b.type}-${b.employeeId}-${idx}`}>
+                              <TableRow key={`${b.type}-${b.employeeId || "company"}-${idx}`}>
                                 <TableCell className="font-mono text-xs">{b.type}</TableCell>
                                 <TableCell className="text-sm">
-                                  {emp ? `${emp.firstName} ${emp.lastName}` : b.employeeId || "-"}
+                                  {emp ? `${emp.firstName} ${emp.lastName}` : b.employeeId ? b.employeeId : "Company"}
                                 </TableCell>
                                 <TableCell className="text-sm">{b.message}</TableCell>
                                 <TableCell>
@@ -449,7 +544,7 @@ const PayrollRunDetailPage: React.FC = () => {
                                 <TableCell className="text-right">
                                   {link ? (
                                     <Button variant="outline" size="sm" onClick={() => navigate(link)}>
-                                      Fix
+                                      Open
                                     </Button>
                                   ) : (
                                     <span className="text-xs text-muted-foreground">-</span>

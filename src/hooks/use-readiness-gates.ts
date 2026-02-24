@@ -3,32 +3,41 @@
 import { MockEmployee, TimesheetEntry, MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 
-export type ReadinessBlockerType = 'BANK_INFO' | 'TAX_INFO' | 'TIMESHEET_DRAFT' | 'MISSING_TIMESHEET';
-export interface ReadinessBlocker {
+export type ReadinessBlockerType =
+  | "BANK_INFO"
+  | "EMPLOYEE_TAX_INFO"
+  | "COMPANY_TAX_INFO"
+  | "TIMESHEET_DRAFT"
+  | "MISSING_TIMESHEET";
+
+export type ReadinessBlocker = {
   type: ReadinessBlockerType;
   employeeId?: string;
   message: string;
-  severity: 'error' | 'warning';
-}
+  severity: "error" | "warning";
+  meta?: {
+    missingFields?: string[];
+    periodStart?: string;
+    periodEnd?: string;
+  };
+};
 
 export const useReadinessGates = () => {
-  const hasBankInfo = (e: MockEmployee) =>
-    !!e.bankName && !!e.bankAccountHolder && !!e.accountNumber && !!e.branchCode;
-
-  const hasTaxInfo = (e: MockEmployee, company: MockCompanyDetails | null, userTax: UserTaxSettings | null) => {
-    const employeeTaxOk = !!e.taxReferenceNumber;
-    const companyTaxOk = !!company?.companyTaxNumber;
-    const applyPAYE = userTax?.applyPaye ?? false;
-    // Only require tax info if PAYE applies
-    return applyPAYE ? (employeeTaxOk && companyTaxOk) : true;
+  const missingBankFields = (e: MockEmployee): string[] => {
+    const missing: string[] = [];
+    if (!e.bankName) missing.push("bankName");
+    if (!e.bankAccountHolder) missing.push("bankAccountHolder");
+    if (!e.accountNumber) missing.push("accountNumber");
+    if (!e.branchCode) missing.push("branchCode");
+    return missing;
   };
 
   const isWithinPeriod = (dateIso: string, start: Date, end: Date) => {
     const d = new Date(dateIso);
     const sd = new Date(start);
     const ed = new Date(end);
-    sd.setHours(0,0,0,0);
-    ed.setHours(23,59,59,999);
+    sd.setHours(0, 0, 0, 0);
+    ed.setHours(23, 59, 59, 999);
     return d >= sd && d <= ed;
   };
 
@@ -42,22 +51,37 @@ export const useReadinessGates = () => {
   ): ReadinessBlocker[] => {
     const blockers: ReadinessBlocker[] = [];
 
+    const applyPAYE = userTaxSettings?.applyPaye ?? false;
+    const companyTaxOk = !!companyDetails?.companyTaxNumber;
+
+    if (applyPAYE && !companyTaxOk) {
+      blockers.push({
+        type: "COMPANY_TAX_INFO",
+        severity: "error",
+        message: "Company tax number is missing (required when PAYE applies).",
+      });
+    }
+
     employees.forEach((e) => {
-      if (!hasBankInfo(e)) {
+      const missingBank = missingBankFields(e);
+      if (missingBank.length > 0) {
         blockers.push({
-          type: 'BANK_INFO',
+          type: "BANK_INFO",
           employeeId: e.id,
-          severity: 'error',
+          severity: "error",
           message: `Missing bank info for ${e.firstName} ${e.lastName}`,
+          meta: { missingFields: missingBank },
         });
       }
 
-      if (!hasTaxInfo(e, companyDetails, userTaxSettings)) {
+      const employeeTaxOk = !!e.taxReferenceNumber;
+      if (applyPAYE && !employeeTaxOk) {
         blockers.push({
-          type: 'TAX_INFO',
+          type: "EMPLOYEE_TAX_INFO",
           employeeId: e.id,
-          severity: 'error',
-          message: `Missing tax info for ${e.firstName} ${e.lastName} or company`,
+          severity: "error",
+          message: `Missing tax reference number for ${e.firstName} ${e.lastName}`,
+          meta: { missingFields: ["taxReferenceNumber"] },
         });
       }
 
@@ -67,19 +91,27 @@ export const useReadinessGates = () => {
 
       if (tsForEmployeeInPeriod.length === 0) {
         blockers.push({
-          type: 'MISSING_TIMESHEET',
+          type: "MISSING_TIMESHEET",
           employeeId: e.id,
-          severity: 'warning',
+          severity: "warning",
           message: `No timesheets in period for ${e.firstName} ${e.lastName}`,
+          meta: {
+            periodStart: periodStart.toISOString().slice(0, 10),
+            periodEnd: periodEnd.toISOString().slice(0, 10),
+          },
         });
       } else {
-        const hasDraft = tsForEmployeeInPeriod.some((ts) => ts.status === 'Draft');
+        const hasDraft = tsForEmployeeInPeriod.some((ts) => ts.status === "Draft");
         if (hasDraft) {
           blockers.push({
-            type: 'TIMESHEET_DRAFT',
+            type: "TIMESHEET_DRAFT",
             employeeId: e.id,
-            severity: 'warning',
+            severity: "warning",
             message: `Draft timesheets present for ${e.firstName} ${e.lastName}`,
+            meta: {
+              periodStart: periodStart.toISOString().slice(0, 10),
+              periodEnd: periodEnd.toISOString().slice(0, 10),
+            },
           });
         }
       }
@@ -96,7 +128,7 @@ export const useReadinessGates = () => {
   const buildReminderPayload = (blockers: ReadinessBlocker[]) => {
     // Group by employee and summarize messages
     const perEmp = new Map<string, string[]>();
-    blockers.forEach(b => {
+    blockers.forEach((b) => {
       if (b.employeeId) {
         const arr = perEmp.get(b.employeeId) || [];
         arr.push(b.message);

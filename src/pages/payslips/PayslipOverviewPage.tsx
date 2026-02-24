@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, AlertTriangle, ReceiptText, Sparkles } from "lucide-react";
 
@@ -14,7 +15,7 @@ import PayslipsHeader from "@/components/payslips/PayslipsHeader";
 import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOverviewToolbar";
 import { useAuth } from "@/context/AuthContext";
 import PayslipsSummaryCards from "@/components/payslips/overview/PayslipsSummaryCards";
-import { usePayslipsOverviewSelectors, PayslipsOverviewFilters } from "@/hooks/selectors/usePayslipsOverviewSelectors";
+import { usePayslipsOverviewSelectors, PayslipsOverviewFilters, FrequencyFilter } from "@/hooks/selectors/usePayslipsOverviewSelectors";
 import { Button } from "@/components/ui/button";
 import CalculatePaycheckDialog from "@/components/payroll/CalculatePaycheckDialog";
 
@@ -27,6 +28,7 @@ const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
 };
 
 const PayslipOverviewPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { employees, payslips, companyDetails, isLoadingCompanyDetails, isLoadingEmployees, isLoadingPayslips } = usePayrollProcessor();
   const { user } = useAuth();
   const { settings: payslipDesignSettings } = usePayslipDesignSettings();
@@ -44,6 +46,52 @@ const PayslipOverviewPage: React.FC = () => {
     dateEnd: "",
     search: "",
   });
+
+  const didInitFromUrl = React.useRef(false);
+  useEffect(() => {
+    if (didInitFromUrl.current) return;
+
+    const employeeId = searchParams.get("employeeId") || "";
+    const frequencyRaw = searchParams.get("frequency") || "";
+    const dateStart = searchParams.get("dateStart") || "";
+    const dateEnd = searchParams.get("dateEnd") || "";
+    const search = searchParams.get("search") || "";
+
+    const frequency: FrequencyFilter = ["all", "Monthly", "Weekly", "Bi-Weekly"].includes(frequencyRaw)
+      ? (frequencyRaw as FrequencyFilter)
+      : "all";
+
+    setFilters((prev) => ({
+      ...prev,
+      employeeFilterId: employeeId || prev.employeeFilterId,
+      frequencyFilter: frequency,
+      dateStart: dateStart || prev.dateStart,
+      dateEnd: dateEnd || prev.dateEnd,
+      search: search || prev.search,
+    }));
+
+    didInitFromUrl.current = true;
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!didInitFromUrl.current) return;
+
+    const next = new URLSearchParams(searchParams);
+
+    const setOrDelete = (key: string, value: string) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    };
+
+    setOrDelete("employeeId", filters.employeeFilterId === "all" ? "" : filters.employeeFilterId);
+    setOrDelete("frequency", filters.frequencyFilter === "all" ? "" : filters.frequencyFilter);
+    setOrDelete("dateStart", filters.dateStart);
+    setOrDelete("dateEnd", filters.dateEnd);
+    setOrDelete("search", filters.search.trim());
+
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   // Staff scoping: default to the staff's own employee and restrict selection
   useEffect(() => {

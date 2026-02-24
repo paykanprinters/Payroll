@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearchParams } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import { Button } from "@/components/ui/button";
-import { Clock, Send, CheckCircle, Filter, RefreshCcw, CalendarDays, X } from "lucide-react";
+import { Clock, Filter, RefreshCcw, CalendarDays, X } from "lucide-react";
 import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -19,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const Timesheet: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const {
     employees,
     leaveRecords,
@@ -58,11 +61,55 @@ const Timesheet: React.FC = () => {
   const [selectedDateForWeeklyEditor, setSelectedDateForWeeklyEditor] = React.useState<string>("");
 
   // Toolbar filters/search
-  const [statusFilter, setStatusFilter] = React.useState<"all" | "Draft" | "Submitted" | "Approved" | "Locked">("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "Draft" | "Submitted" | "Approved" | "Locked">(
+    "all"
+  );
   const [employeeFilterId, setEmployeeFilterId] = React.useState<string>("all");
   const [dateStart, setDateStart] = React.useState<string>("");
   const [dateEnd, setDateEnd] = React.useState<string>("");
   const [search, setSearch] = React.useState<string>("");
+
+  // URL -> state (deep links from readiness blockers)
+  const didInitFromUrl = React.useRef(false);
+  React.useEffect(() => {
+    if (didInitFromUrl.current) return;
+
+    const employeeId = searchParams.get("employeeId");
+    const status = searchParams.get("status") as any;
+    const ds = searchParams.get("dateStart") || "";
+    const de = searchParams.get("dateEnd") || "";
+    const q = searchParams.get("search") || "";
+
+    if (employeeId) setEmployeeFilterId(employeeId);
+    if (status && ["all", "Draft", "Submitted", "Approved", "Locked"].includes(status)) setStatusFilter(status);
+    if (ds) setDateStart(ds);
+    if (de) setDateEnd(de);
+    if (q) setSearch(q);
+
+    didInitFromUrl.current = true;
+  }, [searchParams]);
+
+  // state -> URL (so filters are shareable)
+  React.useEffect(() => {
+    if (!didInitFromUrl.current) return;
+
+    const next = new URLSearchParams(searchParams);
+
+    const setOrDelete = (key: string, value: string) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    };
+
+    setOrDelete("employeeId", employeeFilterId === "all" ? "" : employeeFilterId);
+    setOrDelete("status", statusFilter === "all" ? "" : statusFilter);
+    setOrDelete("dateStart", dateStart);
+    setOrDelete("dateEnd", dateEnd);
+    setOrDelete("search", search.trim());
+
+    // Avoid noisy history spam
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeFilterId, statusFilter, dateStart, dateEnd, search]);
 
   const handleImportTimesheets = (importedEntries: ImportableTimesheetEntry[]) => {
     addTimesheetBatch(importedEntries);
@@ -70,7 +117,7 @@ const Timesheet: React.FC = () => {
 
   const openWeeklyEditor = React.useCallback(() => {
     const todayIso = new Date().toISOString().slice(0, 10);
-    const employeeIdToUse = employeeFilterId !== "all" ? employeeFilterId : (employees?.[0]?.id || "");
+    const employeeIdToUse = employeeFilterId !== "all" ? employeeFilterId : employees?.[0]?.id || "";
     if (!employeeIdToUse) return;
     setSelectedEmployeeIdForWeeklyEditor(employeeIdToUse);
     setSelectedDateForWeeklyEditor(todayIso);
@@ -193,7 +240,12 @@ const Timesheet: React.FC = () => {
               <Label className="text-xs">Date From</Label>
               <div className="mt-1 flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="flex-1 rounded-xl" />
+                <Input
+                  type="date"
+                  value={dateStart}
+                  onChange={(e) => setDateStart(e.target.value)}
+                  className="flex-1 rounded-xl"
+                />
               </div>
             </div>
 
@@ -201,7 +253,12 @@ const Timesheet: React.FC = () => {
               <Label className="text-xs">Date To</Label>
               <div className="mt-1 flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="flex-1 rounded-xl" />
+                <Input
+                  type="date"
+                  value={dateEnd}
+                  onChange={(e) => setDateEnd(e.target.value)}
+                  className="flex-1 rounded-xl"
+                />
               </div>
             </div>
           </div>
@@ -240,127 +297,86 @@ const Timesheet: React.FC = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
           <SummaryAccent variant="sky" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <div className="p-6">
+            <div className="text-sm font-medium flex items-center gap-2">
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
                 <Clock className="h-4 w-4" />
               </span>
               Total entries
-            </CardTitle>
-            <CardDescription className="text-xs">All recorded timesheets</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalEntries}</div>
-          </CardContent>
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">All recorded timesheets</div>
+            <div className="mt-3 text-2xl font-bold">{totalEntries}</div>
+          </div>
         </Card>
 
         <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
           <SummaryAccent variant="emerald" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
-                <Send className="h-4 w-4" />
-              </span>
-              Submitted
-            </CardTitle>
-            <CardDescription className="text-xs">Awaiting approval</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{submittedCount}</div>
-          </CardContent>
+          <div className="p-6">
+            <div className="text-sm font-medium">Submitted</div>
+            <div className="mt-2 text-xs text-muted-foreground">Waiting for approval</div>
+            <div className="mt-3 text-2xl font-bold">{submittedCount}</div>
+          </div>
         </Card>
 
         <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
-          <SummaryAccent variant="orange" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
-                <CheckCircle className="h-4 w-4" />
-              </span>
-              Approved
-            </CardTitle>
-            <CardDescription className="text-xs">Finalized entries</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{approvedCount}</div>
-          </CardContent>
+          <SummaryAccent variant="emerald" />
+          <div className="p-6">
+            <div className="text-sm font-medium">Approved</div>
+            <div className="mt-2 text-xs text-muted-foreground">Ready for payroll</div>
+            <div className="mt-3 text-2xl font-bold">{approvedCount}</div>
+          </div>
         </Card>
 
         <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
-          <SummaryAccent variant="rose" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Draft / Locked</CardTitle>
-            <CardDescription className="text-xs">Work in progress or locked</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Draft</span>
-              <span className="font-semibold">{draftCount}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Locked</span>
-              <span className="font-semibold">{lockedCount}</span>
-            </div>
-          </CardContent>
+          <SummaryAccent variant="amber" />
+          <div className="p-6">
+            <div className="text-sm font-medium">Draft</div>
+            <div className="mt-2 text-xs text-muted-foreground">Needs submission</div>
+            <div className="mt-3 text-2xl font-bold">{draftCount}</div>
+          </div>
         </Card>
       </div>
 
-      {/* Timesheet entry form */}
-      <Card className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
-        <SummaryAccent variant="sky" />
-        <CardHeader>
-          <CardTitle className="text-xl">{isEditing ? "Edit timesheet entry" : "Record daily time"}</CardTitle>
-          <CardDescription>Enter daily clock-in/out times and breaks for an employee.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ErrorBoundary fallbackTitle="Timesheets error">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
           <TimesheetForm
-            employees={employees || []}
+            employees={employees}
             onSave={addOrUpdateTimesheet}
             initialData={editingTimesheet}
             isEditing={isEditing}
             isLeaveDay={isLeaveDay}
             onCancelEdit={cancelEditing}
           />
-        </CardContent>
-      </Card>
+          <TimesheetTable
+            timesheets={filteredTimesheets}
+            employees={employees}
+            onEdit={startEditing}
+            onDelete={(id) => void deleteTimesheet(id)}
+            onStatusChange={updateTimesheetStatus}
+            onEmployeeClick={handleEmployeeClick}
+          />
+        </div>
+      </ErrorBoundary>
 
-      {/* Timesheet table (filtered) */}
-      <TimesheetTable
-        timesheets={filteredTimesheets}
-        employees={employees || []}
-        onEdit={startEditing}
-        onDelete={deleteTimesheet}
-        onStatusChange={updateTimesheetStatus}
-        onEmployeeClick={handleEmployeeClick}
+      <ImportTimesheetDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImport={handleImportTimesheets}
+        employees={employees}
+        workHoursSettings={workHoursSettings}
       />
 
-      {/* Import dialog modal */}
-      {isImportDialogOpen && (
-        <ImportTimesheetDialog
-          isOpen={isImportDialogOpen}
-          onClose={() => setIsImportDialogOpen(false)}
-          onImport={handleImportTimesheets}
-          employees={employees || []}
-          workHoursSettings={workHoursSettings}
-        />
-      )}
-
-      {/* Weekly editor modal */}
-      {isWeeklyEditorOpen && (
-        <ErrorBoundary fallbackTitle="Weekly Timesheet Editor failed to render" onReset={() => setIsWeeklyEditorOpen(false)}>
-          <WeeklyTimesheetEditorDialog
-            isOpen={isWeeklyEditorOpen}
-            onClose={() => setIsWeeklyEditorOpen(false)}
-            employeeId={selectedEmployeeIdForWeeklyEditor}
-            initialDateInWeek={selectedDateForWeeklyEditor}
-            allTimesheets={timesheets}
-            onSaveTimesheet={addOrUpdateTimesheet}
-            getEmployeeName={getEmployeeName}
-            isLeaveDay={isLeaveDay}
-            employees={employees || []}
-          />
-        </ErrorBoundary>
-      )}
+      <WeeklyTimesheetEditorDialog
+        isOpen={isWeeklyEditorOpen}
+        onClose={() => setIsWeeklyEditorOpen(false)}
+        employeeId={selectedEmployeeIdForWeeklyEditor}
+        initialDateInWeek={selectedDateForWeeklyEditor}
+        allTimesheets={timesheets}
+        onSaveTimesheet={addOrUpdateTimesheet}
+        getEmployeeName={getEmployeeName}
+        isLeaveDay={isLeaveDay}
+        employees={employees}
+      />
     </div>
   );
 };
