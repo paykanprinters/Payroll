@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { format, eachDayOfInterval, parse, addDays } from "date-fns";
+import { format, eachDayOfInterval, parse, addDays, parseISO, isValid } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
@@ -51,7 +51,16 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
 
   const { payCycleSettings } = usePayrollProcessor({ silent: true });
   const currentWeeklyPeriod = useMemo(() => {
-    const refDate = parse(initialDateInWeek, "yyyy-MM-dd", new Date());
+    const refDate = (() => {
+      if (!initialDateInWeek) return new Date();
+      if (initialDateInWeek.includes("T")) {
+        const d = parseISO(initialDateInWeek);
+        return isValid(d) ? d : new Date();
+      }
+      const d = parse(initialDateInWeek, "yyyy-MM-dd", new Date());
+      return isValid(d) ? d : new Date();
+    })();
+
     const settings = payCycleSettings
       ? {
           payCycleType: payCycleSettings.payCycleType,

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, parse, isBefore, isAfter } from "date-fns";
+import { format, parse, isBefore, isAfter, parseISO, isValid } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
@@ -103,9 +103,20 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
 
   useEffect(() => {
     if (initialData) {
+      const parsedDate = (() => {
+        const raw = initialData.date;
+        if (!raw) return new Date();
+        if (raw.includes("T")) {
+          const d = parseISO(raw);
+          return isValid(d) ? d : new Date();
+        }
+        const d = parse(raw, "yyyy-MM-dd", new Date());
+        return isValid(d) ? d : new Date();
+      })();
+
       form.reset({
         employeeId: initialData.employeeId,
-        date: parse(initialData.date, "yyyy-MM-dd", new Date()),
+        date: parsedDate,
         timeIn: initialData.timeIn,
         teaStart: initialData.teaStart || "",
         teaEnd: initialData.teaEnd || "",
@@ -145,6 +156,7 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
   const date = form.watch("date");
   const isCurrentDayLeave = employeeId && date ? isLeaveDay(employeeId, date) : false;
 
+  const watchedDate = form.watch("date");
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -185,19 +197,19 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
               variant={"outline"}
               className={cn(
                 "w-full justify-start text-left font-normal mt-1",
-                !form.watch("date") && "text-muted-foreground"
+                !watchedDate || !isValid(watchedDate) ? "text-muted-foreground" : ""
               )}
               disabled={isEditing}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {form.watch("date") ? format(form.watch("date"), "PPP") : <span>Pick a date</span>}
+              {watchedDate && isValid(watchedDate) ? format(watchedDate, "PPP") : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
             <Calendar
               mode="single"
-              selected={form.watch("date")}
-              onSelect={(date) => form.setValue("date", date!)}
+              selected={watchedDate && isValid(watchedDate) ? watchedDate : undefined}
+              onSelect={(date) => date && form.setValue("date", date)}
               initialFocus
             />
           </PopoverContent>
