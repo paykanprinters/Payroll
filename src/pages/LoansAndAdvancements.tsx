@@ -119,8 +119,9 @@ const LoansAndAdvancements: React.FC = () => {
     const totalPrincipal = loans.reduce((s, l) => s + Number(l.loanAmount || 0), 0);
     const totalRemaining = loans.reduce((s, l) => s + Number(l.remainingBalance || 0), 0);
     const active = loans.filter((l) => l.status === "active").length;
+    const frozen = loans.filter((l) => !!l.freezeMode).length;
     const paused = loans.filter((l) => l.paused).length;
-    return { totalPrincipal, totalRemaining, active, paused };
+    return { totalPrincipal, totalRemaining, active, frozen, paused };
   }, [loans]);
 
   const startDate = form.watch("startDate");
@@ -423,7 +424,11 @@ const LoansAndAdvancements: React.FC = () => {
                 <div className="mt-1 text-lg font-semibold">{totals.active}</div>
               </div>
               <div className="rounded-2xl border bg-background p-4">
-                <div className="text-xs text-muted-foreground">Paused deductions</div>
+                <div className="text-xs text-muted-foreground">Frozen</div>
+                <div className="mt-1 text-lg font-semibold">{totals.frozen}</div>
+              </div>
+              <div className="rounded-2xl border bg-background p-4">
+                <div className="text-xs text-muted-foreground">Paused (next payroll only)</div>
                 <div className="mt-1 text-lg font-semibold">{totals.paused}</div>
               </div>
             </CardContent>
@@ -522,7 +527,7 @@ const LoansAndAdvancements: React.FC = () => {
                           disabled={l.status === "completed"}
                         >
                           <Snowflake className="h-4 w-4" />
-                          Freeze
+                          {l.freezeMode ? "Edit freeze" : "Freeze"}
                         </Button>
                         <Button
                           variant="outline"
