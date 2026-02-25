@@ -19,6 +19,10 @@ import {
   ListTodo,
   User as UserIcon,
   BookOpen,
+  Boxes,
+  Link2,
+  AlertTriangle,
+  ClipboardList,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -106,27 +110,83 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [companyDetails]);
 
-  const navItems: Array<{
-    to: string;
-    icon: React.ElementType;
-    label: string;
-    badgeCount?: number;
+  const navSections: Array<{
+    title: string;
+    items: Array<{ to: string; icon: React.ElementType; label: string; badgeCount?: number }>;
   }> = [
-    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/profile", icon: UserIcon, label: user?.role === "Staff" ? "My Profile" : "My Account" },
-    { to: "/docs", icon: BookOpen, label: "Docs" },
-    { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
-    { to: "/employees", icon: Users, label: "Employees" },
-    { to: "/timesheet", icon: Clock, label: "Timesheet" },
-    { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },
-    { to: "/payroll/runs", icon: ReceiptText, label: "Payroll Runs" },
-    { to: "/payroll/batches", icon: Landmark, label: "Payment Batches" },
-    { to: "/savings", icon: PiggyBank, label: "Savings" },
-    { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
-    { to: "/analytics", icon: LineChart, label: "Analytics" },
-    { to: "/reports", icon: BarChart, label: "Reports" },
-    { to: "/settings", icon: Settings, label: "Settings" },
+    {
+      title: "Workspace",
+      items: [
+        { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
+      ],
+    },
+    {
+      title: "People",
+      items: [
+        { to: "/employees", icon: Users, label: "Employees" },
+        { to: "/timesheet", icon: Clock, label: "Timesheet" },
+        { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
+        { to: "/savings", icon: PiggyBank, label: "Savings" },
+      ],
+    },
+    {
+      title: "Payroll",
+      items: [
+        { to: "/payslips/overview", icon: ReceiptText, label: "Payslips" },
+        { to: "/payroll/runs", icon: ClipboardList, label: "Payroll Runs" },
+        { to: "/payroll/batches", icon: Landmark, label: "Payment Batches" },
+      ],
+    },
+    {
+      title: "Payroll setup",
+      items: [
+        { to: "/payroll/components", icon: Boxes, label: "Components" },
+        { to: "/payroll/assignments", icon: Link2, label: "Assignments" },
+        { to: "/payroll/overtime-rules", icon: Clock, label: "Overtime Rules" },
+        { to: "/payroll/exceptions", icon: AlertTriangle, label: "Exceptions" },
+      ],
+    },
+    {
+      title: "Insights",
+      items: [
+        { to: "/analytics", icon: LineChart, label: "Analytics" },
+        { to: "/reports", icon: BarChart, label: "Reports" },
+      ],
+    },
+    {
+      title: "Account",
+      items: [
+        { to: "/profile", icon: UserIcon, label: user?.role === "Staff" ? "My Profile" : "My Account" },
+        { to: "/docs", icon: BookOpen, label: "Docs" },
+        { to: "/settings", icon: Settings, label: "Settings" },
+      ],
+    },
   ];
+
+  // Role filtering (kept centralized)
+  const filteredSections = navSections
+    .map((section) => {
+      const items = section.items.filter((item) => {
+        // Admin/Manager-only
+        if (
+          item.to === "/employees" ||
+          item.to === "/analytics" ||
+          item.to === "/reports" ||
+          item.to.startsWith("/payroll/")
+        ) {
+          return user?.role === "Admin" || user?.role === "Manager";
+        }
+        // Admin-only
+        if (item.to === "/settings") {
+          return user?.role === "Admin";
+        }
+        return true;
+      });
+
+      return { ...section, items };
+    })
+    .filter((section) => section.items.length > 0);
 
   const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
     <div className={cn("relative overflow-hidden", currentIsCollapsed ? "h-20" : "h-28")}>
@@ -191,22 +251,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     return null;
   }
 
-  const filteredItems = navItems.filter((item) => {
-    if (
-      item.to === "/employees" ||
-      item.to === "/analytics" ||
-      item.to === "/reports" ||
-      item.to === "/payroll/runs" ||
-      item.to === "/payroll/batches"
-    ) {
-      return user?.role === "Admin" || user?.role === "Manager";
-    }
-    if (item.to === "/settings") {
-      return user?.role === "Admin";
-    }
-    return true;
-  });
-
   if (isMobile) {
     return (
       <Sheet>
@@ -223,16 +267,21 @@ const Sidebar: React.FC<SidebarProps> = ({
         <SheetContent side="left" className="w-72 p-0">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
             {renderSidebarHeader(false, setIsCollapsed)}
-            <nav className="grid items-start gap-1 p-4">
-              {filteredItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  icon={item.icon}
-                  label={item.label}
-                  isCollapsed={false}
-                  badgeCount={item.badgeCount}
-                />
+            <nav className="grid items-start gap-3 p-4">
+              {filteredSections.map((section) => (
+                <div key={section.title} className="grid gap-1">
+                  <div className="px-3 text-xs font-medium text-white/60">{section.title}</div>
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
+                      isCollapsed={false}
+                      badgeCount={item.badgeCount}
+                    />
+                  ))}
+                </div>
               ))}
             </nav>
           </div>
@@ -249,16 +298,23 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
     >
       {renderSidebarHeader(isCollapsed, setIsCollapsed)}
-      <nav className="grid items-start gap-1 p-4">
-        {filteredItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            icon={item.icon}
-            label={item.label}
-            isCollapsed={isCollapsed}
-            badgeCount={item.badgeCount}
-          />
+      <nav className="grid items-start gap-3 p-4">
+        {filteredSections.map((section) => (
+          <div key={section.title} className="grid gap-1">
+            {!isCollapsed && (
+              <div className="px-3 text-xs font-medium text-white/60">{section.title}</div>
+            )}
+            {section.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                icon={item.icon}
+                label={item.label}
+                isCollapsed={isCollapsed}
+                badgeCount={item.badgeCount}
+              />
+            ))}
+          </div>
         ))}
       </nav>
     </div>
