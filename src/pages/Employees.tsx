@@ -8,6 +8,8 @@ import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
 import { usePdfGenerator } from "@/hooks/use-pdf-generator";
+import { usePdfVector } from "@/hooks/use-pdf-vector";
+import EmployeeProfilePdfDocument from "@/components/reports/EmployeeProfilePdfDocument";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import EmployeesHeader from "@/components/employees/EmployeesHeader";
@@ -147,7 +149,7 @@ const Employees: React.FC = () => {
     return sorted(base);
   }, [employees, debouncedSearch, jobTitleFilter, departmentFilter, payBasisFilter, portalAccessFilter, sortField, sortDir]);
 
-  const { generatePdf } = usePdfGenerator();
+  const { downloadPdf } = usePdfVector();
 
   const loadEmployeeDataAndCharts = useCallback(() => {
     if (employees.length > 0) {
@@ -273,28 +275,16 @@ const Employees: React.FC = () => {
   };
 
   const handleDownloadProfile = async (employee: MockEmployee) => {
-    if (!companyDetails || !reportDesignSettings) {
-      return;
+    if (!companyDetails) {
+      // Keep existing behavior: allow download without company details (still generates a usable PDF)
     }
 
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <ReportContentWrapper
-        reportTitle={`Employee Profile: ${employee.firstName} ${employee.lastName}`}
-        reportContent={generateEmployeeProfileReportContent(employee, companyDetails, reportDesignSettings)}
-        companyDetails={companyDetails}
-        reportDesignSettings={reportDesignSettings}
-        isPdfGeneration={true}
-        onReadyForPdf={onReadyForPdf}
-      />
+    // Prefer vector PDF for crisp output
+    const doc = (
+      <EmployeeProfilePdfDocument employee={employee} companyDetails={companyDetails || null} />
     );
-
-    const options = {
-      filename: `employee-profile-${employee.firstName}-${employee.lastName}.pdf`,
-      format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
-      documentType: 'report' as const,
-    };
-
-    await generatePdf(renderComponent, options);
+    const filename = `employee-profile-${employee.firstName}-${employee.lastName}.pdf`;
+    await downloadPdf(doc, filename);
   };
 
   const salaryCount = useMemo(

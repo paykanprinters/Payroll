@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import { format, isSameYear } from "date-fns";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
+import { usePdfVector } from "@/hooks/use-pdf-vector";
+import Irp5PdfDocument from "@/components/reports/Irp5PdfDocument";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -37,6 +39,7 @@ const Irp5ExportPage: React.FC = () => {
   const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined);
 
   const { generatePdf, printPdf } = usePdfGenerator();
+  const { downloadPdf, openPdf } = usePdfVector();
 
   const loadData = useCallback(() => {
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
@@ -97,46 +100,24 @@ const Irp5ExportPage: React.FC = () => {
         return;
       }
 
-      const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-        <ReportContentWrapper
-          reportTitle={`IRP5 Certificate - Tax Year ${year}`}
-          reportContent={generateIrp5ExportContent(
-            selectedEmployee,
-            payslipsForYear,
-            companyDetails,
-            reportDesignSettings,
-            year
-          )}
+      // Prefer vector PDF for crisp output
+      const doc = (
+        <Irp5PdfDocument
+          employee={selectedEmployee}
+          payslipsForYear={payslipsForYear}
           companyDetails={companyDetails}
-          reportDesignSettings={reportDesignSettings}
-          isPdfGeneration={true}
-          onReadyForPdf={onReadyForPdf}
+          year={year}
         />
       );
-
-      const options = {
-        filename: `irp5-export-${selectedEmployee.id}-${year}.pdf`,
-        format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as "a4" | "letter" | "a5",
-        documentType: "report" as const,
-      };
+      const filename = `irp5-export-${selectedEmployee.id}-${year}.pdf`;
 
       if (action === "download") {
-        await generatePdf(renderComponent, options);
+        await downloadPdf(doc, filename);
       } else {
-        await printPdf(renderComponent, options);
+        await openPdf(doc, `IRP5 Export — ${year}`);
       }
     },
-    [
-      userTaxSettings,
-      selectedEmployee,
-      selectedIrpYear,
-      companyDetails,
-      payslips,
-      selectedEmployeeId,
-      reportDesignSettings,
-      generatePdf,
-      printPdf,
-    ]
+    [userTaxSettings, selectedEmployee, selectedIrpYear, companyDetails, payslips, selectedEmployeeId, downloadPdf, openPdf]
   );
 
   const isDisabled = !selectedEmployeeId || !selectedIrpYear || !userTaxSettings?.enableIrp5Export;

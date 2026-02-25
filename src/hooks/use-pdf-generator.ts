@@ -171,7 +171,18 @@ const mountReactInIframe = (
   );
 
   const timeoutId = setTimeout(() => resolveReady(), 7000);
-  return { root, readyPromise, timeoutId };
+
+  // Ensure web fonts are loaded in the iframe before capture.
+  const fontsReadyPromise = (async () => {
+    const win = iframeDoc.defaultView as any;
+    try {
+      await win?.document?.fonts?.ready;
+    } catch {
+      // ignore
+    }
+  })();
+
+  return { root, readyPromise: Promise.all([readyPromise, fontsReadyPromise]).then(() => undefined), timeoutId };
 };
 
 const cleanup = (iframe: HTMLIFrameElement, root: ReactDOM.Root | null) => {
