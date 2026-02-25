@@ -245,42 +245,49 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     const lastRefetchTsRef = { current: 0 } as { current: number };
     const MIN_INTERVAL = 10000; // 10s throttle
 
-    const handler = () => {
+    const handler = async () => {
       const now = Date.now();
       if (now - lastRefetchTsRef.current < MIN_INTERVAL) return;
       lastRefetchTsRef.current = now;
 
       if (!isAuthenticated || isLoadingAuth) return;
 
-      // Prevent re-entrancy across pages for a few seconds
       const w = window as any;
       if (w.__appRefreshInProgress) return;
       w.__appRefreshInProgress = true;
-      setTimeout(() => {
-        w.__appRefreshInProgress = false;
-      }, 5000);
-
-      refetchCompanyDetails?.();
-      refetchTaxTables?.(activeTaxYearForCalculations);
-      refetchWorkHoursSettings?.();
-      refetchPayCycleSettings?.();
-      refetchUserTaxSettings?.();
-      refetchPayslips?.();
-      refetchPayrollSavingsEntries?.();
-      refetchToDosFnRef.current?.();
-      refetchComponents?.();
-      refetchOvertimeRules?.();
 
       try {
-        typeof refetchEmployees === "function" && refetchEmployees();
-      } catch {
-        // allow hook-level errors to surface
+        // Run sequentially to avoid saturating the browser / Supabase connection pool
+        // when users return to the tab (especially after opening PDFs).
+        const tasks: Array<() => any> = [
+          () => refetchCompanyDetails?.(),
+          () => refetchTaxTables?.(activeTaxYearForCalculations),
+          () => refetchWorkHoursSettings?.(),
+          () => refetchPayCycleSettings?.(),
+          () => refetchUserTaxSettings?.(),
+          () => refetchPayslips?.(),
+          () => refetchPayrollSavingsEntries?.(),
+          () => refetchToDosFnRef.current?.(),
+          () => refetchComponents?.(),
+          () => refetchOvertimeRules?.(),
+          () => (typeof refetchEmployees === "function" ? refetchEmployees() : undefined),
+        ];
+
+        for (const t of tasks) {
+          try {
+            await Promise.resolve(t());
+          } catch {
+            // ignore individual refresh failures; next refresh cycle will recover
+          }
+        }
+      } finally {
+        w.__appRefreshInProgress = false;
       }
     };
 
-    window.addEventListener("appFocusRefresh", handler);
+    window.addEventListener("appFocusRefresh", handler as any);
     return () => {
-      window.removeEventListener("appFocusRefresh", handler);
+      window.removeEventListener("appFocusRefresh", handler as any);
     };
   }, [
     isAuthenticated,
@@ -293,6 +300,8 @@ export const usePayrollProcessor = (options?: { silent?: boolean }) => {
     refetchPayslips,
     refetchPayrollSavingsEntries,
     refetchEmployees,
+    refetchComponents,
+    refetchOvertimeRules,
     activeTaxYearForCalculations,
   ]);
 

@@ -209,13 +209,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const visibilityHandler = () => {
       if (document.visibilityState === "visible") refreshSession({ silent: true });
     };
+    const onlineHandler = () => refreshSession({ silent: true, force: true });
 
     window.addEventListener("focus", focusHandler);
     document.addEventListener("visibilitychange", visibilityHandler);
+    window.addEventListener("online", onlineHandler);
 
     return () => {
       window.removeEventListener("focus", focusHandler);
       document.removeEventListener("visibilitychange", visibilityHandler);
+      window.removeEventListener("online", onlineHandler);
     };
   }, [isLoadingAuth, refreshSession]);
 
