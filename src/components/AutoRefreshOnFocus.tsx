@@ -21,6 +21,16 @@ const AutoRefreshOnFocus: React.FC = () => {
 
     const triggerRefresh = (reason: "focus" | "visible") => {
       const now = Date.now();
+
+      // If we just opened a PDF in a new tab, suppress focus-refresh to avoid
+      // a burst of parallel Supabase refetches when users return.
+      try {
+        const until = Number(sessionStorage.getItem("suppressAppFocusRefreshUntil") || "0");
+        if (until && now < until) return;
+      } catch {
+        // ignore
+      }
+
       if (now - lastTriggeredRef.current < MIN_INTERVAL_MS) return;
 
       if (reason === "visible" && lastHiddenAtRef.current) {
