@@ -2,24 +2,20 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MockEmployee, MockPayslip, MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { usePdfGenerator } from "@/hooks/use-pdf-generator";
-import { generateIrp5ExportContent } from "@/lib/report-generators";
-import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FileText, Printer, Download, CalendarIcon } from "lucide-react";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
+import { usePdfVector } from "@/hooks/use-pdf-vector";
+import Irp5PdfDocument from "@/components/reports/Irp5PdfDocument";
 import { showError } from "@/utils/toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, isSameYear } from "date-fns";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
-import { usePdfVector } from "@/hooks/use-pdf-vector";
-import Irp5PdfDocument from "@/components/reports/Irp5PdfDocument";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CalendarIcon, Download, FileText, Printer } from "lucide-react";
 
 const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   defaultReportPaperSize: "A4",
@@ -38,7 +34,6 @@ const Irp5ExportPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined);
 
-  const { generatePdf, printPdf } = usePdfGenerator();
   const { downloadPdf, openPdf } = usePdfVector();
 
   const loadData = useCallback(() => {
@@ -100,7 +95,6 @@ const Irp5ExportPage: React.FC = () => {
         return;
       }
 
-      // Prefer vector PDF for crisp output
       const doc = (
         <Irp5PdfDocument
           employee={selectedEmployee}

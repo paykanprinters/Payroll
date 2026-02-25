@@ -16,8 +16,9 @@ import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } 
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import HoursBreakdown from "@/components/payslips/HoursBreakdown";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
-import { usePdfGenerator } from "@/hooks/use-pdf-generator";
+import { format } from "date-fns";
+import { usePdfVector } from "@/hooks/use-pdf-vector";
+import PayslipPdfDocument from "@/components/payslips/PayslipPdfDocument";
 import { Printer, Download } from "lucide-react";
 import { showError } from "@/utils/toast";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
@@ -31,7 +32,7 @@ interface CalculatePaycheckDialogProps {
 
 const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpen, onClose, payslipDesignSettings }) => {
   const { employees, calculateSinglePayslipPreview, companyDetails, taxTables, payCycleSettings, timesheets, workHoursSettings } = usePayrollProcessor();
-  const { generatePdf, printPdf } = usePdfGenerator();
+  const { downloadPdf, openPdf } = usePdfVector();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [previewPayslip, setPreviewPayslip] = useState<MockPayslip | null>(null);
@@ -115,31 +116,24 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       return;
     }
 
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <IndividualPayslipCard
-        payslip={previewPayslip}
-        payslipDesignSettings={payslipDesignSettings}
-        companyDetails={companyDetails}
+    const doc = (
+      <PayslipPdfDocument
+        payslips={[previewPayslip]}
         employees={employees}
+        companyDetails={companyDetails}
+        payslipDesignSettings={payslipDesignSettings}
         getEmployeeName={(id) => employees.find(emp => emp.id === id)?.firstName + " " + employees.find(emp => emp.id === id)?.lastName || "Unknown"}
-        isPdfGeneration={true}
-        onReadyForPdf={onReadyForPdf}
       />
     );
 
     const filename = `payslip-preview-${previewPayslip.employeeId}-${format(currentPeriodStart, 'yyyy-MM-dd')}.pdf`;
-    const options = {
-      filename,
-      format: payslipDesignSettings.layoutSize?.toLowerCase() as 'a4' | 'letter' | 'a5',
-      documentType: 'payslip' as const,
-    };
 
     if (action === 'download') {
-      await generatePdf(renderComponent, options);
+      await downloadPdf(doc, filename);
     } else {
-      await printPdf(renderComponent, options);
+      await openPdf(doc, filename);
     }
-  }, [previewPayslip, companyDetails, currentPeriodStart, currentPeriodEnd, payslipDesignSettings, employees, generatePdf, printPdf]);
+  }, [previewPayslip, companyDetails, currentPeriodStart, currentPeriodEnd, payslipDesignSettings, employees, downloadPdf, openPdf]);
 
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);

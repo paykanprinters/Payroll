@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import ReactDOM from 'react-dom/client';
 import {
   Dialog,
   DialogContent,
@@ -11,20 +10,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Save } from "lucide-react"; // Import Save icon
-import { showSuccess, showError } from "@/utils/toast";
-import html2pdf from 'html2pdf.js';
+import { Printer, Download, Save } from "lucide-react";
+import { showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getPrintStyles } from "@/lib/utils";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import ReportContentWrapper from "./ReportContentWrapper";
-import { usePdfGenerator } from "@/hooks/use-pdf-generator";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
-import { saveReportToSupabase } from "@/integrations/supabase/report-queries"; // New import
-import { useAuth } from "@/context/AuthContext"; // Import useAuth
-import { sanitizeHtml } from "@/utils/sanitize-html"; // Sanitize rendered HTML
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { saveReportToSupabase } from "@/integrations/supabase/report-queries";
+import { useAuth } from "@/context/AuthContext";
+import { sanitizeHtml } from "@/utils/sanitize-html";
+import { usePdfVector } from "@/hooks/use-pdf-vector";
+import HtmlReportPdfDocument from "@/components/reports/HtmlReportPdfDocument";
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -63,47 +61,30 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
 
   // Get explicit print styles for the preview display
   const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
-  const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || '14px');
+  const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || "14px");
 
-  const getPreviewPageClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
-    switch (layoutSize) {
-      case "Letter":
-        return "w-letter min-h-letter";
-      case "A5":
-        return "w-a5 min-h-a5";
-      case "A4":
-      default:
-        return "w-a4 min-h-a4";
-    }
-  };
-
-  const { generatePdf, printPdf } = usePdfGenerator(); // Use the hook
+  const { downloadPdf, openPdf } = usePdfVector();
 
   // Sanitize report content before rendering
   const sanitizedReportContent = React.useMemo(() => sanitizeHtml(reportContent), [reportContent]);
 
-  const handlePrintOrDownload = async (action: 'print' | 'download') => {
-    const renderComponent = ({ onReadyForPdf }: { onReadyForPdf?: () => void }) => (
-      <ReportContentWrapper
+  const handlePrintOrDownload = async (action: "print" | "download") => {
+    const doc = (
+      <HtmlReportPdfDocument
         reportTitle={reportTitle}
-        reportContent={reportContent}
+        reportContentHtml={sanitizedReportContent}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
-        isPdfGeneration={true}
-        onReadyForPdf={onReadyForPdf}
       />
     );
 
-    const options = {
-      filename: `${reportTitle.replace(/\s/g, '-')}.pdf`,
-      format: reportDesignSettings.defaultReportPaperSize.toLowerCase() as 'a4' | 'letter' | 'a5',
-      documentType: documentType, // Pass documentType from props
-    };
+    const filename = `${reportTitle.replace(/\s/g, "-")}.pdf`;
 
-    if (action === 'download') {
-      await generatePdf(renderComponent, options);
+    if (action === "download") {
+      await downloadPdf(doc, filename);
     } else {
-      await printPdf(renderComponent, options);
+      // Open vector PDF in a new tab; user prints from the browser PDF viewer
+      await openPdf(doc, reportTitle);
     }
   };
 
@@ -117,13 +98,12 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       return;
     }
 
-    const payload = {
+    await saveReportToSupabase({
       user_id: user.id,
       report_title: reportTitle,
-      report_type: documentType, // Use documentType as report_type
+      report_type: documentType,
       content_html: reportContent,
-    };
-    await saveReportToSupabase(payload);
+    });
   };
 
   return (
@@ -134,19 +114,22 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <DialogDescription>Preview and manage your report.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-4">
-          {/* This is the UI preview, not the content for PDF generation */}
-          <div className={cn(
-            "bg-white text-gray-900 mx-auto rounded-lg shadow-lg max-w-full", // Apply rounded-lg and shadow-lg for UI preview
-            getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize), // Apply width/min-height classes
-          )}
-          style={{
-            padding: '24px', // Consistent padding for UI preview
-            fontSize: previewStyles.fontSize,
-            border: '1px solid #ccc', // Lighter border for UI preview
-            boxShadow: '0 0 10px rgba(0,0,0,0.1)', // Shadow for UI preview
-          }}
+          <div
+            className={cn(
+              "bg-white text-gray-900 mx-auto rounded-lg shadow-lg max-w-full",
+              reportDesignSettings.defaultReportPaperSize === "Letter"
+                ? "w-letter min-h-letter"
+                : reportDesignSettings.defaultReportPaperSize === "A5"
+                  ? "w-a5 min-h-a5"
+                  : "w-a4 min-h-a4"
+            )}
+            style={{
+              padding: "24px",
+              fontSize: previewStyles.fontSize,
+              border: "1px solid #ccc",
+              boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+            }}
           >
-            {/* Report Header with Company Details */}
             {(reportDesignSettings.includeCompanyLogo && companyLogoUrl) || reportDesignSettings.includeCompanyDetails ? (
               <div className="flex justify-between items-start mb-6 print:mb-8">
                 {reportDesignSettings.includeCompanyLogo && companyLogoUrl && (
@@ -178,7 +161,6 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
 
             <h3 className="text-lg font-bold text-center mb-4 print:text-xl print:mb-6" style={{ fontSize: `${baseFontSizePx * 1.3}px`, marginBottom: `${baseFontSizePx * 1}px` }}>{reportTitle}</h3>
 
-            {/* Report Content */}
             <div
               dangerouslySetInnerHTML={{ __html: sanitizedReportContent }}
               style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }}
@@ -186,10 +168,10 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           </div>
         </ScrollArea>
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={() => handlePrintOrDownload('print')}>
+          <Button variant="outline" onClick={() => handlePrintOrDownload("print")}>
             <Printer className="mr-2 h-4 w-4" /> Print Report
           </Button>
-          <Button onClick={() => handlePrintOrDownload('download')}>
+          <Button onClick={() => handlePrintOrDownload("download")}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
           </Button>
           <Button variant="outline" onClick={handleSaveToSupabase} disabled={isMockDataEnabled || !user?.id}>

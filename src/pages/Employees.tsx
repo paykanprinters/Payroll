@@ -7,7 +7,6 @@ import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/E
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
-import { usePdfGenerator } from "@/hooks/use-pdf-generator";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import EmployeeProfilePdfDocument from "@/components/reports/EmployeeProfilePdfDocument";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
