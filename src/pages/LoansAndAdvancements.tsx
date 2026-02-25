@@ -42,7 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, DollarSign, PauseCircle, PlayCircle, Trash2 } from "lucide-react";
+import { CalendarIcon, DollarSign, PauseCircle, PlayCircle, Trash2, Snowflake } from "lucide-react";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import { showError } from "@/utils/toast";
 import type { Loan } from "@/lib/mock-data-interfaces";
@@ -64,6 +64,7 @@ const LoansAndAdvancements: React.FC = () => {
     employees,
     loans,
     addLoan,
+    updateLoan,
     togglePauseDeduction,
     applyManualPayment,
     deleteLoan,
@@ -157,6 +158,83 @@ const LoansAndAdvancements: React.FC = () => {
     () => (paymentLoanId ? loans.find((l) => l.id === paymentLoanId) ?? null : null),
     [paymentLoanId, loans]
   );
+
+  const [freezeDialogOpen, setFreezeDialogOpen] = useState(false);
+  const [freezeLoanId, setFreezeLoanId] = useState<string | null>(null);
+  const [freezeMode, setFreezeMode] = useState<"range" | "cycles">("range");
+  const [freezeStart, setFreezeStart] = useState<Date | undefined>(undefined);
+  const [freezeEnd, setFreezeEnd] = useState<Date | undefined>(undefined);
+  const [freezeCycles, setFreezeCycles] = useState<string>("1");
+
+  const freezeLoan = useMemo(
+    () => (freezeLoanId ? loans.find((l) => l.id === freezeLoanId) ?? null : null),
+    [freezeLoanId, loans]
+  );
+
+  const openFreeze = (loanId: string) => {
+    const loan = loans.find((l) => l.id === loanId);
+    if (!loan) return;
+    setFreezeLoanId(loanId);
+    const initialMode = (loan.freezeMode as any) || "range";
+    setFreezeMode(initialMode === "cycles" ? "cycles" : "range");
+    setFreezeStart(loan.freezeStartDate ? new Date(loan.freezeStartDate) : undefined);
+    setFreezeEnd(loan.freezeEndDate ? new Date(loan.freezeEndDate) : undefined);
+    setFreezeCycles(String(loan.freezeCyclesRemaining ?? 1));
+    setFreezeDialogOpen(true);
+  };
+
+  const confirmFreeze = async () => {
+    if (!freezeLoan) return;
+
+    if (freezeMode === "range") {
+      if (!freezeStart || !freezeEnd) {
+        showError("Select a start and end date.");
+        return;
+      }
+      if (freezeEnd < freezeStart) {
+        showError("End date cannot be before start date.");
+        return;
+      }
+
+      await updateLoan({
+        ...freezeLoan,
+        freezeMode: "range",
+        freezeStartDate: format(freezeStart, "yyyy-MM-dd"),
+        freezeEndDate: format(freezeEnd, "yyyy-MM-dd"),
+        freezeCyclesRemaining: null,
+        paused: false,
+      });
+    } else {
+      const n = Number(freezeCycles);
+      if (!Number.isFinite(n) || n <= 0) {
+        showError("Enter a valid number of payroll cycles.");
+        return;
+      }
+
+      await updateLoan({
+        ...freezeLoan,
+        freezeMode: "cycles",
+        freezeCyclesRemaining: Math.floor(n),
+        freezeStartDate: null,
+        freezeEndDate: null,
+        paused: false,
+      });
+    }
+
+    setFreezeDialogOpen(false);
+  };
+
+  const clearFreeze = async () => {
+    if (!freezeLoan) return;
+    await updateLoan({
+      ...freezeLoan,
+      freezeMode: null,
+      freezeStartDate: null,
+      freezeEndDate: null,
+      freezeCyclesRemaining: null,
+    });
+    setFreezeDialogOpen(false);
+  };
 
   const openManualPayment = (loanId: string) => {
     setPaymentLoanId(loanId);
@@ -423,6 +501,11 @@ const LoansAndAdvancements: React.FC = () => {
                         >
                           {l.status}
                         </Badge>
+                        {l.freezeMode && (
+                          <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+                            frozen
+                          </Badge>
+                        )}
                         {l.paused && (
                           <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
                             paused
@@ -432,6 +515,15 @@ const LoansAndAdvancements: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openFreeze(l.id)}
+                          disabled={l.status === "completed"}
+                        >
+                          <Snowflake className="h-4 w-4" />
+                          Freeze
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -488,6 +580,104 @@ const LoansAndAdvancements: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={freezeDialogOpen} onOpenChange={setFreezeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Freeze loan deductions</DialogTitle>
+            <DialogDescription>
+              {freezeLoan ? `${getEmployeeName(freezeLoan.employeeId)} • Remaining: R ${Number(freezeLoan.remainingBalance).toFixed(2)}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="space-y-1">
+              <Label>Freeze type</Label>
+              <Select value={freezeMode} onValueChange={(v) => setFreezeMode(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="range">Date range</SelectItem>
+                  <SelectItem value="cycles">Number of payroll cycles</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {freezeMode === "range" ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Start date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !freezeStart && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {freezeStart ? format(freezeStart, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={freezeStart} onSelect={setFreezeStart} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-1">
+                  <Label>End date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !freezeEnd && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {freezeEnd ? format(freezeEnd, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={freezeEnd} onSelect={setFreezeEnd} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>Payroll cycles to freeze</Label>
+                <Input value={freezeCycles} onChange={(e) => setFreezeCycles(e.target.value)} type="number" min={1} step={1} />
+                <p className="text-xs text-muted-foreground">
+                  This will skip deductions for the next N payroll runs for this employee.
+                </p>
+              </div>
+            )}
+
+            {freezeLoan?.freezeMode && (
+              <Button variant="outline" onClick={clearFreeze}>
+                Clear freeze
+              </Button>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFreezeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmFreeze}>
+              <Snowflake className="h-4 w-4" />
+              Save freeze
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent>

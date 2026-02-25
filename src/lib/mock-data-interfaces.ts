@@ -112,6 +112,12 @@ export interface Loan {
   paused: boolean; // New field
   notes?: string; // New field
   deductionHistory: LoanDeductionHistoryEntry[]; // New field
+
+  // Optional: advanced freeze controls
+  freezeMode?: "range" | "cycles" | null;
+  freezeStartDate?: string | null; // YYYY-MM-DD
+  freezeEndDate?: string | null; // YYYY-MM-DD
+  freezeCyclesRemaining?: number | null;
 }
 
 export interface SavingPlan {
