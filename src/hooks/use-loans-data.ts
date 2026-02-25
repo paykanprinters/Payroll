@@ -138,6 +138,10 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
       remainingBalance: newLoan.loanAmount,
       paused: false,
       deductionHistory: [],
+      freezeMode: null,
+      freezeStartDate: null,
+      freezeEndDate: null,
+      freezeCyclesRemaining: null,
     };
 
     if (isMockDataEnabled) {
@@ -201,6 +205,11 @@ export const useLoansData = ({ initialLoans, employees, isMockDataEnabled, isAut
     const updatedLoan: Loan = {
       ...loanToUpdate,
       paused: newPausedStatus,
+      // "Pause" is the one-period skip mechanism. Clear any advanced freeze so they don't conflict.
+      freezeMode: null,
+      freezeStartDate: null,
+      freezeEndDate: null,
+      freezeCyclesRemaining: null,
       deductionHistory: [...loanToUpdate.deductionHistory, historyEntry],
     };
 

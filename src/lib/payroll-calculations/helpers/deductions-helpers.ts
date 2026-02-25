@@ -116,6 +116,54 @@ export const buildDeductions = (
   loans.forEach((loan) => {
     if (loan.employeeId !== emp.id || loan.status === "completed" || new Date(loan.startDate) > periodEnd) return;
 
+    // Advanced freeze (date range or number of payroll cycles)
+    const freezeStart = loan.freezeStartDate ? parseISO(loan.freezeStartDate) : null;
+    const freezeEnd = loan.freezeEndDate ? parseISO(loan.freezeEndDate) : null;
+
+    // Clear an expired range freeze before checking overlap
+    if (loan.freezeMode === "range" && freezeEnd && freezeEnd < periodStart) {
+      loan.freezeMode = null;
+      loan.freezeStartDate = null;
+      loan.freezeEndDate = null;
+      loan.freezeCyclesRemaining = null;
+    }
+
+    const isFrozenByRange =
+      loan.freezeMode === "range" &&
+      freezeStart &&
+      freezeEnd &&
+      freezeStart <= periodEnd &&
+      freezeEnd >= periodStart;
+
+    const isFrozenByCycles = loan.freezeMode === "cycles" && (loan.freezeCyclesRemaining ?? 0) > 0;
+
+    if (isFrozenByRange || isFrozenByCycles) {
+      const reason = isFrozenByRange
+        ? `Deduction frozen (${format(freezeStart!, "yyyy-MM-dd")} to ${format(freezeEnd!, "yyyy-MM-dd")}) for pay period ${payPeriodString}`
+        : `Deduction frozen (${loan.freezeCyclesRemaining} cycle(s) remaining) for pay period ${payPeriodString}`;
+
+      const freezeEntry: LoanDeductionHistoryEntry = {
+        date: format(periodEnd, "yyyy-MM-dd"),
+        amount: 0,
+        type: "pause",
+        notes: reason,
+      };
+      loan.deductionHistory.push(freezeEntry);
+
+      if (isFrozenByCycles) {
+        loan.freezeCyclesRemaining = Math.max(0, (loan.freezeCyclesRemaining ?? 0) - 1);
+        if ((loan.freezeCyclesRemaining ?? 0) <= 0) {
+          loan.freezeMode = null;
+          loan.freezeStartDate = null;
+          loan.freezeEndDate = null;
+          loan.freezeCyclesRemaining = null;
+        }
+      }
+
+      return;
+    }
+
+    // Existing one-period pause (skip next payroll only)
     if (loan.paused) {
       const pauseEntry: LoanDeductionHistoryEntry = {
         date: format(periodEnd, "yyyy-MM-dd"),
