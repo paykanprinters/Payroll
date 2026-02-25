@@ -14,24 +14,38 @@ interface DashboardMonthlyPayrollOverviewChartProps {
   monthlyPayrollData: MonthlyPayrollData[];
 }
 
-const DashboardMonthlyPayrollOverviewChart: React.FC<DashboardMonthlyPayrollOverviewChartProps> = ({ monthlyPayrollData }) => {
+const DashboardMonthlyPayrollOverviewChart: React.FC<DashboardMonthlyPayrollOverviewChartProps> = ({
+  monthlyPayrollData,
+}) => {
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Monthly Payroll Overview</CardTitle>
         <CardDescription>Total gross payroll amount per month.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[300px]">
+      <CardContent className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={monthlyPayrollData}>
+          <BarChart data={monthlyPayrollData} margin={{ top: 8, right: 12, left: 4, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
-            <YAxis tickFormatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} style={{ fontSize: dataVisualsFontSize }} />
-            <Tooltip formatter={(value: number) => `R ${value.toLocaleString('en-ZA')}`} contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
-            <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-            <Bar dataKey="payroll" fill="#8884d8" name="Total Payroll" />
+            <YAxis
+              tickFormatter={(value: number) => `R ${value.toLocaleString("en-ZA")}`}
+              style={{ fontSize: dataVisualsFontSize }}
+            />
+            <Tooltip
+              formatter={(value: number) => `R ${value.toLocaleString("en-ZA")}`}
+              contentStyle={{ fontSize: dataVisualsFontSize }}
+              labelStyle={{ fontSize: dataVisualsFontSize }}
+            />
+            <Legend
+              layout="horizontal"
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{ fontSize: dataVisualsFontSize }}
+            />
+            <Bar dataKey="payroll" fill="#8884d8" name="Payroll" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

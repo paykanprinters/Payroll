@@ -54,8 +54,7 @@ const BulkPayslipsRenderer: React.FC<Props> = ({
               isPdfGeneration={!!isPdfGeneration}
             />
           </div>
-          {/* Explicit html2pdf page break marker */}
-          <div className="html2pdf__page-break" />
+          <div style={{ pageBreakBefore: "always" }} />
         </React.Fragment>
       ))}
     </div>

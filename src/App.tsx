@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
@@ -28,6 +28,15 @@ import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 import Profile from "./pages/Profile";
 import ErrorBoundary from "./components/ErrorBoundary";
 import StaffHome from "./pages/StaffHome";
+import PaymentBatches from "./pages/payroll/PaymentBatches";
+import PaymentBatchDetail from "./pages/payroll/PaymentBatchDetail";
+import CompensationComponents from "./pages/payroll/CompensationComponents";
+import EmployeeAssignments from "./pages/payroll/EmployeeAssignments";
+import OvertimeRules from "./pages/payroll/OvertimeRules";
+import ExceptionsDashboard from "./pages/payroll/ExceptionsDashboard";
+import PayrollRuns from "./pages/payroll/PayrollRuns";
+import PayrollRunDetail from "./pages/payroll/PayrollRunDetail";
+import Docs from "./pages/Docs";
 
 const queryClient = new QueryClient();
 
@@ -35,21 +44,34 @@ const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
 
 const App = () => {
   const isStaffPortal = portalType === "staff";
-  console.log("App.tsx: Initial localStorage.isMockDataEnabled:", localStorage.getItem("isMockDataEnabled"));
+
+  // Dyad preview runs the app embedded in an iframe. HashRouter is more reliable there,
+  // because some hosts block or interfere with history.pushState-based navigation.
+  const isEmbedded = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+
+  const Router = isEmbedded ? HashRouter : BrowserRouter;
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <AutoRefreshOnFocus />
-        <BrowserRouter>
+        <Router>
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/employee" element={<StaffLogin />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
-                <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>}>
+                <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>} >
                   {isStaffPortal ? (
                     <>
                       <Route path="/" element={<StaffHome />} />
@@ -59,6 +81,7 @@ const App = () => {
                       <Route path="/savings" element={<Savings />} />
                       <Route path="/vacation-absence" element={<VacationAbsence />} />
                       <Route path="/profile" element={<Profile />} />
+                      <Route path="/docs" element={<Docs />} />
                       <Route path="/analytics/staff" element={<AnalyticsStaff />} />
                       {/* Block admin routes in staff portal */}
                       <Route path="/employees" element={<Unauthorized />} />
@@ -80,6 +103,7 @@ const App = () => {
                       <Route path="/savings" element={<Savings />} />
                       <Route path="/vacation-absence" element={<VacationAbsence />} />
                       <Route path="/profile" element={<Profile />} />
+                      <Route path="/docs" element={<Docs />} />
                       
                       {/* Staff-only analytics route */}
                       <Route element={<ProtectedRoute allowedRoles={['Staff']} />}>
@@ -91,6 +115,14 @@ const App = () => {
                         <Route path="/employees" element={<Employees />} />
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/reports" element={<Reports />} />
+                        <Route path="/payroll/runs" element={<PayrollRuns />} />
+                        <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
+                        <Route path="/payroll/batches" element={<PaymentBatches />} />
+                        <Route path="/payroll/batches/:id" element={<PaymentBatchDetail />} />
+                        <Route path="/payroll/components" element={<CompensationComponents />} />
+                        <Route path="/payroll/assignments" element={<EmployeeAssignments />} />
+                        <Route path="/payroll/overtime-rules" element={<OvertimeRules />} />
+                        <Route path="/payroll/exceptions" element={<ExceptionsDashboard />} />
                       </Route>
 
                       {/* Admin-only settings */}
@@ -105,7 +137,7 @@ const App = () => {
               </Route>
             </Routes>
           </AuthProvider>
-        </BrowserRouter>
+        </Router>
       </TooltipProvider>
     </QueryClientProvider>
   );

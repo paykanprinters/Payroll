@@ -1,5 +1,5 @@
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear, addMonths } from "date-fns";
-import { MockEmployee } from "../mock-data";
+import { MockEmployee } from "../mock-data-interfaces";
 import { getEmployeeName } from "../utils"; // Import from shared utils
 
 export const generateNewHiresTerminationsReportContent = (

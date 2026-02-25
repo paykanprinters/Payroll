@@ -4,27 +4,79 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, AlertTriangle, Info, ArrowRight } from "lucide-react";
+import {
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  ArrowRight,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
+} from "lucide-react";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
+import { cn } from "@/lib/utils";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
 
 interface ToDoListProps {
   toDos: ToDoEntry[];
   pendingCount: number;
-  markToDoAsDone: (id: string) => Promise<void>; // Updated prop type
+  markToDoAsDone: (id: string) => Promise<void>;
 }
 
-const ToDoList: React.FC<ToDoListProps> = ({ toDos, pendingCount, markToDoAsDone }) => {
+const ITEMS_PER_PAGE = 10;
 
-  const pendingToDos = toDos.filter(todo => todo.status === "pending");
+const ToDoList: React.FC<ToDoListProps> = ({ toDos, markToDoAsDone }) => {
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const pendingToDos = React.useMemo(() => toDos.filter((todo) => todo.status === "pending"), [toDos]);
+
+  const totalPages = Math.max(1, Math.ceil(pendingToDos.length / ITEMS_PER_PAGE));
+
+  React.useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndexExclusive = Math.min(pendingToDos.length, startIndex + ITEMS_PER_PAGE);
+  const paginatedToDos = pendingToDos.slice(startIndex, endIndexExclusive);
+
+  const handleFirstPage = () => setCurrentPage(1);
+  const handleLastPage = () => setCurrentPage(totalPages);
+  const handlePreviousPage = () => setCurrentPage((prev) => Math.max(1, prev - 1));
+  const handleNextPage = () => setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+
+  const pageBlock = React.useMemo(() => {
+    const blockStart = Math.floor((currentPage - 1) / 10) * 10 + 1;
+    const blockEnd = Math.min(totalPages, blockStart + 9);
+    return { blockStart, blockEnd };
+  }, [currentPage, totalPages]);
+
+  const pageNumbers = React.useMemo(() => {
+    const list: number[] = [];
+    for (let p = pageBlock.blockStart; p <= pageBlock.blockEnd; p++) list.push(p);
+    return list;
+  }, [pageBlock.blockStart, pageBlock.blockEnd]);
 
   const getLevelBadge = (level: ToDoEntry["level"]) => {
     switch (level) {
       case "critical":
-        return <Badge variant="destructive" className="bg-red-500 text-white">Critical</Badge>;
+        return (
+          <Badge variant="destructive" className="bg-red-500 text-white">
+            Critical
+          </Badge>
+        );
       case "warning":
-        return <Badge variant="outline" className="bg-yellow-500 text-white border-yellow-500">Warning</Badge>;
+        return (
+          <Badge variant="outline" className="bg-yellow-500 text-white border-yellow-500">
+            Warning
+          </Badge>
+        );
       case "info":
         return <Badge variant="secondary">Info</Badge>;
       default:
@@ -46,62 +98,148 @@ const ToDoList: React.FC<ToDoListProps> = ({ toDos, pendingCount, markToDoAsDone
   };
 
   return (
-    <Card className="col-span-full lg:col-span-2">
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className="text-xl font-bold">📋 Top Payroll To-Dos</span>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          Payroll To-Dos
           {pendingToDos.length > 0 && (
-            <Badge className="ml-2 bg-primary text-primary-foreground">
-              {pendingToDos.length} Pending
-            </Badge>
+            <Badge className="ml-1 bg-primary text-primary-foreground">{pendingToDos.length} Pending</Badge>
           )}
         </CardTitle>
         <CardDescription>
-          High-priority tasks and alerts across your payroll modules.
+          High-priority tasks and alerts across employees, timesheets, payroll and compliance.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {pendingToDos.length > 0 ? (
           <div className="space-y-4">
-            {pendingToDos.slice(0, 5).map((todo) => (
-              <div key={todo.id} className="flex items-start justify-between p-3 border rounded-md bg-muted/50">
-                <div className="flex items-center gap-3 flex-1">
-                  {getLevelIcon(todo.level)}
-                  <div>
-                    <p className="font-medium text-sm">{todo.message}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-muted-foreground">
+              Showing {startIndex + 1}–{endIndexExclusive} of {pendingToDos.length}
+            </div>
+
+            {paginatedToDos.map((todo) => (
+              <div
+                key={todo.id}
+                className="flex items-start justify-between gap-4 rounded-xl border bg-muted/50 p-3"
+              >
+                <div className="flex flex-1 items-start gap-3">
+                  <div className="mt-0.5">{getLevelIcon(todo.level)}</div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium leading-snug">{todo.message}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       {getLevelBadge(todo.level)}
                       <span>Module: {todo.module}</span>
                       {todo.relatedField && (
-                        <span className="ml-2">Field: {todo.relatedField.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        <span>Field: {todo.relatedField.replace(/([A-Z])/g, " $1").trim()}</span>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex shrink-0 items-center gap-2">
                   {todo.actionUrl && (
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline" size="sm" className="rounded-full bg-white">
                       <Link to={todo.actionUrl}>
-                        Go <ArrowRight className="ml-1 h-3 w-3" />
+                        Open <ArrowRight className="ml-1 h-3 w-3" />
                       </Link>
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" onClick={() => markToDoAsDone(todo.id)} title="Mark as Done">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => markToDoAsDone(todo.id)}
+                    title="Mark as done"
+                    className="rounded-full"
+                  >
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </Button>
                 </div>
               </div>
             ))}
-            {pendingToDos.length > 5 && (
-              <p className="text-sm text-muted-foreground text-center mt-4">
-                And {pendingToDos.length - 5} more pending to-dos...
-              </p>
+
+            {totalPages > 1 && (
+              <Pagination className="pt-1">
+                <PaginationContent className="flex-wrap gap-1">
+                  <PaginationItem>
+                    <PaginationLink
+                      size="default"
+                      onClick={handleFirstPage}
+                      className={cn(
+                        "rounded-full bg-white gap-1 pl-2.5 pr-3",
+                        currentPage === 1 && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to first page"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                      <span>First</span>
+                    </PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink
+                      size="default"
+                      onClick={handlePreviousPage}
+                      className={cn(
+                        "rounded-full bg-white gap-1 pl-2.5 pr-3",
+                        currentPage === 1 && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to previous page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span>Back</span>
+                    </PaginationLink>
+                  </PaginationItem>
+
+                  {pageNumbers.map((p) => (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(p)}
+                        isActive={currentPage === p}
+                        className={cn(
+                          "rounded-full bg-white",
+                          currentPage === p &&
+                            "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:text-primary-foreground"
+                        )}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationLink
+                      size="default"
+                      onClick={handleNextPage}
+                      className={cn(
+                        "rounded-full bg-white gap-1 pl-3 pr-2.5",
+                        currentPage === totalPages && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to next page"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink
+                      size="default"
+                      onClick={handleLastPage}
+                      className={cn(
+                        "rounded-full bg-white gap-1 pl-3 pr-2.5",
+                        currentPage === totalPages && "pointer-events-none opacity-50"
+                      )}
+                      aria-label="Go to last page"
+                    >
+                      <span>Last</span>
+                      <ChevronsRight className="h-4 w-4" />
+                    </PaginationLink>
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <CheckCircle className="h-10 w-10 mx-auto mb-3 text-green-500" />
-            <p className="text-lg font-semibold">All caught up!</p>
+          <div className="py-8 text-center text-muted-foreground">
+            <CheckCircle className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
+            <p className="text-base font-semibold text-slate-900">All caught up</p>
             <p className="text-sm">No pending payroll tasks at the moment.</p>
           </div>
         )}

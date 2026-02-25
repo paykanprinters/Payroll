@@ -21,8 +21,8 @@ import { TaxTables } from "./use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
-
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
+import type { OvertimePremiumRules } from "@/lib/payroll-calculations/helpers/earnings-helpers";
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
@@ -41,9 +41,14 @@ export const usePayrollProcessingLogic = (
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
   updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>,
-  batchUpsertPayslips: (payslips: MockPayslips[]) => Promise<boolean>,
+  batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>,
   recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
   isMockDataEnabled: boolean,
+  // Phase 3 inputs (forwarded to generator)
+  earningComponents?: any[],
+  deductionComponents?: any[],
+  assignments?: any[],
+  overtimeRules?: OvertimePremiumRules
 ) => {
 
   const runPayrollProcess = useCallback(
@@ -73,7 +78,11 @@ export const usePayrollProcessingLogic = (
         userTaxSettings,
         payrollSavingsEntries,
         workHoursSettings,
-        publicHolidays || []
+        publicHolidays || [],
+        earningComponents || [],
+        deductionComponents || [],
+        assignments || [],
+        overtimeRules
       );
       const newPayslipsWithBranding = newPayslips.map(p => ({
         ...p,
@@ -96,7 +105,6 @@ export const usePayrollProcessingLogic = (
         const currentStart = parsePeriodStart(newPayslip.payPeriod);
         const employeePayslips = payslips.filter(p => p.employeeId === newPayslip.employeeId);
 
-        // Only include payslips strictly before this period
         const previousPayslips = employeePayslips.filter(p => parsePeriodStart(p.payPeriod) < currentStart);
 
         const prevYtdGross = previousPayslips.reduce((sum, p) => sum + (p.grossEarnings || 0), 0);
@@ -160,7 +168,31 @@ export const usePayrollProcessingLogic = (
 
       showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, companyDetails, setPayslips, updateLoan, updateSavingPlan, updateTimesheetStatus, batchUpsertPayslips, recordSavingsPayment, isMockDataEnabled]
+    [
+      employees,
+      payslips,
+      loans,
+      savingPlans,
+      leaveRecords,
+      timesheets,
+      taxTables,
+      userTaxSettings,
+      payrollSavingsEntries,
+      workHoursSettings,
+      publicHolidays,
+      companyDetails,
+      setPayslips,
+      updateLoan,
+      updateSavingPlan,
+      updateTimesheetStatus,
+      batchUpsertPayslips,
+      recordSavingsPayment,
+      isMockDataEnabled,
+      earningComponents,
+      deductionComponents,
+      assignments,
+      overtimeRules,
+    ]
   );
 
   const calculateSinglePayslipPreview = useCallback(
@@ -191,7 +223,11 @@ export const usePayrollProcessingLogic = (
         userTaxSettings,
         payrollSavingsEntries,
         workHoursSettings,
-        publicHolidays || []
+        publicHolidays || [],
+        earningComponents || [],
+        deductionComponents || [],
+        assignments || [],
+        overtimeRules
       );
       const previewPayslipsWithBranding = previewPayslips.map(p => ({
         ...p,
@@ -222,7 +258,25 @@ export const usePayrollProcessingLogic = (
       }
       return null;
     },
-    [employees, payslips, loans, savingPlans, leaveRecords, timesheets, taxTables, userTaxSettings, payrollSavingsEntries, workHoursSettings, publicHolidays, companyDetails, isMockDataEnabled]
+    [
+      employees,
+      payslips,
+      loans,
+      savingPlans,
+      leaveRecords,
+      timesheets,
+      taxTables,
+      userTaxSettings,
+      payrollSavingsEntries,
+      workHoursSettings,
+      publicHolidays,
+      companyDetails,
+      isMockDataEnabled,
+      earningComponents,
+      deductionComponents,
+      assignments,
+      overtimeRules,
+    ]
   );
 
   return {

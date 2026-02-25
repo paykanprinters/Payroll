@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateCustomEmployeeId } from "@/lib/utils";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 
@@ -122,6 +123,7 @@ interface EmployeeFormDialogProps {
   onClose: () => void;
   onSave: (employee: EmployeeFormValues) => void;
   initialEmployee?: MockEmployee | null;
+  initialFocus?: "basic" | "personal" | "payment" | "bank" | "tax";
 }
 
 const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
@@ -129,6 +131,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   onClose,
   onSave,
   initialEmployee,
+  initialFocus,
 }) => {
   const { employees: allEmployees, companyDetails } = usePayrollProcessor();
   const companyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
@@ -194,6 +197,18 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       ignoredIncompleteFields: [],
     },
   });
+
+  const initialTab = React.useMemo(() => {
+    if (initialFocus === "personal") return "personal";
+    if (initialFocus === "payment" || initialFocus === "bank" || initialFocus === "tax") return "payment";
+    return "basic";
+  }, [initialFocus]);
+
+  const [tab, setTab] = React.useState<"basic" | "personal" | "payment">(initialTab);
+
+  React.useEffect(() => {
+    if (isOpen) setTab(initialTab);
+  }, [isOpen, initialTab]);
 
   React.useEffect(() => {
     if (initialEmployee) {
@@ -291,20 +306,38 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             {initialEmployee ? "Make changes to employee details here." : "Fill in the details for the new employee."}
           </DialogDescription>
         </DialogHeader>
-        <FormProvider {...formMethods}>
-          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden h-full">
-            <ScrollArea className="flex-grow px-4 min-h-0">
-              <div className="grid gap-4 py-4">
-                <BasicInfoForm />
-                <PersonalDetailsForm />
-                <PaymentInfoForm />
-              </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4 px-4">
-              <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
-            </DialogFooter>
-          </form>
-        </FormProvider>
+
+        <div className="px-4">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+            <TabsList className="rounded-xl">
+              <TabsTrigger value="basic" className="rounded-lg">Basic</TabsTrigger>
+              <TabsTrigger value="personal" className="rounded-lg">Personal</TabsTrigger>
+              <TabsTrigger value="payment" className="rounded-lg">Pay & Bank</TabsTrigger>
+            </TabsList>
+
+            <FormProvider {...formMethods}>
+              <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col overflow-hidden h-full">
+                <ScrollArea className="mt-4 flex-grow min-h-0">
+                  <div className="grid gap-4 pb-4">
+                    <TabsContent value="basic" className="m-0">
+                      <BasicInfoForm />
+                    </TabsContent>
+                    <TabsContent value="personal" className="m-0">
+                      <PersonalDetailsForm />
+                    </TabsContent>
+                    <TabsContent value="payment" className="m-0">
+                      <PaymentInfoForm initialFocus={initialFocus} />
+                    </TabsContent>
+                  </div>
+                </ScrollArea>
+
+                <DialogFooter className="pt-4 pb-4">
+                  <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
+                </DialogFooter>
+              </form>
+            </FormProvider>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

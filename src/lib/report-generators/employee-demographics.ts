@@ -1,4 +1,4 @@
-import { MockEmployee } from "../mock-data";
+import { MockEmployee } from "../mock-data-interfaces";
 import { getEmployeeName } from "../utils"; // Import from shared utils
 import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 

@@ -1,273 +1,222 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
+import React, { useMemo } from "react";
 import { Loader2 } from "lucide-react";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
-import { format } from "date-fns";
-import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
 import RetroFunkHeader from "@/components/dashboard/RetroFunkHeader";
+import DashboardPrimaryActions from "@/components/dashboard/DashboardPrimaryActions";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
-import ToDoList from "@/components/ToDoList";
-import DashboardMonthlyPayrollOverviewChart from "@/components/dashboard/DashboardMonthlyPayrollOverviewChart";
-import DashboardCurrentDateCalendar from "@/components/dashboard/DashboardCurrentDateCalendar";
+import SetupHealthSummaryCard from "@/components/dashboard/SetupHealthSummaryCard";
 import PayrollRunCard from "@/components/payroll/PayrollRunCard";
-import DashboardEmployeeJobTitleDistributionChart from "@/components/dashboard/DashboardEmployeeJobTitleDistributionChart";
+import ToDoList from "@/components/ToDoList";
+
+import DashboardMonthlyPayrollOverviewChart from "@/components/dashboard/DashboardMonthlyPayrollOverviewChart";
 import DashboardTotalDeductionsBreakdownChart from "@/components/dashboard/DashboardTotalDeductionsBreakdownChart";
 import DashboardAverageNetPayTrendChart from "@/components/dashboard/DashboardAverageNetPayTrendChart";
+import DashboardEmployeeJobTitleDistributionChart from "@/components/dashboard/DashboardEmployeeJobTitleDistributionChart";
 import DashboardEmployeeSalaryDistributionChart from "@/components/dashboard/DashboardEmployeeSalaryDistributionChart";
 import DashboardMonthlyLeaveDaysTakenChart from "@/components/dashboard/DashboardMonthlyLeaveDaysTakenChart";
-import DashboardQuickActionsCard from "@/components/dashboard/DashboardQuickActionsCard";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import DashboardCurrentDateCalendar from "@/components/dashboard/DashboardCurrentDateCalendar";
+import DashboardTimesheetStatusChart from "@/components/dashboard/DashboardTimesheetStatusChart";
+import DashboardSavingsStatusChart from "@/components/dashboard/DashboardSavingsStatusChart";
+import DashboardLoansOverviewCard from "@/components/dashboard/DashboardLoansOverviewCard";
+
+import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
+import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
+
+import {
+  computeAverageNetPayTrend,
+  computeDeductionsBreakdown,
+  computeJobTitleDistribution,
+  computeLeaveDaysTakenTrend,
+  computeLoansOverview,
+  computeMonthlyPayrollData,
+  computeSalaryDistribution,
+  computeSavingsStatusSummary,
+  computeTimesheetStatusCounts,
+} from "@/lib/dashboard-metrics";
 
 const Dashboard: React.FC = () => {
-  const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
   const {
     employees,
     payslips,
     leaveRecords,
-    isMockDataEnabled,
-    companyDetails,
+    timesheets,
     toDos,
     pendingCount,
-    markToDoAsDone,
+    loans,
+    payrollSavingsEntries,
+    companyDetails,
     payCycleSettings,
-    isLoadingPayCycleSettings,
     runPayrollProcess,
     calculateSinglePayslipPreview,
+    markToDoAsDone,
+    isLoadingCompanyDetails,
+    isLoadingEmployees,
+    isLoadingPayCycleSettings,
+    isLoadingPayslips,
+    isLoadingLeaveRecords,
+    isLoadingTimesheets,
+    isLoadingToDos,
+    isLoadingLoans,
+    isLoadingPayrollSavingsEntries,
+    isMockDataEnabled,
   } = usePayrollProcessor();
-  const { visibleWidgets, isLoadingSettings } = useDashboardSettings({ isMockDataEnabled });
 
-  const [employeeCount, setEmployeeCount] = useState(0);
-  const [recentPayslipCount, setRecentPayslipCount] = useState(0);
-  const [employeeJobTitleData, setEmployeeJobTitleData] = useState<{ name: string; value: number }[]>([]);
-  const [monthlyPayrollData, setMonthlyPayrollData] = useState<{ name: string; payroll: number }[]>([]);
-  const [totalDeductionsBreakdown, setTotalDeductionsBreakdown] = useState<{ name: string; value: number }[]>([]);
-  const [averageNetPayTrend, setAverageNetPayTrend] = useState<{ name: string; avgNetPay: number }[]>([]);
-  const [employeeSalaryDistribution, setEmployeeSalaryDistribution] = useState<{ range: string; count: number }[]>([]);
-  const [leaveDaysTakenTrend, setLeaveDaysTakenTrend] = useState<{ name: string; days: number }[]>([]);
+  const { settings: payslipDesignSettings, isLoading: isLoadingPayslipDesign } = usePayslipDesignSettings();
+  const {
+    visibleWidgets,
+    isLoadingSettings,
+    getSectionOrder,
+    moveWidget,
+    toggleWidgetVisibility,
+    resetToDefaults,
+  } = useDashboardSettings({ isMockDataEnabled });
 
-  const { settings: payslipDesignSettings, isLoading: isLoadingPayslipDesignSettings } = usePayslipDesignSettings();
+  const isLoadingPage =
+    isLoadingCompanyDetails ||
+    isLoadingEmployees ||
+    isLoadingPayCycleSettings ||
+    isLoadingPayslips ||
+    isLoadingLeaveRecords ||
+    isLoadingTimesheets ||
+    isLoadingToDos ||
+    isLoadingLoans ||
+    isLoadingPayrollSavingsEntries ||
+    isLoadingPayslipDesign ||
+    isLoadingSettings;
 
-  const loadDashboardData = React.useCallback(() => {
-    setEmployeeCount(employees.length);
-    setRecentPayslipCount(payslips.length);
+  const monthlyPayrollData = useMemo(() => computeMonthlyPayrollData(payslips, { limit: 12 }), [payslips]);
+  const avgNetPayTrend = useMemo(() => computeAverageNetPayTrend(payslips, { limit: 12 }), [payslips]);
+  const deductionsBreakdown = useMemo(() => computeDeductionsBreakdown(payslips, { top: 7 }), [payslips]);
+  const jobTitleDist = useMemo(() => computeJobTitleDistribution(employees, { top: 7 }), [employees]);
+  const salaryDist = useMemo(() => computeSalaryDistribution(employees), [employees]);
+  const leaveDaysTrend = useMemo(
+    () => computeLeaveDaysTakenTrend(leaveRecords || [], { limit: 12 }),
+    [leaveRecords]
+  );
+  const timesheetStatus = useMemo(() => computeTimesheetStatusCounts(timesheets || []), [timesheets]);
+  const savingsStatus = useMemo(
+    () => computeSavingsStatusSummary(payrollSavingsEntries || []),
+    [payrollSavingsEntries]
+  );
+  const loansOverview = useMemo(() => computeLoansOverview(loans || []), [loans]);
 
-    const jobTitleMap = new Map<string, number>();
-    employees.forEach((emp) => {
-      jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
-    });
-    setEmployeeJobTitleData(
-      Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
-    );
+  const mainOrder = useMemo(() => getSectionOrder("main"), [getSectionOrder]);
+  const sideOrder = useMemo(() => getSectionOrder("side"), [getSectionOrder]);
+  const chartsOrder = useMemo(() => getSectionOrder("charts"), [getSectionOrder]);
 
-    const monthlyGrossPayMap = new Map<string, number>();
-    payslips.forEach(p => {
-      const monthYear = p.payPeriod.substring(0, 7);
-      monthlyGrossPayMap.set(monthYear, (monthlyGrossPayMap.get(monthYear) || 0) + p.grossEarnings);
-    });
-    const sortedMonthlyPayrollData = Array.from(monthlyGrossPayMap.entries())
-      .map(([monthYear, payroll]) => ({
-        name: format(new Date(monthYear), 'MMM yyyy'),
-        payroll: payroll,
-      }))
-      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
-    setMonthlyPayrollData(sortedMonthlyPayrollData);
+  const renderWidget = (key: keyof typeof visibleWidgets) => {
+    if (!visibleWidgets || !visibleWidgets[key]) return null;
 
-    const deductionsMap = new Map<string, number>();
-    payslips.forEach(p => {
-      p.deductionsBreakdown.forEach(deduction => {
-        deductionsMap.set(deduction.name, (deductionsMap.get(deduction.name) || 0) + deduction.amount);
-      });
-    });
-    setTotalDeductionsBreakdown(
-      Array.from(deductionsMap.entries()).map(([name, value]) => ({ name, value }))
-    );
+    switch (key) {
+      case "toDoListCard":
+        return (
+          <ToDoList
+            toDos={toDos}
+            pendingCount={pendingCount}
+            markToDoAsDone={markToDoAsDone}
+          />
+        );
+      case "timesheetStatusChart":
+        return <DashboardTimesheetStatusChart statusCounts={timesheetStatus.chartData} />;
+      case "loansOverviewCard":
+        return (
+          <DashboardLoansOverviewCard
+            activeCount={loansOverview.activeCount}
+            totalLoanAmount={loansOverview.totalLoanAmount}
+            totalRemaining={loansOverview.totalRemaining}
+            repaidPct={loansOverview.repaidPct}
+          />
+        );
+      case "payrollRunCard":
+        return companyDetails && payCycleSettings ? (
+          <PayrollRunCard
+            employees={employees}
+            companyDetails={companyDetails}
+            payCycleType={payCycleSettings.payCycleType}
+            cutOffDay={payCycleSettings.cutOffDay}
+            payDayOffset={payCycleSettings.payDayOffset}
+            runPayrollProcess={runPayrollProcess}
+            calculateSinglePayslipPreview={calculateSinglePayslipPreview}
+            payslipDesignSettings={payslipDesignSettings}
+          />
+        ) : null;
+      case "savingsStatusChart":
+        return <DashboardSavingsStatusChart data={savingsStatus.chartData} />;
+      case "currentDateCalendar":
+        return <DashboardCurrentDateCalendar />;
 
-    const monthlyNetPayMap = new Map<string, { totalNetPay: number; employeeCount: number }>();
-    payslips.forEach(p => {
-      const monthYear = p.payPeriod.substring(0, 7);
-      const current = monthlyNetPayMap.get(monthYear) || { totalNetPay: 0, employeeCount: 0 };
-      monthlyNetPayMap.set(monthYear, {
-        totalNetPay: current.totalNetPay + p.netPay,
-        employeeCount: current.employeeCount + 1,
-      });
-    });
-    const sortedAverageNetPay = Array.from(monthlyNetPayMap.entries())
-      .map(([monthYear, data]) => ({
-        name: new Date(monthYear).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
-        avgNetPay: data.employeeCount > 0 ? data.totalNetPay / data.employeeCount : 0,
-      }))
-      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
-    setAverageNetPayTrend(sortedAverageNetPay);
+      case "monthlyPayrollOverviewChart":
+        return <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />;
+      case "averageNetPayTrendChart":
+        return <DashboardAverageNetPayTrendChart averageNetPayTrend={avgNetPayTrend} />;
+      case "totalDeductionsBreakdownChart":
+        return <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={deductionsBreakdown} />;
+      case "employeeJobTitleDistributionChart":
+        return <DashboardEmployeeJobTitleDistributionChart employeeJobTitleData={jobTitleDist} />;
+      case "employeeSalaryDistributionChart":
+        return <DashboardEmployeeSalaryDistributionChart employeeSalaryDistribution={salaryDist} />;
+      case "monthlyLeaveDaysTakenChart":
+        return <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTrend} />;
 
-    const salaryRanges = [
-      { range: "R0 - R20k", min: 0, max: 20000, count: 0 },
-      { range: "R20k - R40k", min: 20001, max: 40000, count: 0 },
-      { range: "R40k - R60k", min: 40001, max: 60000, count: 0 },
-      { range: "R60k+", min: 60001, max: Infinity, count: 0 },
-    ];
-    employees.forEach(emp => {
-      for (const range of salaryRanges) {
-        if ((emp.salary || 0) >= range.min && (emp.salary || 0) <= range.max) {
-          range.count++;
-          break;
-        }
-      }
-    });
-    setEmployeeSalaryDistribution(salaryRanges.map(r => ({ range: r.range, count: r.count })));
+      default:
+        return null;
+    }
+  };
 
-    const monthlyLeaveDaysMap = new Map<string, number>();
-    leaveRecords.forEach(record => {
-      const monthYear = record.startDate.substring(0, 7);
-      monthlyLeaveDaysMap.set(monthYear, (monthlyLeaveDaysMap.get(monthYear) || 0) + record.workingDays);
-    });
-    const sortedLeaveDaysTrend = Array.from(monthlyLeaveDaysMap.entries())
-      .map(([monthYear, days]) => ({
-        name: new Date(monthYear).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
-        days: days,
-      }))
-      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
-    setLeaveDaysTakenTrend(sortedLeaveDaysTrend);
-
-  }, [employees, payslips, leaveRecords, payCycleSettings, calculateSinglePayslipPreview]);
-
-  useEffect(() => {
-    loadDashboardData();
-    window.addEventListener('allMockDataUpdated', loadDashboardData);
-    window.addEventListener('employeesUpdated', loadDashboardData);
-    window.addEventListener('payslipsUpdated', loadDashboardData);
-    window.addEventListener('leaveRecordsUpdated', loadDashboardData);
-    window.addEventListener('companyDetailsUpdated', loadDashboardData);
-    window.addEventListener('payCycleSettingsUpdated', loadDashboardData);
-    return () => {
-      window.removeEventListener('allMockDataUpdated', loadDashboardData);
-      window.removeEventListener('employeesUpdated', loadDashboardData);
-      window.removeEventListener('payslipsUpdated', loadDashboardData);
-      window.removeEventListener('leaveRecordsUpdated', loadDashboardData);
-      window.removeEventListener('companyDetailsUpdated', loadDashboardData);
-      window.removeEventListener('payCycleSettingsUpdated', loadDashboardData);
-    };
-  }, [loadDashboardData, companyDetails]);
-
-  if (isLoadingSettings || !visibleWidgets || isLoadingPayslipDesignSettings) {
+  if (isLoadingPage) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="mb-2">
-        <Alert className="border-blue-200 bg-blue-50 text-blue-900">
-          <AlertTitle>Active build</AlertTitle>
-          <AlertDescription>{portalType === "staff" ? "Staff Portal" : "Admin/Manager Console"}</AlertDescription>
-        </Alert>
+    <div className="space-y-6">
+      <RetroFunkHeader
+        companyLegalName={companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company"}
+        isMockDataEnabled={isMockDataEnabled}
+        visibleWidgets={visibleWidgets}
+        isLoadingSettings={isLoadingSettings}
+        getSectionOrder={getSectionOrder}
+        moveWidget={moveWidget}
+        toggleWidgetVisibility={toggleWidgetVisibility}
+        resetToDefaults={resetToDefaults}
+      />
+
+      <DashboardPrimaryActions />
+
+      {visibleWidgets?.summaryCards && (
+        <DashboardSummaryCards
+          employeeCount={employees.length}
+          recentPayslipCount={payslips.length}
+          showUpcomingPayrollCard={!!visibleWidgets.upcomingPayrollCard}
+        />
+      )}
+
+      <div className="grid items-start gap-6 md:grid-cols-12">
+        <div className="md:col-span-7 space-y-6">
+          {mainOrder.map((k) => (
+            <React.Fragment key={k}>{renderWidget(k)}</React.Fragment>
+          ))}
+        </div>
+
+        <div className="md:col-span-5 space-y-6">
+          <SetupHealthSummaryCard />
+
+          {sideOrder.map((k) => (
+            <React.Fragment key={k}>{renderWidget(k)}</React.Fragment>
+          ))}
+        </div>
       </div>
-      <RetroFunkHeader />
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full max-w-2xl grid grid-cols-4 gap-2 bg-white/60 backdrop-blur-md rounded-full p-1 ring-1 ring-muted">
-          <TabsTrigger value="overview" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="payroll" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
-            Payroll
-          </TabsTrigger>
-          <TabsTrigger value="workforce" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
-            Workforce
-          </TabsTrigger>
-          <TabsTrigger value="leave" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-foreground">
-            Leave
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          {visibleWidgets.summaryCards && (
-            <DashboardSummaryCards
-              employeeCount={employeeCount}
-              recentPayslipCount={recentPayslipCount}
-              showUpcomingPayrollCard={visibleWidgets.upcomingPayrollCard}
-            />
-          )}
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="space-y-4 lg:col-span-2">
-              {visibleWidgets.payrollRunCard && (
-                <PayrollRunCard
-                  employees={employees}
-                  companyDetails={companyDetails}
-                  payCycleType={payCycleSettings?.payCycleType ?? 'Weekly'}
-                  cutOffDay={payCycleSettings?.cutOffDay ?? 5}
-                  payDayOffset={payCycleSettings?.payDayOffset ?? 0}
-                  runPayrollProcess={runPayrollProcess}
-                  calculateSinglePayslipPreview={calculateSinglePayslipPreview}
-                  payslipDesignSettings={payslipDesignSettings}
-                />
-              )}
-            </div>
-            <div className="space-y-4 lg:col-span-1">
-              {visibleWidgets.quickActionsCard && <DashboardQuickActionsCard />}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="payroll" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="space-y-4 lg:col-span-2">
-              <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-                {visibleWidgets.monthlyPayrollOverviewChart && (
-                  <DashboardMonthlyPayrollOverviewChart monthlyPayrollData={monthlyPayrollData} />
-                )}
-                {visibleWidgets.averageNetPayTrendChart && (
-                  <DashboardAverageNetPayTrendChart averageNetPayTrend={averageNetPayTrend} />
-                )}
-              </div>
-              {visibleWidgets.totalDeductionsBreakdownChart && (
-                <DashboardTotalDeductionsBreakdownChart totalDeductionsBreakdown={totalDeductionsBreakdown} />
-              )}
-            </div>
-
-            <div className="space-y-4 lg:col-span-1">
-              {visibleWidgets.toDoListCard && (
-                <ToDoList toDos={toDos} pendingCount={pendingCount} markToDoAsDone={markToDoAsDone} />
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="workforce" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-            {visibleWidgets.employeeJobTitleDistributionChart && (
-              <DashboardEmployeeJobTitleDistributionChart employeeJobTitleData={employeeJobTitleData} />
-            )}
-            {visibleWidgets.employeeSalaryDistributionChart && (
-              <DashboardEmployeeSalaryDistributionChart employeeSalaryDistribution={employeeSalaryDistribution} />
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="leave" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-            {visibleWidgets.monthlyLeaveDaysTakenChart && (
-              <DashboardMonthlyLeaveDaysTakenChart leaveDaysTakenTrend={leaveDaysTakenTrend} />
-            )}
-            {visibleWidgets.currentDateCalendar && (
-              <DashboardCurrentDateCalendar />
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <div className="mt-2 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
-        <h3 className="font-semibold text-lg mb-2">Important Note on South African Regulations:</h3>
-        <p className="text-sm">
-          This dashboard provides the user interface for a payroll system. The complex calculations required to meet full South African regulations for pay and deductions (such as PAYE, UIF, SDL, etc.) are highly specialized and typically handled by a robust backend system. This front-end setup provides the structure for managing and displaying payroll data, but the actual calculation logic would need to be implemented on the server-side.
-        </p>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {chartsOrder.map((k) => (
+          <React.Fragment key={k}>{renderWidget(k)}</React.Fragment>
+        ))}
       </div>
     </div>
   );

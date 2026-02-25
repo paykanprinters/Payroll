@@ -11,6 +11,7 @@ import { useCompanyDetails } from "@/hooks/use-company-details";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext"; // Import useAuth
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor to get isMockDataEnabled
+import { useSearchParams } from "react-router-dom";
 
 // Import new modular components
 import LegalTradeInfoForm from "@/components/settings/company-details/LegalTradeInfoForm";
@@ -51,7 +52,7 @@ const companyDetailsSchema = z.object({
 type CompanyDetailsFormValues = z.infer<typeof companyDetailsSchema>;
 
 const CompanyDetails: React.FC = () => {
-  console.log("CompanyDetails.tsx: Component is rendering.");
+  const [searchParams, setSearchParams] = useSearchParams();
   const { companyDetails, isLoading, upsertCompanyDetails } = useCompanyDetails({ isMockDataEnabled: false, isAuthenticated: true, isLoadingAuth: false }); // Pass explicit values for now
   const { user, isLoadingAuth } = useAuth(); // Get current user from AuthContext
   const { isMockDataEnabled } = usePayrollProcessor(); // Get mock data status
@@ -140,6 +141,25 @@ const CompanyDetails: React.FC = () => {
       console.log("CompanyDetails.tsx: Form reset with empty defaults for initial setup.");
     }
   }, [companyDetails, isLoading, formMethods]);
+
+  React.useEffect(() => {
+    const focus = (searchParams.get("focus") || "").toLowerCase();
+    if (!focus) return;
+    if (isLoading || isLoadingAuth) return;
+
+    // Allow the page to render before scrolling.
+    window.requestAnimationFrame(() => {
+      if (focus === "tax") {
+        const el = document.getElementById("companyTaxNumber");
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        (el as HTMLInputElement | null)?.focus?.();
+      }
+    });
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, isLoading, isLoadingAuth]);
 
   const onSubmit = async (data: CompanyDetailsFormValues) => {
     await upsertCompanyDetails(data);

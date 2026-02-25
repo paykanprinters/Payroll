@@ -10,9 +10,10 @@ export interface AuditEvent {
 
 const AUDIT_KEY = "auditEvents";
 
-export const logAuditEvent = async (action: string) => {
+export const logAuditEvent = async (action: string, entityType?: string, entityId?: string, metadata?: Record<string, any>) => {
   let userLabel = "Anonymous";
   const { data } = await supabase.auth.getUser();
+  const userId = data?.user?.id || null;
   if (data?.user) {
     userLabel = data.user.email || `User ${data.user.id}`;
   }
@@ -22,6 +23,18 @@ export const logAuditEvent = async (action: string) => {
     user: userLabel,
     action,
   };
+
+  // Persist to DB when context is provided (user + entity details)
+  if (userId && entityType && entityId) {
+    const { error } = await supabase.from('audit_logs').insert({
+      user_id: userId,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      metadata: metadata ?? null,
+    });
+    // Ignore DB errors here; always keep local fallback below
+  }
 
   const existingRaw = typeof window !== "undefined" ? localStorage.getItem(AUDIT_KEY) : null;
   const existing = existingRaw ? JSON.parse(existingRaw) : [];

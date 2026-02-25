@@ -10,10 +10,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import ToDosHeader from "@/components/todos/ToDosHeader";
-import { CheckCircle, AlertTriangle, Info, ArrowRight, RefreshCcw, ListFilter, Sparkles } from "lucide-react";
+import {
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  ArrowRight,
+  RefreshCcw,
+  ListFilter,
+  Sparkles,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { cn } from "@/lib/utils";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
+
+const ITEMS_PER_PAGE = 10;
 
 const ToDosPage: React.FC = () => {
   const {
@@ -88,6 +109,144 @@ const ToDosPage: React.FC = () => {
     () => completedToDos.filter(matchesFilters),
     [completedToDos, severityFilter, moduleFilter, search]
   );
+
+  const [pendingPage, setPendingPage] = useState(1);
+  const [completedPage, setCompletedPage] = useState(1);
+
+  const pendingTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredPending.length / ITEMS_PER_PAGE)),
+    [filteredPending.length]
+  );
+  const completedTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredCompleted.length / ITEMS_PER_PAGE)),
+    [filteredCompleted.length]
+  );
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setPendingPage(1);
+    setCompletedPage(1);
+  }, [severityFilter, moduleFilter, search]);
+
+  // Clamp pages when totals change
+  useEffect(() => {
+    setPendingPage((p) => Math.min(p, pendingTotalPages));
+  }, [pendingTotalPages]);
+  useEffect(() => {
+    setCompletedPage((p) => Math.min(p, completedTotalPages));
+  }, [completedTotalPages]);
+
+  const pendingStartIndex = (pendingPage - 1) * ITEMS_PER_PAGE;
+  const pendingEndExclusive = Math.min(filteredPending.length, pendingStartIndex + ITEMS_PER_PAGE);
+  const paginatedPending = filteredPending.slice(pendingStartIndex, pendingEndExclusive);
+
+  const completedStartIndex = (completedPage - 1) * ITEMS_PER_PAGE;
+  const completedEndExclusive = Math.min(filteredCompleted.length, completedStartIndex + ITEMS_PER_PAGE);
+  const paginatedCompleted = filteredCompleted.slice(completedStartIndex, completedEndExclusive);
+
+  const getPageNumbers = (currentPage: number, totalPages: number) => {
+    const blockStart = Math.floor((currentPage - 1) / 10) * 10 + 1;
+    const blockEnd = Math.min(totalPages, blockStart + 9);
+    const list: number[] = [];
+    for (let p = blockStart; p <= blockEnd; p++) list.push(p);
+    return list;
+  };
+
+  const PaginationBar = ({
+    currentPage,
+    totalPages,
+    onChange,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onChange: (page: number) => void;
+  }) => {
+    if (totalPages <= 1) return null;
+
+    const pageNumbers = getPageNumbers(currentPage, totalPages);
+
+    return (
+      <Pagination className="pt-2">
+        <PaginationContent className="flex-wrap gap-1">
+          <PaginationItem>
+            <PaginationLink
+              size="default"
+              onClick={() => onChange(1)}
+              className={cn(
+                "rounded-full bg-white gap-1 pl-2.5 pr-3",
+                currentPage === 1 && "pointer-events-none opacity-50"
+              )}
+              aria-label="Go to first page"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+              <span>First</span>
+            </PaginationLink>
+          </PaginationItem>
+
+          <PaginationItem>
+            <PaginationLink
+              size="default"
+              onClick={() => onChange(Math.max(1, currentPage - 1))}
+              className={cn(
+                "rounded-full bg-white gap-1 pl-2.5 pr-3",
+                currentPage === 1 && "pointer-events-none opacity-50"
+              )}
+              aria-label="Go to previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Back</span>
+            </PaginationLink>
+          </PaginationItem>
+
+          {pageNumbers.map((p) => (
+            <PaginationItem key={p}>
+              <PaginationLink
+                onClick={() => onChange(p)}
+                isActive={currentPage === p}
+                className={cn(
+                  "rounded-full bg-white",
+                  currentPage === p &&
+                    "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:text-primary-foreground"
+                )}
+              >
+                {p}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+
+          <PaginationItem>
+            <PaginationLink
+              size="default"
+              onClick={() => onChange(Math.min(totalPages, currentPage + 1))}
+              className={cn(
+                "rounded-full bg-white gap-1 pl-3 pr-2.5",
+                currentPage === totalPages && "pointer-events-none opacity-50"
+              )}
+              aria-label="Go to next page"
+            >
+              <span>Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </PaginationLink>
+          </PaginationItem>
+
+          <PaginationItem>
+            <PaginationLink
+              size="default"
+              onClick={() => onChange(totalPages)}
+              className={cn(
+                "rounded-full bg-white gap-1 pl-3 pr-2.5",
+                currentPage === totalPages && "pointer-events-none opacity-50"
+              )}
+              aria-label="Go to last page"
+            >
+              <span>Last</span>
+              <ChevronsRight className="h-4 w-4" />
+            </PaginationLink>
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -235,7 +394,7 @@ const ToDosPage: React.FC = () => {
             <CardContent>
               {isLoadingToDos ? (
                 <div className="space-y-3">
-                  {[...Array(4)].map((_, i) => (
+                  {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
                     <div key={i} className="p-3 border rounded-xl bg-white">
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-4 w-4 rounded-full" />
@@ -251,7 +410,11 @@ const ToDosPage: React.FC = () => {
                 </div>
               ) : filteredPending.length > 0 ? (
                 <div className="space-y-4">
-                  {filteredPending.map((todo) => (
+                  <div className="text-xs text-muted-foreground">
+                    Showing {pendingStartIndex + 1}–{pendingEndExclusive} of {filteredPending.length}
+                  </div>
+
+                  {paginatedPending.map((todo) => (
                     <div
                       key={todo.id}
                       className="flex items-start justify-between p-3 border rounded-xl bg-white hover:bg-muted/50 transition-colors"
@@ -288,6 +451,12 @@ const ToDosPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
+
+                  <PaginationBar
+                    currentPage={pendingPage}
+                    totalPages={pendingTotalPages}
+                    onChange={setPendingPage}
+                  />
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -319,7 +488,7 @@ const ToDosPage: React.FC = () => {
             <CardContent>
               {isLoadingToDos ? (
                 <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
+                  {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
                     <div key={i} className="p-3 border rounded-xl bg-white">
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-4 w-4 rounded-full" />
@@ -330,7 +499,11 @@ const ToDosPage: React.FC = () => {
                 </div>
               ) : filteredCompleted.length > 0 ? (
                 <div className="space-y-4">
-                  {filteredCompleted.map((todo) => (
+                  <div className="text-xs text-muted-foreground">
+                    Showing {completedStartIndex + 1}–{completedEndExclusive} of {filteredCompleted.length}
+                  </div>
+
+                  {paginatedCompleted.map((todo) => (
                     <div
                       key={todo.id}
                       className="flex items-start justify-between p-3 border rounded-xl bg-green-50/60 text-muted-foreground"
@@ -349,6 +522,12 @@ const ToDosPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
+
+                  <PaginationBar
+                    currentPage={completedPage}
+                    totalPages={completedTotalPages}
+                    onChange={setCompletedPage}
+                  />
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

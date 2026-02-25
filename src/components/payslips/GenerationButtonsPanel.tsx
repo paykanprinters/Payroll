@@ -20,18 +20,20 @@ const GenerationButtonsPanel: React.FC<GenerationButtonsPanelProps> = ({
   return (
     <div className="flex flex-col gap-3">
       <Button
-        className="w-full"
+        className="w-full h-auto whitespace-normal py-3 text-sm leading-snug"
         onClick={onGenerateSelectedPeriod}
         disabled={disabledSelectedPeriod}
       >
-        <FileStack className="mr-2 h-4 w-4" /> Generate Payslips for Selected Period
+        <FileStack className="mr-2 h-4 w-4 shrink-0" />
+        <span>Generate payslips for selected period</span>
       </Button>
       <Button
-        className="w-full"
+        className="w-full h-auto whitespace-normal py-3 text-sm leading-snug"
         onClick={onGenerateAllCurrentPeriodDownload}
         disabled={disabledCurrentPeriod}
       >
-        <FileStack className="mr-2 h-4 w-4" /> Generate All for Current Period (Download)
+        <FileStack className="mr-2 h-4 w-4 shrink-0" />
+        <span>Export current period (ZIP)</span>
       </Button>
     </div>
   );

@@ -66,7 +66,7 @@ const BulkReportsRenderer: React.FC<Props> = ({
           isPdfGeneration={isPdfGeneration}
         />
       </div>
-      <div className="html2pdf__page-break" />
+      <div style={{ pageBreakBefore: "always" }} />
       <div className="pdf-page">
         <ReportContentWrapper
           reportTitle={`Employee Payslip Report (${mode === "monthly" ? "Monthly" : "Weekly"})`}
@@ -77,7 +77,6 @@ const BulkReportsRenderer: React.FC<Props> = ({
           onReadyForPdf={onReadyForPdf}
         />
       </div>
-      <div className="html2pdf__page-break" />
     </div>
   );
 };

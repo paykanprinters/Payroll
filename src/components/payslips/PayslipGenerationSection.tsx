@@ -177,7 +177,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     });
 
     if (payslipsForPeriod.length === 0) {
-      showError(`No ${mode} payslips found for the selected period (${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}).`);
+      showError(`No ${mode} payslips found for the selected period (${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}). Generate payslips for that period first.`);
       return;
     }
 
@@ -293,7 +293,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     });
 
     if (payslipsForCurrentPeriod.length === 0) {
-      showError("No payslips found for the current period for any employee. Ensure mock data is up-to-date.");
+      showError("No payslips found for the current period. Generate payslips first, then export.");
       return;
     }
 
@@ -427,7 +427,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       {/* Row 1: Employee & payslip selection + actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
         {/* Left: selectors */}
-        <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-2">
+        <div className="md:col-span-1 lg:col-span-2 grid gap-3">
           <EmployeePayslipSelector
             employees={employees}
             payslips={payslips}
@@ -440,7 +440,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         </div>
 
         {/* Right: individual actions panel */}
-        <div className="md:col-span-1 lg:col-span-1">
+        <div className="md:col-span-1 lg:col-span-1 md:mt-6">
           <IndividualActionsPanel
             selectedPayslip={selectedPayslip}
             selectedEmployeeId={selectedEmployeeId}
@@ -456,7 +456,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       {/* Row 2: Bulk actions + generation buttons */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
         {/* Left: bulk controls */}
-        <div className="md:col-span-1 lg:col-span-2 grid gap-3 sm:grid-cols-3">
+        <div className="md:col-span-1 lg:col-span-2 grid gap-3">
           <BulkPayslipActions
             payslips={payslips}
             selectedPayPeriodDate={selectedPayPeriodDate}
@@ -471,7 +471,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         </div>
 
         {/* Right: generation buttons panel */}
-        <div className="md:col-span-1 lg:col-span-1">
+        <div className="md:col-span-1 lg:col-span-1 md:mt-6">
           <GenerationButtonsPanel
             onGenerateSelectedPeriod={handleGenerateSelectedPeriodPayslips}
             onGenerateAllCurrentPeriodDownload={() => handleGenerateAllCurrentPeriodPayslips('download')}

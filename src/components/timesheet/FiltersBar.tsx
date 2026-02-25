@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Filter, ArrowDownAZ, ArrowUpAZ, CalendarDays } from "lucide-react";
+import { Filter, ArrowDownAZ, ArrowUpAZ, CalendarDays, Users } from "lucide-react";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 
 type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" | "personalDesc";
@@ -15,6 +15,9 @@ type Props = {
   employees: MockEmployee[];
   compact: boolean;
   setCompact: (v: boolean) => void;
+
+  groupByEmployee: boolean;
+  setGroupByEmployee: (v: boolean) => void;
 
   filterEmployeeId: string;
   setFilterEmployeeId: (v: string) => void;
@@ -47,6 +50,8 @@ const FiltersBar: React.FC<Props> = ({
   employees,
   compact,
   setCompact,
+  groupByEmployee,
+  setGroupByEmployee,
   filterEmployeeId,
   setFilterEmployeeId,
   filterEmployeeName,
@@ -70,9 +75,16 @@ const FiltersBar: React.FC<Props> = ({
       <div className="flex items-center gap-2">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">Filters</span>
-        <div className="ml-auto flex items-center gap-2">
-          <Label htmlFor="compact">Compact Table</Label>
-          <Switch id="compact" checked={compact} onCheckedChange={setCompact} />
+        <div className="ml-auto flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <Label htmlFor="groupByEmployee">Group by employee</Label>
+            <Switch id="groupByEmployee" checked={groupByEmployee} onCheckedChange={setGroupByEmployee} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="compact">Compact Table</Label>
+            <Switch id="compact" checked={compact} onCheckedChange={setCompact} />
+          </div>
         </div>
       </div>
 

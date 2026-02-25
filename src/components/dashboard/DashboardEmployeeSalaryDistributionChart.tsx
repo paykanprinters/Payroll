@@ -20,20 +20,20 @@ const DashboardEmployeeSalaryDistributionChart: React.FC<DashboardEmployeeSalary
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle>Employee Salary Distribution</CardTitle>
         <CardDescription>Number of employees within different salary ranges.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[300px]">
+      <CardContent className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={employeeSalaryDistribution}>
+          <BarChart data={employeeSalaryDistribution} margin={{ top: 8, right: 12, left: 4, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} />
+            <XAxis dataKey="range" style={{ fontSize: dataVisualsFontSize }} interval={0} />
             <YAxis allowDecimals={false} style={{ fontSize: dataVisualsFontSize }} />
             <Tooltip contentStyle={{ fontSize: dataVisualsFontSize }} labelStyle={{ fontSize: dataVisualsFontSize }} />
             <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: dataVisualsFontSize }} />
-            <Bar dataKey="count" fill="#FFBB28" name="Number of Employees" />
+            <Bar dataKey="count" fill="#FFBB28" name="Employees" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

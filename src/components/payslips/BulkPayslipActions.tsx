@@ -63,6 +63,8 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
     return `Window: ${format(start, "yyyy-MM-dd")} → ${format(end, "yyyy-MM-dd")}`;
   }, [selectedPayPeriodDate, bulkGenerationMode, payCycleSettings]);
 
+  const bulkDisabled = !selectedPayPeriodDate || payslips.length === 0;
+
   return (
     <>
       {/* Bulk Generation Mode first */}
@@ -74,7 +76,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           <SelectTrigger id="bulk-mode-select" className="mt-1">
             <SelectValue placeholder="Select mode" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent side="bottom" align="start" sideOffset={8}>
             <SelectItem value="monthly">Monthly</SelectItem>
             <SelectItem value="weekly">Weekly</SelectItem>
           </SelectContent>
@@ -96,10 +98,12 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedPayPeriodDate ? format(selectedPayPeriodDate, bulkGenerationMode === "monthly" ? "MMM yyyy" : "PPP") : <span>Pick a {bulkGenerationMode === "monthly" ? "month" : "date"}</span>}
+              {selectedPayPeriodDate ? format(selectedPayPeriodDate, bulkGenerationMode === "monthly" ? "MMM yyyy" : "PPP") : (
+                <span>Pick a {bulkGenerationMode === "monthly" ? "month" : "date"}</span>
+              )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-50">
+          <PopoverContent className="w-auto p-0 z-50" side="bottom" align="start" sideOffset={8}>
             <Calendar
               mode="single"
               selected={selectedPayPeriodDate}
@@ -125,7 +129,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           <SelectTrigger id="audit-level-select" className="mt-1">
             <SelectValue placeholder="Select level" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent side="bottom" align="start" sideOffset={8}>
             <SelectItem value="minimal">Minimal</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
             <SelectItem value="detailed">Detailed</SelectItem>
@@ -136,15 +140,21 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
       {/* Bulk actions */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button className="w-full" variant="outline" disabled={!selectedPayPeriodDate || payslips.length === 0}>
+          <Button className="w-full" variant="outline" disabled={bulkDisabled}>
             Bulk Payslips
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="z-50">
-          <DropdownMenuItem onClick={() => onPrintAll('print', bulkGenerationMode, auditLevel)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
+        <DropdownMenuContent side="bottom" align="start" sideOffset={8} className="z-50">
+          <DropdownMenuItem
+            disabled={bulkDisabled}
+            onSelect={() => onPrintAll('print', bulkGenerationMode, auditLevel)}
+          >
             <Printer className="mr-2 h-4 w-4" /> Print All Payslips
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onDownloadAll('download', bulkGenerationMode, auditLevel)} disabled={!selectedPayPeriodDate || payslips.length === 0}>
+          <DropdownMenuItem
+            disabled={bulkDisabled}
+            onSelect={() => onDownloadAll('download', bulkGenerationMode, auditLevel)}
+          >
             <Download className="mr-2 h-4 w-4" /> Download All Payslips PDF
           </DropdownMenuItem>
         </DropdownMenuContent>

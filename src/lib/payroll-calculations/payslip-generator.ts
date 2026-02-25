@@ -20,6 +20,7 @@ import { bankersRound } from "@/lib/utils";
 import { v4 as uuidv4 } from "uuid";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
+import type { OvertimePremiumRules } from "./helpers/earnings-helpers";
 
 import {
   getWeeklyThreshold,
@@ -44,7 +45,8 @@ const calculateEarnings = (
   payPeriodStart: Date,
   payPeriodEnd: Date,
   workHoursSettings?: WorkHoursSettings | null,
-  holidays: PublicHoliday[] = []
+  holidays: PublicHoliday[] = [],
+  overtimeRules?: OvertimePremiumRules
 ) => {
   const weeklyThreshold = getWeeklyThreshold(workHoursSettings);
   const hourlyRate = deriveHourlyRate(emp, workHoursSettings);
@@ -76,14 +78,16 @@ const calculateEarnings = (
   const holidayAmounts = computeHolidayAmounts(
     holidayBuckets.holidayWorkedHours,
     holidayBuckets.holidayNonWorkedHours,
-    hourlyRate
+    hourlyRate,
+    overtimeRules
   );
 
   const overtimeAmounts = computeOvertimeAmounts(
     hourlyRate,
     overtimeAlloc.overtimeWeekdayHours,
     overtimeAlloc.overtimeSaturdayHours,
-    overtimeAlloc.overtimeSundayHours
+    overtimeAlloc.overtimeSundayHours,
+    overtimeRules
   );
 
   return buildEarningsBreakdown(
@@ -118,12 +122,16 @@ export const generatePayslipsForPeriod = (
   userTaxSettings: UserTaxSettings | null,
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
   workHoursSettings?: WorkHoursSettings | null,
-  holidays: PublicHoliday[] = []
-): { 
-  payslips: MockPayslip[]; 
-  updatedLoans: Loan[]; 
-  updatedSavingPlans: SavingPlan[]; 
-  savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] 
+  holidays: PublicHoliday[] = [],
+  earningComponents: any[] = [],
+  deductionComponents: any[] = [],
+  assignments: any[] = [],
+  overtimeRules?: OvertimePremiumRules
+): {
+  payslips: MockPayslip[];
+  updatedLoans: Loan[];
+  updatedSavingPlans: SavingPlan[];
+  savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[]
 } => {
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
@@ -149,7 +157,8 @@ export const generatePayslipsForPeriod = (
       payPeriodStart,
       payPeriodEnd,
       workHoursSettings,
-      holidays
+      holidays,
+      overtimeRules
     );
 
     const { deductionsBreakdown, totalDeductions } = buildDeductions(
@@ -162,7 +171,11 @@ export const generatePayslipsForPeriod = (
       payPeriodStart,
       payPeriodEnd,
       payPeriodString,
-      payrollSavingsEntries
+      payrollSavingsEntries,
+      // Phase 3 additions
+      earningComponents,
+      deductionComponents,
+      assignments
     );
 
     const netPay = bankersRound(grossEarnings - totalDeductions, 2);
