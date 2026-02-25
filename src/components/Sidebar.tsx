@@ -23,6 +23,7 @@ import {
   Link2,
   AlertTriangle,
   ClipboardList,
+  HandCoins,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -128,6 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         { to: "/timesheet", icon: Clock, label: "Timesheet" },
         { to: "/vacation-absence", icon: CalendarDays, label: "Vacation & Absence" },
         { to: "/savings", icon: PiggyBank, label: "Savings" },
+        { to: "/loans-advancements", icon: HandCoins, label: "Loans" },
       ],
     },
     {
