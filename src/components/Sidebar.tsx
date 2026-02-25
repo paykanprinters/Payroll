@@ -267,23 +267,25 @@ const Sidebar: React.FC<SidebarProps> = ({
         <SheetContent side="left" className="w-72 p-0">
           <div className="flex h-full max-h-screen flex-col gap-2 bg-sidebar text-sidebar-foreground">
             {renderSidebarHeader(false, setIsCollapsed)}
-            <nav className="grid items-start gap-3 p-4">
-              {filteredSections.map((section) => (
-                <div key={section.title} className="grid gap-1">
-                  <div className="px-3 text-xs font-medium text-white/60">{section.title}</div>
-                  {section.items.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      icon={item.icon}
-                      label={item.label}
-                      isCollapsed={false}
-                      badgeCount={item.badgeCount}
-                    />
-                  ))}
-                </div>
-              ))}
-            </nav>
+            <div className="flex-1 overflow-y-auto">
+              <nav className="grid items-start gap-3 p-4 pb-8">
+                {filteredSections.map((section) => (
+                  <div key={section.title} className="grid gap-1">
+                    <div className="px-3 text-xs font-medium text-white/60">{section.title}</div>
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        icon={item.icon}
+                        label={item.label}
+                        isCollapsed={false}
+                        badgeCount={item.badgeCount}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </nav>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -298,25 +300,27 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
     >
       {renderSidebarHeader(isCollapsed, setIsCollapsed)}
-      <nav className="grid items-start gap-3 p-4">
-        {filteredSections.map((section) => (
-          <div key={section.title} className="grid gap-1">
-            {!isCollapsed && (
-              <div className="px-3 text-xs font-medium text-white/60">{section.title}</div>
-            )}
-            {section.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                icon={item.icon}
-                label={item.label}
-                isCollapsed={isCollapsed}
-                badgeCount={item.badgeCount}
-              />
-            ))}
-          </div>
-        ))}
-      </nav>
+      <div className="flex-1 overflow-y-auto">
+        <nav className="grid items-start gap-3 p-4 pb-8">
+          {filteredSections.map((section) => (
+            <div key={section.title} className="grid gap-1">
+              {!isCollapsed && (
+                <div className="px-3 text-xs font-medium text-white/60">{section.title}</div>
+              )}
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                  isCollapsed={isCollapsed}
+                  badgeCount={item.badgeCount}
+                />
+              ))}
+            </div>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 };
