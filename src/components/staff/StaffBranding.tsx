@@ -4,7 +4,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
 import { supabase } from "@/integrations/supabase/client";
 import { getBranding } from "@/config/branding";

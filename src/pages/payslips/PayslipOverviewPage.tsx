@@ -9,7 +9,7 @@ import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSec
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import PayslipsHeader from "@/components/payslips/PayslipsHeader";
 import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOverviewToolbar";

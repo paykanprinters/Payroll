@@ -2,7 +2,7 @@
 
 import React from "react";
 import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 
 const DashboardHeader: React.FC = () => {
   const { companyDetails, isMockDataEnabled } = usePayrollProcessor();

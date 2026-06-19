@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Building2, CalendarDays, RefreshCcw, ShieldCheck, ArrowRight } from "lucide-react";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 
 function StatusBadge({ ok, labelOk = "Ready", labelBad = "Needs setup" }: { ok: boolean; labelOk?: string; labelBad?: string }) {
   return (

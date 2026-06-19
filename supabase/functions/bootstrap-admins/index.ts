@@ -1,12 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
+import { getCorsHeaders } from "../_shared/cors.ts"
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("Origin"))
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders })
   }
@@ -50,24 +48,30 @@ serve(async (req) => {
   const callerIsAdmin = !!callerProfile && callerProfile.role === "Admin"
   console.log("[bootstrap-admins] Caller admin check", { callerIsAdmin })
 
-  // Allowed emails to promote
+  // Bootstrap allowlist: these accounts may promote ONLY THEMSELVES when no
+  // admin exists yet. Promoting arbitrary emails always requires an Admin caller.
   const defaultAllowlist = ["info@kanprinters.co.za"]
-  let targetEmails: string[] = defaultAllowlist
-
-  try {
-    const body = await req.json().catch(() => ({}))
-    if (Array.isArray(body?.emails) && body.emails.length > 0) {
-      targetEmails = body.emails
-    }
-  } catch {
-    // ignore malformed body
-  }
-
-  // Gate: only Admins OR allowlisted callers can invoke
   const callerAllowlisted = defaultAllowlist.includes(callerEmail)
+
   if (!callerIsAdmin && !callerAllowlisted) {
     console.error("[bootstrap-admins] Caller not authorized to invoke", { callerEmail })
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders })
+  }
+
+  let targetEmails: string[]
+  if (callerIsAdmin) {
+    targetEmails = defaultAllowlist
+    try {
+      const body = await req.json().catch(() => ({}))
+      if (Array.isArray(body?.emails) && body.emails.length > 0) {
+        targetEmails = body.emails.filter((e: unknown): e is string => typeof e === "string")
+      }
+    } catch {
+      // ignore malformed body
+    }
+  } else {
+    // Allowlisted non-admin: self-promotion only, request body is ignored.
+    targetEmails = [callerEmail]
   }
 
   // Promote each target email to Admin + Active

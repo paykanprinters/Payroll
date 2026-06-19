@@ -14,7 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // Corrected import path for UserTaxSettings
 

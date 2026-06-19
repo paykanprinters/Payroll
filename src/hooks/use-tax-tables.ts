@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 
-// Define interfaces for fetched tax data
 interface TaxBracketPAYE {
   min_income: number;
   max_income: number | null;
@@ -33,10 +33,9 @@ interface TaxYearDetails {
 export interface TaxTables {
   payeBrackets: TaxBracketPAYE[];
   uifSdlRates: TaxRatesUIFSDL | null;
-  taxYearDetails: TaxYearDetails | null; // New field for tax year details including rebates
+  taxYearDetails: TaxYearDetails | null;
 }
 
-// Define mock tax tables for when mock data is enabled
 const mockTaxTables: TaxTables = {
   payeBrackets: [
     { min_income: 1, max_income: 237100, rate: 0.18, deduction: 0 },
@@ -49,10 +48,10 @@ const mockTaxTables: TaxTables = {
   ],
   uifSdlRates: {
     uif_rate: 0.01,
-    uif_cap: 177.12, // Monthly cap
+    uif_cap: 177.12,
     sdl_rate: 0.01,
   },
-  taxYearDetails: { // Mock tax year details with rebates
+  taxYearDetails: {
     year: new Date().getFullYear(),
     start_date: `${new Date().getFullYear()}-03-01`,
     end_date: `${new Date().getFullYear() + 1}-02-28`,
@@ -65,97 +64,98 @@ const mockTaxTables: TaxTables = {
   },
 };
 
+async function fetchTaxTablesFromDb(year: number): Promise<TaxTables> {
+  const { data: payeData, error: payeError } = await supabase
+    .from("tax_brackets_paye")
+    .select("*")
+    .eq("tax_year", year)
+    .order("min_income", { ascending: true });
+
+  const { data: uifSdlData, error: uifSdlError } = await supabase
+    .from("tax_rates_uif_sdl")
+    .select("*")
+    .eq("tax_year", year)
+    .maybeSingle();
+
+  const { data: taxYearDetailsData, error: taxYearDetailsError } = await supabase
+    .from("tax_years")
+    .select("*")
+    .eq("year", year)
+    .maybeSingle();
+
+  if (payeError || taxYearDetailsError) {
+    throw new Error(payeError?.message || taxYearDetailsError?.message || "Failed to load tax tables");
+  }
+  if (uifSdlError) {
+    console.warn("useTaxTables: UIF/SDL rates missing for year", year, uifSdlError.message);
+  }
+
+  const payeBrackets = payeData || [];
+  const taxYearInfo = (taxYearDetailsData as TaxYearDetails) || null;
+
+  if (payeBrackets.length === 0 || !taxYearInfo) {
+    throw new Error(`Tax tables for ${year} are incomplete in the database.`);
+  }
+
+  return {
+    payeBrackets,
+    uifSdlRates: uifSdlData || null,
+    taxYearDetails: taxYearInfo,
+  };
+}
+
 interface UseTaxTablesProps {
   isMockDataEnabled: boolean;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
-  activeTaxYear: number; // NEW: Prop to specify the active tax year
+  activeTaxYear: number;
 }
 
-export const useTaxTables = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYear }: UseTaxTablesProps) => {
-  const [taxTables, setTaxTables] = useState<TaxTables | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+export const useTaxTables = ({
+  isMockDataEnabled,
+  isAuthenticated,
+  isLoadingAuth,
+  activeTaxYear,
+}: UseTaxTablesProps) => {
+  const queryClient = useQueryClient();
+  const enabled = !isLoadingAuth && isAuthenticated && !isMockDataEnabled;
 
-  const fetchLiveTaxTables = useCallback(async (year: number) => {
-    setIsLoading(true);
-    try {
-      console.log("useTaxTables: Fetching live tax tables from Supabase for year:", year);
-      const { data: payeData, error: payeError } = await supabase
-        .from('tax_brackets_paye')
-        .select('*')
-        .eq('tax_year', year)
-        .order('min_income', { ascending: true });
-
-      const { data: uifSdlData, error: uifSdlError } = await supabase
-        .from('tax_rates_uif_sdl')
-        .select('*')
-        .eq('tax_year', year)
-        .single();
-      
-      const { data: taxYearDetailsData, error: taxYearDetailsError } = await supabase
-        .from('tax_years')
-        .select('*')
-        .eq('year', year)
-        .single();
-
-      if (payeError || taxYearDetailsError) {
-        console.error("useTaxTables: Error fetching live tax tables:", payeError || taxYearDetailsError);
-        showError("Failed to load live tax tables for payroll calculations. Using mock tables as fallback.");
-        setTaxTables(mockTaxTables);
-      } else {
-        const payeBrackets = payeData || [];
-        const taxYearInfo = (taxYearDetailsData as TaxYearDetails) || null;
-        const uifSdl = uifSdlData || null;
-
-        if (payeBrackets.length === 0 || !taxYearInfo) {
-          console.warn("useTaxTables: Live tables missing/empty. Falling back to mock tables.");
-          setTaxTables(mockTaxTables);
-        } else {
-          setTaxTables({
-            payeBrackets,
-            uifSdlRates: uifSdl,
-            taxYearDetails: taxYearInfo,
-          });
-          console.log(`useTaxTables: Live tax tables for ${year} loaded successfully.`);
-        }
-      }
-    } catch (err) {
-      console.error("useTaxTables: Unhandled error fetching live tax tables:", err);
-      showError("An unexpected error occurred while loading live tax tables.");
-      setTaxTables(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["taxTables", activeTaxYear],
+    queryFn: () => fetchTaxTablesFromDb(activeTaxYear),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
 
   useEffect(() => {
-    if (isLoadingAuth) {
-      setIsLoading(true);
-      return;
-    }
+    if (!error || !enabled) return;
+    showError(
+      error instanceof Error
+        ? error.message
+        : "Failed to load tax tables. Payroll calculations are blocked until tables are available."
+    );
+  }, [error, enabled]);
 
-    if (isAuthenticated) {
-      fetchLiveTaxTables(activeTaxYear);
-      const handleTaxTablesUpdate = () => {
-        fetchLiveTaxTables(activeTaxYear);
-      };
-      window.addEventListener('taxTablesUpdated', handleTaxTablesUpdate);
-      return () => {
-        window.removeEventListener('taxTablesUpdated', handleTaxTablesUpdate);
-      };
-    } else if (isMockDataEnabled) {
-      // Only fall back to mock when not authenticated
-      setTaxTables(mockTaxTables);
-      setIsLoading(false);
-    } else {
-      setTaxTables(null);
-      setIsLoading(false);
-    }
-  }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveTaxTables, activeTaxYear]);
+  const refetchTaxTables = useCallback(
+    async (year?: number) => {
+      const targetYear = year ?? activeTaxYear;
+      await queryClient.invalidateQueries({ queryKey: ["taxTables", targetYear] });
+      return refetch();
+    },
+    [activeTaxYear, queryClient, refetch]
+  );
+
+  const taxTables =
+    isMockDataEnabled && !isAuthenticated
+      ? mockTaxTables
+      : isMockDataEnabled
+        ? mockTaxTables
+        : data ?? null;
 
   return {
     taxTables,
-    isLoadingTaxTables: isLoading,
-    refetchTaxTables: fetchLiveTaxTables, // Expose refetch for manual trigger
+    isLoadingTaxTables: isLoadingAuth || (enabled && isLoading),
+    refetchTaxTables,
   };
 };

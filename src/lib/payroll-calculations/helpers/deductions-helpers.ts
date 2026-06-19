@@ -1,9 +1,10 @@
-import { format, differenceInYears, parseISO } from "date-fns";
+import { format, differenceInYears, parseISO, isSameMonth, differenceInCalendarDays } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LoanDeductionHistoryEntry } from "@/lib/mock-data-interfaces";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { bankersRound } from "@/lib/utils";
+import { sumMoney } from "@/lib/money";
 import { calculatePAYE } from "@/lib/payroll-calculations";
 
 const computeUIF = (
@@ -21,7 +22,8 @@ const computeUIF = (
       if (freq === "Bi-Weekly") return monthlyCap / 2.1667;
       return monthlyCap;
     };
-    const shouldProRate = userTaxSettings?.proRateUifCapByFrequency === true;
+    // Default pro-rate on unless explicitly disabled.
+    const shouldProRate = userTaxSettings?.proRateUifCapByFrequency !== false;
     const capToUse = shouldProRate ? getCapForFrequency(emp.payFrequency) : monthlyCap;
     return bankersRound(Math.min(grossEarnings * uifRate, capToUse), 2);
   }
@@ -52,6 +54,38 @@ const computePAYE = (
   return paye > 0 ? bankersRound(paye, 2) : 0;
 };
 
+export const isFullPeriod = (
+  frequency: "Monthly" | "Weekly" | "Bi-Weekly",
+  start: Date,
+  end: Date
+): boolean => {
+  if (frequency === "Monthly") {
+    return (
+      isSameMonth(start, end) &&
+      format(start, "dd") === "01" &&
+      format(end, "dd") === format(new Date(end.getFullYear(), end.getMonth() + 1, 0), "dd")
+    );
+  }
+  if (frequency === "Weekly") {
+    return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) === 6;
+  }
+  if (frequency === "Bi-Weekly") {
+    return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) === 13;
+  }
+  return false;
+};
+
+const getPeriodProrationFactor = (
+  frequency: "Monthly" | "Weekly" | "Bi-Weekly",
+  periodStart: Date,
+  periodEnd: Date
+): number => {
+  if (isFullPeriod(frequency, periodStart, periodEnd)) return 1;
+  const actualDays = differenceInCalendarDays(periodEnd, periodStart) + 1;
+  const expectedDays = frequency === "Weekly" ? 7 : frequency === "Bi-Weekly" ? 14 : 30;
+  return Math.min(1, actualDays / expectedDays);
+};
+
 export const buildDeductions = (
   emp: MockEmployee,
   grossEarnings: number,
@@ -63,12 +97,20 @@ export const buildDeductions = (
   periodEnd: Date,
   payPeriodString: string,
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
-  earningComponents?: any[],
-  deductionComponents?: any[],
-  assignments?: any[]
+  earningComponents?: unknown[],
+  deductionComponents?: { id: string; name?: string; amount?: number; amountType?: string }[],
+  assignments?: {
+    componentType?: string;
+    employeeId?: string;
+    componentId?: string;
+    overrideAmount?: number;
+    effectiveStart?: string | null;
+    effectiveEnd?: string | null;
+  }[]
 ) => {
   let totalDeductions = 0;
   const deductionsBreakdown: { name: string; amount: number }[] = [];
+  const savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] = [];
 
   const uif = computeUIF(grossEarnings, taxTables.uifSdlRates, emp, userTaxSettings);
   const taxableForPAYE = Math.max(0, grossEarnings - uif);
@@ -85,7 +127,7 @@ export const buildDeductions = (
   const applySDLFlag = userTaxSettings?.applySdl ?? true;
   if (applySDLFlag) {
     if (taxTables.uifSdlRates) {
-      const sdlRaw = taxableForPAYE * taxTables.uifSdlRates.sdl_rate + uif;
+      const sdlRaw = grossEarnings * taxTables.uifSdlRates.sdl_rate;
       const sdl = bankersRound(sdlRaw, 2);
       deductionsBreakdown.push({ name: "SDL", amount: sdl });
       totalDeductions += sdl;
@@ -96,31 +138,12 @@ export const buildDeductions = (
     }
   }
 
-  // Loans
-  const isFullPeriod = (frequency: "Monthly" | "Weekly" | "Bi-Weekly", start: Date, end: Date): boolean => {
-    if (frequency === "Monthly") {
-      return (
-        format(start, "dd") === "01" &&
-        format(end, "dd") === format(new Date(end.getFullYear(), end.getMonth() + 1, 0), "dd")
-      );
-    }
-    if (frequency === "Weekly") {
-      return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) === 6;
-    }
-    if (frequency === "Bi-Weekly") {
-      return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) === 13;
-    }
-    return false;
-  };
-
   loans.forEach((loan) => {
     if (loan.employeeId !== emp.id || loan.status === "completed" || new Date(loan.startDate) > periodEnd) return;
 
-    // Advanced freeze (date range or number of payroll cycles)
     const freezeStart = loan.freezeStartDate ? parseISO(loan.freezeStartDate) : null;
     const freezeEnd = loan.freezeEndDate ? parseISO(loan.freezeEndDate) : null;
 
-    // Clear an expired range freeze before checking overlap
     if (loan.freezeMode === "range" && freezeEnd && freezeEnd < periodStart) {
       loan.freezeMode = null;
       loan.freezeStartDate = null;
@@ -142,13 +165,12 @@ export const buildDeductions = (
         ? `Deduction frozen (${format(freezeStart!, "yyyy-MM-dd")} to ${format(freezeEnd!, "yyyy-MM-dd")}) for pay period ${payPeriodString}`
         : `Deduction frozen (${loan.freezeCyclesRemaining} cycle(s) remaining) for pay period ${payPeriodString}`;
 
-      const freezeEntry: LoanDeductionHistoryEntry = {
+      loan.deductionHistory.push({
         date: format(periodEnd, "yyyy-MM-dd"),
         amount: 0,
         type: "pause",
         notes: reason,
-      };
-      loan.deductionHistory.push(freezeEntry);
+      });
 
       if (isFrozenByCycles) {
         loan.freezeCyclesRemaining = Math.max(0, (loan.freezeCyclesRemaining ?? 0) - 1);
@@ -159,33 +181,32 @@ export const buildDeductions = (
           loan.freezeCyclesRemaining = null;
         }
       }
-
       return;
     }
 
-    // Existing one-period pause (skip next payroll only)
     if (loan.paused) {
-      const pauseEntry: LoanDeductionHistoryEntry = {
+      loan.deductionHistory.push({
         date: format(periodEnd, "yyyy-MM-dd"),
         amount: 0,
         type: "pause",
         notes: `Deduction paused for pay period ${payPeriodString}`,
-      };
-      loan.deductionHistory.push(pauseEntry);
+      });
       loan.paused = false;
       return;
     }
 
     let deductionAmount = 0;
     const employeePayFrequency = emp.payFrequency;
-    if (loan.frequency === employeePayFrequency?.toLowerCase()) {
-      if (isFullPeriod(employeePayFrequency, periodStart, periodEnd)) {
-        deductionAmount = loan.repaymentAmount;
-      }
+    if (!employeePayFrequency) return;
+
+    if (loan.frequency === employeePayFrequency.toLowerCase()) {
+      deductionAmount = loan.repaymentAmount * getPeriodProrationFactor(employeePayFrequency, periodStart, periodEnd);
     } else if (employeePayFrequency === "Monthly" && loan.frequency === "weekly") {
-      if (isFullPeriod("Monthly", periodStart, periodEnd)) deductionAmount = loan.repaymentAmount * 4;
+      deductionAmount =
+        loan.repaymentAmount * 4 * getPeriodProrationFactor("Monthly", periodStart, periodEnd);
     } else if (employeePayFrequency === "Bi-Weekly" && loan.frequency === "weekly") {
-      if (isFullPeriod("Bi-Weekly", periodStart, periodEnd)) deductionAmount = loan.repaymentAmount * 2;
+      deductionAmount =
+        loan.repaymentAmount * 2 * getPeriodProrationFactor("Bi-Weekly", periodStart, periodEnd);
     }
 
     if (deductionAmount > 0) {
@@ -193,14 +214,12 @@ export const buildDeductions = (
       deductionsBreakdown.push({ name: "Loan Repayment", amount: rounded });
       totalDeductions += rounded;
       loan.remainingBalance -= rounded;
-
-      const entry: LoanDeductionHistoryEntry = {
+      loan.deductionHistory.push({
         date: format(periodEnd, "yyyy-MM-dd"),
         amount: rounded,
         type: "deduction",
         notes: `Payroll deduction for pay period ${payPeriodString}`,
-      };
-      loan.deductionHistory.push(entry);
+      });
       if (loan.remainingBalance <= 0) {
         loan.status = "completed";
         loan.remainingBalance = 0;
@@ -208,46 +227,46 @@ export const buildDeductions = (
     }
   });
 
-  // Savings
   savingPlans.forEach((plan) => {
     if (plan.employeeId !== emp.id || plan.status !== "active" || new Date(plan.startDate) > periodEnd) return;
     if (plan.endDate && new Date(plan.endDate) < periodStart) return;
 
     const employeePayFrequency = emp.payFrequency;
+    if (!employeePayFrequency) return;
 
-    const entryForPlan = payrollSavingsEntries?.find(
-      (e) => e.planId === plan.id && e.employeeId === emp.id
-    ) || null;
+    const entryForPlan =
+      payrollSavingsEntries?.find((e) => e.planId === plan.id && e.employeeId === emp.id) || null;
 
-    const isPaused = entryForPlan?.paused === true;
-    if (isPaused) return;
+    if (entryForPlan?.paused === true) return;
 
-    const baseAmount = entryForPlan ? (entryForPlan.overrideAmount ?? entryForPlan.originalAmount) : plan.amount;
+    const baseAmount = entryForPlan
+      ? (entryForPlan.overrideAmount ?? entryForPlan.originalAmount)
+      : plan.amount;
 
     let deductionAmount = 0;
-    if (plan.frequency === employeePayFrequency?.toLowerCase()) {
-      if (isFullPeriod(employeePayFrequency, periodStart, periodEnd)) deductionAmount = baseAmount;
+    if (plan.frequency === employeePayFrequency.toLowerCase()) {
+      deductionAmount = baseAmount * getPeriodProrationFactor(employeePayFrequency, periodStart, periodEnd);
     } else if (employeePayFrequency === "Monthly" && plan.frequency === "weekly") {
-      if (isFullPeriod("Monthly", periodStart, periodEnd)) deductionAmount = baseAmount * 4;
+      deductionAmount = baseAmount * 4 * getPeriodProrationFactor("Monthly", periodStart, periodEnd);
     } else if (employeePayFrequency === "Bi-Weekly" && plan.frequency === "weekly") {
-      if (isFullPeriod("Bi-Weekly", periodStart, periodEnd)) deductionAmount = baseAmount * 2;
+      deductionAmount = baseAmount * 2 * getPeriodProrationFactor("Bi-Weekly", periodStart, periodEnd);
     }
 
     if (deductionAmount > 0) {
       const rounded = bankersRound(deductionAmount, 2);
       deductionsBreakdown.push({ name: "Savings", amount: rounded });
       totalDeductions += rounded;
+      if (entryForPlan) {
+        savingPaymentsToRecord.push({ planId: plan.id, employeeId: emp.id, amount: rounded });
+      }
     }
   });
 
-  // Apply assigned deduction components (effective within this period)
   if (assignments && deductionComponents) {
     const isEffective = (start?: string | null, end?: string | null) => {
-      const s = start ? parseISO(start as any) : null;
-      const e = end ? parseISO(end as any) : null;
-      const inStart = !s || s <= periodEnd;
-      const inEnd = !e || e >= periodStart;
-      return inStart && inEnd;
+      const s = start ? parseISO(start) : null;
+      const e = end ? parseISO(end) : null;
+      return (!s || s <= periodEnd) && (!e || e >= periodStart);
     };
     const computeAmount = (base: number, type: string) => {
       if (type === "fixed") return base;
@@ -257,12 +276,18 @@ export const buildDeductions = (
       return base;
     };
     assignments
-      .filter(a => a.componentType === "deduction" && a.employeeId === emp.id && isEffective(a.effectiveStart, a.effectiveEnd))
-      .forEach(a => {
-        const comp = deductionComponents.find((c: any) => c.id === a.componentId);
+      .filter(
+        (a) =>
+          a.componentType === "deduction" &&
+          a.employeeId === emp.id &&
+          isEffective(a.effectiveStart, a.effectiveEnd)
+      )
+      .forEach((a) => {
+        const comp = deductionComponents.find((c) => c.id === a.componentId);
         if (comp) {
-          const amountBase = typeof a.overrideAmount === "number" ? a.overrideAmount : Number(comp.amount || 0);
-          const amt = bankersRound(computeAmount(amountBase, comp.amountType), 2);
+          const amountBase =
+            typeof a.overrideAmount === "number" ? a.overrideAmount : Number(comp.amount || 0);
+          const amt = bankersRound(computeAmount(amountBase, comp.amountType || "fixed"), 2);
           if (amt > 0) {
             deductionsBreakdown.push({ name: comp.name || "Deduction", amount: amt });
             totalDeductions += amt;
@@ -271,6 +296,6 @@ export const buildDeductions = (
       });
   }
 
-  totalDeductions = bankersRound(totalDeductions, 2);
-  return { deductionsBreakdown, totalDeductions };
+  totalDeductions = sumMoney(deductionsBreakdown.map((d) => d.amount));
+  return { deductionsBreakdown, totalDeductions, savingPaymentsToRecord };
 };

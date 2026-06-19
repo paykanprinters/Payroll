@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Suspense } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,19 +18,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getBranding } from "@/config/branding";
 
 interface MainLayoutProps {}
 
+declare global {
+  interface Window {
+    __tabLag?: Array<{ path: string; paintMs: number; at: number }>;
+  }
+}
+
 const MainLayout: React.FC<MainLayoutProps> = () => {
+  const location = useLocation();
   const { isAuthenticated, user, isLoadingAuth } = useAuth();
   const { companyDetails, isLoadingCompanyDetails, pendingCount } = usePayrollProcessor();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const path = location.pathname;
+    const t0 = performance.now();
+    let cancelled = false;
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        const paintMs = Math.round(performance.now() - t0);
+        window.__tabLag = window.__tabLag ?? [];
+        window.__tabLag.push({ path, paintMs, at: Date.now() });
+        console.info(`[tab-lag] ${path}: ${paintMs}ms to first paint`);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [location.pathname]);
 
   React.useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 4);
@@ -136,7 +164,15 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
                 <span>Loading company data…</span>
               </div>
             )}
-            <Outlet />
+            <Suspense
+              fallback={
+                <div className="flex min-h-[40vh] items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
         </main>
 

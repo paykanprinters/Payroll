@@ -12,7 +12,7 @@ import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog"
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import TimesheetHeader from "@/components/timesheet/TimesheetHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

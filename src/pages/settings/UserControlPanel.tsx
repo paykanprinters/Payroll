@@ -25,7 +25,7 @@ import LinkEmployeeDialog from "@/components/settings/LinkEmployeeDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/context/PayrollDataContext"; // Import usePayrollProcessor
 
 interface UserData {
   id: string;
@@ -266,14 +266,15 @@ const UserControlPanel: React.FC = () => {
       }
 
     } else {
+      // The signup trigger creates the profile row with a forced 'Staff' role
+      // (role is never read from metadata). The admin then sets the intended
+      // role with a direct update, which RLS only permits for Admins.
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password!,
         options: {
           data: {
             name: userData.name,
-            role: userData.role,
-            status: userData.status,
           },
         },
       });
@@ -284,17 +285,16 @@ const UserControlPanel: React.FC = () => {
       } else if (authData.user) {
         const { error: profileError } = await supabase
           .from('users')
-          .insert({
-            id: authData.user.id,
+          .update({
             name: userData.name,
-            email: userData.email,
             role: userData.role,
             status: userData.status,
-          });
+          })
+          .eq('id', authData.user.id);
 
         if (profileError) {
-          console.error("Error inserting new user profile:", profileError);
-          showError("Failed to add user profile after signup.");
+          console.error("Error updating new user profile:", profileError);
+          showError("Failed to set role on the new user profile.");
         } else {
           showSuccess(`User ${userData.name} added successfully!`);
           fetchUsers();

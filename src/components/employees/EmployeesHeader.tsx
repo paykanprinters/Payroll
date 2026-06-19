@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Users, Sparkles } from "lucide-react";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 
 const EmployeesHeader: React.FC = () => {
   const { companyDetails } = usePayrollProcessor();

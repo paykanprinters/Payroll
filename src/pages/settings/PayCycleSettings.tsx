@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { showSuccess, showError } from "@/utils/toast";
 import { usePayCycleSettings } from "@/hooks/use-pay-cycle-settings";
 import { PayCycleSettings } from "@/integrations/supabase/pay-cycle-queries"; // Corrected import path
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 

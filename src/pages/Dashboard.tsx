@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { Loader2 } from "lucide-react";
 
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import RetroFunkHeader from "@/components/dashboard/RetroFunkHeader";
 import DashboardPrimaryActions from "@/components/dashboard/DashboardPrimaryActions";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";

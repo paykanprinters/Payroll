@@ -8,7 +8,7 @@ import AbsenceCalendar from "@/components/vacation-absence/AbsenceCalendar";
 import LeaveAnalytics from "@/components/vacation-absence/LeaveAnalytics";
 import LeaveRecordsTable from "@/components/vacation-absence/LeaveRecordsTable";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import VacationAbsenceHeader from "@/components/vacation-absence/VacationAbsenceHeader";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import { CalendarDays, CheckCircle, Activity } from "lucide-react";

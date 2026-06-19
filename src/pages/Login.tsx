@@ -89,6 +89,8 @@ const Login: React.FC = () => {
                 <Auth
                   supabaseClient={supabase}
                   providers={[]}
+                  view="sign_in"
+                  showLinks={false}
                   appearance={{ theme: ThemeSupa }}
                   theme="light"
                 />

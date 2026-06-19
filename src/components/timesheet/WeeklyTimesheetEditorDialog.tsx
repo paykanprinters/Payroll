@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { format, eachDayOfInterval, parse, addDays, parseISO, isValid } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/lib/timesheet-types";
 import { showSuccess } from "@/utils/toast";

@@ -18,7 +18,7 @@ import {
   Bar,
 } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { format, differenceInMonths } from "date-fns";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import AnalyticsHeader from "@/components/analytics/AnalyticsHeader";

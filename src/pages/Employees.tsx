@@ -10,7 +10,7 @@ import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import EmployeeProfilePdfDocument from "@/components/reports/EmployeeProfilePdfDocument";
 import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import EmployeesHeader from "@/components/employees/EmployeesHeader";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import EmployeesToolbar from "@/components/employees/EmployeesToolbar";

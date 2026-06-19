@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, CreditCard, Activity } from "lucide-react";
 import UpcomingPayrollSummaryCard from "@/components/payroll/UpcomingPayrollSummaryCard";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { differenceInCalendarDays } from "date-fns";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
