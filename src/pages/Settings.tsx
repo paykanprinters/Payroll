@@ -4,7 +4,7 @@ import React from "react";
 import { Route, Routes, Navigate } from "react-router-dom";
 import SettingsLayout from "./settings/SettingsLayout";
 import CompanyDetails from "./settings/CompanyDetails";
-import BiometricDevices from "./settings/BiometricDevices";
+import BiometricApiSettings from "./settings/BiometricApiSettings";
 import TaxLiabilities from "./settings/TaxLiabilities";
 import PayslipDesign from "./settings/PayslipDesign";
 import DataVisuals from "./settings/DataVisuals";
@@ -21,7 +21,8 @@ const Settings: React.FC = () => {
         <Route path="company-details" element={<CompanyDetails />} />
         <Route path="work-hours" element={<WorkHours />} />
         <Route path="pay-cycle-settings" element={<PayCycleSettingsPage />} />
-        <Route path="biometric-devices" element={<BiometricDevices />} />
+        <Route path="biometric-api" element={<BiometricApiSettings />} />
+        <Route path="biometric-devices" element={<Navigate to="/settings/biometric-api" replace />} />
         <Route path="tax-liabilities" element={<TaxLiabilities />} />
         <Route path="payslip-design" element={<PayslipDesign />} />
         <Route path="report-design" element={<ReportDesign />} />

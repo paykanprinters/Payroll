@@ -31,6 +31,7 @@ const Timesheet: React.FC = () => {
     isLoadingAuth,
     workHoursSettings,
     isLoadingEmployees,
+    companyDetails,
   } = usePayrollProcessor({ silent: true });
 
   const {
@@ -364,6 +365,7 @@ const Timesheet: React.FC = () => {
         onImport={handleImportTimesheets}
         employees={employees}
         workHoursSettings={workHoursSettings}
+        biometricApiUrl={companyDetails?.biometricApiUrl}
       />
 
       <WeeklyTimesheetEditorDialog

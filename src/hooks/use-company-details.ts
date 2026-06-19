@@ -36,6 +36,7 @@ const columnToPropertyMap: { [key: string]: keyof MockCompanyDetails | 'updatedA
   updated_at: 'updatedAt', // Handles the underscore case,
   // NEW mapping for persisted active tax year
   active_tax_year: 'activeTaxYear',
+  biometric_api_url: 'biometricApiUrl',
 };
 
 // Modified conversion function to use the explicit map
@@ -140,6 +141,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         logoheight: details.logoHeight,
         logofit: details.logoFit,
         active_tax_year: details.activeTaxYear,
+        biometric_api_url: details.biometricApiUrl,
       };
 
       const cleanedPayload = Object.fromEntries(
@@ -206,6 +208,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
       const mockLogoWidth = parseFloat(localStorage.getItem('companyLogoWidth') || '100');
       const mockLogoHeight = parseFloat(localStorage.getItem('companyLogoHeight') || '50');
       const mockLogoFit = (localStorage.getItem('companyLogoFit') as "contain" | "cover" | "fill" | "none" | "scale-down") || "contain";
+      const mockBiometricApiUrl = localStorage.getItem('biometricApiUrl') || undefined;
 
       const newMockCompanyDetails: MockCompanyDetails = {
         companyLegalName: mockCompanyLegalName, companyTradingName: mockCompanyTradingName, companyRegistrationNumber: mockCompanyRegistrationNumber,
@@ -214,6 +217,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         coidaRegistrationNumber: mockCoidaRegistrationNumber, physicalAddress: mockPhysicalAddress, postalAddress: mockPostalAddress, mainContactNumber: mockMainContactNumber, alternativeContactNumber: mockAlternativeContactNumber,
         companyEmail: mockCompanyEmail, companyWebsite: mockCompanyWebsite, bankName: mockBankName, accountholdername: mockAccountholdername, accountNumber: mockAccountNumber,
         branchCode: mockBranchCode, accountType: mockAccountType, logoUrl: mockLogoUrl, logoWidth: mockLogoWidth, logoHeight: mockLogoHeight, logoFit: mockLogoFit,
+        biometricApiUrl: mockBiometricApiUrl,
       };
 
       // Deep comparison for mock data as well

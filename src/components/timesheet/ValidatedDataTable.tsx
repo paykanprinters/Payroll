@@ -21,6 +21,7 @@ interface ValidatedDataTableProps {
   workHoursSettings?: WorkHoursSettings | null;
   onEditRow?: (key: string, updates: Partial<ParsedTimesheetRow>) => void;
   onResolveEmployee?: (key: string, employeeId: string) => void;
+  externalIdLabel?: string;
 }
 
 const normalizeDate = (d: string) => (d || "").replace(/\//g, "-");
@@ -54,6 +55,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
   workHoursSettings,
   onEditRow,
   onResolveEmployee,
+  externalIdLabel = "Personal ID (from CSV)",
 }) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -331,7 +333,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead className={cellClass}>Status</TableHead>
-                <TableHead className={cellClass}>Personal ID (from CSV)</TableHead>
+                <TableHead className={cellClass}>{externalIdLabel}</TableHead>
                 <TableHead className={cellClass}>Employee Name (Resolved)</TableHead>
                 <TableHead className={cellClass}>Date</TableHead>
                 <TableHead className={cellClass}>Time In</TableHead>

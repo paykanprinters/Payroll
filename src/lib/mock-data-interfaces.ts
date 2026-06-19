@@ -43,6 +43,7 @@ export interface MockCompanyDetails {
   companyBankIban?: string;
   // NEW: active tax year persisted in Supabase
   activeTaxYear?: number;
+  biometricApiUrl?: string;
 }
 
 export interface MockEmployee {

@@ -35,10 +35,9 @@ const RetroFunkHeader: React.FC<RetroFunkHeaderProps> = ({
   resetToDefaults,
 }) => {
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-[#0B253A] p-8 text-white shadow-xl">
-      {/* subtle texture */}
-      <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_20%_10%,rgba(122,186,72,0.18),transparent_55%)]" />
-      <div className="pointer-events-none absolute -bottom-16 -right-16 h-64 w-64 rounded-full bg-white/5 blur-2xl" />
+    <div className="kan-page-banner p-8 shadow-xl">
+      <div className="kan-page-banner-glow" />
+      <div className="kan-page-banner-orb" />
 
       <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-4">

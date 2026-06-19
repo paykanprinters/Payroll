@@ -44,6 +44,8 @@ type Props = {
 
   importFilteredOnly: boolean;
   setImportFilteredOnly: (v: boolean) => void;
+
+  externalIdLabel?: string;
 };
 
 const FiltersBar: React.FC<Props> = ({
@@ -69,6 +71,7 @@ const FiltersBar: React.FC<Props> = ({
   filteredCount,
   importFilteredOnly,
   setImportFilteredOnly,
+  externalIdLabel = "Personal ID (CSV)",
 }) => {
   return (
     <div className="flex flex-col gap-3 pb-2 border-b">
@@ -120,7 +123,7 @@ const FiltersBar: React.FC<Props> = ({
         </div>
 
         <div>
-          <Label className="text-xs">Personal ID (CSV)</Label>
+          <Label className="text-xs">{externalIdLabel}</Label>
           <Input
             placeholder="Search personal ID"
             value={filterPersonalId}

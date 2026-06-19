@@ -4,48 +4,54 @@
 
 @layer base {
   :root {
-    /* Workpay-inspired light theme */
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    /* Kan Printers & Promo light theme */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 8%;
 
-    /* Brand */
-    --primary: 94 45% 51%; /* #7ABA48 */
+    /* Brand — CMYK magenta primary */
+    --primary: 326 100% 46%; /* #EC008C */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 8%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 42%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 197 100% 47%; /* #00AEEF */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 357 79% 52%; /* #E62229 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 94 45% 51%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 326 100% 46%;
 
-    /* Friendly rounding */
     --radius: 0.9rem;
 
-    /* Sidebar (deep navy) */
-    --sidebar-background: 207 68% 14%; /* #0B253A */
+    /* Kan brand tokens */
+    --brand-panel: 0 0% 8%; /* #141414 */
+    --brand-magenta: 326 100% 46%;
+    --brand-cyan: 197 100% 47%;
+    --brand-yellow: 48 100% 50%;
+    --brand-red: 357 79% 52%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 94 45% 51%;
+    --sidebar-primary: 326 100% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 207 55% 18%;
+    --sidebar-accent: 0 0% 14%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 207 45% 20%;
-    --sidebar-ring: 94 45% 51%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 326 100% 46%;
   }
 
   .dark {
@@ -58,33 +64,33 @@
     --popover: 222 47% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 94 45% 51%;
+    --primary: 326 100% 46%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 197 100% 47%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 63% 31%;
+    --destructive: 357 79% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 94 45% 51%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 326 100% 46%;
 
-    --sidebar-background: 207 68% 14%;
+    --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 94 45% 51%;
+    --sidebar-primary: 326 100% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 207 55% 18%;
+    --sidebar-accent: 0 0% 14%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 207 45% 20%;
-    --sidebar-ring: 94 45% 51%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 326 100% 46%;
   }
 
   * {
@@ -128,5 +134,48 @@
   .hover\:shadow-lg:hover,
   .hover\:shadow-2xl:hover {
     @apply -translate-y-0.5;
+  }
+
+  /* Kan Printers page banners & auth panels */
+  .kan-page-banner,
+  .kan-auth-panel {
+    @apply relative overflow-hidden border border-white/10 text-white;
+    background-color: hsl(var(--brand-panel));
+  }
+
+  .kan-page-banner {
+    @apply rounded-2xl p-6 md:p-8;
+  }
+
+  .kan-auth-panel {
+    @apply min-h-[320px] lg:min-h-0;
+  }
+
+  .kan-page-banner-glow,
+  .kan-auth-panel-glow {
+    @apply pointer-events-none absolute inset-0 opacity-70;
+    background:
+      radial-gradient(circle at 15% 10%, hsl(var(--brand-magenta) / 0.22), transparent 50%),
+      radial-gradient(circle at 85% 80%, hsl(var(--brand-cyan) / 0.15), transparent 45%),
+      radial-gradient(circle at 60% 40%, hsl(var(--brand-yellow) / 0.08), transparent 40%);
+  }
+
+  .kan-page-banner-orb {
+    @apply pointer-events-none absolute -bottom-10 -right-10 h-40 w-40 rounded-full blur-3xl;
+    background-color: hsl(var(--brand-magenta) / 0.18);
+  }
+
+  .kan-cmyk-bar {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--brand-cyan)) 0%,
+      hsl(var(--brand-cyan)) 25%,
+      hsl(var(--brand-magenta)) 25%,
+      hsl(var(--brand-magenta)) 50%,
+      hsl(var(--brand-yellow)) 50%,
+      hsl(var(--brand-yellow)) 75%,
+      hsl(var(--brand-panel)) 75%,
+      hsl(var(--brand-panel)) 100%
+    );
   }
 }

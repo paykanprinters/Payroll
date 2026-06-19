@@ -22,8 +22,11 @@ import ValidatedDataTable from "./ValidatedDataTable";
 import FiltersBar from "./FiltersBar";
 import QuickFixTools from "./QuickFixTools";
 import AggregationErrorsPanel from "./AggregationErrorsPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BiometricImportSection from "./BiometricImportSection";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
+import type { AggregationError } from "@/hooks/use-timesheet-import";
 
 const hhmmRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -36,6 +39,7 @@ interface ImportTimesheetDialogProps {
   onImport: (timesheets: ImportableTimesheetEntry[]) => void;
   employees: MockEmployee[];
   workHoursSettings?: WorkHoursSettings | null;
+  biometricApiUrl?: string;
 }
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
@@ -44,8 +48,11 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   onImport,
   employees,
   workHoursSettings,
+  biometricApiUrl,
 }) => {
   const safeEmployees: MockEmployee[] = Array.isArray(employees) ? employees : [];
+  const [importSource, setImportSource] = useState<"api" | "csv">("api");
+  const [apiAggregationErrors, setApiAggregationErrors] = useState<AggregationError[]>([]);
 
   const {
     file,
@@ -64,19 +71,21 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
 
   const [editableRows, setEditableRows] = useState<ParsedTimesheetRow[]>([]);
   useEffect(() => {
-    // Auto-normalize dates so inputs are valid and editable
+    if (importSource !== "csv") return;
     const normalized = validatedData.map((r) => ({ ...r, date: (r.date || "").replace(/\//g, "-") }));
     setEditableRows(normalized);
-  }, [validatedData]);
+  }, [validatedData, importSource]);
+
+  const activeAggregationErrors = importSource === "api" ? apiAggregationErrors : aggregationErrors;
 
   const [compact, setCompact] = useState<boolean>(false);
   const [groupByEmployee, setGroupByEmployee] = useState<boolean>(true);
 
   const [showAggErrors, setShowAggErrors] = useState<boolean>(false);
   useEffect(() => {
-    if (aggregationErrors.length > 0) setShowAggErrors(true);
+    if (activeAggregationErrors.length > 0) setShowAggErrors(true);
     else setShowAggErrors(false);
-  }, [aggregationErrors]);
+  }, [activeAggregationErrors]);
 
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>("");
   const [filterEmployeeName, setFilterEmployeeName] = useState<string>("");
@@ -259,6 +268,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
 
   const handleCancel = () => {
     reset();
+    setImportSource("api");
+    setApiAggregationErrors([]);
     onClose();
   };
 
@@ -316,7 +327,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
             <div>
               <DialogTitle className="text-xl">Import clock times</DialogTitle>
               <DialogDescription>
-                Upload a CSV of punches. We aggregate the earliest as Time In and latest as Time Out per employee/day.
+                Fetch attendance from your biometric API or upload a CSV. Earliest punch becomes Time In and latest
+                becomes Time Out per employee/day.
                 <div className="mt-1 text-xs text-muted-foreground">Time Out must be strictly later than Time In.</div>
               </DialogDescription>
             </div>
@@ -330,7 +342,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
               <CardHeader>
                 <CardTitle>No employees available</CardTitle>
                 <CardDescription>
-                  Please add employees or enable mock data in Settings. The importer needs employees to resolve Personal IDs.
+                  Please add employees or enable mock data in Settings. Set each employee&apos;s{" "}
+                  <strong>Clock ID (Personal ID)</strong> to match the biometric logs.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-end">
@@ -341,37 +354,68 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
             </Card>
           ) : (
             <>
-              {/* Upload and parse */}
-              <div className="flex flex-col gap-4 py-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                  <Label htmlFor="timesheet-file" className="sr-only">
-                    Upload CSV
-                  </Label>
-                  <Input
-                    id="timesheet-file"
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleFileChange(e);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    className="flex-1"
-                  />
-                  <Button type="button" onClick={handleParseFile} disabled={!file || isParsing}>
-                    <UploadCloud className="h-4 w-4" /> {isParsing ? "Parsing..." : "Parse file"}
-                  </Button>
-                </div>
+              <Tabs
+                value={importSource}
+                onValueChange={(value) => setImportSource(value as "api" | "csv")}
+                className="py-4"
+              >
+                <TabsList className="grid w-full max-w-md grid-cols-2">
+                  <TabsTrigger value="api">Biometric API</TabsTrigger>
+                  <TabsTrigger value="csv">CSV upload</TabsTrigger>
+                </TabsList>
 
-                <ColumnMappingSection
-                  csvHeaders={csvHeaders}
-                  columnMappings={columnMappings}
-                  onColumnMappingChange={handleColumnMappingChange}
-                  onRevalidate={handleRevalidate}
-                  parsedRawDataLength={parsedRawData.length}
-                />
-              </div>
+                <TabsContent value="api" className="mt-4">
+                  <BiometricImportSection
+                    employees={safeEmployees}
+                    apiUrl={biometricApiUrl}
+                    onLoaded={(rows) => {
+                      setEditableRows(rows);
+                      setImportSource("api");
+                    }}
+                    onErrors={(errors) =>
+                      setApiAggregationErrors(
+                        errors.map((entry) => ({
+                          originalRow: {},
+                          personalIdAttempted: entry.personalIdAttempted,
+                          dateAttempted: entry.dateAttempted,
+                          error: entry.error,
+                        }))
+                      )
+                    }
+                  />
+                </TabsContent>
+
+                <TabsContent value="csv" className="mt-4 space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <Label htmlFor="timesheet-file" className="sr-only">
+                      Upload CSV
+                    </Label>
+                    <Input
+                      id="timesheet-file"
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleFileChange(e);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="flex-1"
+                    />
+                    <Button type="button" onClick={handleParseFile} disabled={!file || isParsing}>
+                      <UploadCloud className="h-4 w-4" /> {isParsing ? "Parsing..." : "Parse file"}
+                    </Button>
+                  </div>
+
+                  <ColumnMappingSection
+                    csvHeaders={csvHeaders}
+                    columnMappings={columnMappings}
+                    onColumnMappingChange={handleColumnMappingChange}
+                    onRevalidate={handleRevalidate}
+                    parsedRawDataLength={parsedRawData.length}
+                  />
+                </TabsContent>
+              </Tabs>
 
               {/* Filters */}
               <FiltersBar
@@ -397,6 +441,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                 filteredCount={filteredRows.length}
                 importFilteredOnly={importFilteredOnly}
                 setImportFilteredOnly={setImportFilteredOnly}
+                externalIdLabel={importSource === "api" ? "Clock ID" : "Personal ID (CSV)"}
               />
 
               {/* Quick-fix tools */}
@@ -408,14 +453,13 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
 
               {/* Aggregation Errors with auto-dismiss */}
               <AggregationErrorsPanel
-                errors={aggregationErrors as any}
-                show={aggregationErrors.length > 0 && showAggErrors}
+                errors={activeAggregationErrors as any}
+                show={activeAggregationErrors.length > 0 && showAggErrors}
                 onDismiss={() => setShowAggErrors(false)}
                 autoDismissMs={10000}
               />
 
-              {/* Slim banner to restore errors after auto-dismiss */}
-              {aggregationErrors.length > 0 && !showAggErrors && (
+              {activeAggregationErrors.length > 0 && !showAggErrors && (
                 <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
                   <span className="text-sm">Aggregation errors hidden to free space.</span>
                   <Button variant="outline" size="sm" onClick={() => setShowAggErrors(true)}>
@@ -435,6 +479,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                   workHoursSettings={workHoursSettings}
                   onEditRow={updateRow}
                   onResolveEmployee={resolveEmployee}
+                  externalIdLabel={importSource === "api" ? "Clock ID" : "Personal ID (from CSV)"}
                 />
               )}
             </>

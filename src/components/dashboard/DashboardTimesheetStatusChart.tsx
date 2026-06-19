@@ -7,7 +7,7 @@ import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 
 type Row = { name: string; value: number };
 
-const COLORS = ["#4B9CD3", "#7ABA48", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+const COLORS = ["#00AEEF", "#EC008C", "#FFDE00", "#E62229", "#141414", "#6b6b6b"];
 
 export default function DashboardTimesheetStatusChart({
   statusCounts,

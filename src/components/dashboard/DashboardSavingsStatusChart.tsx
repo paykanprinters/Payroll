@@ -47,7 +47,7 @@ export default function DashboardSavingsStatusChart({ data }: { data: Row[] }) {
                 align="center"
                 wrapperStyle={{ fontSize: dataVisualsFontSize }}
               />
-              <Bar dataKey="value" fill="#7ABA48" name="Entries" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" fill="#EC008C" name="Entries" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

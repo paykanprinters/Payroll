@@ -30,7 +30,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { getBranding } from "@/config/branding";
+import { getBranding, SIDEBAR_LOGO_FALLBACK, SIDEBAR_LOGO_HEIGHT } from "@/config/branding";
 
 interface NavLinkProps {
   to: string;
@@ -98,18 +98,24 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isMobile = useIsMobile();
   const { isAuthenticated, isLoadingAuth, user } = useAuth();
 
+  const [logoError, setLogoError] = React.useState(false);
+
   const displayCompanyDetails = React.useMemo(() => {
     const b = getBranding();
 
     // Fallback to branding defaults if company details aren't loaded yet.
     return {
-      name: companyDetails?.companyTradingName || companyDetails?.companyLegalName || b.name || "Your Company",
-      logoUrl: companyDetails?.logoUrl || b.logoUrl || "/logonscreen_for_workflow.png",
-      logoWidth: companyDetails?.logoWidth || b.logoWidth || 120,
-      logoHeight: companyDetails?.logoHeight || b.logoHeight || 48,
-      logoFit: (companyDetails?.logoFit as any) || b.logoFit || "contain",
+      name: companyDetails?.companyTradingName || companyDetails?.companyLegalName || b.name || "Kan Printers & Promo",
+      shortName: b.shortName || "Kan Printers",
+      logoUrl:
+        companyDetails?.logoUrl || b.logoUrlDark || b.logoUrl || SIDEBAR_LOGO_FALLBACK,
+      sidebarLogoHeight: SIDEBAR_LOGO_HEIGHT,
     };
   }, [companyDetails]);
+
+  React.useEffect(() => {
+    setLogoError(false);
+  }, [displayCompanyDetails.logoUrl]);
 
   const navSections: Array<{
     title: string;
@@ -190,16 +196,22 @@ const Sidebar: React.FC<SidebarProps> = ({
     })
     .filter((section) => section.items.length > 0);
 
-  const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => (
-    <div className={cn("relative overflow-hidden", currentIsCollapsed ? "h-20" : "h-28")}>
+  const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => {
+    const b = getBranding();
+    const sidebarLogo = logoError
+      ? SIDEBAR_LOGO_FALLBACK
+      : displayCompanyDetails.logoUrl;
+
+    return (
+    <div className={cn("relative overflow-hidden", currentIsCollapsed ? "h-20" : "h-[5.5rem]")}>
       <div className="absolute inset-0 bg-sidebar" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(122,186,72,0.22),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(236,0,140,0.18),transparent_55%)]" />
       <div className="absolute bottom-0 left-0 right-0 h-px bg-white/10" />
 
       <div
         className={cn(
-          "relative z-10 flex items-center px-4 lg:px-6",
-          currentIsCollapsed ? "h-full justify-center" : "h-full justify-between"
+          "relative z-10 flex h-full items-center px-3",
+          currentIsCollapsed ? "justify-center" : "justify-between gap-2"
         )}
       >
         {currentIsCollapsed ? (
@@ -210,35 +222,31 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="bg-white/10 text-white hover:bg-white/15"
             aria-label="Toggle sidebar"
           >
-            <Menu className="h-5 w-5" />
+            <img
+              src={b.iconUrl || "/brand/kanprinters_icon_color.svg"}
+              alt=""
+              className="h-8 w-8 rounded-md object-contain"
+            />
           </Button>
         ) : (
           <>
-            <Link to="/" className="flex items-center gap-3">
-              {displayCompanyDetails.logoUrl && (
-                <img
-                  src={displayCompanyDetails.logoUrl}
-                  alt="Company Logo"
-                  style={{
-                    width: displayCompanyDetails.logoWidth,
-                    height: displayCompanyDetails.logoHeight,
-                    objectFit: displayCompanyDetails.logoFit as React.CSSProperties["objectFit"],
-                  }}
-                  className="shrink-0 rounded-md bg-white/5 p-1"
-                />
-              )}
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold tracking-tight text-white">
-                  {displayCompanyDetails.name}
-                </div>
-                <div className="text-xs text-white/70">Payroll Console</div>
+            <Link to="/" className="min-w-0 flex-1 pr-1">
+              <img
+                src={sidebarLogo}
+                alt={displayCompanyDetails.name}
+                onError={() => setLogoError(true)}
+                className="w-full max-w-[13.5rem] object-contain object-left"
+                style={{ height: displayCompanyDetails.sidebarLogoHeight }}
+              />
+              <div className="mt-1 text-[11px] font-medium tracking-wide text-white/60">
+                Payroll Console
               </div>
             </Link>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => toggleCollapse(!currentIsCollapsed)}
-              className="bg-white/10 text-white hover:bg-white/15"
+              className="shrink-0 bg-white/10 text-white hover:bg-white/15"
               aria-label="Collapse sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -247,7 +255,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   if (isLoadingAuth || !isAuthenticated) {
     return null;
@@ -298,7 +307,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div
       className={cn(
         "flex h-full max-h-screen flex-col gap-2 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300",
-        isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[260px]"
+        isCollapsed ? "w-[70px] overflow-x-hidden" : "w-[280px]"
       )}
     >
       {renderSidebarHeader(isCollapsed, setIsCollapsed)}

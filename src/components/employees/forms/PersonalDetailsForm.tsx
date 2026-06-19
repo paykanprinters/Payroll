@@ -29,11 +29,12 @@ const PersonalDetailsForm: React.FC = () => {
             {errors.dateOfBirth && (<p className="text-red-500 text-sm">{errors.dateOfBirth.message as string}</p>)}
           </div>
           <div className="space-y-1">
-            <Label htmlFor="personalId">Personal ID (from Clock Report)</Label>
-            <Input id="personalId" {...register("personalId")} />
+            <Label htmlFor="personalId">Clock ID (Biometric Personal ID)</Label>
+            <Input id="personalId" placeholder="e.g. 3" {...register("personalId")} />
             {errors.personalId && (<p className="text-red-500 text-sm">{errors.personalId.message as string}</p>)}
             <p className="text-xs text-muted-foreground mt-1">
-              This unique ID is used to associate clock-in data with this employee.
+              Must match the number in attendance logs, e.g.{" "}
+              <code className="rounded bg-muted px-1">&lt;Attendance&gt;: 3 : …</code>
             </p>
           </div>
           <div className="space-y-1">

@@ -75,8 +75,8 @@ const StaffBranding: React.FC = () => {
   }, [designBranding.name, triedEdge]);
 
   const brand = getBranding();
-  const finalName = brand.name || snapshotBranding?.name || designBranding.name || edgeBranding?.name || "Your Company";
-  const finalLogoUrl = brand.logoUrl || snapshotBranding?.logoUrl || designBranding.logoUrl || edgeBranding?.logoUrl;
+  const finalName = brand.name || snapshotBranding?.name || designBranding.name || edgeBranding?.name || "Kan Printers & Promo";
+  const finalLogoUrl = brand.logoUrl || snapshotBranding?.logoUrl || designBranding.logoUrl || edgeBranding?.logoUrl || "/brand/kanprinters_horizontal_color.svg";
 
   const logoWidth = (settings.payslipLogoWidth as number) || (companyDetails?.logoWidth as number) || 100;
   const logoHeight = (settings.payslipLogoHeight as number) || (companyDetails?.logoHeight as number) || 50;

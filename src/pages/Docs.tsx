@@ -130,7 +130,7 @@ const Docs: React.FC = () => {
                                   />
                                   <SectionTitle
                                     title="CSV import & validation"
-                                    description="The Import Clock Times dialog aggregates punches and lets you validate/correct before importing."
+                                    description="Import clock times from the biometric API (date range) or CSV. Earliest punch = Time In, latest = Time Out. Match employees by Personal ID (clock ID)."
                                   />
                                   <BulletList
                                     items={[

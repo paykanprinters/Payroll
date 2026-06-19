@@ -39,8 +39,8 @@ function resolveFetchUrl(input: RequestInfo | URL): string {
 
 function globalFetch(input: RequestInfo | URL, init?: RequestInit) {
   const url = resolveFetchUrl(input);
-  // Auth token exchange must not share the data-layer abort wrapper (can stall sign-in).
-  if (url.includes("/auth/v1/")) {
+  // Auth and edge functions must not share the data-layer abort wrapper.
+  if (url.includes("/auth/v1/") || url.includes("/functions/v1/")) {
     return fetch(input, init);
   }
   return fetchWithTimeout(input, init);

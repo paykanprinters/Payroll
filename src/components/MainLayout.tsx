@@ -73,14 +73,14 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
 
   const gridColsClass = isCollapsed
     ? "md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]"
-    : "md:grid-cols-[260px_1fr] lg:grid-cols-[260px_1fr]";
+    : "md:grid-cols-[280px_1fr] lg:grid-cols-[280px_1fr]";
 
   // Update the title element without mounting another payroll hook elsewhere
   React.useEffect(() => {
     const titleElement = document.getElementById("app-title");
     if (titleElement) {
       const b = getBranding();
-      const name = b.name || companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Payroll App";
+      const name = b.shortName || b.name || companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Kan Printers Payroll";
       titleElement.innerText = name;
     }
   }, [companyDetails]);
