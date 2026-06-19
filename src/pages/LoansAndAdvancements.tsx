@@ -43,7 +43,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, DollarSign, PauseCircle, PlayCircle, Trash2, Snowflake } from "lucide-react";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { showError } from "@/utils/toast";
 import type { Loan } from "@/lib/mock-data-interfaces";
 

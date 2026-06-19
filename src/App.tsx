@@ -4,39 +4,39 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
-import Dashboard from "./pages/Dashboard";
-import Employees from "./pages/Employees";
-import Payslips from "./pages/Payslips";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import LoansAndAdvancements from "./pages/LoansAndAdvancements";
-import Savings from "./pages/Savings";
-import VacationAbsence from "./pages/VacationAbsence";
-import Analytics from "./pages/Analytics";
-import AnalyticsStaff from "./pages/AnalyticsStaff";
-import Timesheet from "./pages/Timesheet";
-import NotFound from "./pages/NotFound";
-import ToDosPage from "./pages/ToDosPage";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
 import StaffLogin from "./pages/StaffLogin";
-import RootHome from "./pages/RootHome";
 import { AuthProvider } from "./context/AuthContext";
+import { PayrollDataProvider } from "./context/PayrollDataContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
-import Profile from "./pages/Profile";
 import ErrorBoundary from "./components/ErrorBoundary";
-import StaffHome from "./pages/StaffHome";
-import PaymentBatches from "./pages/payroll/PaymentBatches";
-import PaymentBatchDetail from "./pages/payroll/PaymentBatchDetail";
-import CompensationComponents from "./pages/payroll/CompensationComponents";
-import EmployeeAssignments from "./pages/payroll/EmployeeAssignments";
-import OvertimeRules from "./pages/payroll/OvertimeRules";
-import ExceptionsDashboard from "./pages/payroll/ExceptionsDashboard";
-import PayrollRuns from "./pages/payroll/PayrollRuns";
-import PayrollRunDetail from "./pages/payroll/PayrollRunDetail";
-import Docs from "./pages/Docs";
+const RootHome = lazy(() => import("./pages/RootHome"));
+const StaffHome = lazy(() => import("./pages/StaffHome"));
+const ToDosPage = lazy(() => import("./pages/ToDosPage"));
+const Timesheet = lazy(() => import("./pages/Timesheet"));
+const Payslips = lazy(() => import("./pages/Payslips"));
+const LoansAndAdvancements = lazy(() => import("./pages/LoansAndAdvancements"));
+const Savings = lazy(() => import("./pages/Savings"));
+const VacationAbsence = lazy(() => import("./pages/VacationAbsence"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Docs = lazy(() => import("./pages/Docs"));
+const AnalyticsStaff = lazy(() => import("./pages/AnalyticsStaff"));
+const Employees = lazy(() => import("./pages/Employees"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const PaymentBatches = lazy(() => import("./pages/payroll/PaymentBatches"));
+const PaymentBatchDetail = lazy(() => import("./pages/payroll/PaymentBatchDetail"));
+const CompensationComponents = lazy(() => import("./pages/payroll/CompensationComponents"));
+const EmployeeAssignments = lazy(() => import("./pages/payroll/EmployeeAssignments"));
+const OvertimeRules = lazy(() => import("./pages/payroll/OvertimeRules"));
+const ExceptionsDashboard = lazy(() => import("./pages/payroll/ExceptionsDashboard"));
+const PayrollRuns = lazy(() => import("./pages/payroll/PayrollRuns"));
+const PayrollRunDetail = lazy(() => import("./pages/payroll/PayrollRunDetail"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
@@ -71,7 +71,15 @@ const App = () => {
               <Route path="/employee" element={<StaffLogin />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
-                <Route element={<ErrorBoundary fallbackTitle="Page error"><MainLayout /></ErrorBoundary>} >
+                <Route
+                  element={
+                    <ErrorBoundary fallbackTitle="Page error">
+                      <PayrollDataProvider>
+                        <MainLayout />
+                      </PayrollDataProvider>
+                    </ErrorBoundary>
+                  }
+                >
                   {isStaffPortal ? (
                     <>
                       <Route path="/" element={<StaffHome />} />

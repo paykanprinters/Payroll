@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { differenceInYears } from "date-fns";
 import { bankersRound } from "@/lib/utils";
 

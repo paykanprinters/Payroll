@@ -35,7 +35,7 @@ import {
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
 
-export const usePayrollProcessor = (options?: { silent?: boolean }) => {
+export const usePayrollProcessorState = (options?: { silent?: boolean }) => {
   const { isAuthenticated, isLoadingAuth, user } = useAuth();
   const silent = options?.silent === true;
 

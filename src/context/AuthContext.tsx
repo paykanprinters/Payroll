@@ -53,13 +53,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const buildAuthUserFromSession = useCallback((sessionUser: any): AuthUser => {
     const email = (sessionUser?.email as string) || "";
     const meta = (sessionUser?.user_metadata || {}) as any;
-    const role = (meta?.role || "Staff") as UserRole;
+    // Never trust user_metadata.role for authorization — it is user-editable.
     const name = (meta?.name || meta?.full_name || email) as string;
 
     return {
       id: sessionUser.id,
       email,
-      role,
+      role: "Staff",
       name,
     };
   }, []);

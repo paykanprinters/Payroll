@@ -8,7 +8,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { fetchPayslipsFromSupabase } from "@/integrations/supabase/payslip-queries";
 import { logAuditEvent } from "@/utils/audit";
 import {

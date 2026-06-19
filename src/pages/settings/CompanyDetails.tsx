@@ -10,7 +10,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useCompanyDetails } from "@/hooks/use-company-details";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext"; // Import useAuth
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor to get isMockDataEnabled
+import { usePayrollProcessor } from "@/context/PayrollDataContext"; // Import usePayrollProcessor to get isMockDataEnabled
 import { useSearchParams } from "react-router-dom";
 
 // Import new modular components

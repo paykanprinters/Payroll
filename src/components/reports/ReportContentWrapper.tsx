@@ -3,6 +3,7 @@
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { cn, getPrintStyles } from "@/lib/utils";
+import { sanitizeHtml } from "@/utils/sanitize-html";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 
@@ -43,6 +44,11 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   // Get explicit print styles based on layout size
   const printStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
   const baseFontSizePx = parseFloat(printStyles.fontSize?.toString().replace('px', '') || '14'); // Ensure it's a number
+
+  const sanitizedReportContent = React.useMemo(
+    () => sanitizeHtml(reportContent),
+    [reportContent]
+  );
 
   const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const imageRefs = React.useRef<HTMLImageElement[]>([]);
@@ -159,7 +165,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
 
       {/* Report Content */}
       <div
-        dangerouslySetInnerHTML={{ __html: reportContent }}
+        dangerouslySetInnerHTML={{ __html: sanitizedReportContent }}
         style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }}
       />
     </div>

@@ -4,7 +4,7 @@ import React, { useCallback } from "react";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { format, isSameMonth, isSameYear, startOfMonth, endOfMonth } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import BulkPayslipActions from "./BulkPayslipActions";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";

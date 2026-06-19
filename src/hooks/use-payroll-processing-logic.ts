@@ -141,12 +141,10 @@ export const usePayrollProcessingLogic = (
         }
       }
 
-      for (const loan of updatedLoans) {
-        await updateLoan(loan);
-      }
-      for (const plan of updatedSavingPlans) {
-        await updateSavingPlan(plan);
-      }
+      await Promise.all([
+        ...updatedLoans.map((loan) => updateLoan(loan)),
+        ...updatedSavingPlans.map((plan) => updateSavingPlan(plan)),
+      ]);
 
       if (!isMockDataEnabled) {
         for (const payment of savingPaymentsToRecord) {

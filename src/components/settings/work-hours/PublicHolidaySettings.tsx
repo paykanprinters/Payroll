@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { usePublicHolidays, PublicHoliday, getDefaultSouthAfricanHolidays } from "@/hooks/use-public-holidays";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useAuth } from "@/context/AuthContext";
 import { showSuccess } from "@/utils/toast";
 

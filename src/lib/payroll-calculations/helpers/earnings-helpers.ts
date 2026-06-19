@@ -1,9 +1,11 @@
-import { eachDayOfInterval, format, parseISO, isWithinInterval, differenceInCalendarDays, isSameMonth } from "date-fns";
+import { eachDayOfInterval, format, parseISO, isWithinInterval, differenceInCalendarDays } from "date-fns";
 import { MockEmployee, LeaveEntry, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import { calculateWorkingDays } from "@/lib/payroll-calculations";
 import { bankersRound } from "@/lib/utils";
+import { countUnpaidLeaveDays } from "@/lib/leave-summary";
+import { sumMoney } from "@/lib/money";
 
 export type OvertimePremiumRules = {
   weekdayOtMultiplier?: number;
@@ -224,48 +226,99 @@ export const allocateOvertime = (
   return { regularHours, overtimeWeekdayHours, overtimeSaturdayHours, overtimeSundayHours };
 };
 
+const prorateForEmploymentWindow = (
+  emp: MockEmployee,
+  amount: number,
+  periodStart: Date,
+  periodEnd: Date
+): number => {
+  if (!emp.startDate) return amount;
+  const hireDate = parseISO(emp.startDate);
+  if (hireDate > periodEnd) return 0;
+  if (hireDate <= periodStart) return amount;
+
+  const workingDaysInPeriod = calculateWorkingDays(periodStart, periodEnd) || 1;
+  const workingDaysEmployed = calculateWorkingDays(hireDate, periodEnd);
+  return amount * (workingDaysEmployed / workingDaysInPeriod);
+};
+
 export const computeBasicSalary = (
   emp: MockEmployee,
   regularHours: number,
   hourlyRate: number,
   leaveRecords: LeaveEntry[],
   periodStart: Date,
-  periodEnd: Date
-): number => {
+  periodEnd: Date,
+  workHoursSettings?: WorkHoursSettings | null
+): { basic: number; unpaidLeaveDaysInPeriod: number } => {
+  const unpaidLeaveDaysInPeriod = countUnpaidLeaveDays(emp, leaveRecords, periodStart, periodEnd);
+  const workingDaysInPeriod = calculateWorkingDays(periodStart, periodEnd) || 1;
+
   if (emp.hourlyRate && emp.hourlyRate > 0) {
-    return regularHours * hourlyRate;
+    let basic = regularHours * hourlyRate;
+    if (unpaidLeaveDaysInPeriod > 0) {
+      const weeklyHours = computeWeeklyScheduledHours(workHoursSettings);
+      const workDayCount = Math.max(1, (workHoursSettings?.workDays || []).length);
+      const avgDailyHours = weeklyHours / workDayCount;
+      basic -= unpaidLeaveDaysInPeriod * avgDailyHours * hourlyRate;
+    }
+    return {
+      basic: bankersRound(prorateForEmploymentWindow(emp, basic, periodStart, periodEnd), 2),
+      unpaidLeaveDaysInPeriod,
+    };
   }
 
   if (emp.salary && emp.salary > 0) {
-    let basic = emp.salary;
-    let unpaidLeaveDaysInPeriod = 0;
-
-    const employeeUnpaidLeave = leaveRecords.filter(
-      (rec) =>
-        rec.employeeId === emp.id &&
-        rec.leaveType === "Unpaid Leave" &&
-        (isWithinInterval(new Date(rec.startDate), { start: periodStart, end: periodEnd }) ||
-          isWithinInterval(new Date(rec.endDate), { start: periodStart, end: periodEnd }) ||
-          (new Date(rec.startDate) < periodStart && new Date(rec.endDate) > periodEnd))
-    );
-
-    employeeUnpaidLeave.forEach((rec) => {
-      const leaveStart = new Date(rec.startDate);
-      const leaveEnd = new Date(rec.endDate);
-      const overlapStart = leaveStart > periodStart ? leaveStart : periodStart;
-      const overlapEnd = leaveEnd < periodEnd ? leaveEnd : periodEnd;
-      unpaidLeaveDaysInPeriod += calculateWorkingDays(overlapStart, overlapEnd);
-    });
-
+    let basic = prorateForEmploymentWindow(emp, emp.salary, periodStart, periodEnd);
     if (unpaidLeaveDaysInPeriod > 0) {
-      const workingDaysInPeriod = calculateWorkingDays(periodStart, periodEnd) || 1;
       const dailyRate = (emp.salary as number) / workingDaysInPeriod;
       basic -= dailyRate * unpaidLeaveDaysInPeriod;
     }
-    return basic;
+    return { basic: bankersRound(Math.max(0, basic), 2), unpaidLeaveDaysInPeriod };
   }
 
-  return 0;
+  return { basic: 0, unpaidLeaveDaysInPeriod };
+};
+
+export const applyAssignedEarnings = (
+  emp: MockEmployee,
+  grossEarnings: number,
+  earningsBreakdown: { name: string; amount: number }[],
+  earningComponents: { id: string; name?: string; amount?: number; amountType?: string }[] | undefined,
+  assignments: { componentType?: string; employeeId?: string; componentId?: string; overrideAmount?: number; effectiveStart?: string | null; effectiveEnd?: string | null }[] | undefined,
+  periodStart: Date,
+  periodEnd: Date
+): { earningsBreakdown: { name: string; amount: number }[]; grossEarnings: number } => {
+  if (!assignments?.length || !earningComponents?.length) {
+    return { earningsBreakdown, grossEarnings };
+  }
+
+  const lines = [...earningsBreakdown];
+  const isEffective = (start?: string | null, end?: string | null) => {
+    const s = start ? parseISO(start) : null;
+    const e = end ? parseISO(end) : null;
+    return (!s || s <= periodEnd) && (!e || e >= periodStart);
+  };
+  const computeAmount = (base: number, type: string) => {
+    if (type === "fixed") return base;
+    if (type === "percent_of_salary") return ((emp.salary || 0) * base) / 100;
+    if (type === "percent_of_hourly") return ((emp.hourlyRate || 0) * base) / 100;
+    if (type === "percent_of_gross") return (grossEarnings * base) / 100;
+    return base;
+  };
+
+  assignments
+    .filter((a) => a.componentType === "earning" && a.employeeId === emp.id && isEffective(a.effectiveStart, a.effectiveEnd))
+    .forEach((a) => {
+      const comp = earningComponents.find((c) => c.id === a.componentId);
+      if (!comp) return;
+      const amountBase = typeof a.overrideAmount === "number" ? a.overrideAmount : Number(comp.amount || 0);
+      const amt = bankersRound(computeAmount(amountBase, comp.amountType || "fixed"), 2);
+      if (amt > 0) lines.push({ name: comp.name || "Earning", amount: amt });
+    });
+
+  const newGross = sumMoney(lines.map((l) => l.amount));
+  return { earningsBreakdown: lines, grossEarnings: newGross };
 };
 
 export const computeHolidayAmounts = (
@@ -349,10 +402,6 @@ export const buildEarningsBreakdown = (
     });
   }
 
-  if (emp.id === "EMP004" && isSameMonth(periodStart, new Date())) {
-    lines.push({ name: "Bonus", amount: bankersRound(2000, 2) });
-  }
-
-  const grossEarnings = bankersRound(lines.reduce((sum, e) => sum + e.amount, 0), 2);
+  const grossEarnings = sumMoney(lines.map((e) => e.amount));
   return { earningsBreakdown: lines, grossEarnings };
 };

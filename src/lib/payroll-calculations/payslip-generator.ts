@@ -1,22 +1,23 @@
-import { 
+import {
   parseISO,
   isWithinInterval,
   startOfDay,
   endOfDay,
-  format
+  format,
 } from "date-fns";
-import { 
-  MockEmployee, 
-  Loan, 
-  SavingPlan, 
-  LeaveEntry, 
-  MockPayslip, 
-  TimesheetEntry 
+import {
+  MockEmployee,
+  Loan,
+  SavingPlan,
+  LeaveEntry,
+  MockPayslip,
+  TimesheetEntry,
 } from "../mock-data-interfaces";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { bankersRound } from "@/lib/utils";
+import { calculateLeaveSummary } from "@/lib/leave-summary";
 import { v4 as uuidv4 } from "uuid";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
@@ -33,11 +34,11 @@ import {
   computeHolidayAmounts,
   computeOvertimeAmounts,
   buildEarningsBreakdown,
+  applyAssignedEarnings,
 } from "./helpers/earnings-helpers";
 
 import { buildDeductions } from "./helpers/deductions-helpers";
 
-/* Internal orchestration: earnings */
 const calculateEarnings = (
   emp: MockEmployee,
   approvedTimesheetsForPeriod: TimesheetEntry[],
@@ -66,13 +67,14 @@ const calculateEarnings = (
   const thresholdForPeriod = computeThresholdForPeriod(emp, weeklyThreshold, payPeriodStart, payPeriodEnd);
   const overtimeAlloc = allocateOvertime(nonHolidayBuckets, thresholdForPeriod);
 
-  const basicSalary = computeBasicSalary(
+  const { basic: basicSalary, unpaidLeaveDaysInPeriod } = computeBasicSalary(
     emp,
     overtimeAlloc.regularHours,
     hourlyRate,
     leaveRecords,
     payPeriodStart,
-    payPeriodEnd
+    payPeriodEnd,
+    workHoursSettings
   );
 
   const holidayAmounts = computeHolidayAmounts(
@@ -90,7 +92,7 @@ const calculateEarnings = (
     overtimeRules
   );
 
-  return buildEarningsBreakdown(
+  const { earningsBreakdown, grossEarnings } = buildEarningsBreakdown(
     emp,
     overtimeAlloc.regularHours,
     basicSalary,
@@ -107,9 +109,10 @@ const calculateEarnings = (
     },
     payPeriodStart
   );
+
+  return { earningsBreakdown, grossEarnings, unpaidLeaveDaysInPeriod };
 };
 
-/* Public API: unchanged */
 export const generatePayslipsForPeriod = (
   employees: MockEmployee[],
   initialLoans: Loan[],
@@ -123,15 +126,22 @@ export const generatePayslipsForPeriod = (
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
   workHoursSettings?: WorkHoursSettings | null,
   holidays: PublicHoliday[] = [],
-  earningComponents: any[] = [],
-  deductionComponents: any[] = [],
-  assignments: any[] = [],
+  earningComponents: { id: string; name?: string; amount?: number; amountType?: string }[] = [],
+  deductionComponents: { id: string; name?: string; amount?: number; amountType?: string }[] = [],
+  assignments: {
+    componentType?: string;
+    employeeId?: string;
+    componentId?: string;
+    overrideAmount?: number;
+    effectiveStart?: string | null;
+    effectiveEnd?: string | null;
+  }[] = [],
   overtimeRules?: OvertimePremiumRules
 ): {
   payslips: MockPayslip[];
   updatedLoans: Loan[];
   updatedSavingPlans: SavingPlan[];
-  savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[]
+  savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[];
 } => {
   const payslipsForPeriod: MockPayslip[] = [];
   const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
@@ -144,13 +154,16 @@ export const generatePayslipsForPeriod = (
   employees.forEach((emp) => {
     const approvedTimesheetsForPeriod = timesheets.filter((ts) => {
       const isEmployeeMatch = ts.employeeId === emp.id;
-      const eligibleStatus = ts.status === "Approved" || ts.status === "Locked" || ts.status === "Submitted";
+      const eligibleStatus = ts.status === "Approved" || ts.status === "Locked";
       const tsDate = parseISO(ts.date);
-      const inRange = isWithinInterval(tsDate, { start: startOfDay(payPeriodStart), end: endOfDay(payPeriodEnd) });
+      const inRange = isWithinInterval(tsDate, {
+        start: startOfDay(payPeriodStart),
+        end: endOfDay(payPeriodEnd),
+      });
       return isEmployeeMatch && eligibleStatus && inRange;
     });
 
-    const { earningsBreakdown, grossEarnings } = calculateEarnings(
+    const earningsResult = calculateEarnings(
       emp,
       approvedTimesheetsForPeriod,
       leaveRecords,
@@ -161,45 +174,75 @@ export const generatePayslipsForPeriod = (
       overtimeRules
     );
 
-    const { deductionsBreakdown, totalDeductions } = buildDeductions(
+    const withComponents = applyAssignedEarnings(
       emp,
-      grossEarnings,
-      processingLoans,
-      processingSavingPlans,
-      taxTables,
-      userTaxSettings,
-      payPeriodStart,
-      payPeriodEnd,
-      payPeriodString,
-      payrollSavingsEntries,
-      // Phase 3 additions
+      earningsResult.grossEarnings,
+      earningsResult.earningsBreakdown,
       earningComponents,
-      deductionComponents,
-      assignments
+      assignments,
+      payPeriodStart,
+      payPeriodEnd
     );
 
-    const netPay = bankersRound(grossEarnings - totalDeductions, 2);
+    const { deductionsBreakdown, totalDeductions, savingPaymentsToRecord: empSavingPayments } =
+      buildDeductions(
+        emp,
+        withComponents.grossEarnings,
+        processingLoans,
+        processingSavingPlans,
+        taxTables,
+        userTaxSettings,
+        payPeriodStart,
+        payPeriodEnd,
+        payPeriodString,
+        payrollSavingsEntries,
+        earningComponents,
+        deductionComponents,
+        assignments
+      );
+
+    if (empSavingPayments.length > 0) {
+      savingPaymentsToRecord.push(...empSavingPayments);
+    }
+
+    const rawNet = withComponents.grossEarnings - totalDeductions;
+    const netPay = bankersRound(Math.max(0, rawNet), 2);
+    const finalDeductions = [...deductionsBreakdown];
+    if (rawNet < 0) {
+      finalDeductions.push({
+        name: "Deductions exceed gross (capped at zero net)",
+        amount: bankersRound(rawNet, 2),
+      });
+    }
+
+    const leaveSummary = calculateLeaveSummary(
+      emp,
+      leaveRecords,
+      payPeriodStart,
+      payPeriodEnd,
+      earningsResult.unpaidLeaveDaysInPeriod
+    );
 
     payslipsForPeriod.push({
       id: uuidv4(),
       employeeId: emp.id,
       payPeriod: payPeriodString,
       payDate: payDateString,
-      grossEarnings,
+      grossEarnings: withComponents.grossEarnings,
       totalDeductions,
       netPay,
-      earningsBreakdown,
-      deductionsBreakdown,
-      leaveSummary: { annual: 0, sick: 0, unpaid: 0 },
+      earningsBreakdown: withComponents.earningsBreakdown,
+      deductionsBreakdown: finalDeductions,
+      leaveSummary,
       ytdGrossEarnings: 0,
       ytdTotalDeductions: 0,
     });
   });
 
-  return { 
-    payslips: payslipsForPeriod, 
-    updatedLoans: processingLoans, 
-    updatedSavingPlans: processingSavingPlans, 
-    savingPaymentsToRecord 
+  return {
+    payslips: payslipsForPeriod,
+    updatedLoans: processingLoans,
+    updatedSavingPlans: processingSavingPlans,
+    savingPaymentsToRecord,
   };
 };

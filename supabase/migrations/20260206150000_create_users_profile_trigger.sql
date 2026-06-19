@@ -21,7 +21,9 @@ begin
   elsif (select count(*) from public.users) = 0 then
     v_role := 'Admin';
   else
-    v_role := coalesce(new.raw_user_meta_data ->> 'role', 'Staff');
+    -- SECURITY: role is server-controlled. Never read it from
+    -- raw_user_meta_data, which is attacker-controlled at signup.
+    v_role := 'Staff';
   end if;
 
   v_name := coalesce(
@@ -36,8 +38,8 @@ begin
   on conflict (id) do update
     set name = excluded.name,
         email = excluded.email,
-        -- Don't downgrade an existing Admin role
-        role = case when public.users.role = 'Admin' then 'Admin' else excluded.role end,
+        -- Never change an existing role from this trigger
+        role = public.users.role,
         status = excluded.status,
         updated_at = now();
 

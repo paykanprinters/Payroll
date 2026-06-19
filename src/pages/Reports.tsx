@@ -6,7 +6,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import CorePayrollReportsSection from "@/components/reports/CorePayrollReportsSection";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";

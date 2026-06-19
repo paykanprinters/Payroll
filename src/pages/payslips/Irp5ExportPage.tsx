@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import Irp5PdfDocument from "@/components/reports/Irp5PdfDocument";

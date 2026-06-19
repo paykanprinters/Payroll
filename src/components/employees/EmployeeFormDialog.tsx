@@ -25,7 +25,7 @@ import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateCustomEmployeeId } from "@/lib/utils";
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 
 import BasicInfoForm from "./forms/BasicInfoForm";
 import PersonalDetailsForm from "./forms/PersonalDetailsForm";

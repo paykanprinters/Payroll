@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
-import { usePayrollProcessor } from "@/hooks/use-payroll-processor"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/context/PayrollDataContext"; // Import usePayrollProcessor
 
 interface CompanyLogoUploadProps {
   canEdit: boolean;
