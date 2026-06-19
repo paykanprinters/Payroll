@@ -129,34 +129,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    const handleAuthStateChange = async (event: string, session: any | null) => {
+    const applySession = (sessionUser: { id: string }, event?: string) => {
+      void (async () => {
+        setIsLoadingAuth(true);
+        try {
+          const dbProfile = await fetchProfile(sessionUser.id);
+          setUser(dbProfile ?? buildAuthUserFromSession(sessionUser));
+          setIsAuthenticated(true);
+          if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+            redirectAfterLogin();
+          }
+        } catch (err: unknown) {
+          console.error("AuthContext: profile fetch failed", err);
+          setUser(buildAuthUserFromSession(sessionUser));
+          setIsAuthenticated(true);
+        } finally {
+          setIsLoadingAuth(false);
+        }
+      })();
+    };
+
+    /**
+     * Supabase auth holds an internal lock while this callback runs.
+     * Never await other supabase calls here — defer them or sign-in stalls forever.
+     */
+    const handleAuthStateChange = (event: string, session: any | null) => {
       console.groupCollapsed(`AuthContext: onAuthStateChange event: ${event}`);
       try {
         if (!session) {
           setUser(null);
           setIsAuthenticated(false);
+          setIsLoadingAuth(false);
           if (event === "SIGNED_OUT" && location.pathname !== "/login") {
             navigate("/login", { replace: true });
           }
           return;
         }
 
-        const dbProfile = await fetchProfile(session.user.id);
-        setUser(dbProfile ?? buildAuthUserFromSession(session.user));
-        setIsAuthenticated(true);
-
-        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-          redirectAfterLogin();
-        }
-      } catch (err: any) {
-        console.error("AuthContext: Error handling auth change", { message: err?.message, err });
+        setTimeout(() => applySession(session.user, event), 0);
+      } catch (err: unknown) {
+        console.error("AuthContext: Error handling auth change", err);
         setUser(null);
         setIsAuthenticated(false);
+        setIsLoadingAuth(false);
         if (location.pathname !== "/login") navigate("/login", { replace: true });
       } finally {
-        setIsLoadingAuth(false);
+        console.groupEnd();
       }
-      console.groupEnd();
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);

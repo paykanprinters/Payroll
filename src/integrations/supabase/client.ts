@@ -31,6 +31,21 @@ function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
   }).finally(() => window.clearTimeout(timeoutId));
 }
 
+function resolveFetchUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+function globalFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const url = resolveFetchUrl(input);
+  // Auth token exchange must not share the data-layer abort wrapper (can stall sign-in).
+  if (url.includes("/auth/v1/")) {
+    return fetch(input, init);
+  }
+  return fetchWithTimeout(input, init);
+}
+
 let supabaseInstance: SupabaseClient | null = null;
 
 function getConfiguredClient(): SupabaseClient {
@@ -41,7 +56,7 @@ function getConfiguredClient(): SupabaseClient {
   }
   if (!supabaseInstance) {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { fetch: fetchWithTimeout },
+      global: { fetch: globalFetch },
     });
   }
   return supabaseInstance;
