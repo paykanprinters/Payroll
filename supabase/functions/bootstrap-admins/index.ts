@@ -48,14 +48,33 @@ serve(async (req) => {
   const callerIsAdmin = !!callerProfile && callerProfile.role === "Admin"
   console.log("[bootstrap-admins] Caller admin check", { callerIsAdmin })
 
+  const { count: adminCount, error: adminCountErr } = await supabaseAdmin
+    .from("users")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "Admin")
+
+  if (adminCountErr) {
+    console.error("[bootstrap-admins] Failed to count admins", { error: adminCountErr })
+    return new Response(JSON.stringify({ error: "Server error" }), { status: 500, headers: corsHeaders })
+  }
+
+  const hasExistingAdmin = (adminCount ?? 0) > 0
+
   // Bootstrap allowlist: these accounts may promote ONLY THEMSELVES when no
   // admin exists yet. Promoting arbitrary emails always requires an Admin caller.
   const defaultAllowlist = ["info@kanprinters.co.za"]
   const callerAllowlisted = defaultAllowlist.includes(callerEmail)
 
-  if (!callerIsAdmin && !callerAllowlisted) {
-    console.error("[bootstrap-admins] Caller not authorized to invoke", { callerEmail })
-    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders })
+  if (!callerIsAdmin) {
+    if (!callerAllowlisted) {
+      console.error("[bootstrap-admins] Caller not authorized to invoke", { callerEmail })
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders })
+    }
+
+    if (hasExistingAdmin) {
+      console.error("[bootstrap-admins] Bootstrap blocked; admin already exists", { callerEmail })
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders })
+    }
   }
 
   let targetEmails: string[]
@@ -70,7 +89,7 @@ serve(async (req) => {
       // ignore malformed body
     }
   } else {
-    // Allowlisted non-admin: self-promotion only, request body is ignored.
+    // Allowlisted non-admin: self-promotion only when bootstrapping, body ignored.
     targetEmails = [callerEmail]
   }
 
