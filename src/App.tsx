@@ -13,6 +13,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import React, { Suspense, lazy } from "react";
 import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 import ErrorBoundary from "./components/ErrorBoundary";
+import DeploymentConfigError from "./components/DeploymentConfigError";
+import { getDeploymentConfigMessage } from "@/lib/env";
 const RootHome = lazy(() => import("./pages/RootHome"));
 const StaffHome = lazy(() => import("./pages/StaffHome"));
 const ToDosPage = lazy(() => import("./pages/ToDosPage"));
@@ -43,6 +45,11 @@ const queryClient = new QueryClient();
 const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
 
 const App = () => {
+  const deploymentConfigError = getDeploymentConfigMessage();
+  if (deploymentConfigError) {
+    return <DeploymentConfigError message={deploymentConfigError} />;
+  }
+
   const isStaffPortal = portalType === "staff";
 
   // Dyad preview runs the app embedded in an iframe. HashRouter is more reliable there,
