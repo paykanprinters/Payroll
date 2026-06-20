@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .env
 .dyad/
+scripts/edge-deploy-manifest.json
+scripts/.edge-deploy-payloads/
+supabase/.temp/
