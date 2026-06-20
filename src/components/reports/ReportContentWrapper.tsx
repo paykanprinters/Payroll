@@ -6,6 +6,7 @@ import { cn, getPrintStyles } from "@/lib/utils";
 import { sanitizeHtml } from "@/utils/sanitize-html";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 
 interface ReportContentWrapperProps {
   reportTitle: string;
@@ -40,6 +41,10 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   } = companyDetails || {}; // Destructure with fallback to empty object
 
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
+  const resolvedLogoUrl = reportDesignSettings.includeCompanyLogo
+    ? resolveCompanyLogoSource(companyLogoUrl)
+    : undefined;
+  const logoDims = resolveDocumentLogoDimensions(companyLogoWidth, companyLogoHeight, companyLogoFit);
 
   // Get explicit print styles based on layout size
   const printStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
@@ -89,7 +94,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
         img.removeEventListener('error', handleImageLoad);
       });
     };
-  }, [companyLogoUrl, isPdfGeneration]); // Re-run if logo URL changes or PDF generation context changes
+  }, [resolvedLogoUrl, isPdfGeneration]); // Re-run if logo URL changes or PDF generation context changes
 
   React.useEffect(() => {
     if (imagesLoaded && onReadyForPdf) {
@@ -131,14 +136,14 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
       }}
     >
       {/* Report Header with Company Details */}
-      {(reportDesignSettings.includeCompanyLogo && companyLogoUrl) || reportDesignSettings.includeCompanyDetails ? (
+      {(reportDesignSettings.includeCompanyLogo && resolvedLogoUrl) || reportDesignSettings.includeCompanyDetails ? (
         <div className="flex justify-between items-start mb-6 print:mb-8">
-          {reportDesignSettings.includeCompanyLogo && companyLogoUrl && (
+          {reportDesignSettings.includeCompanyLogo && resolvedLogoUrl && (
             <img
               ref={el => { if (el) imageRefs.current.push(el); }}
-              src={companyLogoUrl}
+              src={resolvedLogoUrl}
               alt="Company Logo"
-              style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
+              style={{ width: logoDims.width, height: logoDims.height, objectFit: logoDims.fit }}
               className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
             />
           )}

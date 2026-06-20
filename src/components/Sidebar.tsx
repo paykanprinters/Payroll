@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { getBranding, SIDEBAR_LOGO_FALLBACK, SIDEBAR_LOGO_HEIGHT } from "@/config/branding";
+import BrandLogo from "@/components/brand/BrandLogo";
 
 interface NavLinkProps {
   to: string;
@@ -103,19 +104,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   const displayCompanyDetails = React.useMemo(() => {
     const b = getBranding();
 
-    // Fallback to branding defaults if company details aren't loaded yet.
     return {
       name: companyDetails?.companyTradingName || companyDetails?.companyLegalName || b.name || "Kan Printers & Promo",
       shortName: b.shortName || "Kan Printers",
-      logoUrl:
-        companyDetails?.logoUrl || b.logoUrlDark || b.logoUrl || SIDEBAR_LOGO_FALLBACK,
       sidebarLogoHeight: SIDEBAR_LOGO_HEIGHT,
     };
   }, [companyDetails]);
-
-  React.useEffect(() => {
-    setLogoError(false);
-  }, [displayCompanyDetails.logoUrl]);
 
   const navSections: Array<{
     title: string;
@@ -197,13 +191,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     .filter((section) => section.items.length > 0);
 
   const renderSidebarHeader = (currentIsCollapsed: boolean, toggleCollapse: (collapsed: boolean) => void) => {
-    const b = getBranding();
-    const sidebarLogo = logoError
-      ? SIDEBAR_LOGO_FALLBACK
-      : displayCompanyDetails.logoUrl;
+    const sidebarLogoSrc = logoError ? SIDEBAR_LOGO_FALLBACK : undefined;
 
     return (
-    <div className={cn("relative overflow-hidden", currentIsCollapsed ? "h-20" : "h-[5.5rem]")}>
+    <div className={cn("relative overflow-hidden", currentIsCollapsed ? "h-[4.75rem]" : "h-[6.25rem]")}>
       <div className="absolute inset-0 bg-sidebar" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(236,0,140,0.18),transparent_55%)]" />
       <div className="absolute bottom-0 left-0 right-0 h-px bg-white/10" />
@@ -223,7 +214,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             aria-label="Toggle sidebar"
           >
             <img
-              src={b.iconUrl || "/brand/kanprinters_icon_color.svg"}
+              src={getBranding().iconUrl}
               alt=""
               className="h-8 w-8 rounded-md object-contain"
             />
@@ -231,15 +222,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <>
             <Link to="/" className="min-w-0 flex-1 pr-1">
-              <img
-                src={sidebarLogo}
+              <BrandLogo
+                variant="sidebar"
+                src={sidebarLogoSrc}
                 alt={displayCompanyDetails.name}
                 onError={() => setLogoError(true)}
-                className="w-full max-w-[13.5rem] object-contain object-left"
-                style={{ height: displayCompanyDetails.sidebarLogoHeight }}
               />
-              <div className="mt-1 text-[11px] font-medium tracking-wide text-white/60">
-                Payroll Console
+              <div className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/50">
+                Payroll
               </div>
             </Link>
             <Button

@@ -26,7 +26,9 @@ const PayslipLogoSettings: React.FC<PayslipLogoSettingsProps> = ({
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Payslip Logo</h3>
-      <p className="text-sm text-muted-foreground">Upload a specific logo for payslips, overriding the main company logo if provided.</p>
+      <p className="text-sm text-muted-foreground">
+        Uses the company logo from Settings → Company Details by default. Upload here only if you need a different payslip logo.
+      </p>
       <div className="flex items-center gap-2">
         <Label htmlFor="payslipLogo">Upload Payslip Logo</Label>
         <Input
@@ -57,10 +59,10 @@ const PayslipLogoSettings: React.FC<PayslipLogoSettingsProps> = ({
                 <Label htmlFor="payslipLogoWidth">Width ({settings.payslipLogoWidth}px)</Label>
                 <Slider
                   id="payslipLogoWidth"
-                  min={20}
-                  max={200}
+                  min={40}
+                  max={320}
                   step={1}
-                  value={[settings.payslipLogoWidth || 100]}
+                  value={[settings.payslipLogoWidth || 180]}
                   onValueChange={onPayslipLogoWidthChange}
                   className="mt-2"
                 />
@@ -69,10 +71,10 @@ const PayslipLogoSettings: React.FC<PayslipLogoSettingsProps> = ({
                 <Label htmlFor="payslipLogoHeight">Height ({settings.payslipLogoHeight}px)</Label>
                 <Slider
                   id="payslipLogoHeight"
-                  min={20}
-                  max={100}
+                  min={24}
+                  max={120}
                   step={1}
-                  value={[settings.payslipLogoHeight || 50]}
+                  value={[settings.payslipLogoHeight || 60]}
                   onValueChange={onPayslipLogoHeightChange}
                   className="mt-2"
                 />

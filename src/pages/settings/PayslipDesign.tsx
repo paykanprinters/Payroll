@@ -8,6 +8,8 @@ import { showSuccess } from "@/utils/toast";
 import { PayslipDesignSettings, MockPayslip, MockCompanyDetails, MockEmployee } from "@/lib/mock-data-interfaces"; // Import the updated interface
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
+import { seedKanBrandLogo } from "@/lib/seed-kan-logo";
+import { useAuth } from "@/context/AuthContext";
 
 // Import new modular components
 import PayslipLayoutOptions from "@/components/settings/payslip-design/PayslipLayoutOptions";
@@ -33,8 +35,8 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
   payslipLogoUrl: '',
-  payslipLogoWidth: 100,
-  payslipLogoHeight: 50,
+  payslipLogoWidth: 180,
+  payslipLogoHeight: 60,
   payslipLogoFit: 'contain',
 };
 
@@ -42,7 +44,23 @@ type SectionName = "Earnings" | "Deductions"; // Only Earnings and Deductions ar
 
 const PayslipDesign: React.FC = () => {
   const { settings: liveSettings, setSettings: setLiveSettings, isLoading, save } = usePayslipDesignSettings();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<PayslipDesignSettings>(defaultPayslipSettings);
+
+  useEffect(() => {
+    if (user?.role !== "Admin") return;
+    seedKanBrandLogo().then((result) => {
+      if (result.ok && result.logoUrl && !result.skipped) {
+        setSettings((prev) => ({
+          ...prev,
+          payslipLogoUrl: result.logoUrl!,
+          payslipLogoWidth: 180,
+          payslipLogoHeight: 60,
+          payslipLogoFit: "contain",
+        }));
+      }
+    });
+  }, [user?.role]);
 
   useEffect(() => {
     setSettings(liveSettings);

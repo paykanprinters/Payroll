@@ -3,6 +3,7 @@
 import React from "react";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { MockCompanyDetails, MockEmployee } from "@/lib/mock-data-interfaces";
+import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 
 type Props = {
   employee: MockEmployee;
@@ -33,9 +34,12 @@ const val = (v: unknown) => {
 const EmployeeProfilePdfDocument: React.FC<Props> = ({ employee, companyDetails }) => {
   const companyName =
     companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Company";
-  const logoSrc = companyDetails?.logoUrl || undefined;
-  const logoW = (companyDetails?.logoWidth as number) || 100;
-  const logoH = (companyDetails?.logoHeight as number) || 50;
+  const logoSrc = resolveCompanyLogoSource(companyDetails?.logoUrl);
+  const logoDims = resolveDocumentLogoDimensions(
+    companyDetails?.logoWidth,
+    companyDetails?.logoHeight,
+    companyDetails?.logoFit
+  );
 
   const renderField = (label: string, value: unknown) => (
     <View style={styles.fieldRow}>
@@ -56,7 +60,7 @@ const EmployeeProfilePdfDocument: React.FC<Props> = ({ employee, companyDetails 
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View>
-            {logoSrc && <Image src={logoSrc} style={[styles.logo, { width: logoW, height: logoH }]} />}
+            {logoSrc && <Image src={logoSrc} style={[styles.logo, { width: logoDims.width, height: logoDims.height }]} />}
           </View>
           <View style={styles.companyInfo}>
             <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>

@@ -47,8 +47,8 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
   payslipLogoUrl: "",
-  payslipLogoWidth: 100,
-  payslipLogoHeight: 50,
+  payslipLogoWidth: 180,
+  payslipLogoHeight: 60,
   payslipLogoFit: "contain",
 };
 
@@ -105,8 +105,8 @@ function fromDomain(settings: PayslipDesignSettings, userId: string): Omit<DbRow
     layout_size: settings.layoutSize,
     earnings_deductions_layout: settings.earningsDeductionsLayout,
     payslip_logo_url: settings.payslipLogoUrl || null,
-    payslip_logo_width: Number(settings.payslipLogoWidth ?? 100),
-    payslip_logo_height: Number(settings.payslipLogoHeight ?? 50),
+    payslip_logo_width: Number(settings.payslipLogoWidth ?? 180),
+    payslip_logo_height: Number(settings.payslipLogoHeight ?? 60),
     payslip_logo_fit: settings.payslipLogoFit ?? "contain",
   };
 }

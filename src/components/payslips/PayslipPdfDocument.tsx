@@ -3,6 +3,7 @@
 import React from "react";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { MockPayslip, MockCompanyDetails, MockEmployee, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
+import { resolveDocumentLogoDimensions, resolvePayslipLogoSource } from "@/lib/document-logo";
 
 interface Props {
   payslips: MockPayslip[];
@@ -48,9 +49,16 @@ const PayslipPdfDocument: React.FC<Props> = ({
         const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : getEmployeeName(p.employeeId);
         const pCompanyName = p.companyName || companyDetails?.companyTradingName || companyDetails?.companyLegalName || "Company";
         const pCompanyAddress = p.companyAddress || companyDetails?.physicalAddress;
-        const pLogoSrc = payslipDesignSettings.payslipLogoUrl || p.companyLogoUrl || companyDetails?.logoUrl || undefined;
-        const pLogoW = (payslipDesignSettings.payslipLogoWidth as number) || (companyDetails?.logoWidth as number) || 100;
-        const pLogoH = (payslipDesignSettings.payslipLogoHeight as number) || (companyDetails?.logoHeight as number) || 50;
+        const pLogoSrc = resolvePayslipLogoSource(
+          payslipDesignSettings.payslipLogoUrl,
+          companyDetails?.logoUrl,
+          p.companyLogoUrl
+        );
+        const pLogoDims = resolveDocumentLogoDimensions(
+          payslipDesignSettings.payslipLogoWidth ?? companyDetails?.logoWidth,
+          payslipDesignSettings.payslipLogoHeight ?? companyDetails?.logoHeight,
+          payslipDesignSettings.payslipLogoFit ?? companyDetails?.logoFit
+        );
 
         return (
           <Page size="A4" style={styles.page} key={p.id}>
@@ -108,7 +116,7 @@ const PayslipPdfDocument: React.FC<Props> = ({
                 </View>
                 <View style={[styles.col, styles.card]}>
                   {(payslipDesignSettings.showCompanyLogo && pLogoSrc) && (
-                    <Image src={pLogoSrc as string} style={[styles.logo, { width: pLogoW, height: pLogoH, marginBottom: 6 }]} />
+                    <Image src={pLogoSrc as string} style={[styles.logo, { width: pLogoDims.width, height: pLogoDims.height, marginBottom: 6 }]} />
                   )}
                   {!!payslipDesignSettings.showCompanyDetails && (
                     <>

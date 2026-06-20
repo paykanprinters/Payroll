@@ -18,16 +18,19 @@ export const KAN_BRAND = {
   name: "Kan Printers & Promo",
   shortName: "Kan Printers",
   tagline: "KAN DO IT — since 2000",
-  logoUrl: "/brand/kanprinters_horizontal_color.svg",
-  logoUrlLight: "/brand/kanprinters_horizontal_color.svg",
-  logoUrlDark: "/brand/kanprinters_horizontal_dark.svg",
-  iconUrl: "/brand/kanprinters_icon_color.svg",
-  logoWidth: 220,
-  logoHeight: 64,
+  logoUrl: "/brand/kanprinters_horizontal_color.png",
+  logoUrlLight: "/brand/kanprinters_horizontal_color.png",
+  logoUrlDark: "/brand/kanprinters_horizontal_dark.png",
+  iconUrl: "/brand/kanprinters_icon_color.png",
+  logoWidth: 240,
+  logoHeight: 72,
   logoFit: "contain" as const,
-  /** Compact horizontal logo for the narrow sidebar header */
-  sidebarLogoUrl: "/brand/kanprinters_horizontal_dark.svg",
-  sidebarLogoHeight: 40,
+  /** Horizontal logo on dark sidebar — bundled asset, not Supabase upload */
+  sidebarLogoUrl: "/brand/kanprinters_horizontal_dark.png",
+  sidebarLogoHeight: 52,
+  /** Large logo on auth brand panel (dark background) */
+  authLogoUrl: "/brand/kanprinters_horizontal_dark.png",
+  authLogoHeight: 80,
   colors: {
     panel: "#141414",
     magenta: "#EC008C",
@@ -81,7 +84,30 @@ export function getBranding(): BrandingConfig {
   };
 }
 
-/** Prefer company settings from localStorage, then env defaults. */
+/** Auth / sidebar — always bundled Kan brand (never Supabase company upload). */
+export function resolveAppBranding(): Required<
+  Pick<BrandingConfig, "name" | "tagline" | "logoUrl" | "logoWidth" | "logoHeight" | "logoFit">
+> & { logoUrlDark: string; authLogoUrl: string; authLogoHeight: number } {
+  const b = getBranding();
+  const lsName =
+    (typeof window !== "undefined" &&
+      (localStorage.getItem("companyTradingName") || localStorage.getItem("companyLegalName"))) ||
+    null;
+
+  return {
+    name: lsName || b.name || DEFAULTS.name,
+    tagline: b.tagline || DEFAULTS.tagline,
+    logoUrl: KAN_BRAND.authLogoUrl,
+    logoUrlDark: b.logoUrlDark || DEFAULTS.logoUrlDark,
+    authLogoUrl: KAN_BRAND.authLogoUrl,
+    authLogoHeight: KAN_BRAND.authLogoHeight,
+    logoWidth: KAN_BRAND.logoWidth,
+    logoHeight: KAN_BRAND.authLogoHeight,
+    logoFit: KAN_BRAND.logoFit,
+  };
+}
+
+/** Payslips / reports — company upload from settings, then bundled defaults. */
 export function resolveStoredBranding(): Required<
   Pick<BrandingConfig, "name" | "logoUrl" | "logoWidth" | "logoHeight" | "logoFit" | "tagline">
 > & { logoUrlDark: string } {
@@ -99,7 +125,7 @@ export function resolveStoredBranding(): Required<
   return {
     name: lsName || b.name || DEFAULTS.name,
     tagline: b.tagline || DEFAULTS.tagline,
-    logoUrl: lsLogoUrl || b.logoUrlDark || DEFAULTS.logoUrlDark,
+    logoUrl: lsLogoUrl || b.logoUrlLight || DEFAULTS.logoUrl,
     logoUrlDark: b.logoUrlDark || DEFAULTS.logoUrlDark,
     logoWidth: lsLogoWidthRaw ? Number(lsLogoWidthRaw) : b.logoWidth ?? DEFAULTS.logoWidth,
     logoHeight: lsLogoHeightRaw ? Number(lsLogoHeightRaw) : b.logoHeight ?? DEFAULTS.logoHeight,

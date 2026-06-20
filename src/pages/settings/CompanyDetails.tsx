@@ -19,6 +19,7 @@ import StatutoryInfoForm from "@/components/settings/company-details/StatutoryIn
 import ContactDetailsForm from "@/components/settings/company-details/ContactDetailsForm";
 import BankingInfoForm from "@/components/settings/company-details/BankingInfoForm";
 import CompanyLogoUpload from "@/components/settings/company-details/CompanyLogoUpload";
+import { seedKanBrandLogo } from "@/lib/seed-kan-logo";
 
 // Define the schema for form validation
 const companyDetailsSchema = z.object({
@@ -44,8 +45,8 @@ const companyDetailsSchema = z.object({
   branchCode: z.string().optional(),
   accountType: z.enum(["Cheque", "Savings", "Business"]).optional(),
   logoUrl: z.string().optional(),
-  logoWidth: z.number().min(20).max(200).default(100),
-  logoHeight: z.number().min(20).max(100).default(50),
+  logoWidth: z.number().min(40).max(320).default(180),
+  logoHeight: z.number().min(24).max(120).default(60),
   logoFit: z.enum(["contain", "cover", "fill", "none", "scale-down"]).default("contain"),
 });
 
@@ -82,8 +83,8 @@ const CompanyDetails: React.FC = () => {
       branchCode: "",
       accountType: "Cheque",
       logoUrl: "",
-      logoWidth: 100,
-      logoHeight: 50,
+      logoWidth: 180,
+      logoHeight: 60,
       logoFit: "contain",
     },
   });
@@ -121,8 +122,8 @@ const CompanyDetails: React.FC = () => {
         branchCode: companyDetails.branchCode || "",
         accountType: companyDetails.accountType || "Cheque",
         logoUrl: companyDetails.logoUrl || "",
-        logoWidth: companyDetails.logoWidth || 100,
-        logoHeight: companyDetails.logoHeight || 50,
+        logoWidth: companyDetails.logoWidth || 180,
+        logoHeight: companyDetails.logoHeight || 60,
         logoFit: companyDetails.logoFit || "contain",
       });
       console.log("CompanyDetails.tsx: Form reset with fetched data.");
@@ -160,6 +161,27 @@ const CompanyDetails: React.FC = () => {
     next.delete("focus");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams, isLoading, isLoadingAuth]);
+
+  // One-time Kan logo seed for payslips/reports (Admin, live data only)
+  React.useEffect(() => {
+    if (isLoadingAuth || isLoading || isMockDataEnabled || user?.role !== "Admin") return;
+
+    let cancelled = false;
+    (async () => {
+      const result = await seedKanBrandLogo();
+      if (cancelled || result.skipped || !result.ok || !result.logoUrl) return;
+
+      formMethods.setValue("logoUrl", result.logoUrl);
+      formMethods.setValue("logoWidth", 180);
+      formMethods.setValue("logoHeight", 60);
+      formMethods.setValue("logoFit", "contain");
+      showSuccess("Kan Printers logo applied to payslips and reports.");
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoadingAuth, isLoading, isMockDataEnabled, user?.role, formMethods]);
 
   const onSubmit = async (data: CompanyDetailsFormValues) => {
     await upsertCompanyDetails(data);

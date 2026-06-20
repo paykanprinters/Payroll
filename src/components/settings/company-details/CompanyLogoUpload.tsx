@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError } from "@/utils/toast";
+import { seedKanBrandLogo } from "@/lib/seed-kan-logo";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { usePayrollProcessor } from "@/context/PayrollDataContext"; // Import usePayrollProcessor
 
@@ -102,8 +103,8 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         setValue("logoUrl", dataUrl);
-        setValue("logoWidth", 100);
-        setValue("logoHeight", 50);
+        setValue("logoWidth", 180);
+        setValue("logoHeight", 60);
         setValue("logoFit", "contain");
         showSuccess("Mock company logo uploaded successfully!");
       };
@@ -113,8 +114,8 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
       const publicUrl = await uploadFileToSupabaseStorage(file);
       if (publicUrl) {
         setValue("logoUrl", publicUrl);
-        setValue("logoWidth", 100);
-        setValue("logoHeight", 50);
+        setValue("logoWidth", 180);
+        setValue("logoHeight", 60);
         setValue("logoFit", "contain");
         showSuccess("Company logo uploaded successfully to Supabase Storage!");
       } else {
@@ -127,16 +128,16 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
     if (isMockDataEnabled) {
       // Handle mock data locally
       setValue("logoUrl", "");
-      setValue("logoWidth", 100);
-      setValue("logoHeight", 50);
+      setValue("logoWidth", 180);
+      setValue("logoHeight", 60);
       setValue("logoFit", "contain");
       showSuccess("Mock company logo removed successfully!");
     } else {
       // Handle live data with Supabase Storage
       await deleteFileFromSupabaseStorage();
       setValue("logoUrl", "");
-      setValue("logoWidth", 100);
-      setValue("logoHeight", 50);
+      setValue("logoWidth", 180);
+      setValue("logoHeight", 60);
       setValue("logoFit", "contain");
     }
   };
@@ -153,23 +154,44 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
     setValue("logoFit", value);
   };
 
+  const handleApplyKanLogo = async () => {
+    const result = await seedKanBrandLogo(true);
+    if (result.ok && result.logoUrl) {
+      setValue("logoUrl", result.logoUrl);
+      setValue("logoWidth", 180);
+      setValue("logoHeight", 60);
+      setValue("logoFit", "contain");
+      showSuccess("Kan Printers logo applied to payslips and reports.");
+    } else {
+      showError("Could not apply Kan Printers logo. Check storage permissions.");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Company Logo</CardTitle>
+        <CardTitle className="text-lg font-semibold">Payslip &amp; Report Logo</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Optional override for payslips and PDF reports. Navigation and login always use the bundled Kan Printers brand.
+        </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Label htmlFor="companyLogo">Upload Logo</Label>
             <Input
               id="companyLogo"
               type="file"
               accept="image/*"
               onChange={handleLogoUpload}
-              className="mt-1 flex-1"
+              className="mt-1 flex-1 min-w-[12rem]"
               disabled={!canEdit}
             />
+            {canEdit && (
+              <Button type="button" variant="secondary" onClick={handleApplyKanLogo} className="mt-1">
+                Use Kan Printers logo
+              </Button>
+            )}
             {logoUrl && (
               <Button type="button" variant="outline" onClick={handleRemoveLogo} className="mt-1" disabled={!canEdit}>
                 Remove Logo
@@ -191,8 +213,8 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
                     <Label htmlFor="logoWidth">Logo Width ({logoWidth}px)</Label>
                     <Slider
                       id="logoWidth"
-                      min={20}
-                      max={200}
+                      min={40}
+                      max={320}
                       step={1}
                       value={[logoWidth]}
                       onValueChange={handleLogoWidthChange}
@@ -204,8 +226,8 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
                     <Label htmlFor="logoHeight">Logo Height ({logoHeight}px)</Label>
                     <Slider
                       id="logoHeight"
-                      min={20}
-                      max={100}
+                      min={24}
+                      max={120}
                       step={1}
                       value={[logoHeight]}
                       onValueChange={handleLogoHeightChange}

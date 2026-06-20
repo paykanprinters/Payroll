@@ -24,8 +24,8 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
   layoutSize: "A4",
   earningsDeductionsLayout: "deductions-left-earnings-right",
   payslipLogoUrl: "",
-  payslipLogoWidth: 100,
-  payslipLogoHeight: 50,
+  payslipLogoWidth: 180,
+  payslipLogoHeight: 60,
   payslipLogoFit: "contain",
 };
 

@@ -9,6 +9,10 @@ import {
   MockEmployee,
   PayslipDesignSettings,
 } from "@/lib/mock-data-interfaces";
+import {
+  resolveDocumentLogoDimensions,
+  resolvePayslipLogoSource,
+} from "@/lib/document-logo";
 
 type LayoutSide = "deductions-left-earnings-right" | "earnings-left-deductions-right";
 
@@ -81,7 +85,16 @@ const IndividualPayslipCard: React.FC<Props> = ({
     payslipLogoFit,
   } = payslipDesignSettings;
 
-  const logoSrc = payslipLogoUrl || payslip.companyLogoUrl || companyDetails?.logoUrl || "";
+  const logoSrc = resolvePayslipLogoSource(
+    payslipLogoUrl,
+    companyDetails?.logoUrl,
+    payslip.companyLogoUrl
+  );
+  const logoDims = resolveDocumentLogoDimensions(
+    payslipLogoWidth ?? companyDetails?.logoWidth,
+    payslipLogoHeight ?? companyDetails?.logoHeight,
+    payslipLogoFit ?? companyDetails?.logoFit
+  );
 
   const earningsTotal = useMemo(
     () => payslip.earningsBreakdown.reduce((sum, e) => sum + (e?.amount || 0), 0),
@@ -103,9 +116,9 @@ const IndividualPayslipCard: React.FC<Props> = ({
               src={logoSrc}
               alt="Company Logo"
               style={{
-                width: payslipLogoWidth || 100,
-                height: payslipLogoHeight || 50,
-                objectFit: payslipLogoFit || "contain",
+                width: logoDims.width,
+                height: logoDims.height,
+                objectFit: logoDims.fit,
               }}
               className="inline-block"
             />

@@ -4,6 +4,7 @@ import React from "react";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { MockPayslip, MockEmployee, MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 import { parseISO, isSameMonth, isSameYear, isSameWeek } from "date-fns";
 
 type AuditLevel = "minimal" | "standard" | "detailed";
@@ -58,9 +59,14 @@ const ReportPdfDocument: React.FC<Props> = ({
     companyDetails?.companyTradingName ||
     "Your Company Name";
 
-  const logoSrc = reportDesignSettings.includeCompanyLogo ? (companyDetails?.logoUrl || undefined) : undefined;
-  const logoW = (companyDetails?.logoWidth as number) || 100;
-  const logoH = (companyDetails?.logoHeight as number) || 50;
+  const logoSrc = reportDesignSettings.includeCompanyLogo
+    ? resolveCompanyLogoSource(companyDetails?.logoUrl)
+    : undefined;
+  const logoDims = resolveDocumentLogoDimensions(
+    companyDetails?.logoWidth,
+    companyDetails?.logoHeight,
+    companyDetails?.logoFit
+  );
 
   // Exclude cash employees for reports (match existing behavior)
   const nonCashEmployees = employees.filter((e) => e.paymentMode !== "Cash");
@@ -143,7 +149,7 @@ const ReportPdfDocument: React.FC<Props> = ({
           <View style={styles.companyRow}>
             <View>
               {logoSrc && (
-                <Image src={logoSrc as string} style={[styles.logo, { width: logoW, height: logoH }]} />
+                <Image src={logoSrc as string} style={[styles.logo, { width: logoDims.width, height: logoDims.height }]} />
               )}
             </View>
             <View style={styles.companyInfo}>
@@ -222,7 +228,7 @@ const ReportPdfDocument: React.FC<Props> = ({
           <View style={styles.companyRow}>
             <View>
               {logoSrc && (
-                <Image src={logoSrc as string} style={[styles.logo, { width: logoW, height: logoH }]} />
+                <Image src={logoSrc as string} style={[styles.logo, { width: logoDims.width, height: logoDims.height }]} />
               )}
             </View>
             <View style={styles.companyInfo}>

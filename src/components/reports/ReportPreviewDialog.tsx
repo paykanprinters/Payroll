@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getPrintStyles } from "@/lib/utils";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { saveReportToSupabase } from "@/integrations/supabase/report-queries";
 import { useAuth } from "@/context/AuthContext";
@@ -45,10 +46,14 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
 }) => {
   // Define displayCompanyName within this component's scope
   const displayCompanyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name";
-  const companyLogoUrl = companyDetails?.logoUrl;
-  const companyLogoWidth = companyDetails?.logoWidth || 100;
-  const companyLogoHeight = companyDetails?.logoHeight || 50;
-  const companyLogoFit = companyDetails?.logoFit || "contain";
+  const companyLogoUrl = reportDesignSettings.includeCompanyLogo
+    ? resolveCompanyLogoSource(companyDetails?.logoUrl)
+    : undefined;
+  const logoDims = resolveDocumentLogoDimensions(
+    companyDetails?.logoWidth,
+    companyDetails?.logoHeight,
+    companyDetails?.logoFit
+  );
   const physicalAddress = companyDetails?.physicalAddress;
   const companyRegistrationNumber = companyDetails?.companyRegistrationNumber;
   const vatRegistrationNumber = companyDetails?.vatRegistrationNumber;
@@ -136,7 +141,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
                   <img
                     src={companyLogoUrl}
                     alt="Company Logo"
-                    style={{ width: companyLogoWidth, height: companyLogoHeight, objectFit: companyLogoFit }}
+                    style={{ width: logoDims.width, height: logoDims.height, objectFit: logoDims.fit }}
                     className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
                   />
                 )}

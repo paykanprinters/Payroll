@@ -136,7 +136,10 @@
     @apply -translate-y-0.5;
   }
 
-  /* Kan Printers page banners & auth panels */
+  .kan-auth-shell {
+    @apply bg-background;
+  }
+
   .kan-page-banner,
   .kan-auth-panel {
     @apply relative overflow-hidden border border-white/10 text-white;

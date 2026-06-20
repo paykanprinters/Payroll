@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { MockCompanyDetails, MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
+import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 
 type Props = {
   employee: MockEmployee;
@@ -32,9 +33,12 @@ const money = (n: number) => `R ${Number(n || 0).toLocaleString("en-ZA", { minim
 
 const Irp5PdfDocument: React.FC<Props> = ({ employee, payslipsForYear, companyDetails, year }) => {
   const companyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Company";
-  const logoSrc = companyDetails?.logoUrl || undefined;
-  const logoW = (companyDetails?.logoWidth as number) || 100;
-  const logoH = (companyDetails?.logoHeight as number) || 50;
+  const logoSrc = resolveCompanyLogoSource(companyDetails?.logoUrl);
+  const logoDims = resolveDocumentLogoDimensions(
+    companyDetails?.logoWidth,
+    companyDetails?.logoHeight,
+    companyDetails?.logoFit
+  );
 
   const totals = useMemo(() => {
     const totalGross = payslipsForYear.reduce((s, p) => s + (p.grossEarnings || 0), 0);
@@ -65,7 +69,7 @@ const Irp5PdfDocument: React.FC<Props> = ({ employee, payslipsForYear, companyDe
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
-          <View>{logoSrc && <Image src={logoSrc} style={[styles.logo, { width: logoW, height: logoH }]} />}</View>
+          <View>{logoSrc && <Image src={logoSrc} style={[styles.logo, { width: logoDims.width, height: logoDims.height }]} />}</View>
           <View style={styles.companyInfo}>
             <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>
             {!!companyDetails?.payeReferenceNumber && <Text>{`PAYE Ref: ${companyDetails.payeReferenceNumber}`}</Text>}

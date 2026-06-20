@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
+import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
 type TextRun = { text: string; bold?: boolean };
@@ -163,9 +164,14 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
   const companyName =
     companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name";
 
-  const logoSrc = reportDesignSettings.includeCompanyLogo ? (companyDetails?.logoUrl || undefined) : undefined;
-  const logoW = (companyDetails?.logoWidth as number) || 100;
-  const logoH = (companyDetails?.logoHeight as number) || 50;
+  const logoSrc = reportDesignSettings.includeCompanyLogo
+    ? resolveCompanyLogoSource(companyDetails?.logoUrl)
+    : undefined;
+  const logoDims = resolveDocumentLogoDimensions(
+    companyDetails?.logoWidth,
+    companyDetails?.logoHeight,
+    companyDetails?.logoFit
+  );
 
   const baseFontSize = reportDesignSettings.reportContentFontSize || 12;
 
@@ -180,7 +186,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
         {(reportDesignSettings.includeCompanyDetails || logoSrc) && (
           <View style={styles.headerRow}>
             <View>
-              {logoSrc && <Image src={logoSrc} style={[styles.logo, { width: logoW, height: logoH }]} />}
+              {logoSrc && <Image src={logoSrc} style={[styles.logo, { width: logoDims.width, height: logoDims.height }]} />}
             </View>
             {reportDesignSettings.includeCompanyDetails && (
               <View style={styles.companyInfo}>
