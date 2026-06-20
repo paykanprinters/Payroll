@@ -17,6 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // Corrected import path for UserTaxSettings
+import { getSarsTaxTablesForYear, SUPPORTED_SARS_TAX_YEARS } from "@/lib/sars-tax-tables";
 
 const DEFAULT_IRP5_FONT_SIZE = 12; // Default font size for IRP5 content
 const MIN_IRP5_FONT_SIZE = 10;
@@ -39,14 +40,7 @@ const TaxLiabilities: React.FC = () => {
   const { isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYearForCalculations, setActiveTaxYearForCalculations } = usePayrollProcessor(); // include activeTaxYearForCalculations
   const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-  const currentYear = new Date().getFullYear();
-  const taxYears = [
-    (currentYear - 2).toString(),
-    (currentYear - 1).toString(),
-    currentYear.toString(),
-    (currentYear + 1).toString(),
-    (currentYear + 2).toString(), // Added 2026
-  ];
+  const taxYears = SUPPORTED_SARS_TAX_YEARS.map(String);
 
   const form = useForm<TaxLiabilitiesFormValues>({
     resolver: zodResolver(taxLiabilitiesSchema),
@@ -92,6 +86,7 @@ const TaxLiabilities: React.FC = () => {
   }, [activeTaxYearForCalculations, form]);
 
   const selectedTaxYear = form.watch("taxYear");
+  const selectedYearMeta = selectedTaxYear ? getSarsTaxTablesForYear(parseInt(selectedTaxYear, 10)) : null;
   const irp5ContentFontSize = form.watch("irp5ContentFontSize");
 
   const handleFetchTaxTables = async () => {
@@ -105,12 +100,12 @@ const TaxLiabilities: React.FC = () => {
       return;
     }
 
-    const toastId = showLoading(`Fetching tax tables for ${selectedTaxYear} from SARS...`) as string;
+    const toastId = showLoading(`Applying SARS tax tables for ${selectedTaxYear}...`) as string;
     console.log(`Attempting to fetch tax tables for year: ${selectedTaxYear}`);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-sars-tax-tables', {
-        body: JSON.stringify({ taxYear: parseInt(selectedTaxYear) }),
+      const { data, error } = await supabase.functions.invoke("fetch-sars-tax-tables", {
+        body: { taxYear: parseInt(selectedTaxYear, 10) },
       });
 
       if (error) {
@@ -200,7 +195,7 @@ const TaxLiabilities: React.FC = () => {
         <CardHeader>
           <CardTitle>Tax Table Calculations</CardTitle>
           <CardDescription>
-            Select a tax year to fetch the latest tax tables from SARS and apply them to employee pay structures.
+            Select a SARS tax year and apply the official PAYE brackets, rebates, and UIF/SDL rates to payroll calculations.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -219,25 +214,44 @@ const TaxLiabilities: React.FC = () => {
                   <SelectValue placeholder="Select a year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {taxYears.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
+                  {taxYears.map((year) => {
+                    const meta = getSarsTaxTablesForYear(parseInt(year, 10));
+                    return (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                        {meta ? ` (${meta.periodLabel})` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {form.formState.errors.taxYear && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.taxYear.message}</p>
               )}
             </div>
+            {selectedYearMeta && (
+              <p className="text-sm text-muted-foreground">
+                Source:{" "}
+                <a
+                  href={selectedYearMeta.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  SARS employer tax guide
+                </a>
+              </p>
+            )}
             <Button onClick={handleFetchTaxTables} disabled={!selectedTaxYear || !canManageTaxSettings || isMockDataEnabled}>
-              Fetch & Apply Tax Tables
+              Apply Tax Tables
             </Button>
           </div>
-          <div className="mt-8 p-4 border rounded-lg bg-yellow-50 text-yellow-800">
-            <h3 className="font-semibold text-lg mb-2">Important Note:</h3>
-            <p className="text-sm">
-              This demonstration uses **mock SARS tax data** for various years. For a production system, fetching and applying legally compliant tax tables from SARS requires a robust backend system with secure API integrations to official data sources. This interface provides the UI for selecting the year and triggering the action, but the actual data retrieval and calculation logic would be handled server-side.
+          <div className="mt-8 p-4 border rounded-lg bg-muted/40 text-sm text-muted-foreground">
+            <h3 className="font-semibold text-foreground mb-2">How this works</h3>
+            <p>
+              SARS does not provide a public API for tax tables. This app stores official rates from the Budget and
+              SARS employer guides, then writes them to your database when you apply a tax year. After Budget day each
+              year, new brackets are added here (2026 and 2027 are available now).
             </p>
           </div>
         </CardContent>

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { getSarsTaxTablesForYear } from "../_shared/sars-tax-tables.ts";
 
 serve(async (req) => {
   const corsHeaders = {
@@ -74,41 +75,28 @@ serve(async (req) => {
       });
     }
 
-    const tablesByYear: Record<number, {
-      payeBrackets: { min_income: number; max_income: number | null; rate: number; deduction: number }[];
-      rebates: { under65: number; sixtyFiveToSeventyFour: number; seventyFivePlus: number };
-    }> = {
-      2026: {
-        payeBrackets: [
-          { min_income: 0,       max_income: 242000,  rate: 0.18, deduction: 0 },
-          { min_income: 242001,  max_income: 378000,  rate: 0.26, deduction: 43560 },
-          { min_income: 378001,  max_income: 521000,  rate: 0.31, deduction: 79748 },
-          { min_income: 521001,  max_income: 684000,  rate: 0.36, deduction: 124079 },
-          { min_income: 684001,  max_income: 872000,  rate: 0.39, deduction: 182371 },
-          { min_income: 872001,  max_income: 1848000, rate: 0.41, deduction: 255871 },
-          { min_income: 1848001, max_income: null,    rate: 0.45, deduction: 655839 },
-        ],
-        rebates: { under65: 16850, sixtyFiveToSeventyFour: 9270, seventyFivePlus: 3070 },
-      },
-    };
-
-    const selected = tablesByYear[taxYear];
+    const selected = getSarsTaxTablesForYear(taxYear);
     if (!selected) {
-      return new Response(JSON.stringify({ error: `No PAYE data configured for taxYear ${taxYear}` }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: `No SARS tax tables are configured for tax year ${taxYear}. Supported years: 2026, 2027.`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const payeBrackets = selected.payeBrackets;
-    const uifSdlRates = { tax_year: taxYear, uif_rate: 0.01, uif_cap: 177.12, sdl_rate: 0.01 };
+    const uifSdlRates = { tax_year: taxYear, ...selected.uifSdlRates };
     const startDate = `${taxYear}-03-01`;
     const endDate = `${taxYear + 1}-02-28`;
     const taxYearDetails = {
       year: taxYear,
       start_date: startDate,
       end_date: endDate,
-      description: "SARS Tax Year",
+      description: `SARS tax year (${selected.periodLabel})`,
       rebates: {
         under65: selected.rebates.under65,
         sixtyFiveToSeventyFour: selected.rebates.sixtyFiveToSeventyFour,
@@ -189,10 +177,18 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, year: taxYear }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        year: taxYear,
+        periodLabel: selected.periodLabel,
+        sourceUrl: selected.sourceUrl,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (e) {
     console.error("Unhandled error in fetch-sars-tax-tables:", e);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
