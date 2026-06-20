@@ -2,11 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
 import StaffLogin from "./pages/StaffLogin";
+import StaffPortalGuard from "./components/staff/StaffPortalGuard";
+import StaffPortalLayout from "./components/staff/StaffPortalLayout";
 import { AuthProvider } from "./context/AuthContext";
 import { PayrollDataProvider } from "./context/PayrollDataContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -39,6 +41,13 @@ const ExceptionsDashboard = lazy(() => import("./pages/payroll/ExceptionsDashboa
 const PayrollRuns = lazy(() => import("./pages/payroll/PayrollRuns"));
 const PayrollRunDetail = lazy(() => import("./pages/payroll/PayrollRunDetail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const StaffPortalHome = lazy(() => import("./pages/staff/StaffPortalHome"));
+const StaffPayslipsPage = lazy(() => import("./pages/staff/StaffPayslipsPage"));
+const StaffLoansPage = lazy(() => import("./pages/staff/StaffLoansPage"));
+const StaffSavingsPage = lazy(() => import("./pages/staff/StaffSavingsPage"));
+const StaffLeavePage = lazy(() => import("./pages/staff/StaffLeavePage"));
+const StaffProfilePage = lazy(() => import("./pages/staff/StaffProfilePage"));
+const StaffInstallPage = lazy(() => import("./pages/staff/StaffInstallPage"));
 
 const queryClient = new QueryClient();
 
@@ -75,7 +84,41 @@ const App = () => {
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/employee" element={<StaffLogin />} />
+              <Route path="/employee" element={<Navigate to="/staff/login" replace />} />
+              <Route path="/staff/login" element={<StaffLogin />} />
+              <Route
+                path="/staff/install"
+                element={
+                  <Suspense fallback={null}>
+                    <StaffInstallPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Employee self-service portal (distinct from admin console) */}
+              <Route
+                path="/staff"
+                element={
+                  <ErrorBoundary fallbackTitle="Staff portal error">
+                    <PayrollDataProvider>
+                      <StaffPortalGuard />
+                    </PayrollDataProvider>
+                  </ErrorBoundary>
+                }
+              >
+                <Route element={<StaffPortalLayout />}>
+                  <Route index element={<StaffPortalHome />} />
+                  <Route path="payslips" element={<StaffPayslipsPage />} />
+                  <Route path="leave" element={<StaffLeavePage />} />
+                  <Route path="savings" element={<StaffSavingsPage />} />
+                  <Route path="loans" element={<StaffLoansPage />} />
+                  <Route path="profile" element={<StaffProfilePage />} />
+                  <Route path="*" element={<Navigate to="/staff" replace />} />
+                </Route>
+              </Route>
+
+              {isStaffPortal && <Route path="/" element={<Navigate to="/staff" replace />} />}
+
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route element={<ProtectedRoute />}>
                 <Route

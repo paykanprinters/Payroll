@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { isStaffPortalPath, STAFF_LOGIN_PATH } from "@/lib/staff-portal";
 import { Suspense } from "react";
 import {
   DropdownMenu,
@@ -67,8 +68,9 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
   }, []);
 
   const handleLogout = async () => {
+    const onStaffPortal = isStaffPortalPath(location.pathname);
     await supabase.auth.signOut();
-    navigate("/login");
+    navigate(onStaffPortal ? STAFF_LOGIN_PATH : "/login");
   };
 
   const gridColsClass = isCollapsed

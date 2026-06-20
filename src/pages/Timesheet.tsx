@@ -19,7 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const Timesheet: React.FC = () => {
+const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = ({
+  staffEmployeeId,
+  staffView = false,
+}) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const {
@@ -65,7 +68,15 @@ const Timesheet: React.FC = () => {
   const [statusFilter, setStatusFilter] = React.useState<"all" | "Draft" | "Submitted" | "Approved" | "Locked">(
     "all"
   );
-  const [employeeFilterId, setEmployeeFilterId] = React.useState<string>("all");
+  const [employeeFilterId, setEmployeeFilterId] = React.useState<string>(
+    staffEmployeeId || "all"
+  );
+
+  React.useEffect(() => {
+    if (staffEmployeeId) {
+      setEmployeeFilterId(staffEmployeeId);
+    }
+  }, [staffEmployeeId]);
   const [dateStart, setDateStart] = React.useState<string>("");
   const [dateEnd, setDateEnd] = React.useState<string>("");
   const [search, setSearch] = React.useState<string>("");
@@ -182,7 +193,8 @@ const Timesheet: React.FC = () => {
 
   const clearFilters = () => {
     setStatusFilter("all");
-    setEmployeeFilterId("all");
+    if (!staffView) setEmployeeFilterId("all");
+    else if (staffEmployeeId) setEmployeeFilterId(staffEmployeeId);
     setDateStart("");
     setDateEnd("");
     setSearch("");
@@ -190,12 +202,14 @@ const Timesheet: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <TimesheetHeader
-        onOpenImport={() => setIsImportDialogOpen(true)}
-        onOpenWeeklyEditor={openWeeklyEditor}
-        importDisabled={!!isLoadingEmployees}
-        weeklyDisabled={!employees || employees.length === 0}
-      />
+      {!staffView && (
+        <TimesheetHeader
+          onOpenImport={() => setIsImportDialogOpen(true)}
+          onOpenWeeklyEditor={openWeeklyEditor}
+          importDisabled={!!isLoadingEmployees}
+          weeklyDisabled={!employees || employees.length === 0}
+        />
+      )}
 
       {/* Toolbar: Filters and Refresh */}
       <Card className="rounded-2xl border bg-white shadow-sm">
@@ -220,22 +234,28 @@ const Timesheet: React.FC = () => {
               </Select>
             </div>
 
-            <div>
-              <Label className="text-xs">Employee</Label>
-              <Select value={employeeFilterId} onValueChange={(v) => setEmployeeFilterId(v)}>
-                <SelectTrigger className="mt-1 rounded-xl">
-                  <SelectValue placeholder="All employees" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All employees</SelectItem>
-                  {(employees || []).map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!staffView ? (
+              <div>
+                <Label className="text-xs">Employee</Label>
+                <Select value={employeeFilterId} onValueChange={(v) => setEmployeeFilterId(v)}>
+                  <SelectTrigger className="mt-1 rounded-xl">
+                    <SelectValue placeholder="All employees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All employees</SelectItem>
+                    {(employees || []).map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="flex items-end">
+                <p className="text-sm text-muted-foreground">Showing your timesheet entries only</p>
+              </div>
+            )}
 
             <div>
               <Label className="text-xs">Date From</Label>

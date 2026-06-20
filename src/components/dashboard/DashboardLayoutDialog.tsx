@@ -31,6 +31,7 @@ import {
   DashboardWidgetSection,
 } from "@/hooks/use-dashboard-settings";
 import { cn } from "@/lib/utils";
+import { KAN_BANNER_BUTTON_CLASS } from "@/lib/kan-banner-styles";
 
 const SECTION_LABELS: Record<DashboardWidgetSection, string> = {
   main: "Main column",
@@ -237,7 +238,11 @@ export default function DashboardLayoutDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(KAN_BANNER_BUTTON_CLASS, "kan-banner-btn gap-2")}
+        >
           <LayoutGrid className="h-4 w-4" />
           Arrange widgets
         </Button>

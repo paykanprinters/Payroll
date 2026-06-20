@@ -168,6 +168,23 @@
     background-color: hsl(var(--brand-magenta) / 0.18);
   }
 
+  /* Outline buttons on dark banners inherit text-white — force readable contrast */
+  .kan-page-banner .kan-banner-btn {
+    color: rgb(15 23 42) !important;
+    background-color: #fff !important;
+    border-color: rgb(255 255 255 / 0.4) !important;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+
+  .kan-page-banner .kan-banner-btn:hover {
+    color: rgb(15 23 42) !important;
+    background-color: rgb(255 255 255 / 0.9) !important;
+  }
+
+  .kan-page-banner .kan-banner-btn svg {
+    color: rgb(51 65 85) !important;
+  }
+
   .kan-cmyk-bar {
     background: linear-gradient(
       90deg,

@@ -1,0 +1,28 @@
+{
+	"appId": "co.za.kanprinters.payroll.staff",
+	"appName": "Kan Printers Staff",
+	"webDir": "dist",
+	"server": {
+		"url": "https://payroll.kanprinters.co.za/staff/login",
+		"cleartext": false,
+		"androidScheme": "https"
+	},
+	"android": {
+		"allowMixedContent": false,
+		"backgroundColor": "#0891b2"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 1800,
+			"launchAutoHide": true,
+			"backgroundColor": "#0891b2",
+			"androidSplashResourceName": "splash",
+			"showSpinner": true,
+			"spinnerColor": "#ffffff"
+		},
+		"StatusBar": {
+			"style": "LIGHT",
+			"backgroundColor": "#0891b2"
+		}
+	}
+}

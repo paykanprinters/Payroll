@@ -39,7 +39,11 @@ const AutoRefreshOnFocus: React.FC = () => {
         // Sleep/lock can leave pending requests in a bad state; prefer a hard reload after long inactivity.
         if (hiddenFor >= FORCE_RELOAD_HIDDEN_MS) {
           const path = window.location.pathname;
-          const onAuthPages = path === "/login" || path === "/employee";
+          const onAuthPages =
+            path === "/login" ||
+            path === "/employee" ||
+            path === "/staff/login" ||
+            path === "/staff/install";
 
           if (!onAuthPages) {
             const lastReload = Number(sessionStorage.getItem("resumeReloadTs") || "0");

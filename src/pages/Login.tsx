@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Link } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,16 @@ const Login: React.FC = () => {
         appearance={{ theme: ThemeSupa, variables: authUiVariables }}
         theme="light"
       />
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Are you an employee?{" "}
+        <Link
+          to="/staff/login"
+          className="font-semibold text-[#00AEEF] underline-offset-2 hover:underline"
+        >
+          Go to the staff portal
+        </Link>
+      </p>
     </AuthLayout>
   );
 };

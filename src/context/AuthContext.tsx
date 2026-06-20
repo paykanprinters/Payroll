@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { isStaffPortalPath, STAFF_LOGIN_PATH, staffPortalPath } from "@/lib/staff-portal";
 
 type UserRole = "Admin" | "Manager" | "Staff" | "Viewer";
 
@@ -84,8 +85,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const redirectAfterLogin = useCallback(() => {
-    const onAuthPages = location.pathname === "/login" || location.pathname === "/employee";
+    const onAuthPages =
+      location.pathname === "/login" ||
+      location.pathname === "/employee" ||
+      location.pathname === STAFF_LOGIN_PATH;
+
     if (!onAuthPages) return;
+
+    if (location.pathname === STAFF_LOGIN_PATH || location.pathname === "/employee") {
+      navigate(staffPortalPath(), { replace: true });
+      return;
+    }
+
     navigate("/dashboard", { replace: true });
   }, [location.pathname, navigate]);
 
@@ -160,8 +171,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           setIsAuthenticated(false);
           setIsLoadingAuth(false);
-          if (event === "SIGNED_OUT" && location.pathname !== "/login") {
-            navigate("/login", { replace: true });
+          if (event === "SIGNED_OUT") {
+            const target = isStaffPortalPath(location.pathname) ? STAFF_LOGIN_PATH : "/login";
+            if (location.pathname !== target) {
+              navigate(target, { replace: true });
+            }
           }
           return;
         }
@@ -172,7 +186,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
-        if (location.pathname !== "/login") navigate("/login", { replace: true });
+        if (location.pathname !== "/login" && location.pathname !== STAFF_LOGIN_PATH) {
+          navigate(isStaffPortalPath(location.pathname) ? STAFF_LOGIN_PATH : "/login", {
+            replace: true,
+          });
+        }
       } finally {
         console.groupEnd();
       }

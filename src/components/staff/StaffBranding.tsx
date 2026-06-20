@@ -20,7 +20,7 @@ const StaffBranding: React.FC = () => {
   const { settings } = usePayslipDesignSettings();
 
   // Find current staff's employee
-  const myEmployee = employees.find((emp: any) => emp.userId === user?.id);
+  const myEmployee = employees.find((emp) => emp.userId === user?.id);
   const myEmployeeId = myEmployee?.id;
 
   // Prefer branding from the most recent payslip snapshot

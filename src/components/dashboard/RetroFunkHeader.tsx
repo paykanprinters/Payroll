@@ -46,7 +46,7 @@ const RetroFunkHeader: React.FC<RetroFunkHeaderProps> = ({
           </div>
           <div className="min-w-0">
             <div className="text-sm text-white/70">{companyLegalName}</div>
-            <h1 className="mt-1 text-3xl font-semibold -tracking-tight md:text-4xl">Payroll Dashboard</h1>
+            <h1 className="mt-1 text-3xl font-semibold -tracking-tight text-white md:text-4xl">Payroll Dashboard</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75 md:text-base">
               Review key metrics, run payroll, and keep an auditable trail—built for scale.
             </p>
@@ -67,6 +67,7 @@ const RetroFunkHeader: React.FC<RetroFunkHeaderProps> = ({
             isLoadingSettings={isLoadingSettings}
             toggleWidgetVisibility={toggleWidgetVisibility}
             resetToDefaults={resetToDefaults}
+            onBanner
           />
         </div>
       </div>

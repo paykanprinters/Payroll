@@ -84,6 +84,7 @@ export interface MockEmployee {
   originCountry?: string;
   employmentType?: "Permanent" | "Contract" | "Temporary";
   portalAccess?: boolean;
+  userId?: string;
   fathersName?: string; // Added
   molId?: string; // Added
   permanentAddress?: string;

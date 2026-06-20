@@ -119,6 +119,7 @@ export async function fetchPayslipDesignSettings(): Promise<PayslipDesignSetting
   const { data, error } = await supabase
     .from("payslip_design_settings")
     .select("*")
+    .order("updated_at", { ascending: false })
     .limit(1);
 
   if (error) {

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kan Printers Staff</string>
+    <string name="title_activity_main">Kan Printers Staff</string>
+    <string name="package_name">co.za.kanprinters.payroll.staff</string>
+    <string name="custom_url_scheme">co.za.kanprinters.payroll.staff</string>
+</resources>

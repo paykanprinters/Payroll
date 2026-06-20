@@ -19,6 +19,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { KAN_BANNER_BUTTON_CLASS } from "@/lib/kan-banner-styles";
 
 interface DashboardVisibilityDropdownProps {
   isMockDataEnabled: boolean;
@@ -27,6 +29,8 @@ interface DashboardVisibilityDropdownProps {
   isLoadingSettings?: boolean;
   toggleWidgetVisibility?: (widgetKey: DashboardWidgetKey) => void;
   resetToDefaults?: () => void | Promise<void>;
+  /** Use high-contrast styling for triggers on dark page banners */
+  onBanner?: boolean;
 }
 
 const widgetLabels: Record<keyof DashboardWidgetVisibility, string> = {
@@ -63,7 +67,11 @@ const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = 
 
   if (isLoadingSettings || !visibleWidgets) {
     return (
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn("h-8 w-8", props.onBanner ? "text-slate-700" : undefined)}
+      >
         <Loader2 className="h-4 w-4 animate-spin" />
       </Button>
     );
@@ -74,7 +82,14 @@ const DashboardVisibilityDropdown: React.FC<DashboardVisibilityDropdownProps> = 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            "flex items-center gap-2",
+            props.onBanner ? cn(KAN_BANNER_BUTTON_CLASS, "kan-banner-btn") : undefined
+          )}
+        >
           <Eye className="h-4 w-4" />
           Customize View
         </Button>
