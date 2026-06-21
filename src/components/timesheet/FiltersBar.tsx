@@ -6,15 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Filter, ArrowDownAZ, ArrowUpAZ, CalendarDays, Users } from "lucide-react";
+import { Filter, ArrowDownAZ, ArrowUpAZ, CalendarDays, Users, LayoutGrid, Rows3, Table2 } from "lucide-react";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 
 type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" | "personalDesc";
+export type ImportPreviewViewMode = "table" | "cards" | "grid";
 
 type Props = {
   employees: MockEmployee[];
   compact: boolean;
   setCompact: (v: boolean) => void;
+
+  viewMode: ImportPreviewViewMode;
+  setViewMode: (v: ImportPreviewViewMode) => void;
 
   groupByEmployee: boolean;
   setGroupByEmployee: (v: boolean) => void;
@@ -52,6 +56,8 @@ const FiltersBar: React.FC<Props> = ({
   employees,
   compact,
   setCompact,
+  viewMode,
+  setViewMode,
   groupByEmployee,
   setGroupByEmployee,
   filterEmployeeId,
@@ -80,12 +86,33 @@ const FiltersBar: React.FC<Props> = ({
         <span className="text-sm text-muted-foreground">Filters</span>
         <div className="ml-auto flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <Label htmlFor="groupByEmployee">Group by employee</Label>
-            <Switch id="groupByEmployee" checked={groupByEmployee} onCheckedChange={setGroupByEmployee} />
+            <Label className="text-xs whitespace-nowrap">Preview layout</Label>
+            <Select value={viewMode} onValueChange={(v) => setViewMode(v as ImportPreviewViewMode)}>
+              <SelectTrigger className="h-9 w-[170px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="table">
+                  <Table2 className="mr-2 inline h-4 w-4" /> Row table
+                </SelectItem>
+                <SelectItem value="cards">
+                  <Rows3 className="mr-2 inline h-4 w-4" /> Day cards
+                </SelectItem>
+                <SelectItem value="grid">
+                  <LayoutGrid className="mr-2 inline h-4 w-4" /> Week grid
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          {viewMode === "table" && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="groupByEmployee">Group by employee</Label>
+              <Switch id="groupByEmployee" checked={groupByEmployee} onCheckedChange={setGroupByEmployee} />
+            </div>
+          )}
           <div className="flex items-center gap-2">
-            <Label htmlFor="compact">Compact Table</Label>
+            <Label htmlFor="compact">Compact</Label>
             <Switch id="compact" checked={compact} onCheckedChange={setCompact} />
           </div>
         </div>

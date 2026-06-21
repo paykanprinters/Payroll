@@ -6,50 +6,78 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const provinces = [
   "Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo",
-  "Mpumalanga", "North West", "Northern Cape", "Western Cape"
+  "Mpumalanga", "North West", "Northern Cape", "Western Cape",
 ];
 
 const PersonalDetailsForm: React.FC = () => {
-  const { register, control, setValue, watch, formState: { errors } } = useFormContext();
+  const { register, setValue, watch, formState: { errors } } = useFormContext();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">Personal Information</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
-            <Input id="dateOfBirth" type="date" {...register("dateOfBirth")} />
-            {errors.dateOfBirth && (<p className="text-red-500 text-sm">{errors.dateOfBirth.message as string}</p>)}
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Identity</CardTitle>
+          <CardDescription>Official identifiers used for HR records and compliance.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <Input id="dateOfBirth" type="date" {...register("dateOfBirth")} />
+              {errors.dateOfBirth && (
+                <p className="text-sm text-red-500">{errors.dateOfBirth.message as string}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="personalId">Clock ID (Biometric Personal ID)</Label>
+              <Input id="personalId" placeholder="e.g. 3" {...register("personalId")} />
+              {errors.personalId && (
+                <p className="text-sm text-red-500">{errors.personalId.message as string}</p>
+              )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Must match attendance logs, e.g.{" "}
+                <code className="rounded bg-muted px-1">&lt;Attendance&gt;: 3 : …</code>
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="idNumber">ID Number (National ID)</Label>
+              <Input id="idNumber" {...register("idNumber")} />
+              {errors.idNumber && (
+                <p className="text-sm text-red-500">{errors.idNumber.message as string}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="fathersName">Father&apos;s Name</Label>
+              <Input id="fathersName" {...register("fathersName")} />
+              {errors.fathersName && (
+                <p className="text-sm text-red-500">{errors.fathersName.message as string}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="molId">MOL ID</Label>
+              <Input id="molId" placeholder="Ministry of Labour reference" {...register("molId")} />
+              {errors.molId && (
+                <p className="text-sm text-red-500">{errors.molId.message as string}</p>
+              )}
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="personalId">Clock ID (Biometric Personal ID)</Label>
-            <Input id="personalId" placeholder="e.g. 3" {...register("personalId")} />
-            {errors.personalId && (<p className="text-red-500 text-sm">{errors.personalId.message as string}</p>)}
-            <p className="text-xs text-muted-foreground mt-1">
-              Must match the number in attendance logs, e.g.{" "}
-              <code className="rounded bg-muted px-1">&lt;Attendance&gt;: 3 : …</code>
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="idNumber">ID Number (National ID)</Label>
-            <Input id="idNumber" {...register("idNumber")} />
-            {errors.idNumber && (<p className="text-red-500 text-sm">{errors.idNumber.message as string}</p>)}
-            <p className="text-xs text-muted-foreground mt-1">
-              This is the employee's official national identification number.
-            </p>
-          </div>
-          <div className="space-y-1 md:col-span-2">
-            <Label htmlFor="addressLine1">Residential Address</Label>
-            <Input id="addressLine1" placeholder="Address Line 1" {...register("addressLine1")} className="mb-2" />
-            <Input id="addressLine2" placeholder="Address Line 2" {...register("addressLine2")} className="mb-2" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Residential Address</CardTitle>
+          <CardDescription>Current home address used on payslips and reports.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Input id="addressLine1" placeholder="Address Line 1" {...register("addressLine1")} />
+            <Input id="addressLine2" placeholder="Address Line 2" {...register("addressLine2")} />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Input id="city" placeholder="City" {...register("city")} />
               <Select onValueChange={(value) => setValue("province", value)} value={watch("province")}>
                 <SelectTrigger id="province">
@@ -62,24 +90,77 @@ const PersonalDetailsForm: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Input id="postalCode" placeholder="Postal Code" {...register("postalCode")} className="mt-2" />
+            <Input id="postalCode" placeholder="Postal Code" {...register("postalCode")} />
             {(errors.addressLine1 || errors.city || errors.province || errors.postalCode) && (
-              <p className="text-red-500 text-sm mt-1">Please complete all address fields.</p>
+              <p className="text-sm text-red-500">Please complete all address fields.</p>
             )}
           </div>
-          <div className="space-y-1 md:col-span-2">
-            <Label htmlFor="permanentAddress">Permanent Address</Label>
-            <Textarea id="permanentAddress" {...register("permanentAddress")} placeholder="Enter permanent address" rows={4} />
-            {errors.permanentAddress && (<p className="text-red-500 text-sm">{errors.permanentAddress.message as string}</p>)}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Permanent Address</CardTitle>
+          <CardDescription>Use when the permanent address differs from the residential address.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            id="permanentAddress"
+            {...register("permanentAddress")}
+            placeholder="Enter permanent address"
+            rows={4}
+          />
+          {errors.permanentAddress && (
+            <p className="mt-1 text-sm text-red-500">{errors.permanentAddress.message as string}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Emergency Contact</CardTitle>
+          <CardDescription>Person to reach if the employee cannot be contacted at work.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="emergencyContactName">Contact Name</Label>
+              <Input
+                id="emergencyContactName"
+                placeholder="Full name"
+                {...register("emergencyContactName")}
+              />
+              {errors.emergencyContactName && (
+                <p className="text-sm text-red-500">{errors.emergencyContactName.message as string}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="emergencyContactNumber">Contact Number</Label>
+              <Input
+                id="emergencyContactNumber"
+                placeholder="Mobile or landline"
+                {...register("emergencyContactNumber")}
+              />
+              {errors.emergencyContactNumber && (
+                <p className="text-sm text-red-500">{errors.emergencyContactNumber.message as string}</p>
+              )}
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <Label htmlFor="emergencyContactAddress">Contact Address</Label>
+              <Textarea
+                id="emergencyContactAddress"
+                {...register("emergencyContactAddress")}
+                placeholder="Street, city, and postal code"
+                rows={3}
+              />
+              {errors.emergencyContactAddress && (
+                <p className="text-sm text-red-500">{errors.emergencyContactAddress.message as string}</p>
+              )}
+            </div>
           </div>
-          <div className="space-y-1 md:col-span-2">
-            <Label htmlFor="emergencyContactAddress">Emergency Contact Address</Label>
-            <Textarea id="emergencyContactAddress" {...register("emergencyContactAddress")} placeholder="Enter emergency contact address" rows={4} />
-            {errors.emergencyContactAddress && (<p className="text-red-500 text-sm">{errors.emergencyContactAddress.message as string}</p>)}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

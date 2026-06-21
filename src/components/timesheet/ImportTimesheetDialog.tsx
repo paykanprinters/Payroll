@@ -19,7 +19,7 @@ import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
-import FiltersBar from "./FiltersBar";
+import FiltersBar, { ImportPreviewViewMode } from "./FiltersBar";
 import QuickFixTools from "./QuickFixTools";
 import AggregationErrorsPanel from "./AggregationErrorsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -79,6 +79,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   const activeAggregationErrors = importSource === "api" ? apiAggregationErrors : aggregationErrors;
 
   const [compact, setCompact] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<ImportPreviewViewMode>("table");
   const [groupByEmployee, setGroupByEmployee] = useState<boolean>(true);
 
   const [showAggErrors, setShowAggErrors] = useState<boolean>(false);
@@ -163,13 +164,15 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   };
 
   const clampTimeInToStart = () => {
+    const startTime = workHoursSettings?.dailyStartTime || "07:45";
+    const [startH, startM] = startTime.split(":").map(Number);
+    const clampMin = startH * 60 + startM;
     setEditableRows((prev) =>
       prev.map((r) => {
         if (!hhmmRegex.test(r.timeIn)) return r;
         const [h, m] = r.timeIn.split(":").map(Number);
         const minutes = h * 60 + m;
-        const clampMin = 7 * 60 + 45; // 07:45
-        const clamped = minutes < clampMin ? "07:45" : r.timeIn;
+        const clamped = minutes < clampMin ? startTime : r.timeIn;
         const updated = { ...r, timeIn: clamped };
         const { isValid, errors } = validateRow(updated);
         updated._isValid = isValid;
@@ -268,9 +271,17 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
 
   const handleCancel = () => {
     reset();
+    setEditableRows([]);
     setImportSource("api");
     setApiAggregationErrors([]);
+    setViewMode("table");
     onClose();
+  };
+
+  const handleImportSourceChange = (value: "api" | "csv") => {
+    setImportSource(value);
+    setEditableRows([]);
+    setApiAggregationErrors([]);
   };
 
   const handleImportData = () => {
@@ -356,7 +367,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
             <>
               <Tabs
                 value={importSource}
-                onValueChange={(value) => setImportSource(value as "api" | "csv")}
+                onValueChange={(value) => handleImportSourceChange(value as "api" | "csv")}
                 className="py-4"
               >
                 <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -422,6 +433,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                 employees={safeEmployees}
                 compact={compact}
                 setCompact={setCompact}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
                 groupByEmployee={groupByEmployee}
                 setGroupByEmployee={setGroupByEmployee}
                 filterEmployeeId={filterEmployeeId}
@@ -476,6 +489,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                   allRowsValid={filteredRows.every((r) => r._isValid)}
                   compact={compact}
                   groupByEmployee={groupByEmployee}
+                  viewMode={viewMode}
                   workHoursSettings={workHoursSettings}
                   onEditRow={updateRow}
                   onResolveEmployee={resolveEmployee}

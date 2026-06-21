@@ -1,36 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
-import { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { generateEmployeeProfileReportContent } from "@/lib/report-generators";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import EmployeeProfilePdfDocument from "@/components/reports/EmployeeProfilePdfDocument";
-import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import EmployeesHeader from "@/components/employees/EmployeesHeader";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
-import EmployeesToolbar from "@/components/employees/EmployeesToolbar";
+import EmployeesToolbar, { UNASSIGNED_DEPARTMENT } from "@/components/employees/EmployeesToolbar";
 import EmployeesStats from "@/components/employees/EmployeesStats";
 import JobTitleDistributionChart from "@/components/employees/JobTitleDistributionChart";
 import AverageSalaryChart from "@/components/employees/AverageSalaryChart";
 import EmployeesTable from "@/components/employees/EmployeesTable";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useSearchParams } from "react-router-dom";
+import { buildEmployeesAdminSummary } from "@/lib/employees-admin-summary";
 
 type SortField = "name" | "jobTitle" | "startDate" | "customEmployeeId";
 type SortDir = "asc" | "desc";
-
-const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
-  defaultReportPaperSize: "A4",
-  includeCompanyLogo: true,
-  includeCompanyDetails: true,
-  reportContentFontSize: 14,
-  irp5ContentFontSize: 12,
-};
 
 const Employees: React.FC = () => {
   const {
@@ -43,18 +34,14 @@ const Employees: React.FC = () => {
     refetchEmployees,
   } = usePayrollProcessor();
 
-  const [jobTitleDistribution, setJobTitleDistribution] = useState<{ name: string; value: number }[]>([]);
-  const [averageSalaryByJobTitle, setAverageSalaryByJobTitle] = useState<{ name: string; salary: number }[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<MockEmployee | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<MockEmployee | null>(null);
-  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Filters and sorting state
   const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [payBasisFilter, setPayBasisFilter] = useState<"all" | "salary" | "hourly">("all");
@@ -72,15 +59,20 @@ const Employees: React.FC = () => {
 
   const jobTitles = useMemo(() => {
     const set = new Set<string>();
-    employees.forEach(e => e.jobTitle && set.add(e.jobTitle));
+    employees.forEach((e) => e.jobTitle && set.add(e.jobTitle));
     return Array.from(set).sort();
   }, [employees]);
 
   const departments = useMemo(() => {
     const set = new Set<string>();
-    employees.forEach(e => e.department && set.add(e.department));
+    employees.forEach((e) => e.department && set.add(e.department));
     return Array.from(set).sort();
   }, [employees]);
+
+  const hasUnassignedDepartment = useMemo(
+    () => employees.some((e) => !e.department?.trim()),
+    [employees]
+  );
 
   const filteredEmployees = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
@@ -96,6 +88,7 @@ const Employees: React.FC = () => {
         emp.department,
         emp.email,
         emp.phoneNumber,
+        emp.emergencyContactName,
         emp.startDate,
         emp.salary != null ? `salary ${emp.salary}` : "",
         emp.hourlyRate != null ? `rate ${emp.hourlyRate}` : "",
@@ -105,7 +98,14 @@ const Employees: React.FC = () => {
 
     const matchesFilters = (emp: MockEmployee) => {
       if (jobTitleFilter !== "all" && emp.jobTitle !== jobTitleFilter) return false;
-      if (departmentFilter !== "all" && (emp.department || "N/A") !== departmentFilter) return false;
+
+      if (departmentFilter !== "all") {
+        if (departmentFilter === UNASSIGNED_DEPARTMENT) {
+          if (emp.department?.trim()) return false;
+        } else if (emp.department !== departmentFilter) {
+          return false;
+        }
+      }
 
       const hasSalary = emp.salary != null && emp.salary > 0;
       const hasHourly = emp.hourlyRate != null && emp.hourlyRate > 0;
@@ -144,62 +144,26 @@ const Employees: React.FC = () => {
       return [...list].sort(compare);
     };
 
-    const base = employees.filter(e => matchesSearch(e) && matchesFilters(e));
+    const base = employees.filter((e) => matchesSearch(e) && matchesFilters(e));
     return sorted(base);
-  }, [employees, debouncedSearch, jobTitleFilter, departmentFilter, payBasisFilter, portalAccessFilter, sortField, sortDir]);
+  }, [
+    employees,
+    debouncedSearch,
+    jobTitleFilter,
+    departmentFilter,
+    payBasisFilter,
+    portalAccessFilter,
+    sortField,
+    sortDir,
+  ]);
+
+  const summary = useMemo(
+    () => buildEmployeesAdminSummary(filteredEmployees),
+    [filteredEmployees]
+  );
 
   const { downloadPdf } = usePdfVector();
-
-  const loadEmployeeDataAndCharts = useCallback(() => {
-    if (employees.length > 0) {
-      const jobTitleMap = new Map<string, number>();
-      employees.forEach((emp) => {
-        jobTitleMap.set(emp.jobTitle, (jobTitleMap.get(emp.jobTitle) || 0) + 1);
-      });
-      setJobTitleDistribution(
-        Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value }))
-      );
-
-      const salarySumByJobTitle = new Map<string, { sum: number; count: number }>();
-      employees.forEach((emp) => {
-        const current = salarySumByJobTitle.get(emp.jobTitle) || { sum: 0, count: 0 };
-        salarySumByJobTitle.set(emp.jobTitle, {
-          sum: current.sum + (emp.salary || 0) + (emp.hourlyRate ? emp.hourlyRate * 160 : 0),
-          count: current.count + 1,
-        });
-      });
-      setAverageSalaryByJobTitle(
-        Array.from(salarySumByJobTitle.entries()).map(([name, data]) => ({
-          name,
-          salary: data.sum / data.count,
-        }))
-      );
-    } else {
-      setJobTitleDistribution([]);
-      setAverageSalaryByJobTitle([]);
-    }
-  }, [employees]);
-
-  const loadReportSettings = useCallback(() => {
-    const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
-    if (savedReportDesignSettings) {
-      setReportDesignSettings(JSON.parse(savedReportDesignSettings));
-    } else {
-      localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
-      setReportDesignSettings(DEFAULT_REPORT_DESIGN_SETTINGS);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadEmployeeDataAndCharts();
-    loadReportSettings();
-    window.addEventListener('employeesUpdated', loadEmployeeDataAndCharts as EventListener);
-    window.addEventListener('reportDesignUpdated', loadReportSettings);
-    return () => {
-      window.removeEventListener('employeesUpdated', loadEmployeeDataAndCharts as EventListener);
-      window.removeEventListener('reportDesignUpdated', loadReportSettings);
-    };
-  }, [loadEmployeeDataAndCharts, loadReportSettings]);
+  const chartFontSize = useDataVisualsFontSize();
 
   useEffect(() => {
     if (deepLinkHandled.current) return;
@@ -210,15 +174,12 @@ const Employees: React.FC = () => {
       return;
     }
 
-    // Wait for employees to load
     if (isLoadingEmployees) return;
 
     const emp = employees.find((e) => e.id === employeeId);
     if (emp) {
       setEditingEmployee(emp);
       setIsFormOpen(true);
-
-      // Keep focus param so the dialog can route to the correct section.
       deepLinkHandled.current = true;
       return;
     }
@@ -236,8 +197,8 @@ const Employees: React.FC = () => {
 
   const handleDialogClose = () => {
     setIsFormOpen(false);
+    setEditingEmployee(null);
 
-    // Clear deep link params after using them so refreshing doesn't re-open.
     const next = new URLSearchParams(searchParams);
     next.delete("employeeId");
     next.delete("focus");
@@ -269,16 +230,9 @@ const Employees: React.FC = () => {
 
   const handleSaveEmployee = async (employeeData: EmployeeFormValues) => {
     await addOrUpdateEmployee(employeeData);
-    setIsFormOpen(false);
-    setEditingEmployee(null);
   };
 
   const handleDownloadProfile = async (employee: MockEmployee) => {
-    if (!companyDetails) {
-      // Keep existing behavior: allow download without company details (still generates a usable PDF)
-    }
-
-    // Prefer vector PDF for crisp output
     const doc = (
       <EmployeeProfilePdfDocument employee={employee} companyDetails={companyDetails || null} />
     );
@@ -286,36 +240,30 @@ const Employees: React.FC = () => {
     await downloadPdf(doc, filename);
   };
 
-  const salaryCount = useMemo(
-    () => employees.filter(e => e.salary != null && e.salary > 0).length,
-    [employees]
-  );
-  const hourlyCount = useMemo(
-    () => employees.filter(e => e.hourlyRate != null && e.hourlyRate > 0).length,
-    [employees]
-  );
-
-  // Call this hook once at the top-level to avoid varying hook calls across renders
-  const chartFontSize = useDataVisualsFontSize();
-
-  if (isLoadingEmployees && employees.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading employees...</span>
-      </div>
-    );
-  }
+  const clearFilters = () => {
+    setJobTitleFilter("all");
+    setDepartmentFilter("all");
+    setPayBasisFilter("all");
+    setPortalAccessFilter("all");
+    setSearchTerm("");
+  };
 
   return (
-    <div className="space-y-4">
-      <EmployeesHeader />
+    <div className="flex flex-col gap-4">
+      <EmployeesHeader onAddEmployee={handleAddEmployeeClick} isMutating={isMutatingEmployee} />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex-1">
+      <Card className="rounded-xl border">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Filters</CardTitle>
+          <CardDescription>
+            Narrow the directory by role, department, pay type, portal access, or search.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <EmployeesToolbar
             jobTitles={jobTitles}
             departments={departments}
+            hasUnassignedDepartment={hasUnassignedDepartment}
             jobTitleFilter={jobTitleFilter}
             setJobTitleFilter={setJobTitleFilter}
             departmentFilter={departmentFilter}
@@ -331,37 +279,49 @@ const Employees: React.FC = () => {
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             onRefresh={() => refetchEmployees?.()}
+            onClear={clearFilters}
             totalCount={employees.length}
             filteredCount={filteredEmployees.length}
           />
+        </CardContent>
+      </Card>
+
+      {isLoadingEmployees && employees.length === 0 ? (
+        <div className="flex min-h-[240px] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-700" aria-label="Loading employees" />
         </div>
+      ) : (
+        <>
+          <EmployeesStats summary={summary} />
 
-        <div className="flex justify-end">
-          <Button onClick={handleAddEmployeeClick} disabled={isMutatingEmployee}>
-            {isMutatingEmployee ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <PlusCircle className="h-4 w-4" />
-            )}
-            Add employee
-          </Button>
-        </div>
-      </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <JobTitleDistributionChart data={summary.jobTitleDistribution} fontSize={chartFontSize} />
+            <AverageSalaryChart data={summary.averageSalaryByJobTitle} fontSize={chartFontSize} />
+          </div>
 
-      <EmployeesStats totalCount={employees.length} salaryCount={salaryCount} hourlyCount={hourlyCount} />
+          <ErrorBoundary fallbackTitle="Employees error">
+            <EmployeesTable
+              employees={filteredEmployees}
+              isMutatingEmployee={isMutatingEmployee}
+              onEdit={handleEditEmployeeClick}
+              onDownloadProfile={handleDownloadProfile}
+              onDelete={handleDeleteEmployeeClick}
+            />
+          </ErrorBoundary>
+        </>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <JobTitleDistributionChart data={jobTitleDistribution} fontSize={chartFontSize} />
-        <AverageSalaryChart data={averageSalaryByJobTitle} fontSize={chartFontSize} />
-      </div>
-
-      <EmployeesTable
-        employees={filteredEmployees}
-        isMutatingEmployee={isMutatingEmployee}
-        onEdit={handleEditEmployeeClick}
-        onDownloadProfile={handleDownloadProfile}
-        onDelete={handleDeleteEmployeeClick}
-      />
+      <Card className="border-dashed bg-muted/30">
+        <CardContent className="py-4 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Record structure</p>
+          <p className="mt-2">
+            Use <strong>Basic</strong> for employment and portal access, <strong>Personal</strong> for identity,
+            addresses, and emergency contact (name, number, and address), and <strong>Pay & Bank</strong> for
+            compensation and tax details. Enable portal access here, then link a login under{" "}
+            <strong>Settings → User Control</strong>. KPI cards and charts reflect the filtered list above.
+          </p>
+        </CardContent>
+      </Card>
 
       <EmployeeFormDialog
         isOpen={isFormOpen}
@@ -369,6 +329,7 @@ const Employees: React.FC = () => {
         onSave={handleSaveEmployee}
         initialEmployee={editingEmployee}
         initialFocus={employeeDialogFocus}
+        isSaving={isMutatingEmployee}
       />
 
       <DeleteEmployeeDialog

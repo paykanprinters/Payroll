@@ -17,11 +17,12 @@ import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useStaffPortalContext } from "@/context/StaffPortalContext";
 import { formatRand, staffPortalPath } from "@/lib/staff-portal";
 import { calculateLeaveSummary } from "@/lib/leave-summary";
+import { buildStaffSavingsSummary } from "@/lib/staff-savings-summary";
 import { startOfYear, endOfYear } from "date-fns";
 
 const StaffPortalHome: React.FC = () => {
   const { employee } = useStaffPortalContext();
-  const { payslips, loans, savingPlans, leaveRecords } = usePayrollProcessor();
+  const { payslips, loans, savingPlans, payrollSavingsEntries, leaveRecords } = usePayrollProcessor();
 
   const myPayslips = useMemo(
     () =>
@@ -40,14 +41,10 @@ const StaffPortalHome: React.FC = () => {
 
   const loanOutstanding = activeLoans.reduce((sum, l) => sum + (l.remainingBalance || 0), 0);
 
-  const activeSavings = useMemo(
-    () => savingPlans.filter((s) => s.employeeId === employee.id && s.status === "active"),
-    [employee.id, savingPlans]
+  const savingsSummary = useMemo(
+    () => buildStaffSavingsSummary(employee, savingPlans, payrollSavingsEntries, payslips),
+    [employee, savingPlans, payrollSavingsEntries, payslips]
   );
-
-  const monthlySavings = activeSavings
-    .filter((s) => s.frequency === "monthly")
-    .reduce((sum, s) => sum + s.amount, 0);
 
   const leaveSummary = useMemo(() => {
     const now = new Date();
@@ -162,7 +159,7 @@ const StaffPortalHome: React.FC = () => {
         </Card>
       </div>
 
-      {(activeLoans.length > 0 || activeSavings.length > 0) && (
+      {(activeLoans.length > 0 || savingsSummary.plans.length > 0) && (
         <div className="grid gap-6 md:grid-cols-2">
           {activeLoans.length > 0 && (
             <Card className="border-amber-100">
@@ -187,23 +184,40 @@ const StaffPortalHome: React.FC = () => {
             </Card>
           )}
 
-          {activeSavings.length > 0 && (
+          {savingsSummary.plans.length > 0 && (
             <Card className="border-emerald-100">
-              <CardHeader>
-                <CardTitle className="text-lg">Active savings</CardTitle>
-                <CardDescription>
-                  {monthlySavings > 0
-                    ? `${formatRand(monthlySavings)} deducted monthly`
-                    : "Recurring savings plans"}
-                </CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-lg">Savings</CardTitle>
+                  <CardDescription>
+                    {formatRand(savingsSummary.totalSaved)} saved ·{" "}
+                    {formatRand(savingsSummary.perPaycheckDeductions)} per pay period
+                  </CardDescription>
+                </div>
+                <Button asChild variant="outline" size="sm" className="border-emerald-200 shrink-0">
+                  <Link to={staffPortalPath("savings")}>Details</Link>
+                </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                {activeSavings.map((plan) => (
-                  <div key={plan.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
-                    <p className="text-sm capitalize">{plan.frequency} plan</p>
-                    <p className="font-semibold">{formatRand(plan.amount)}</p>
-                  </div>
-                ))}
+                {savingsSummary.plans
+                  .filter((row) => row.plan.status === "active")
+                  .slice(0, 4)
+                  .map((row) => (
+                    <div
+                      key={row.plan.id}
+                      className="flex items-center justify-between rounded-lg border px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium capitalize">{row.plan.frequency} plan</p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.isPaused ? "Paused" : formatRand(row.effectiveAmount)}
+                        </p>
+                      </div>
+                      <Badge variant={row.isPaused ? "secondary" : "outline"}>
+                        {row.amountPaid != null ? formatRand(row.amountPaid) : "—"}
+                      </Badge>
+                    </div>
+                  ))}
               </CardContent>
             </Card>
           )}

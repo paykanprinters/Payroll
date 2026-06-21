@@ -61,9 +61,9 @@ export const usePayslipsOverviewSelectors = (
 
     const q = search.trim().toLowerCase();
     if (q) {
-      list = list.filter(p => {
+      list = list.filter((p) => {
         const emp = employeesById.get(p.employeeId);
-        const hay = `${emp?.name || ""} ${emp?.customId || ""}`.toLowerCase();
+        const hay = `${emp?.name || ""} ${emp?.customId || ""} ${p.payPeriod} ${p.payDate}`.toLowerCase();
         return hay.includes(q);
       });
     }
@@ -81,11 +81,15 @@ export const usePayslipsOverviewSelectors = (
   const totals = useMemo(() => {
     const gross = filteredPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
     const net = filteredPayslips.reduce((sum, p) => sum + p.netPay, 0);
+    const deductions = filteredPayslips.reduce((sum, p) => sum + p.totalDeductions, 0);
     const count = filteredPayslips.length;
     return {
-      gross, net, count,
+      gross,
+      net,
+      deductions,
+      count,
       filteredCount: filteredPayslips.length,
-      totalCount: payslips.length
+      totalCount: payslips.length,
     };
   }, [filteredPayslips, payslips]);
 

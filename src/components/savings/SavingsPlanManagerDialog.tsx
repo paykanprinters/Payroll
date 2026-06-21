@@ -113,18 +113,20 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
-          <DialogTitle>Manage Savings Plan</DialogTitle>
+      <DialogContent className="gap-0 p-0 sm:max-w-[560px]">
+        <DialogHeader className="space-y-2 border-b px-6 py-5 text-left">
+          <DialogTitle>Manage savings plan</DialogTitle>
           <DialogDescription>
-            {plan ? `Employee: ${employeeName} • Plan ${plan.id}` : ""}
+            {plan
+              ? `${employeeName} · ${plan.frequency} deduction of R ${plan.amount.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`
+              : ""}
           </DialogDescription>
         </DialogHeader>
 
         {!plan || loading || !entry ? (
-          <div className="py-8 text-center text-muted-foreground">Loading...</div>
+          <div className="px-6 py-10 text-center text-muted-foreground">Loading plan details…</div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 px-6 py-5">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">Status</div>

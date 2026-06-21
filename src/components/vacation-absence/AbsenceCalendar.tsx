@@ -3,55 +3,48 @@
 import React from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import SummaryAccent from "@/components/dashboard/SummaryAccent";
-
-interface LeaveEntry {
-  id: string;
-  employeeId: string;
-  leaveType: "Annual Leave" | "Sick Leave" | "Unpaid Leave" | "Family Responsibility Leave" | "Maternity Leave";
-  startDate: string;
-  endDate: string;
-  totalDays: number;
-  workingDays: number;
-  reason?: string;
-  documentUrl?: string;
-}
+import { LeaveEntry } from "@/lib/mock-data-interfaces";
 
 interface AbsenceCalendarProps {
   leaveRecords: LeaveEntry[];
+  recordCount?: number;
 }
 
-const AbsenceCalendar: React.FC<AbsenceCalendarProps> = ({ leaveRecords }) => {
-  const leaveRanges = leaveRecords.map(record => ({
+const AbsenceCalendar: React.FC<AbsenceCalendarProps> = ({ leaveRecords, recordCount }) => {
+  const leaveRanges = leaveRecords.map((record) => ({
     from: new Date(record.startDate),
     to: new Date(record.endDate),
   }));
 
-  const modifiers = {
-    leaveDays: leaveRanges,
-  };
-
-  const modifiersClassNames = {
-    leaveDays: "bg-blue-200 text-blue-900 rounded-md",
-  };
-
   return (
-    <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-      <SummaryAccent variant="emerald" />
-      <CardHeader>
-        <CardTitle>Absence Calendar</CardTitle>
+    <Card className="rounded-2xl border bg-white shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Absence calendar</CardTitle>
         <CardDescription>
-          Visual overview of recorded employee absences.
+          Highlighted days reflect {recordCount ?? leaveRecords.length} filtered leave record
+          {(recordCount ?? leaveRecords.length) === 1 ? "" : "s"}.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex justify-center">
-        <Calendar
-          mode="range"
-          selected={undefined}
-          modifiers={modifiers}
-          modifiersClassNames={modifiersClassNames}
-          className="rounded-md border"
-        />
+      <CardContent>
+        {leaveRecords.length === 0 ? (
+          <div className="flex min-h-[280px] items-center justify-center rounded-lg border border-dashed bg-muted/20 px-4 text-center text-sm text-muted-foreground">
+            No absences in the current filter range to display on the calendar.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="flex justify-center min-w-[280px]">
+              <Calendar
+                mode="range"
+                selected={undefined}
+                modifiers={{ leaveDays: leaveRanges }}
+                modifiersClassNames={{
+                  leaveDays: "bg-sky-200 text-sky-950 rounded-md font-medium",
+                }}
+                className="rounded-md border"
+              />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

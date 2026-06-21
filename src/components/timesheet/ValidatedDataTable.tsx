@@ -2,15 +2,17 @@
 
 import React, { useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle, XCircle, PencilLine, Save, User } from "lucide-react";
 import { ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calculateTimesheetMetrics } from "@/lib/timesheet-utils";
 import { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
-import { parse, isValid } from "date-fns";
+import { format, parse, isValid } from "date-fns";
+import type { ImportPreviewViewMode } from "@/components/timesheet/FiltersBar";
 
 interface ValidatedDataTableProps {
   validatedData: ParsedTimesheetRow[];
@@ -18,6 +20,7 @@ interface ValidatedDataTableProps {
   allRowsValid: boolean;
   compact?: boolean;
   groupByEmployee?: boolean;
+  viewMode?: ImportPreviewViewMode;
   workHoursSettings?: WorkHoursSettings | null;
   onEditRow?: (key: string, updates: Partial<ParsedTimesheetRow>) => void;
   onResolveEmployee?: (key: string, employeeId: string) => void;
@@ -34,17 +37,14 @@ const formatWorkHours = (hours: number) => {
   return `${h}h ${String(m).padStart(2, "0")}m`;
 };
 
-// Light formatter: allow free typing, auto-insert ":" after HH, keep only digits/colon, clamp length
 const formatHHmmInput = (raw: string) => {
   let v = (raw || "").replace(/[^\d:]/g, "");
-  // Auto insert colon after two digits if none
-  if (!v.includes(":") && v.length >= 3) {
-    v = `${v.slice(0, 2)}:${v.slice(2)}`;
-  }
-  // Clamp to HH:mm length
+  if (!v.includes(":") && v.length >= 3) v = `${v.slice(0, 2)}:${v.slice(2)}`;
   if (v.length > 5) v = v.slice(0, 5);
   return v;
 };
+
+const rowKeyFor = (row: ParsedTimesheetRow) => `${row.employeeId}|${normalizeDate(row.date)}`;
 
 const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
   validatedData,
@@ -52,6 +52,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
   allRowsValid,
   compact = false,
   groupByEmployee = false,
+  viewMode = "table",
   workHoursSettings,
   onEditRow,
   onResolveEmployee,
@@ -96,7 +97,6 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
       employee,
       metricOpts
     );
-
     return totalWorkHours;
   };
 
@@ -106,14 +106,19 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
         row,
         originalIndex,
         workHours: getRowWorkHours(row),
+        key: rowKeyFor(row),
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [validatedData, employeesById, metricOpts]
   );
 
-  const groups = useMemo(() => {
-    if (!groupByEmployee) return null;
+  const rowByKey = useMemo(() => {
+    const map = new Map<string, (typeof indexedRows)[number]>();
+    indexedRows.forEach((item) => map.set(item.key, item));
+    return map;
+  }, [indexedRows]);
 
+  const groups = useMemo(() => {
     const map = new Map<
       string,
       {
@@ -121,7 +126,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
         name: string;
         customEmployeeId: string;
         csvPersonalId: string;
-        items: { row: ParsedTimesheetRow; originalIndex: number; workHours: number }[];
+        items: (typeof indexedRows)[number][];
       }
     >();
 
@@ -145,47 +150,246 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
     const result = Array.from(map.values());
     result.sort((a, b) => a.name.localeCompare(b.name));
     result.forEach((g) => {
-      g.items.sort((a, b) => {
-        const da = normalizeDate(a.row.date);
-        const db = normalizeDate(b.row.date);
-        const byDate = da.localeCompare(db);
-        if (byDate !== 0) return byDate;
-        return (a.row.timeIn || "").localeCompare(b.row.timeIn || "");
-      });
+      g.items.sort((a, b) => normalizeDate(a.row.date).localeCompare(normalizeDate(b.row.date)));
     });
-
     return result;
-  }, [groupByEmployee, indexedRows, employeesById]);
+  }, [indexedRows, employeesById]);
 
-  if (validatedData.length === 0) {
-    return null;
-  }
+  if (validatedData.length === 0) return null;
 
+  const cellClass = compact ? "p-2" : "p-3";
   const rowClass = compact ? "py-1" : "py-2";
-  const cellClass = compact ? "p-2" : "p-4";
+
+  const renderTimeInput = (
+    row: ParsedTimesheetRow,
+    key: string,
+    field: keyof ParsedTimesheetRow,
+    className = "w-full min-w-[4.5rem]"
+  ) => (
+    <Input
+      type="text"
+      inputMode="numeric"
+      placeholder="HH:mm"
+      value={String(row[field] || "")}
+      onChange={(e) => onEditRow?.(key, { [field]: formatHHmmInput(e.target.value) })}
+      className={className}
+    />
+  );
+
+  const renderStatusIcon = (row: ParsedTimesheetRow) =>
+    row._isValid ? (
+      <CheckCircle className="h-4 w-4 text-green-600" />
+    ) : (
+      <span title={row._errors.join("; ")}>
+        <XCircle className="h-4 w-4 text-red-500" />
+      </span>
+    );
+
+  const renderCardsView = () => (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {indexedRows.map(({ row, originalIndex, workHours, key }) => {
+        const employee = employeesById.get(row.employeeId);
+        const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : "Unknown";
+        return (
+          <Card
+            key={key}
+            className={row._isValid ? "border-slate-200" : "border-red-200 bg-red-50/40"}
+          >
+            <CardHeader className="space-y-2 pb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">{employeeName}</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {format(parse(normalizeDate(row.date), "yyyy-MM-dd", new Date()), "EEE, dd MMM yyyy")}
+                  </p>
+                </div>
+                {renderStatusIcon(row)}
+              </div>
+              {!row._isValid && (
+                <p className="text-xs text-red-600">{row._errors.join(" · ")}</p>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">{externalIdLabel}</p>
+                <p className="text-sm">{row.csvPersonalId || "—"}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Employee match</p>
+                <Select onValueChange={(value) => onResolveEmployee?.(key, value)} value={row.employeeId || ""}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Resolve employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Time in</p>
+                  {renderTimeInput(row, key, "timeIn")}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Time out</p>
+                  {renderTimeInput(row, key, "timeOut")}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Tea start</p>
+                  {renderTimeInput(row, key, "teaStart")}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Tea end</p>
+                  {renderTimeInput(row, key, "teaEnd")}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Lunch start</p>
+                  {renderTimeInput(row, key, "lunchStart")}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Lunch end</p>
+                  {renderTimeInput(row, key, "lunchEnd")}
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t pt-3 text-sm">
+                <span className="text-muted-foreground">Work hours</span>
+                <span className="font-medium">{formatWorkHours(workHours)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  const renderGridView = () => (
+    <div className="space-y-6">
+      {groups.map((group) => {
+        const dates = group.items.map((item) => normalizeDate(item.row.date));
+        const uniqueDates = [...new Set(dates)].sort();
+        const fieldRows: { label: string; field: keyof ParsedTimesheetRow }[] = [
+          { label: "Time in", field: "timeIn" },
+          { label: "Tea start", field: "teaStart" },
+          { label: "Tea end", field: "teaEnd" },
+          { label: "Lunch start", field: "lunchStart" },
+          { label: "Lunch end", field: "lunchEnd" },
+          { label: "Time out", field: "timeOut" },
+        ];
+
+        return (
+          <Card key={group.employeeId} className="overflow-hidden">
+            <CardHeader className="border-b bg-slate-50/80 pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">{group.name}</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    #{group.customEmployeeId}
+                    {group.csvPersonalId ? ` · ${externalIdLabel}: ${group.csvPersonalId}` : ""}
+                  </p>
+                </div>
+                <Badge variant="outline">{group.items.length} day(s)</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="sticky left-0 z-20 min-w-[120px] border-r bg-muted/30 px-3 py-2 text-left font-medium">
+                        Field
+                      </th>
+                      {uniqueDates.map((date) => {
+                        const item = rowByKey.get(`${group.employeeId}|${date}`);
+                        return (
+                          <th
+                            key={date}
+                            className={`min-w-[110px] px-2 py-2 text-center font-medium ${item?.row._isValid ? "" : "bg-red-50/80"}`}
+                          >
+                            <div>{format(parse(date, "yyyy-MM-dd", new Date()), "EEE")}</div>
+                            <div className="text-xs font-normal text-muted-foreground">
+                              {format(parse(date, "yyyy-MM-dd", new Date()), "dd MMM")}
+                            </div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fieldRows.map(({ label, field }) => (
+                      <tr key={field} className="border-b last:border-b-0">
+                        <td className="sticky left-0 z-10 border-r bg-background px-3 py-2 font-medium text-muted-foreground">
+                          {label}
+                        </td>
+                        {uniqueDates.map((date) => {
+                          const item = rowByKey.get(`${group.employeeId}|${date}`);
+                          if (!item) {
+                            return (
+                              <td key={date} className="px-2 py-2 text-center text-muted-foreground">
+                                —
+                              </td>
+                            );
+                          }
+                          return (
+                            <td
+                              key={date}
+                              className={`px-2 py-2 ${item.row._isValid ? "" : "bg-red-50/50"}`}
+                            >
+                              {renderTimeInput(item.row, item.key, field, "h-8 w-full min-w-[5rem] text-xs")}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                    <tr className="border-t bg-slate-50/50">
+                      <td className="sticky left-0 z-10 border-r bg-slate-50/50 px-3 py-2 font-medium">
+                        Work hours
+                      </td>
+                      {uniqueDates.map((date) => {
+                        const item = rowByKey.get(`${group.employeeId}|${date}`);
+                        return (
+                          <td key={date} className="px-2 py-2 text-center font-medium">
+                            {item ? formatWorkHours(item.workHours) : "—"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="sticky left-0 z-10 border-r bg-background px-3 py-2 font-medium">
+                        Status
+                      </td>
+                      {uniqueDates.map((date) => {
+                        const item = rowByKey.get(`${group.employeeId}|${date}`);
+                        return (
+                          <td key={date} className="px-2 py-2 text-center">
+                            {item ? renderStatusIcon(item.row) : "—"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
 
   const renderDataRow = (row: ParsedTimesheetRow, originalIndex: number, workHours: number) => {
     const isEditing = editingIndex === originalIndex;
-    const rowKey = `${row.employeeId}|${normalizeDate(row.date)}`;
+    const rowKey = rowKeyFor(row);
     const employee = employeesById.get(row.employeeId);
     const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : "N/A";
 
     return (
       <TableRow key={originalIndex} className={`${row._isValid ? "" : "bg-red-50/50"} ${rowClass}`}>
-        <TableCell className={`${cellClass} text-center`}>
-          {row._isValid ? (
-            <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
-          ) : (
-            <div className="flex items-center justify-center text-red-500" title={row._errors.join("; ")}>
-              <XCircle className="h-4 w-4" />
-            </div>
-          )}
-        </TableCell>
-
-        {/* CSV Personal ID (read-only display) */}
+        <TableCell className={`${cellClass} text-center`}>{renderStatusIcon(row)}</TableCell>
         <TableCell className={cellClass}>{row.csvPersonalId}</TableCell>
-
-        {/* Employee Resolver */}
         <TableCell className={cellClass}>
           {isEditing ? (
             <div className="flex items-center gap-2">
@@ -207,8 +411,6 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
             employeeName
           )}
         </TableCell>
-
-        {/* Date */}
         <TableCell className={cellClass}>
           {isEditing ? (
             <Input
@@ -221,175 +423,115 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
             normalizeDate(row.date)
           )}
         </TableCell>
-
-        {/* Time In */}
         <TableCell className={cellClass}>
-          {isEditing ? (
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="HH:mm"
-              value={row.timeIn || ""}
-              onChange={(e) => onEditRow?.(rowKey, { timeIn: formatHHmmInput(e.target.value) })}
-              className="w-28"
-            />
-          ) : (
-            row.timeIn
-          )}
+          {isEditing ? renderTimeInput(row, rowKey, "timeIn", "w-28") : row.timeIn}
         </TableCell>
-
-        {/* Tea Break */}
         <TableCell className={cellClass}>
           {isEditing ? (
             <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="HH:mm"
-                value={row.teaStart || ""}
-                onChange={(e) => onEditRow?.(rowKey, { teaStart: formatHHmmInput(e.target.value) })}
-                className="w-24"
-              />
+              {renderTimeInput(row, rowKey, "teaStart", "w-24")}
               <span className="text-muted-foreground">–</span>
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="HH:mm"
-                value={row.teaEnd || ""}
-                onChange={(e) => onEditRow?.(rowKey, { teaEnd: formatHHmmInput(e.target.value) })}
-                className="w-24"
-              />
+              {renderTimeInput(row, rowKey, "teaEnd", "w-24")}
             </div>
           ) : (
             row.teaStart && row.teaEnd ? `${row.teaStart}-${row.teaEnd}` : "N/A"
           )}
         </TableCell>
-
-        {/* Lunch Break */}
         <TableCell className={cellClass}>
           {isEditing ? (
             <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="HH:mm"
-                value={row.lunchStart || ""}
-                onChange={(e) => onEditRow?.(rowKey, { lunchStart: formatHHmmInput(e.target.value) })}
-                className="w-24"
-              />
+              {renderTimeInput(row, rowKey, "lunchStart", "w-24")}
               <span className="text-muted-foreground">–</span>
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="HH:mm"
-                value={row.lunchEnd || ""}
-                onChange={(e) => onEditRow?.(rowKey, { lunchEnd: formatHHmmInput(e.target.value) })}
-                className="w-24"
-              />
+              {renderTimeInput(row, rowKey, "lunchEnd", "w-24")}
             </div>
           ) : (
             row.lunchStart && row.lunchEnd ? `${row.lunchStart}-${row.lunchEnd}` : "N/A"
           )}
         </TableCell>
-
-        {/* Time Out */}
         <TableCell className={cellClass}>
-          {isEditing ? (
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="HH:mm"
-              value={row.timeOut || ""}
-              onChange={(e) => onEditRow?.(rowKey, { timeOut: formatHHmmInput(e.target.value) })}
-              className="w-28"
-            />
-          ) : (
-            row.timeOut
-          )}
+          {isEditing ? renderTimeInput(row, rowKey, "timeOut", "w-28") : row.timeOut}
         </TableCell>
-
-        {/* Work Hours */}
         <TableCell className={`${cellClass} whitespace-nowrap`}>
-          <span className={row._isValid ? "text-slate-900" : "text-muted-foreground"}>{formatWorkHours(workHours)}</span>
+          <span className={row._isValid ? "text-slate-900" : "text-muted-foreground"}>
+            {formatWorkHours(workHours)}
+          </span>
         </TableCell>
-
-        {/* Actions */}
         <TableCell className={`${cellClass} text-right`}>
           {isEditing ? (
-            <ButtonIcon icon={<Save className="h-4 w-4" />} label="Save" onClick={() => setEditingIndex(null)} />
+            <ButtonIcon icon={<Save className="h-4 w-4" />} label="Done" onClick={() => setEditingIndex(null)} />
           ) : (
-            <ButtonIcon icon={<PencilLine className="h-4 w-4" />} label="Edit" onClick={() => setEditingIndex(originalIndex)} />
+            <ButtonIcon
+              icon={<PencilLine className="h-4 w-4" />}
+              label="Edit"
+              onClick={() => setEditingIndex(originalIndex)}
+            />
           )}
         </TableCell>
       </TableRow>
     );
   };
 
-  return (
-    <>
-      <ScrollArea className="border rounded-md w-full h-[70vh] md:h-[65vh]">
-        <div className="min-w-full">
-          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10">
-              <TableRow>
-                <TableHead className={cellClass}>Status</TableHead>
-                <TableHead className={cellClass}>{externalIdLabel}</TableHead>
-                <TableHead className={cellClass}>Employee Name (Resolved)</TableHead>
-                <TableHead className={cellClass}>Date</TableHead>
-                <TableHead className={cellClass}>Time In</TableHead>
-                <TableHead className={cellClass}>Tea Break</TableHead>
-                <TableHead className={cellClass}>Lunch Break</TableHead>
-                <TableHead className={cellClass}>Time Out</TableHead>
-                <TableHead className={cellClass}>Work Hours</TableHead>
-                <TableHead className={`${cellClass} text-right`}>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups
-                ? groups.flatMap((g) => {
-                    const validItems = g.items.filter((i) => i.row._isValid);
-                    const validHoursSum = validItems.reduce((sum, i) => sum + i.workHours, 0);
-                    const validDaysCount = validItems.length;
-                    const totalRows = g.items.length;
-                    const invalidCount = totalRows - validDaysCount;
+  const renderTableView = () => {
+    const tableGroups = groupByEmployee ? groups : null;
 
-                    return [
-                      <TableRow key={`group-${g.employeeId}`} className="bg-slate-50/80">
-                        <TableCell colSpan={10} className={compact ? "p-2" : "p-3"}>
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                              <span className="font-semibold text-slate-900">{g.name}</span>
-                              <span className="text-xs text-muted-foreground">#{g.customEmployeeId}</span>
-                              {g.csvPersonalId ? (
-                                <span className="text-xs text-muted-foreground">Personal ID: {g.csvPersonalId}</span>
-                              ) : null}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs">
-                              <span className="text-muted-foreground">
-                                {validDaysCount} valid day(s)
-                                {invalidCount > 0 ? ` (of ${totalRows})` : ""}
-                              </span>
-                              <span className="font-medium text-slate-900">Total: {formatWorkHours(validHoursSum)}</span>
-                              {invalidCount > 0 ? <span className="text-red-600">{invalidCount} invalid</span> : null}
-                            </div>
+    return (
+      <div className="overflow-auto rounded-md border" style={{ maxHeight: "70vh" }}>
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
+            <TableRow>
+              <TableHead className={cellClass}>Status</TableHead>
+              <TableHead className={cellClass}>{externalIdLabel}</TableHead>
+              <TableHead className={cellClass}>Employee</TableHead>
+              <TableHead className={cellClass}>Date</TableHead>
+              <TableHead className={cellClass}>Time In</TableHead>
+              <TableHead className={cellClass}>Tea</TableHead>
+              <TableHead className={cellClass}>Lunch</TableHead>
+              <TableHead className={cellClass}>Time Out</TableHead>
+              <TableHead className={cellClass}>Work Hours</TableHead>
+              <TableHead className={`${cellClass} text-right`}>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tableGroups
+              ? tableGroups.flatMap((g) => {
+                  const validItems = g.items.filter((i) => i.row._isValid);
+                  const validHoursSum = validItems.reduce((sum, i) => sum + i.workHours, 0);
+                  return [
+                    <TableRow key={`group-${g.employeeId}`} className="bg-slate-50/80">
+                      <TableCell colSpan={10} className={compact ? "p-2" : "p-3"}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="font-semibold">{g.name}</span>
+                            <span className="text-xs text-muted-foreground">#{g.customEmployeeId}</span>
                           </div>
-                        </TableCell>
-                      </TableRow>,
-                      ...g.items.map((i) => renderDataRow(i.row, i.originalIndex, i.workHours)),
-                    ];
-                  })
-                : indexedRows.map((i) => renderDataRow(i.row, i.originalIndex, i.workHours))}
-            </TableBody>
-          </Table>
-        </div>
-      </ScrollArea>
+                          <span className="text-xs font-medium">
+                            {validItems.length} valid · {formatWorkHours(validHoursSum)}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>,
+                    ...g.items.map((i) => renderDataRow(i.row, i.originalIndex, i.workHours)),
+                  ];
+                })
+              : indexedRows.map((i) => renderDataRow(i.row, i.originalIndex, i.workHours))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {viewMode === "cards" && renderCardsView()}
+      {viewMode === "grid" && renderGridView()}
+      {viewMode === "table" && renderTableView()}
 
       {!allRowsValid && (
-        <p className="text-sm text-red-500 mt-2">
-          Some rows contain errors and will not be imported. Hover over <XCircle className="inline h-3 w-3" /> for details.
+        <p className="text-sm text-red-600">
+          Some rows contain errors and will not be imported. Invalid rows are highlighted in red.
         </p>
       )}
-    </>
+    </div>
   );
 };
 

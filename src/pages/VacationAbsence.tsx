@@ -1,153 +1,223 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLeaveData } from "@/hooks/use-leave-data";
-import VacationAbsenceForm from "@/components/vacation-absence/VacationAbsenceForm";
-import AbsenceCalendar from "@/components/vacation-absence/AbsenceCalendar";
-import LeaveAnalytics from "@/components/vacation-absence/LeaveAnalytics";
-import LeaveRecordsTable from "@/components/vacation-absence/LeaveRecordsTable";
+import { Loader2, CalendarDays, Activity, Palmtree, Thermometer } from "lucide-react";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import VacationAbsenceHeader from "@/components/vacation-absence/VacationAbsenceHeader";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
-import { CalendarDays, CheckCircle, Activity } from "lucide-react";
+import LeaveAnalytics from "@/components/vacation-absence/LeaveAnalytics";
+import AbsenceCalendar from "@/components/vacation-absence/AbsenceCalendar";
+import LeaveRecordsTable from "@/components/vacation-absence/LeaveRecordsTable";
+import LeaveFiltersBar from "@/components/vacation-absence/LeaveFiltersBar";
+import LeaveRecordDialog from "@/components/vacation-absence/LeaveRecordDialog";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import {
+  buildLeaveAdminSummary,
+  filterLeaveRecords,
+} from "@/lib/leave-admin-summary";
 
 const VacationAbsence: React.FC = () => {
-  const { employees, leaveRecords: initialLeaveRecords, isMockDataEnabled, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
-
   const {
+    employees,
     leaveRecords,
-    leaveTypeDistribution,
-    monthlyLeaveData,
-    getEmployeeName,
-    getEmployeeCustomId,
     addLeaveRecord,
-  } = useLeaveData({ initialLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth });
+    isLoadingLeaveRecords,
+    isLoadingEmployees,
+  } = usePayrollProcessor();
 
-  const handleAddLeave = (newLeaveData: Omit<LeaveEntry, 'id'>) => {
-    const newRecordWithId = { ...newLeaveData, id: `LEAVE-${Date.now()}` };
-    addLeaveRecord(newRecordWithId);
+  const [recordDialogOpen, setRecordDialogOpen] = useState(false);
+  const [employeeFilterId, setEmployeeFilterId] = useState("all");
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState("all");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+  const [search, setSearch] = useState("");
+
+  const getEmployeeName = React.useCallback(
+    (employeeId: string) => {
+      const employee = employees.find((emp) => emp.id === employeeId);
+      return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown employee";
+    },
+    [employees]
+  );
+
+  const getEmployeeCustomId = React.useCallback(
+    (employeeId: string) => {
+      const employee = employees.find((emp) => emp.id === employeeId);
+      return employee?.customEmployeeId || "N/A";
+    },
+    [employees]
+  );
+
+  const filteredLeaveRecords = useMemo(() => {
+    const filtered = filterLeaveRecords(leaveRecords, employees, {
+      employeeId: employeeFilterId,
+      leaveType: leaveTypeFilter,
+      dateStart,
+      dateEnd,
+      search,
+    });
+    return [...filtered].sort((a, b) => b.startDate.localeCompare(a.startDate));
+  }, [leaveRecords, employees, employeeFilterId, leaveTypeFilter, dateStart, dateEnd, search]);
+
+  const summary = useMemo(
+    () => buildLeaveAdminSummary(filteredLeaveRecords),
+    [filteredLeaveRecords]
+  );
+
+  const clearFilters = () => {
+    setEmployeeFilterId("all");
+    setLeaveTypeFilter("all");
+    setDateStart("");
+    setDateEnd("");
+    setSearch("");
   };
 
-  // KPI calculations
-  const totalRecords = leaveRecords.length;
-  const totalWorkingDaysThisMonth = useMemo(
-    () => monthlyLeaveData.reduce((sum, m) => sum + (m.days || 0), 0),
-    [monthlyLeaveData]
-  );
-  const annualLeaveCount = useMemo(
-    () => leaveTypeDistribution.find(d => d.name === "Annual Leave")?.value || 0,
-    [leaveTypeDistribution]
-  );
-  const sickLeaveCount = useMemo(
-    () => leaveTypeDistribution.find(d => d.name === "Sick Leave")?.value || 0,
-    [leaveTypeDistribution]
-  );
+  const handleAddLeave = async (newLeaveData: Omit<LeaveEntry, "id">) => {
+    await addLeaveRecord(newLeaveData);
+  };
+
+  const isLoading = isLoadingLeaveRecords || isLoadingEmployees;
+  const addDisabled = !employees || employees.length === 0;
 
   return (
     <div className="flex flex-col gap-4">
-      <VacationAbsenceHeader />
-
-      {/* KPI row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="sky" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-100 text-sky-600">
-                <CalendarDays className="h-4 w-4" />
-              </span>
-              Total Leave Records
-            </CardTitle>
-            <CardDescription className="text-xs">All recorded absences</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalRecords}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="emerald" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
-                <CheckCircle className="h-4 w-4" />
-              </span>
-              Working Days Taken (Monthly)
-            </CardTitle>
-            <CardDescription className="text-xs">Sum for the selected period</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalWorkingDaysThisMonth}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="orange" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-orange-100 text-orange-600">
-                <CalendarDays className="h-4 w-4" />
-              </span>
-              Annual Leave
-            </CardTitle>
-            <CardDescription className="text-xs">Total working days taken</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{annualLeaveCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="amber" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-100 text-amber-600">
-                <Activity className="h-4 w-4" />
-              </span>
-              Sick Leave
-            </CardTitle>
-            <CardDescription className="text-xs">Total working days taken</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{sickLeaveCount}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Analytics */}
-      <LeaveAnalytics
-        leaveTypeDistribution={leaveTypeDistribution}
-        monthlyLeaveData={monthlyLeaveData}
+      <VacationAbsenceHeader
+        onRecordAbsence={() => setRecordDialogOpen(true)}
+        addDisabled={addDisabled}
       />
 
-      {/* Form + Calendar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-          <SummaryAccent variant="sky" />
-          <CardHeader>
-            <CardTitle>Record New Absence</CardTitle>
-            <CardDescription>
-              Enter details for an employee's leave or absence.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <VacationAbsenceForm employees={employees} onAddLeave={handleAddLeave} />
-          </CardContent>
-        </Card>
+      <Card className="rounded-xl border">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Filters</CardTitle>
+          <CardDescription>
+            Filter leave records by employee, type, date range, or search.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LeaveFiltersBar
+            employees={employees || []}
+            employeeFilterId={employeeFilterId}
+            onEmployeeFilterChange={setEmployeeFilterId}
+            leaveTypeFilter={leaveTypeFilter}
+            onLeaveTypeFilterChange={setLeaveTypeFilter}
+            dateStart={dateStart}
+            onDateStartChange={setDateStart}
+            dateEnd={dateEnd}
+            onDateEndChange={setDateEnd}
+            search={search}
+            onSearchChange={setSearch}
+            filteredCount={filteredLeaveRecords.length}
+            totalCount={leaveRecords.length}
+            onClear={clearFilters}
+            onRefresh={() => window.dispatchEvent(new Event("appFocusRefresh"))}
+          />
+        </CardContent>
+      </Card>
 
-        <AbsenceCalendar leaveRecords={leaveRecords} />
-      </div>
+      {isLoading ? (
+        <div className="flex min-h-[240px] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-700" aria-label="Loading leave records" />
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Card className="relative overflow-hidden rounded-xl border bg-white shadow-sm">
+              <SummaryAccent variant="sky" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <CalendarDays className="h-4 w-4 text-sky-600" />
+                  In view
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {summary.uniqueEmployees} employee{summary.uniqueEmployees === 1 ? "" : "s"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.total}</div>
+              </CardContent>
+            </Card>
 
-      <LeaveRecordsTable leaveRecords={leaveRecords} getEmployeeName={getEmployeeName} getEmployeeCustomId={getEmployeeCustomId} />
+            <Card className="relative overflow-hidden rounded-xl border bg-white shadow-sm">
+              <SummaryAccent variant="emerald" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <Activity className="h-4 w-4 text-emerald-600" />
+                  Working days
+                </CardTitle>
+                <CardDescription className="text-xs">Total in filtered records</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.workingDays}</div>
+              </CardContent>
+            </Card>
 
-      <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-blue-800">
-        <h3 className="font-semibold text-lg mb-2">Important Note on Leave Management:</h3>
-        <p className="text-sm">
-          This interface provides the front-end for recording and visualizing employee leave. In a real-world system, leave balances (e.g., remaining annual leave days) would be managed by a backend service, which would also handle complex rules for leave accrual, approval workflows, and integration with payroll for unpaid leave deductions. Document uploads would typically go to secure cloud storage.
-        </p>
-      </div>
+            <Card className="relative overflow-hidden rounded-xl border bg-white shadow-sm">
+              <SummaryAccent variant="orange" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <Palmtree className="h-4 w-4 text-orange-600" />
+                  Annual leave
+                </CardTitle>
+                <CardDescription className="text-xs">Working days taken</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.annualDays}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden rounded-xl border bg-white shadow-sm">
+              <SummaryAccent variant="amber" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <Thermometer className="h-4 w-4 text-amber-600" />
+                  Sick leave
+                </CardTitle>
+                <CardDescription className="text-xs">Working days taken</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.sickDays}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <LeaveAnalytics
+            leaveTypeDistribution={summary.leaveTypeDistribution}
+            monthlyLeaveData={summary.monthlyLeaveData}
+          />
+
+          <AbsenceCalendar leaveRecords={filteredLeaveRecords} recordCount={summary.total} />
+
+          <ErrorBoundary fallbackTitle="Leave records error">
+            <LeaveRecordsTable
+              leaveRecords={filteredLeaveRecords}
+              getEmployeeName={getEmployeeName}
+              getEmployeeCustomId={getEmployeeCustomId}
+            />
+          </ErrorBoundary>
+        </>
+      )}
+
+      <Card className="border-dashed bg-muted/30">
+        <CardContent className="py-4 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">How leave connects to payroll</p>
+          <p className="mt-2">
+            Recorded absences feed timesheet leave checks and payroll unpaid-leave calculations.
+            Working days exclude weekends automatically. Staff see their own history in the portal;
+            balances shown there use the same leave types recorded here. Use filters to review a
+            pay period before processing payroll.
+          </p>
+        </CardContent>
+      </Card>
+
+      <LeaveRecordDialog
+        open={recordDialogOpen}
+        onOpenChange={setRecordDialogOpen}
+        employees={employees || []}
+        onAddLeave={handleAddLeave}
+        defaultEmployeeId={employeeFilterId !== "all" ? employeeFilterId : undefined}
+      />
     </div>
   );
 };

@@ -5,8 +5,6 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -15,17 +13,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { showSuccess, showError } from "@/utils/toast";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateCustomEmployeeId } from "@/lib/utils";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { Loader2 } from "lucide-react";
 
 import BasicInfoForm from "./forms/BasicInfoForm";
 import PersonalDetailsForm from "./forms/PersonalDetailsForm";
@@ -63,9 +56,11 @@ const employeeSchema = z.object({
     (val) => (val === "" ? undefined : val),
     z.string().min(1, "Start Date is required")
   ),
-  
+
   idNumber: z.string().optional(),
   phoneNumber: z.string().optional(),
+  fathersName: z.string().optional(),
+  molId: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactNumber: z.string().optional(),
   emergencyContactAddress: z.string().optional(),
@@ -121,10 +116,55 @@ export type EmployeeFormValues = z.infer<typeof employeeSchema>;
 interface EmployeeFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (employee: EmployeeFormValues) => void;
+  onSave: (employee: EmployeeFormValues) => void | Promise<void>;
   initialEmployee?: MockEmployee | null;
   initialFocus?: "basic" | "personal" | "payment" | "bank" | "tax";
+  isSaving?: boolean;
 }
+
+const emptyDefaults: EmployeeFormValues = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  jobTitle: "",
+  salary: undefined,
+  hourlyRate: undefined,
+  startDate: new Date().toISOString().split("T")[0],
+  personalId: "",
+  idNumber: "",
+  phoneNumber: "",
+  fathersName: "",
+  molId: "",
+  emergencyContactName: "",
+  emergencyContactNumber: "",
+  emergencyContactAddress: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  province: "",
+  postalCode: "",
+  taxReferenceNumber: "",
+  uifNumber: "",
+  bankName: "",
+  bankAccountHolder: "",
+  accountNumber: "",
+  branchCode: "",
+  bankAccountType: "Cheque",
+  dateOfBirth: "",
+  gender: undefined,
+  department: "",
+  workLocation: "",
+  dateOfConfirmation: "",
+  originCountry: "",
+  employmentType: undefined,
+  portalAccess: false,
+  permanentAddress: "",
+  paymentMode: "Bank Transfer",
+  payFrequency: undefined,
+  standardDailyHours: 8,
+  customEmployeeId: "",
+  ignoredIncompleteFields: [],
+};
 
 const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   isOpen,
@@ -132,70 +172,14 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   onSave,
   initialEmployee,
   initialFocus,
+  isSaving = false,
 }) => {
   const { employees: allEmployees, companyDetails } = usePayrollProcessor();
   const companyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
 
   const formMethods = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: initialEmployee ? {
-      ...initialEmployee,
-      customEmployeeId: initialEmployee.customEmployeeId || "",
-      originCountry: initialEmployee.originCountry || "",
-      employmentType: initialEmployee.employmentType || undefined,
-      gender: initialEmployee.gender || undefined,
-      payFrequency: initialEmployee.payFrequency || undefined,
-      paymentMode: initialEmployee.paymentMode || "Bank Transfer",
-      bankAccountType: initialEmployee.bankAccountType || "Cheque",
-      portalAccess: initialEmployee.portalAccess ?? false,
-      standardDailyHours: initialEmployee.standardDailyHours ?? 8,
-      ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [],
-      // Ensure bank fields align with the form
-      bankName: initialEmployee.bankName || "",
-      bankAccountHolder: initialEmployee.bankAccountHolder || "",
-      accountNumber: initialEmployee.accountNumber || "",
-      branchCode: initialEmployee.branchCode || "",
-    } : {
-      firstName: "",
-      lastName: "",
-      email: "",
-      jobTitle: "",
-      salary: undefined,
-      hourlyRate: undefined,
-      startDate: new Date().toISOString().split('T')[0],
-      personalId: "",
-      idNumber: "",
-      phoneNumber: "",
-      emergencyContactName: "",
-      emergencyContactNumber: "",
-      emergencyContactAddress: "",
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      province: "",
-      postalCode: "",
-      taxReferenceNumber: "",
-      uifNumber: "",
-      bankName: "",
-      bankAccountHolder: "",
-      accountNumber: "",
-      branchCode: "",
-      bankAccountType: "Cheque",
-      dateOfBirth: "",
-      gender: undefined,
-      department: "",
-      workLocation: "",
-      dateOfConfirmation: "",
-      originCountry: "",
-      employmentType: undefined,
-      portalAccess: false,
-      permanentAddress: "",
-      paymentMode: "Bank Transfer",
-      payFrequency: undefined,
-      standardDailyHours: 8,
-      customEmployeeId: "",
-      ignoredIncompleteFields: [],
-    },
+    defaultValues: emptyDefaults,
   });
 
   const initialTab = React.useMemo(() => {
@@ -235,7 +219,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         portalAccess: initialEmployee.portalAccess ?? false,
         standardDailyHours: initialEmployee.standardDailyHours ?? 8,
         ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [],
-        // Bank fields aligned
+        fathersName: initialEmployee.fathersName || "",
+        molId: initialEmployee.molId || "",
+        emergencyContactName: initialEmployee.emergencyContactName || "",
+        emergencyContactNumber: initialEmployee.emergencyContactNumber || "",
+        emergencyContactAddress: initialEmployee.emergencyContactAddress || "",
         bankName: initialEmployee.bankName || "",
         bankAccountHolder: initialEmployee.bankAccountHolder || "",
         accountNumber: initialEmployee.accountNumber || "",
@@ -249,95 +237,74 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
       const newCustomEmployeeId = generateCustomEmployeeId(companyName, currentMaxNumber);
 
       formMethods.reset({
-        firstName: "",
-        lastName: "",
-        email: "",
-        jobTitle: "",
-        salary: undefined,
-        hourlyRate: undefined,
-        startDate: new Date().toISOString().split('T')[0],
-        personalId: "",
-        idNumber: "",
-        phoneNumber: "",
-        emergencyContactName: "",
-        emergencyContactNumber: "",
-        emergencyContactAddress: "",
-        addressLine1: "",
-        addressLine2: "",
-        city: "",
-        province: "",
-        postalCode: "",
-        taxReferenceNumber: "",
-        uifNumber: "",
-        bankName: "",
-        bankAccountHolder: "",
-        accountNumber: "",
-        branchCode: "",
-        bankAccountType: "Cheque",
-        dateOfBirth: "",
-        gender: undefined,
-        department: "",
-        workLocation: "",
-        dateOfConfirmation: "",
-        originCountry: "",
-        employmentType: undefined,
-        portalAccess: false,
-        permanentAddress: "",
-        paymentMode: "Bank Transfer",
-        payFrequency: undefined,
-        standardDailyHours: 8,
+        ...emptyDefaults,
         customEmployeeId: newCustomEmployeeId,
-        ignoredIncompleteFields: [],
       });
     }
   }, [initialEmployee, formMethods, allEmployees, companyName]);
 
-  const onSubmit = (data: EmployeeFormValues) => {
-    onSave(data);
+  const onSubmit = async (data: EmployeeFormValues) => {
+    await onSave(data);
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:max-w-[900px] lg:max-w-6xl max-h-[90vh] h-full flex flex-col">
-        <DialogHeader className="px-4 pt-4">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex h-full max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[900px] lg:max-w-6xl">
+        <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{initialEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
           <DialogDescription>
-            {initialEmployee ? "Make changes to employee details here." : "Fill in the details for the new employee."}
+            {initialEmployee
+              ? "Update employment, personal, and payroll details across the tabs below."
+              : "Complete basic details first, then personal and pay information before saving."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-4">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-            <TabsList className="rounded-xl">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "basic" | "personal" | "payment")} className="flex min-h-0 flex-1 flex-col">
+          <div className="border-b px-6 py-3">
+            <TabsList className="grid w-full grid-cols-3 rounded-xl sm:w-auto">
               <TabsTrigger value="basic" className="rounded-lg">Basic</TabsTrigger>
               <TabsTrigger value="personal" className="rounded-lg">Personal</TabsTrigger>
               <TabsTrigger value="payment" className="rounded-lg">Pay & Bank</TabsTrigger>
             </TabsList>
+          </div>
 
-            <FormProvider {...formMethods}>
-              <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col overflow-hidden h-full">
-                <ScrollArea className="mt-4 flex-grow min-h-0">
-                  <div className="grid gap-4 pb-4">
-                    <TabsContent value="basic" className="m-0">
-                      <BasicInfoForm />
-                    </TabsContent>
-                    <TabsContent value="personal" className="m-0">
-                      <PersonalDetailsForm />
-                    </TabsContent>
-                    <TabsContent value="payment" className="m-0">
-                      <PaymentInfoForm initialFocus={initialFocus} />
-                    </TabsContent>
-                  </div>
-                </ScrollArea>
+          <FormProvider {...formMethods}>
+            <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+              <ScrollArea className="flex-1 px-6">
+                <div className="grid gap-4 py-4">
+                  <TabsContent value="basic" className="m-0">
+                    <BasicInfoForm linkedUserId={initialEmployee?.userId} />
+                  </TabsContent>
+                  <TabsContent value="personal" className="m-0">
+                    <PersonalDetailsForm />
+                  </TabsContent>
+                  <TabsContent value="payment" className="m-0">
+                    <PaymentInfoForm initialFocus={initialFocus} />
+                  </TabsContent>
+                </div>
+              </ScrollArea>
 
-                <DialogFooter className="pt-4 pb-4">
-                  <Button type="submit">{initialEmployee ? "Save Changes" : "Add Employee"}</Button>
-                </DialogFooter>
-              </form>
-            </FormProvider>
-          </Tabs>
-        </div>
+              <DialogFooter className="border-t px-6 py-4">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : initialEmployee ? (
+                    "Save Changes"
+                  ) : (
+                    "Add Employee"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </FormProvider>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
