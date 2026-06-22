@@ -2,7 +2,7 @@
 
 import React from "react";
 import Sidebar from "./Sidebar";
-import { MadeWithDyad } from "./made-with-dyad";
+import { AppFooter } from "./made-with-dyad";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -178,7 +178,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
           </div>
         </main>
 
-        <MadeWithDyad />
+        <AppFooter />
       </div>
       {isMobile && (
         <Sidebar
