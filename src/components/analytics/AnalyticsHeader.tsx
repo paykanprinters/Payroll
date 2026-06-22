@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import KanPageBanner from "@/components/KanPageBanner";
 
 interface AnalyticsHeaderProps {
   variant?: "admin" | "staff";
@@ -19,34 +19,17 @@ const AnalyticsHeader: React.FC<AnalyticsHeaderProps> = ({
   onRefresh,
   isRefreshing = false,
 }) => {
-  const { companyDetails } = usePayrollProcessor();
-  const companyName =
-    companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company";
-
   return (
-    <div className="kan-page-banner">
-      <div className="kan-page-banner-glow" />
-      <div className="kan-page-banner-orb" />
-
-      <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3 md:items-center">
-          <div className="rounded-xl bg-white/10 p-3 ring-1 ring-white/10">
-            <LineChartIcon className="h-6 w-6 text-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm text-white/70">{companyName}</p>
-            <h1 className="text-2xl font-bold leading-tight text-white md:text-3xl">
-              {variant === "staff" ? "My analytics" : "Payroll analytics"}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-white/75">
-              {variant === "staff"
-                ? "Personal payslip, deduction, and leave trends from your own records."
-                : "Workforce cost trends, deductions, leave patterns, and platform health."}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+    <KanPageBanner
+      icon={LineChartIcon}
+      title={variant === "staff" ? "My analytics" : "Payroll analytics"}
+      description={
+        variant === "staff"
+          ? "Personal payslip, deduction, and leave trends from your own records."
+          : "Workforce cost trends, deductions, leave patterns, and platform health."
+      }
+      actions={
+        <>
           {onRefresh && (
             <Button
               variant="outline"
@@ -74,9 +57,9 @@ const AnalyticsHeader: React.FC<AnalyticsHeaderProps> = ({
               Open reports
             </Link>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 };
 

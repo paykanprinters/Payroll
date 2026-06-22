@@ -3,6 +3,7 @@
 import React from "react";
 import { CalendarDays, PlusCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import KanPageBanner from "@/components/KanPageBanner";
 
 interface VacationAbsenceHeaderProps {
   onRecordAbsence?: () => void;
@@ -16,24 +17,12 @@ const VacationAbsenceHeader: React.FC<VacationAbsenceHeaderProps> = ({
   addDisabled = false,
 }) => {
   return (
-    <div className="kan-page-banner">
-      <div className="kan-page-banner-glow" />
-      <div className="kan-page-banner-orb" />
-
-      <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3 md:items-center">
-          <div className="rounded-xl bg-white/10 p-3 ring-1 ring-white/10">
-            <CalendarDays className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold leading-tight md:text-3xl">Vacation & Absence</h1>
-            <p className="text-sm text-white/75">
-              Record leave for payroll, review trends, and keep timesheets aligned with absences.
-            </p>
-          </div>
-        </div>
-
-        {onRecordAbsence && (
+    <KanPageBanner
+      icon={CalendarDays}
+      title="Vacation & Absence"
+      description="Record leave for payroll, review trends, and keep timesheets aligned with absences."
+      actions={
+        onRecordAbsence ? (
           <Button
             onClick={onRecordAbsence}
             disabled={addDisabled || isSubmitting}
@@ -46,9 +35,9 @@ const VacationAbsenceHeader: React.FC<VacationAbsenceHeaderProps> = ({
             )}
             Record absence
           </Button>
-        )}
-      </div>
-    </div>
+        ) : undefined
+      }
+    />
   );
 };
 
