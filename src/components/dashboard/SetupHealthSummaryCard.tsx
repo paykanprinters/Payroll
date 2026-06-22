@@ -70,7 +70,7 @@ const SetupHealthSummaryCard: React.FC = () => {
   const readyCount = rows.filter((r) => r.ok).length;
 
   return (
-    <Card className="rounded-2xl border bg-white shadow-sm">
+    <Card className="rounded-xl border bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Setup status</CardTitle>
         <CardDescription>{readyCount}/3 ready • Finish setup to avoid payroll blockers.</CardDescription>

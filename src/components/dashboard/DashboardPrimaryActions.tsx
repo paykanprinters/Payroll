@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Landmark, ReceiptText, Settings, Users, Timer } from "lucide-react";
+import { ArrowRight, Landmark, ReceiptText, Settings, Users, Timer, CalendarDays } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,12 @@ const DashboardPrimaryActions: React.FC = () => {
       variant: "outline" as const,
     },
     {
+      to: "/vacation-absence",
+      label: "Leave",
+      icon: CalendarDays,
+      variant: "outline" as const,
+    },
+    {
       to: "/settings/company-details",
       label: "Settings",
       icon: Settings,
@@ -42,9 +48,9 @@ const DashboardPrimaryActions: React.FC = () => {
   ];
 
   return (
-    <Card className="rounded-2xl border bg-white shadow-sm">
-      <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
-        <div className="text-sm text-muted-foreground">Quick actions</div>
+    <Card className="rounded-xl border bg-white shadow-sm">
+      <CardContent className="p-4">
+        <p className="mb-3 text-sm font-medium text-foreground">Quick actions</p>
         <div className="flex flex-wrap gap-2">
           {actions.map((a) => {
             const Icon = a.icon;

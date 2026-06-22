@@ -9,11 +9,13 @@ interface UpcomingPayrollSummaryCardProps {
   totalUpcomingPayrollAmount: number;
   dueText: string;
   isMockDataEnabled: boolean;
+  postedThisMonthGross?: number;
 }
 
 const UpcomingPayrollSummaryCard: React.FC<UpcomingPayrollSummaryCardProps> = ({
   totalUpcomingPayrollAmount,
   dueText,
+  postedThisMonthGross,
 }) => {
   return (
     <Card className="relative overflow-hidden border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
@@ -31,6 +33,12 @@ const UpcomingPayrollSummaryCard: React.FC<UpcomingPayrollSummaryCardProps> = ({
           R {totalUpcomingPayrollAmount.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
         </div>
         <p className="text-xs text-muted-foreground">{dueText}</p>
+        {postedThisMonthGross != null && postedThisMonthGross > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Posted this month: R{" "}
+            {postedThisMonthGross.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

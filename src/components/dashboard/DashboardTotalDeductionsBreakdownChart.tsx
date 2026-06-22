@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import ChartEmptyState from "@/components/dashboard/ChartEmptyState";
 
 interface DeductionsBreakdownData {
   name: string;
@@ -19,6 +20,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"
 const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsBreakdownChartProps> = ({ totalDeductionsBreakdown }) => {
   const dataVisualsFontSize = useDataVisualsFontSize();
   const totalDeductions = totalDeductionsBreakdown.reduce((sum, entry) => sum + entry.value, 0);
+  const hasData = totalDeductions > 0;
 
   const WrappedLegend = ({ payload }: any) => (
     <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
@@ -36,12 +38,15 @@ const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsB
   );
 
   return (
-    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+    <Card className="h-full rounded-xl border bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle>Total Deductions Breakdown</CardTitle>
         <CardDescription>Distribution of total deductions across all payslips.</CardDescription>
       </CardHeader>
       <CardContent className="h-[380px]">
+        {!hasData ? (
+          <ChartEmptyState message="No deduction data for the selected period." />
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -67,6 +72,7 @@ const DashboardTotalDeductionsBreakdownChart: React.FC<DashboardTotalDeductionsB
             <Legend verticalAlign="bottom" align="center" content={<WrappedLegend />} />
           </PieChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

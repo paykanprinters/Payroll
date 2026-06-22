@@ -1,11 +1,9 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck } from "lucide-react";
-
+import { LayoutDashboard } from "lucide-react";
 import DashboardVisibilityDropdown from "@/components/dashboard/DashboardVisibilityDropdown";
 import DashboardLayoutDialog from "@/components/dashboard/DashboardLayoutDialog";
-
 import {
   DashboardWidgetKey,
   DashboardWidgetSection,
@@ -15,7 +13,6 @@ import {
 interface RetroFunkHeaderProps {
   companyLegalName: string;
   isMockDataEnabled: boolean;
-  // Pass the dashboard settings instance down from the Dashboard page so actions immediately affect the widgets.
   visibleWidgets: DashboardWidgetVisibility | null;
   isLoadingSettings: boolean;
   getSectionOrder: (section: DashboardWidgetSection) => DashboardWidgetKey[];
@@ -35,25 +32,25 @@ const RetroFunkHeader: React.FC<RetroFunkHeaderProps> = ({
   resetToDefaults,
 }) => {
   return (
-    <div className="kan-page-banner p-8 shadow-xl">
+    <div className="kan-page-banner">
       <div className="kan-page-banner-glow" />
       <div className="kan-page-banner-orb" />
 
-      <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="rounded-2xl bg-white/10 p-3">
-            <ShieldCheck className="h-6 w-6 text-white" />
+      <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-3 md:items-center">
+          <div className="rounded-xl bg-white/10 p-3 ring-1 ring-white/10">
+            <LayoutDashboard className="h-6 w-6 text-white" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm text-white/70">{companyLegalName}</div>
-            <h1 className="mt-1 text-3xl font-semibold -tracking-tight text-white md:text-4xl">Payroll Dashboard</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75 md:text-base">
-              Review key metrics, run payroll, and keep an auditable trail—built for scale.
+            <p className="text-sm text-white/70">{companyLegalName}</p>
+            <h1 className="text-2xl font-bold leading-tight text-white md:text-3xl">Dashboard</h1>
+            <p className="mt-1 max-w-2xl text-sm text-white/75">
+              Operational overview for payroll readiness, tasks, and workforce trends.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start lg:self-auto">
+        <div className="flex flex-wrap items-center gap-2">
           {!isLoadingSettings && visibleWidgets && (
             <DashboardLayoutDialog
               order={getSectionOrder}

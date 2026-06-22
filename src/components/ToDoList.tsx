@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle,
-  AlertTriangle,
-  Info,
   ArrowRight,
   ChevronsLeft,
   ChevronLeft,
@@ -16,6 +14,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ToDoEntry } from "@/lib/mock-data-interfaces";
+import { formatTodoRelatedField } from "@/lib/todos-admin-summary";
+import { ToDoLevelBadge, ToDoLevelIcon } from "@/components/todos/ToDoSeverityBadge";
 import { cn } from "@/lib/utils";
 import {
   Pagination,
@@ -63,42 +63,11 @@ const ToDoList: React.FC<ToDoListProps> = ({ toDos, markToDoAsDone }) => {
     return list;
   }, [pageBlock.blockStart, pageBlock.blockEnd]);
 
-  const getLevelBadge = (level: ToDoEntry["level"]) => {
-    switch (level) {
-      case "critical":
-        return (
-          <Badge variant="destructive" className="bg-red-500 text-white">
-            Critical
-          </Badge>
-        );
-      case "warning":
-        return (
-          <Badge variant="outline" className="bg-yellow-500 text-white border-yellow-500">
-            Warning
-          </Badge>
-        );
-      case "info":
-        return <Badge variant="secondary">Info</Badge>;
-      default:
-        return null;
-    }
-  };
-
-  const getLevelIcon = (level: ToDoEntry["level"]) => {
-    switch (level) {
-      case "critical":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case "warning":
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      case "info":
-        return <Info className="h-4 w-4 text-blue-500" />;
-      default:
-        return null;
-    }
-  };
+  const getLevelBadge = (level: ToDoEntry["level"]) => <ToDoLevelBadge level={level} />;
+  const getLevelIcon = (level: ToDoEntry["level"]) => <ToDoLevelIcon level={level} />;
 
   return (
-    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+    <Card className="h-full rounded-xl border bg-white shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           Payroll To-Dos
@@ -130,7 +99,7 @@ const ToDoList: React.FC<ToDoListProps> = ({ toDos, markToDoAsDone }) => {
                       {getLevelBadge(todo.level)}
                       <span>Module: {todo.module}</span>
                       {todo.relatedField && (
-                        <span>Field: {todo.relatedField.replace(/([A-Z])/g, " $1").trim()}</span>
+                        <span>Field: {formatTodoRelatedField(todo.relatedField)}</span>
                       )}
                     </div>
                   </div>

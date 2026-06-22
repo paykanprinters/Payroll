@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import ChartEmptyState from "@/components/dashboard/ChartEmptyState";
 
 interface MonthlyPayrollData {
   name: string;
@@ -20,13 +21,16 @@ const DashboardMonthlyPayrollOverviewChart: React.FC<DashboardMonthlyPayrollOver
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+    <Card className="h-full rounded-xl border bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle>Monthly Payroll Overview</CardTitle>
         <CardDescription>Total gross payroll amount per month.</CardDescription>
       </CardHeader>
       <CardContent className="h-[320px]">
-        <ResponsiveContainer width="100%" height="100%">
+        {monthlyPayrollData.length === 0 ? (
+          <ChartEmptyState message="No payroll data for the selected period." />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
           <BarChart data={monthlyPayrollData} margin={{ top: 8, right: 12, left: 4, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" style={{ fontSize: dataVisualsFontSize }} />
@@ -48,6 +52,7 @@ const DashboardMonthlyPayrollOverviewChart: React.FC<DashboardMonthlyPayrollOver
             <Bar dataKey="payroll" fill="#8884d8" name="Payroll" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import ChartEmptyState from "@/components/dashboard/ChartEmptyState";
 
 interface LeaveDaysTakenData {
   name: string;
@@ -20,12 +21,15 @@ const DashboardMonthlyLeaveDaysTakenChart: React.FC<DashboardMonthlyLeaveDaysTak
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+    <Card className="h-full rounded-xl border bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle>Monthly Leave Days Taken</CardTitle>
         <CardDescription>Total working days taken as leave per month.</CardDescription>
       </CardHeader>
       <CardContent className="h-[320px]">
+        {leaveDaysTakenTrend.length === 0 ? (
+          <ChartEmptyState message="No leave records for the selected period." />
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={leaveDaysTakenTrend} margin={{ top: 8, right: 12, left: 4, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -40,6 +44,7 @@ const DashboardMonthlyLeaveDaysTakenChart: React.FC<DashboardMonthlyLeaveDaysTak
             <Bar dataKey="days" fill="#00C49F" name="Days" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

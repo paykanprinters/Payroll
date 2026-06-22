@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
+import ChartEmptyState from "@/components/dashboard/ChartEmptyState";
 
 interface AverageNetPayData {
   name: string;
@@ -18,12 +19,15 @@ const DashboardAverageNetPayTrendChart: React.FC<DashboardAverageNetPayTrendChar
   const dataVisualsFontSize = useDataVisualsFontSize();
 
   return (
-    <Card className="h-full rounded-2xl border bg-white shadow-sm">
+    <Card className="h-full rounded-xl border bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle>Average Net Pay Trend</CardTitle>
         <CardDescription>Average net pay per employee over recent months.</CardDescription>
       </CardHeader>
       <CardContent className="h-[320px]">
+        {averageNetPayTrend.length === 0 ? (
+          <ChartEmptyState message="No net pay history for the selected period." />
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={averageNetPayTrend} margin={{ top: 8, right: 12, left: 4, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -49,6 +53,7 @@ const DashboardAverageNetPayTrendChart: React.FC<DashboardAverageNetPayTrendChar
             />
           </LineChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

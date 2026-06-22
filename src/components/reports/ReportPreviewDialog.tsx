@@ -33,6 +33,7 @@ interface ReportPreviewDialogProps {
   companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
   reportDesignSettings: ReportDesignSettings;
   documentType: 'payslip' | 'report'; // New prop for document type
+  periodLabel?: string;
 }
 
 const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
@@ -43,6 +44,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   companyDetails, // Destructure companyDetails
   reportDesignSettings,
   documentType,
+  periodLabel,
 }) => {
   // Define displayCompanyName within this component's scope
   const displayCompanyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name";
@@ -116,7 +118,10 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       <DialogContent className="w-full sm:max-w-[800px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{reportTitle}</DialogTitle>
-          <DialogDescription>Preview and manage your report.</DialogDescription>
+          <DialogDescription>
+            {periodLabel ? `Period: ${periodLabel}. ` : ""}
+            Preview, print, download PDF, or save to Supabase.
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-4">
           <div
