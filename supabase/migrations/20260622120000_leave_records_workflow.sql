@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS public.leave_records (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  employee_id text NOT NULL,
+  employee_id uuid NOT NULL,
   leave_type text NOT NULL,
   start_date date NOT NULL,
   end_date date NOT NULL,
@@ -52,13 +52,13 @@ AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION public.auth_linked_employee_id()
-RETURNS text
+RETURNS uuid
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT e.id::text
+  SELECT e.id
   FROM public.employees e
   WHERE e.user_id = auth.uid()
     AND e.portal_access IS TRUE
@@ -77,6 +77,11 @@ GRANT EXECUTE ON FUNCTION public.auth_linked_employee_id() TO service_role;
 
 ALTER TABLE public.leave_records ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can manage all leave records" ON public.leave_records;
+DROP POLICY IF EXISTS "Employees can delete their own leave requests" ON public.leave_records;
+DROP POLICY IF EXISTS "Employees can insert their own leave requests" ON public.leave_records;
+DROP POLICY IF EXISTS "Employees can update their own leave requests" ON public.leave_records;
+DROP POLICY IF EXISTS "Employees can view their own leave records" ON public.leave_records;
 DROP POLICY IF EXISTS "Payroll managers can read all leave records" ON public.leave_records;
 DROP POLICY IF EXISTS "Staff can read own leave records" ON public.leave_records;
 DROP POLICY IF EXISTS "Payroll managers can insert leave records" ON public.leave_records;

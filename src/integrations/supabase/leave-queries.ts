@@ -18,6 +18,21 @@ const SNAKE_TO_CAMEL: Record<string, keyof LeaveEntry | string> = {
   rejection_reason: "rejectionReason",
 };
 
+const CAMEL_TO_SNAKE: Partial<Record<keyof LeaveEntry, string>> = {
+  employeeId: "employee_id",
+  leaveType: "leave_type",
+  startDate: "start_date",
+  endDate: "end_date",
+  totalDays: "total_days",
+  workingDays: "working_days",
+  documentUrl: "document_url",
+  submittedAt: "submitted_at",
+  submittedByUserId: "submitted_by",
+  reviewedAt: "reviewed_at",
+  reviewedByUserId: "reviewed_by",
+  rejectionReason: "rejection_reason",
+};
+
 export const convertLeaveEntryKeysToCamelCase = (obj: Record<string, unknown>): LeaveEntry => {
   const newObj: Record<string, unknown> = {};
   for (const key in obj) {
@@ -34,7 +49,10 @@ export const convertLeaveEntryKeysToSnakeCase = (obj: Partial<LeaveEntry>): Reco
   const newObj: Record<string, unknown> = {};
   for (const key in obj) {
     if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
-    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    const camelKey = key as keyof LeaveEntry;
+    const snakeKey =
+      CAMEL_TO_SNAKE[camelKey] ||
+      key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
     newObj[snakeKey] = (obj as Record<string, unknown>)[key];
   }
   return newObj;

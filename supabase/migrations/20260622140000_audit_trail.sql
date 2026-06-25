@@ -20,6 +20,17 @@ ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS severity text NOT NULL DE
 ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS module text NOT NULL DEFAULT 'system';
 ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS message text;
 
+UPDATE public.audit_logs SET severity = 'info' WHERE severity IS NULL;
+UPDATE public.audit_logs SET module = 'system' WHERE module IS NULL;
+
+ALTER TABLE public.audit_logs DROP CONSTRAINT IF EXISTS audit_logs_severity_check;
+ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_severity_check CHECK (
+  severity IN ('info', 'change', 'warning', 'alert', 'error', 'auth')
+);
+
+-- App uses string entity keys (e.g. company_details), not only UUIDs.
+ALTER TABLE public.audit_logs ALTER COLUMN entity_id TYPE text USING entity_id::text;
+
 CREATE OR REPLACE FUNCTION public.is_payroll_manager()
 RETURNS boolean
 LANGUAGE sql
@@ -42,8 +53,11 @@ GRANT EXECUTE ON FUNCTION public.is_payroll_manager() TO service_role;
 
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "audit_logs_select_own_or_admin" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_insert_own" ON public.audit_logs;
 DROP POLICY IF EXISTS "Payroll managers can read audit logs" ON public.audit_logs;
 DROP POLICY IF EXISTS "Authenticated users can insert audit logs" ON public.audit_logs;
+DROP POLICY IF EXISTS "Authenticated users can insert own audit events" ON public.audit_logs;
 
 CREATE POLICY "Payroll managers can read audit logs"
 ON public.audit_logs
@@ -51,13 +65,14 @@ FOR SELECT
 TO authenticated
 USING (public.is_payroll_manager());
 
-CREATE POLICY "Authenticated users can insert audit logs"
+CREATE POLICY "Authenticated users can insert own audit events"
 ON public.audit_logs
 FOR INSERT
 TO authenticated
-WITH CHECK (user_id IS NULL OR user_id = auth.uid());
+WITH CHECK (user_id = auth.uid());
 
 CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON public.audit_logs (created_at DESC);
 CREATE INDEX IF NOT EXISTS audit_logs_severity_idx ON public.audit_logs (severity);
 CREATE INDEX IF NOT EXISTS audit_logs_module_idx ON public.audit_logs (module);
+CREATE INDEX IF NOT EXISTS audit_logs_user_id_idx ON public.audit_logs (user_id);
 CREATE INDEX IF NOT EXISTS audit_logs_entity_idx ON public.audit_logs (entity_type, entity_id);
