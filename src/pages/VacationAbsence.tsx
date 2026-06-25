@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CalendarDays, Activity, Palmtree, Thermometer } from "lucide-react";
+import { Loader2, CalendarDays, Activity, Palmtree, Thermometer, Clock3 } from "lucide-react";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import VacationAbsenceHeader from "@/components/vacation-absence/VacationAbsenceHeader";
@@ -23,13 +23,19 @@ const VacationAbsence: React.FC = () => {
     employees,
     leaveRecords,
     addLeaveRecord,
+    updateLeaveRecord,
+    deleteLeaveRecord,
+    approveLeaveRecord,
+    rejectLeaveRecord,
     isLoadingLeaveRecords,
     isLoadingEmployees,
   } = usePayrollProcessor();
 
   const [recordDialogOpen, setRecordDialogOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<LeaveEntry | undefined>();
   const [employeeFilterId, setEmployeeFilterId] = useState("all");
   const [leaveTypeFilter, setLeaveTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [search, setSearch] = useState("");
@@ -54,12 +60,13 @@ const VacationAbsence: React.FC = () => {
     const filtered = filterLeaveRecords(leaveRecords, employees, {
       employeeId: employeeFilterId,
       leaveType: leaveTypeFilter,
+      status: statusFilter,
       dateStart,
       dateEnd,
       search,
     });
     return [...filtered].sort((a, b) => b.startDate.localeCompare(a.startDate));
-  }, [leaveRecords, employees, employeeFilterId, leaveTypeFilter, dateStart, dateEnd, search]);
+  }, [leaveRecords, employees, employeeFilterId, leaveTypeFilter, statusFilter, dateStart, dateEnd, search]);
 
   const summary = useMemo(
     () => buildLeaveAdminSummary(filteredLeaveRecords),
@@ -69,13 +76,28 @@ const VacationAbsence: React.FC = () => {
   const clearFilters = () => {
     setEmployeeFilterId("all");
     setLeaveTypeFilter("all");
+    setStatusFilter("all");
     setDateStart("");
     setDateEnd("");
     setSearch("");
   };
 
-  const handleAddLeave = async (newLeaveData: Omit<LeaveEntry, "id">) => {
-    await addLeaveRecord(newLeaveData);
+  const openCreateDialog = () => {
+    setEditingRecord(undefined);
+    setRecordDialogOpen(true);
+  };
+
+  const openEditDialog = (record: LeaveEntry) => {
+    setEditingRecord(record);
+    setRecordDialogOpen(true);
+  };
+
+  const handleSubmitLeave = async (payload: Omit<LeaveEntry, "id"> | LeaveEntry) => {
+    if ("id" in payload) {
+      await updateLeaveRecord(payload);
+      return;
+    }
+    await addLeaveRecord(payload);
   };
 
   const isLoading = isLoadingLeaveRecords || isLoadingEmployees;
@@ -83,16 +105,13 @@ const VacationAbsence: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <VacationAbsenceHeader
-        onRecordAbsence={() => setRecordDialogOpen(true)}
-        addDisabled={addDisabled}
-      />
+      <VacationAbsenceHeader onRecordAbsence={openCreateDialog} addDisabled={addDisabled} />
 
       <Card className="rounded-xl border">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Filters</CardTitle>
           <CardDescription>
-            Filter leave records by employee, type, date range, or search.
+            Filter leave records by employee, type, status, date range, or search.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,6 +121,8 @@ const VacationAbsence: React.FC = () => {
             onEmployeeFilterChange={setEmployeeFilterId}
             leaveTypeFilter={leaveTypeFilter}
             onLeaveTypeFilterChange={setLeaveTypeFilter}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
             dateStart={dateStart}
             onDateStartChange={setDateStart}
             dateEnd={dateEnd}
@@ -122,7 +143,7 @@ const VacationAbsence: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <Card className="relative overflow-hidden rounded-xl border bg-white shadow-sm">
               <SummaryAccent variant="sky" />
               <CardHeader className="pb-2">
@@ -136,6 +157,20 @@ const VacationAbsence: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summary.total}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden rounded-xl border bg-white shadow-sm">
+              <SummaryAccent variant="rose" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <Clock3 className="h-4 w-4 text-violet-600" />
+                  Pending approval
+                </CardTitle>
+                <CardDescription className="text-xs">Staff requests awaiting review</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.pendingCount}</div>
               </CardContent>
             </Card>
 
@@ -194,6 +229,10 @@ const VacationAbsence: React.FC = () => {
               leaveRecords={filteredLeaveRecords}
               getEmployeeName={getEmployeeName}
               getEmployeeCustomId={getEmployeeCustomId}
+              onEdit={openEditDialog}
+              onApprove={approveLeaveRecord}
+              onReject={rejectLeaveRecord}
+              onDelete={deleteLeaveRecord}
             />
           </ErrorBoundary>
         </>
@@ -201,12 +240,12 @@ const VacationAbsence: React.FC = () => {
 
       <Card className="border-dashed bg-muted/30">
         <CardContent className="py-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">How leave connects to payroll</p>
+          <p className="font-medium text-foreground">Leave workflow</p>
           <p className="mt-2">
-            Recorded absences feed timesheet leave checks and payroll unpaid-leave calculations.
-            Working days exclude weekends automatically. Staff see their own history in the portal;
-            balances shown there use the same leave types recorded here. Use filters to review a
-            pay period before processing payroll.
+            Staff submit requests from the employee portal — they appear here as{" "}
+            <strong>Pending</strong>. Approve or reject requests; only <strong>Approved</strong> leave
+            affects payroll, timesheets, and balances. Admins can also record leave directly as
+            approved. Edit or delete records when corrections are needed.
           </p>
         </CardContent>
       </Card>
@@ -215,7 +254,9 @@ const VacationAbsence: React.FC = () => {
         open={recordDialogOpen}
         onOpenChange={setRecordDialogOpen}
         employees={employees || []}
-        onAddLeave={handleAddLeave}
+        mode={editingRecord ? "admin-edit" : "admin-create"}
+        editingRecord={editingRecord}
+        onSubmit={handleSubmitLeave}
         defaultEmployeeId={employeeFilterId !== "all" ? employeeFilterId : undefined}
       />
     </div>

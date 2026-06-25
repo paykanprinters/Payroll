@@ -1,6 +1,7 @@
 import { format, parse, isBefore, isAfter, addWeeks, subWeeks, addDays, setDay, isWithinInterval } from "date-fns";
 import { MockEmployee, LeaveEntry, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types";
+import { isLeaveEffectiveForPayroll } from "@/lib/leave-status";
 
 /**
  * Calculates the time difference between two HH:mm time strings in hours.
@@ -179,6 +180,7 @@ export const isLeaveDay = (employeeId: string, date: Date, leaveRecords: LeaveEn
   return leaveRecords.some(
     (record) =>
       record.employeeId === employeeId &&
+      isLeaveEffectiveForPayroll(record) &&
       record.startDate <= formattedDate &&
       record.endDate >= formattedDate
   );

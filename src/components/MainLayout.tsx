@@ -22,6 +22,7 @@ import {
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getBranding } from "@/config/branding";
+import { recordAuthEvent } from "@/lib/audit-trail";
 
 interface MainLayoutProps {}
 
@@ -69,6 +70,14 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
 
   const handleLogout = async () => {
     const onStaffPortal = isStaffPortalPath(location.pathname);
+    if (user) {
+      await recordAuthEvent("signed_out", {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        portal: onStaffPortal ? "staff" : "admin",
+      });
+    }
     await supabase.auth.signOut();
     navigate(onStaffPortal ? STAFF_LOGIN_PATH : "/login");
   };

@@ -173,6 +173,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         // Admin/Manager-only
         if (
           item.to === "/employees" ||
+          item.to === "/vacation-absence" ||
           item.to === "/analytics" ||
           item.to === "/reports" ||
           item.to.startsWith("/payroll/")

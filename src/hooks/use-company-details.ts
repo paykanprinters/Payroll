@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
+import { recordSettingsChange } from "@/lib/audit-trail";
 
 // Define a mapping for Supabase column names to camelCase property names
 const columnToPropertyMap: { [key: string]: keyof MockCompanyDetails | 'updatedAt' } = {
@@ -167,6 +168,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
           return changed ? camelCaseData : prev;
         });
         showSuccess("Company details saved successfully!");
+        void recordSettingsChange("company_details", "Company details updated");
         window.dispatchEvent(new Event("companyDetailsUpdated"));
       }
       setIsLoading(false);

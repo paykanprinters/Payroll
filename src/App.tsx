@@ -14,6 +14,7 @@ import { PayrollDataProvider } from "./context/PayrollDataContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React, { Suspense, lazy } from "react";
 import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
+import GlobalErrorLogger from "./components/GlobalErrorLogger";
 import ErrorBoundary from "./components/ErrorBoundary";
 import DeploymentConfigError from "./components/DeploymentConfigError";
 import { getDeploymentConfigMessage } from "@/lib/env";
@@ -80,6 +81,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AutoRefreshOnFocus />
+        <GlobalErrorLogger />
         <Router>
           <AuthProvider>
             <Routes>
@@ -137,7 +139,7 @@ const App = () => {
                       <Route path="/timesheet" element={<Timesheet />} />
                       <Route path="/payslips/*" element={<Payslips />} />
                       <Route path="/savings" element={<Savings />} />
-                      <Route path="/vacation-absence" element={<VacationAbsence />} />
+                      <Route path="/vacation-absence" element={<Navigate to="/staff/leave" replace />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/docs" element={<Docs />} />
                       <Route path="/analytics/staff" element={<AnalyticsStaff />} />
@@ -159,7 +161,6 @@ const App = () => {
                       <Route path="/payslips/*" element={<Payslips />} />
                       <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
                       <Route path="/savings" element={<Savings />} />
-                      <Route path="/vacation-absence" element={<VacationAbsence />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/docs" element={<Docs />} />
                       
@@ -181,6 +182,7 @@ const App = () => {
                         <Route path="/payroll/assignments" element={<EmployeeAssignments />} />
                         <Route path="/payroll/overtime-rules" element={<OvertimeRules />} />
                         <Route path="/payroll/exceptions" element={<ExceptionsDashboard />} />
+                        <Route path="/vacation-absence" element={<VacationAbsence />} />
                       </Route>
 
                       {/* Admin-only settings */}

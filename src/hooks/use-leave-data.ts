@@ -1,40 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, eachDayOfInterval, isWeekend } from "date-fns";
 import { calculateWorkingDays } from "@/lib/payroll-calculations";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
-import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast"; // Import toast functions
-import { supabase } from "@/integrations/supabase/client"; // Import supabase client
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import { useAuth } from "@/context/AuthContext";
+import { v4 as uuidv4 } from "uuid";
 import {
   fetchLeaveRecordsFromSupabase,
   upsertLeaveRecordToSupabase,
-} from "@/integrations/supabase/leave-queries"; // Import new Supabase query functions
-
-// Helper to convert snake_case to camelCase for Supabase data
-const convertLeaveEntryKeysToCamelCase = (obj: any): LeaveEntry => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as LeaveEntry;
-};
-
-// Helper to convert camelCase to snake_case for Supabase inserts/updates
-const convertLeaveEntryKeysToSnakeCase = (obj: Partial<LeaveEntry>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+  deleteLeaveRecordFromSupabase,
+} from "@/integrations/supabase/leave-queries";
+import { recordAuditEvent } from "@/lib/audit-trail";
 
 interface UseLeaveDataProps {
   initialLeaveRecords: LeaveEntry[];
@@ -44,17 +22,31 @@ interface UseLeaveDataProps {
   isLoadingAuth: boolean;
 }
 
-export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseLeaveDataProps) => {
-  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]); // Initialize as empty
+export type AddLeaveRecordOptions = {
+  asStaffRequest?: boolean;
+};
+
+function persistMockLeaveRecords(records: LeaveEntry[]) {
+  localStorage.setItem("mockLeaveRecords", JSON.stringify(records));
+  window.dispatchEvent(new CustomEvent("leaveRecordsUpdated", { detail: records }));
+}
+
+export const useLeaveData = ({
+  initialLeaveRecords,
+  employees,
+  isMockDataEnabled,
+  isAuthenticated,
+  isLoadingAuth,
+}: UseLeaveDataProps) => {
+  const { user } = useAuth();
+  const [leaveRecords, setLeaveRecords] = useState<LeaveEntry[]>([]);
   const [leaveTypeDistribution, setLeaveTypeDistribution] = useState<{ name: string; value: number }[]>([]);
   const [monthlyLeaveData, setMonthlyLeaveData] = useState<{ name: string; days: number }[]>([]);
   const [isLoadingLeaveRecords, setIsLoadingLeaveRecords] = useState(true);
 
-  // --- Live Leave Data Management (Supabase) ---
   const fetchLiveLeaveRecords = useCallback(async () => {
     setIsLoadingLeaveRecords(true);
     try {
-      console.log("useLeaveData: Fetching live leave records from Supabase...");
       const data = await fetchLeaveRecordsFromSupabase();
       setLeaveRecords(data);
     } finally {
@@ -62,86 +54,70 @@ export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled
     }
   }, []);
 
-  const upsertLiveLeaveRecord = useCallback(async (leaveRecordData: LeaveEntry) => {
-    const toastId = showLoading(leaveRecordData.id ? "Updating leave record..." : "Adding new leave record...") as string;
-    setIsLoadingLeaveRecords(true);
-    try {
-      const snakeCasePayload = convertLeaveEntryKeysToSnakeCase(leaveRecordData);
-      console.log("useLeaveData: Upserting live leave record with payload:", snakeCasePayload);
-
-      const { data, error } = await supabase
-        .from('leave_records')
-        .upsert(snakeCasePayload, { onConflict: 'id' })
-        .select();
-
-      if (error) {
-        console.error("useLeaveData: Error upserting live leave record:", error);
-        showError(`Failed to save leave record: ${error.message}`);
-      } else if (data && data.length > 0) {
-        const camelCaseData = convertLeaveEntryKeysToCamelCase(data[0]);
-        setLeaveRecords(prev => {
-          const existingIndex = prev.findIndex(rec => rec.id === camelCaseData.id);
-          if (existingIndex !== -1) {
-            return prev.map((rec, idx) => idx === existingIndex ? camelCaseData : rec);
-          } else {
-            return [...prev, camelCaseData];
-          }
-        });
-        showSuccess("Leave record saved successfully!");
-      } else {
-        console.warn("useLeaveData: Upsert succeeded but returned no data. Refetching to ensure consistency.");
-        showError("Leave record saved, but data could not be retrieved. Please refresh.");
-        fetchLiveLeaveRecords();
+  const upsertLiveLeaveRecord = useCallback(
+    async (leaveRecordData: LeaveEntry, successMessage = "Leave record saved successfully!") => {
+      const toastId = showLoading(
+        leaveRecordData.id ? "Updating leave record..." : "Saving leave record..."
+      ) as string;
+      setIsLoadingLeaveRecords(true);
+      try {
+        const saved = await upsertLeaveRecordToSupabase(leaveRecordData);
+        if (saved) {
+          setLeaveRecords((prev) => {
+            const existingIndex = prev.findIndex((rec) => rec.id === saved.id);
+            if (existingIndex !== -1) {
+              return prev.map((rec, idx) => (idx === existingIndex ? saved : rec));
+            }
+            return [...prev, saved];
+          });
+          showSuccess(successMessage);
+          return saved;
+        }
+        await fetchLiveLeaveRecords();
+        return null;
+      } catch (err) {
+        console.error("useLeaveData: Unhandled error upserting live leave record:", err);
+        showError("An unexpected error occurred while saving leave record data.");
+        return null;
+      } finally {
+        dismissToast(toastId);
+        setIsLoadingLeaveRecords(false);
       }
-    } catch (err) {
-      console.error("useLeaveData: Unhandled error upserting live leave record:", err);
-      showError("An unexpected error occurred while saving leave record data.");
-    } finally {
-      dismissToast(toastId);
-      setIsLoadingLeaveRecords(false);
-    }
-  }, [fetchLiveLeaveRecords]);
+    },
+    [fetchLiveLeaveRecords]
+  );
 
-  // Effect to load data based on mockDataEnabled status
   useEffect(() => {
     if (isLoadingAuth) {
-      setIsLoadingLeaveRecords(true); // Keep loading true while auth is loading
+      setIsLoadingLeaveRecords(true);
       return;
     }
 
     if (isMockDataEnabled) {
-      // Set mock data directly. The initialLeaveRecords prop is now a stable reference from usePayrollProcessor.
       setLeaveRecords(initialLeaveRecords);
       setIsLoadingLeaveRecords(false);
     } else if (isAuthenticated) {
       fetchLiveLeaveRecords();
     } else {
-      // Not mock data, not authenticated, and auth is done loading
       setLeaveRecords([]);
       setIsLoadingLeaveRecords(false);
     }
   }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, initialLeaveRecords, fetchLiveLeaveRecords]);
 
-  // Recalculate charts whenever leaveRecords changes (either mock or live)
   useEffect(() => {
     if (leaveRecords.length > 0) {
       const leaveTypeMap = new Map<string, number>();
-      leaveRecords.forEach(record => {
+      leaveRecords.forEach((record) => {
         leaveTypeMap.set(record.leaveType, (leaveTypeMap.get(record.leaveType) || 0) + record.workingDays);
       });
-      setLeaveTypeDistribution(
-        Array.from(leaveTypeMap.entries()).map(([name, value]) => ({ name, value }))
-      );
+      setLeaveTypeDistribution(Array.from(leaveTypeMap.entries()).map(([name, value]) => ({ name, value })));
 
       const monthlyLeaveMap = new Map<string, number>();
-      leaveRecords.forEach(record => {
+      leaveRecords.forEach((record) => {
         const start = new Date(record.startDate);
         const end = new Date(record.endDate);
-        
         if (start <= end) {
-          const daysInInterval = eachDayOfInterval({ start, end });
-
-          daysInInterval.forEach(day => {
+          eachDayOfInterval({ start, end }).forEach((day) => {
             if (!isWeekend(day)) {
               const monthYear = format(day, "MMM yyyy");
               monthlyLeaveMap.set(monthYear, (monthlyLeaveMap.get(monthYear) || 0) + 1);
@@ -150,48 +126,242 @@ export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled
         }
       });
 
-      const sortedMonthlyLeaveData = Array.from(monthlyLeaveMap.entries())
-        .map(([name, days]) => ({ name, days }))
-        .sort((a, b) => {
-          const dateA = new Date(a.name);
-          const dateB = new Date(b.name);
-          return dateA.getTime() - dateB.getTime();
-        });
-      setMonthlyLeaveData(sortedMonthlyLeaveData);
+      setMonthlyLeaveData(
+        Array.from(monthlyLeaveMap.entries())
+          .map(([name, days]) => ({ name, days }))
+          .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime())
+      );
     } else {
       setLeaveTypeDistribution([]);
       setMonthlyLeaveData([]);
     }
   }, [leaveRecords]);
 
-  const getEmployeeName = useCallback((employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
-  }, [employees]);
+  const getEmployeeName = useCallback(
+    (employeeId: string) => {
+      const employee = employees.find((emp) => emp.id === employeeId);
+      return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown Employee";
+    },
+    [employees]
+  );
 
-  const getEmployeeCustomId = useCallback((employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? employee.customEmployeeId : "N/A";
-  }, [employees]);
+  const getEmployeeCustomId = useCallback(
+    (employeeId: string) => {
+      const employee = employees.find((emp) => emp.id === employeeId);
+      return employee ? employee.customEmployeeId : "N/A";
+    },
+    [employees]
+  );
 
-  const addLeaveRecord = useCallback(async (newRecord: Omit<LeaveEntry, 'id'>) => {
-    const recordToAdd: LeaveEntry = {
-      ...newRecord,
-      id: uuidv4(), // Generate ID for both mock and live
-    };
+  const addLeaveRecord = useCallback(
+    async (newRecord: Omit<LeaveEntry, "id">, options?: AddLeaveRecordOptions) => {
+      const now = new Date().toISOString();
+      const asStaffRequest = options?.asStaffRequest === true;
 
-    if (isMockDataEnabled) {
-      setLeaveRecords(prevRecords => {
-        const updatedRecords = [...prevRecords, recordToAdd];
-        localStorage.setItem("mockLeaveRecords", JSON.stringify(updatedRecords));
-        window.dispatchEvent(new CustomEvent('leaveRecordsUpdated', { detail: updatedRecords }));
-        showSuccess("Leave record added successfully!");
-        return updatedRecords;
+      const recordToAdd: LeaveEntry = {
+        ...newRecord,
+        id: uuidv4(),
+        status: asStaffRequest ? "Pending" : newRecord.status || "Approved",
+        source: asStaffRequest ? "staff" : newRecord.source || "admin",
+        submittedAt: asStaffRequest ? now : newRecord.submittedAt,
+        submittedByUserId: asStaffRequest ? user?.id : newRecord.submittedByUserId,
+      };
+
+      if (isMockDataEnabled) {
+        setLeaveRecords((prevRecords) => {
+          const updatedRecords = [...prevRecords, recordToAdd];
+          persistMockLeaveRecords(updatedRecords);
+          return updatedRecords;
+        });
+        showSuccess(asStaffRequest ? "Leave request submitted for approval." : "Leave record added successfully!");
+        void recordAuditEvent({
+          severity: asStaffRequest ? "info" : "change",
+          module: "leave",
+          action: asStaffRequest ? "leave_submitted" : "leave_recorded",
+          message: asStaffRequest
+            ? `Leave request submitted (${recordToAdd.leaveType})`
+            : `Leave recorded (${recordToAdd.leaveType})`,
+          entityType: "leave_record",
+          entityId: recordToAdd.id,
+          metadata: { status: recordToAdd.status, employeeId: recordToAdd.employeeId },
+        });
+        return recordToAdd;
+      }
+
+      await upsertLiveLeaveRecord(
+        recordToAdd,
+        asStaffRequest ? "Leave request submitted for approval." : "Leave record saved successfully!"
+      );
+      void recordAuditEvent({
+        severity: asStaffRequest ? "info" : "change",
+        module: "leave",
+        action: asStaffRequest ? "leave_submitted" : "leave_recorded",
+        message: asStaffRequest
+          ? `Leave request submitted (${recordToAdd.leaveType})`
+          : `Leave recorded (${recordToAdd.leaveType})`,
+        entityType: "leave_record",
+        entityId: recordToAdd.id,
+        metadata: { status: recordToAdd.status, employeeId: recordToAdd.employeeId },
       });
-    } else {
-      await upsertLiveLeaveRecord(recordToAdd);
-    }
-  }, [isMockDataEnabled, upsertLiveLeaveRecord]);
+      return recordToAdd;
+    },
+    [isMockDataEnabled, upsertLiveLeaveRecord, user?.id]
+  );
+
+  const updateLeaveRecord = useCallback(
+    async (record: LeaveEntry) => {
+      if (isMockDataEnabled) {
+        setLeaveRecords((prev) => {
+          const updated = prev.map((r) => (r.id === record.id ? record : r));
+          persistMockLeaveRecords(updated);
+          return updated;
+        });
+        showSuccess("Leave record updated.");
+        void recordAuditEvent({
+          severity: "change",
+          module: "leave",
+          action: "leave_updated",
+          message: `Leave record updated (${record.leaveType})`,
+          entityType: "leave_record",
+          entityId: record.id,
+          metadata: { status: record.status },
+        });
+        return record;
+      }
+      const saved = await upsertLiveLeaveRecord(record, "Leave record updated.");
+      if (saved) {
+        void recordAuditEvent({
+          severity: "change",
+          module: "leave",
+          action: "leave_updated",
+          message: `Leave record updated (${record.leaveType})`,
+          entityType: "leave_record",
+          entityId: record.id,
+          metadata: { status: record.status },
+        });
+      }
+      return saved;
+    },
+    [isMockDataEnabled, upsertLiveLeaveRecord]
+  );
+
+  const deleteLeaveRecord = useCallback(
+    async (id: string) => {
+      if (isMockDataEnabled) {
+        setLeaveRecords((prev) => {
+          const updated = prev.filter((r) => r.id !== id);
+          persistMockLeaveRecords(updated);
+          return updated;
+        });
+        showSuccess("Leave record deleted.");
+        void recordAuditEvent({
+          severity: "change",
+          module: "leave",
+          action: "leave_deleted",
+          message: "Leave record deleted",
+          entityType: "leave_record",
+          entityId: id,
+        });
+        return true;
+      }
+
+      const toastId = showLoading("Deleting leave record...") as string;
+      setIsLoadingLeaveRecords(true);
+      try {
+        const ok = await deleteLeaveRecordFromSupabase(id);
+        if (ok) {
+          setLeaveRecords((prev) => prev.filter((r) => r.id !== id));
+          showSuccess("Leave record deleted.");
+        }
+        void recordAuditEvent({
+          severity: "change",
+          module: "leave",
+          action: "leave_deleted",
+          message: "Leave record deleted",
+          entityType: "leave_record",
+          entityId: id,
+        });
+        return ok;
+      } finally {
+        dismissToast(toastId);
+        setIsLoadingLeaveRecords(false);
+      }
+    },
+    [isMockDataEnabled]
+  );
+
+  const approveLeaveRecord = useCallback(
+    async (id: string) => {
+      const record = leaveRecords.find((r) => r.id === id);
+      if (!record) return null;
+      const updated: LeaveEntry = {
+        ...record,
+        status: "Approved",
+        reviewedAt: new Date().toISOString(),
+        reviewedByUserId: user?.id,
+        rejectionReason: undefined,
+      };
+      const result = await updateLeaveRecord(updated);
+      void recordAuditEvent({
+        severity: "change",
+        module: "leave",
+        action: "leave_approved",
+        message: `Leave request approved (${record.leaveType})`,
+        entityType: "leave_record",
+        entityId: id,
+      });
+      return result;
+    },
+    [leaveRecords, updateLeaveRecord, user?.id]
+  );
+
+  const rejectLeaveRecord = useCallback(
+    async (id: string, rejectionReason?: string) => {
+      const record = leaveRecords.find((r) => r.id === id);
+      if (!record) return null;
+      const updated: LeaveEntry = {
+        ...record,
+        status: "Rejected",
+        reviewedAt: new Date().toISOString(),
+        reviewedByUserId: user?.id,
+        rejectionReason: rejectionReason?.trim() || "Rejected by payroll.",
+      };
+      const result = await updateLeaveRecord(updated);
+      void recordAuditEvent({
+        severity: "warning",
+        module: "leave",
+        action: "leave_rejected",
+        message: `Leave request rejected (${record.leaveType})`,
+        entityType: "leave_record",
+        entityId: id,
+        metadata: { rejectionReason: updated.rejectionReason },
+      });
+      return result;
+    },
+    [leaveRecords, updateLeaveRecord, user?.id]
+  );
+
+  const cancelLeaveRequest = useCallback(
+    async (id: string) => {
+      const record = leaveRecords.find((r) => r.id === id);
+      if (!record || record.status !== "Pending") return null;
+      const updated: LeaveEntry = {
+        ...record,
+        status: "Cancelled",
+      };
+      const result = await updateLeaveRecord(updated);
+      void recordAuditEvent({
+        severity: "info",
+        module: "leave",
+        action: "leave_cancelled",
+        message: "Leave request withdrawn by staff",
+        entityType: "leave_record",
+        entityId: id,
+      });
+      return result;
+    },
+    [leaveRecords, updateLeaveRecord]
+  );
 
   return {
     leaveRecords,
@@ -200,6 +370,12 @@ export const useLeaveData = ({ initialLeaveRecords, employees, isMockDataEnabled
     getEmployeeName,
     getEmployeeCustomId,
     addLeaveRecord,
+    updateLeaveRecord,
+    deleteLeaveRecord,
+    approveLeaveRecord,
+    rejectLeaveRecord,
+    cancelLeaveRequest,
+    refetchLeaveRecords: fetchLiveLeaveRecords,
     isLoadingLeaveRecords,
   };
 };

@@ -142,6 +142,13 @@ export interface LeaveEntry {
   workingDays: number;
   reason?: string;
   documentUrl?: string;
+  status?: "Pending" | "Approved" | "Rejected" | "Cancelled";
+  submittedAt?: string;
+  submittedByUserId?: string;
+  reviewedAt?: string;
+  reviewedByUserId?: string;
+  rejectionReason?: string;
+  source?: "admin" | "staff";
 }
 
 export interface MockPayslip {

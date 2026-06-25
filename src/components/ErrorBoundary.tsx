@@ -3,6 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { showError } from "@/utils/toast";
+import { recordSystemError } from "@/lib/audit-trail";
 
 type Props = {
   children: React.ReactNode;
@@ -27,6 +28,10 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("[ErrorBoundary] Caught error:", error, info);
+    void recordSystemError(error.message || "React render error", {
+      componentStack: info.componentStack,
+      boundary: this.props.fallbackTitle,
+    });
     showError("Something went wrong. Please try again.");
   }
 

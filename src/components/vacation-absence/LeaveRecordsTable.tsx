@@ -7,11 +7,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
 import { CalendarDays, FileText } from "lucide-react";
+import LeaveStatusBadge from "@/components/vacation-absence/LeaveStatusBadge";
+import LeaveRecordRowActions from "@/components/vacation-absence/LeaveRecordRowActions";
 
 interface LeaveRecordsTableProps {
   leaveRecords: LeaveEntry[];
   getEmployeeName: (employeeId: string) => string;
   getEmployeeCustomId: (employeeId: string) => string;
+  onEdit?: (record: LeaveEntry) => void;
+  onApprove?: (id: string) => void | Promise<void>;
+  onReject?: (id: string, reason?: string) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
+  actionsDisabled?: boolean;
+  showActions?: boolean;
 }
 
 const leaveTypeVariant = (type: LeaveEntry["leaveType"]) => {
@@ -31,6 +39,12 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({
   leaveRecords,
   getEmployeeName,
   getEmployeeCustomId,
+  onEdit,
+  onApprove,
+  onReject,
+  onDelete,
+  actionsDisabled = false,
+  showActions = true,
 }) => {
   if (leaveRecords.length === 0) {
     return (
@@ -48,13 +62,14 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({
     );
   }
 
+  const canAct = showActions && onEdit && onApprove && onReject && onDelete;
+
   return (
     <Card className="rounded-2xl border bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Leave records</CardTitle>
         <CardDescription>
-          {leaveRecords.length} record{leaveRecords.length === 1 ? "" : "s"} matching the current
-          filters.
+          {leaveRecords.length} record{leaveRecords.length === 1 ? "" : "s"} matching the current filters.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0 pb-2">
@@ -63,11 +78,13 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="hidden sm:table-cell">Dates</TableHead>
                 <TableHead className="text-right">Days</TableHead>
                 <TableHead className="hidden md:table-cell">Reason</TableHead>
                 <TableHead className="hidden lg:table-cell text-right">Document</TableHead>
+                {canAct && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -79,11 +96,17 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({
                       <span className="text-xs text-muted-foreground">
                         {getEmployeeCustomId(record.employeeId)}
                       </span>
+                      {record.source === "staff" && (
+                        <span className="mt-1 text-xs text-cyan-700">Staff request</span>
+                      )}
                       <span className="mt-1 text-xs text-muted-foreground sm:hidden">
                         {format(new Date(record.startDate), "dd MMM yyyy")} –{" "}
                         {format(new Date(record.endDate), "dd MMM yyyy")}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <LeaveStatusBadge status={record.status} />
                   </TableCell>
                   <TableCell>
                     <Badge variant={leaveTypeVariant(record.leaveType)} className="whitespace-nowrap">
@@ -101,13 +124,16 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end">
                       <span className="font-medium">{record.workingDays}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {record.totalDays} cal.
-                      </span>
+                      <span className="text-xs text-muted-foreground">{record.totalDays} cal.</span>
                     </div>
                   </TableCell>
                   <TableCell className="hidden max-w-[200px] truncate md:table-cell">
-                    {record.reason || "—"}
+                    <div className="space-y-1">
+                      <p>{record.reason || "—"}</p>
+                      {record.rejectionReason && (
+                        <p className="text-xs text-destructive">{record.rejectionReason}</p>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="hidden text-right lg:table-cell">
                     {record.documentUrl ? (
@@ -124,6 +150,18 @@ const LeaveRecordsTable: React.FC<LeaveRecordsTableProps> = ({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
+                  {canAct && (
+                    <TableCell className="text-right">
+                      <LeaveRecordRowActions
+                        record={record}
+                        onEdit={onEdit}
+                        onApprove={onApprove}
+                        onReject={onReject}
+                        onDelete={onDelete}
+                        disabled={actionsDisabled}
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

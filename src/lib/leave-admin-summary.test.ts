@@ -74,6 +74,7 @@ describe("filterLeaveRecords", () => {
     const filtered = filterLeaveRecords(records, employees, {
       employeeId: "emp-1",
       leaveType: "Annual Leave",
+      status: "all",
       dateStart: "2026-03-01",
       dateEnd: "2026-03-31",
       search: "holiday",

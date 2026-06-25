@@ -17,6 +17,7 @@ const sidebarNavItems = [
   { title: "Report Design", href: "/settings/report-design" },
   { title: "Data Visuals", href: "/settings/data-visuals" },
   { title: "User Control Panel", href: "/settings/user-control-panel" },
+  { title: "Audit Trail", href: "/settings/audit-trail" },
 ];
 
 const SettingsLayout: React.FC = () => {

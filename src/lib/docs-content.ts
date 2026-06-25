@@ -114,7 +114,7 @@ export const STAFF_QUICK_LINKS: DocsQuickLink[] = [
   { title: "Staff portal", description: "Payslips, leave, savings", href: "/staff", icon: Users },
   { title: "My payslips", description: "View and download PDFs", href: "/payslips/overview", icon: ReceiptText },
   { title: "Timesheets", description: "Record your hours", href: "/timesheet", icon: Clock },
-  { title: "Leave", description: "Request and track leave", href: "/vacation-absence", icon: CalendarDays },
+  { title: "Leave", description: "Request and track leave", href: "/staff/leave", icon: CalendarDays },
   { title: "Profile", description: "Contact and portal link", href: "/profile", icon: ShieldCheck },
 ];
 
@@ -192,9 +192,10 @@ export const ADMIN_GUIDE: DocsGuide = {
       id: "leave",
       title: "Vacation & absence",
       bullets: [
-        "Record annual, sick, unpaid, and other leave types with working-day counts.",
-        "Leave in the pay period affects salaried pro-rata and hourly availability.",
-        "Filter by employee, type, and date range; analytics charts respect filters.",
+        "Staff submit leave from the employee portal (/staff/leave) as Pending requests with optional documents.",
+        "Approve or reject pending requests; edit or delete records when corrections are needed.",
+        "Only Approved leave affects payroll balances, timesheets, and unpaid-leave calculations.",
+        "Filter by employee, type, status, and date range; pending count appears on the summary cards.",
       ],
     },
     {
@@ -268,6 +269,7 @@ export const ADMIN_GUIDE: DocsGuide = {
         "Tax liabilities — PAYE/SDL, tax tables, IRP5 export toggle.",
         "Work hours — start/end times, breaks, work days, overtime thresholds.",
         "User control panel — roles and portal users.",
+        "Audit trail — sign-in/out, settings changes, leave actions, payroll events, warnings, and system errors.",
         "Mock data mode — local sample data for training; switch off for live Supabase.",
       ],
     },

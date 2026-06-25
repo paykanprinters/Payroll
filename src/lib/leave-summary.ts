@@ -1,5 +1,6 @@
 import { eachDayOfInterval, isWeekend, isWithinInterval, parseISO } from "date-fns";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
+import { isLeaveEffectiveForPayroll } from "@/lib/leave-status";
 
 export function countUnpaidLeaveDays(
   emp: MockEmployee,
@@ -9,7 +10,7 @@ export function countUnpaidLeaveDays(
 ): number {
   let days = 0;
   leaveRecords
-    .filter((rec) => rec.employeeId === emp.id && rec.leaveType === "Unpaid Leave")
+    .filter((rec) => rec.employeeId === emp.id && rec.leaveType === "Unpaid Leave" && isLeaveEffectiveForPayroll(rec))
     .forEach((rec) => {
       const leaveStart = new Date(rec.startDate);
       const leaveEnd = new Date(rec.endDate);
@@ -40,7 +41,7 @@ export function calculateLeaveSummary(
   let sickLeaveTaken = 0;
 
   leaveRecords
-    .filter((rec) => rec.employeeId === emp.id)
+    .filter((rec) => rec.employeeId === emp.id && isLeaveEffectiveForPayroll(rec))
     .forEach((rec) => {
       const leaveStart = parseISO(rec.startDate);
       const leaveEnd = parseISO(rec.endDate);

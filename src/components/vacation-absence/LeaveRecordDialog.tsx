@@ -11,24 +11,30 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
-import VacationAbsenceForm from "@/components/vacation-absence/VacationAbsenceForm";
+import VacationAbsenceForm, { type LeaveFormMode } from "@/components/vacation-absence/VacationAbsenceForm";
 
 interface LeaveRecordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: MockEmployee[];
-  onAddLeave: (leave: Omit<LeaveEntry, "id">) => void | Promise<void>;
+  mode?: LeaveFormMode;
+  editingRecord?: LeaveEntry;
+  onSubmit: (leave: Omit<LeaveEntry, "id"> | LeaveEntry) => void | Promise<void>;
   isSubmitting?: boolean;
   defaultEmployeeId?: string;
+  employeeId?: string;
 }
 
 const LeaveRecordDialog: React.FC<LeaveRecordDialogProps> = ({
   open,
   onOpenChange,
   employees,
-  onAddLeave,
+  mode = "admin-create",
+  editingRecord,
+  onSubmit,
   isSubmitting = false,
   defaultEmployeeId,
+  employeeId,
 }) => {
   const [formKey, setFormKey] = React.useState(0);
 
@@ -38,28 +44,42 @@ const LeaveRecordDialog: React.FC<LeaveRecordDialogProps> = ({
     }
   }, [open]);
 
-  const handleAddLeave = async (leave: Omit<LeaveEntry, "id">) => {
-    await onAddLeave(leave);
+  const handleSubmit = async (leave: Omit<LeaveEntry, "id"> | LeaveEntry) => {
+    await onSubmit(leave);
     onOpenChange(false);
   };
+
+  const title =
+    mode === "admin-edit"
+      ? "Edit leave record"
+      : mode === "staff-submit"
+        ? "Request leave"
+        : "Record absence";
+
+  const description =
+    mode === "staff-submit"
+      ? "Submit annual or sick leave for payroll approval. You cannot edit after submission."
+      : mode === "admin-edit"
+        ? "Update dates, type, status, or supporting document."
+        : "Capture leave for payroll and timesheet integration. Working days are calculated automatically.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]">
         <DialogHeader className="border-b px-6 py-4 text-left">
-          <DialogTitle>Record absence</DialogTitle>
-          <DialogDescription>
-            Capture leave for payroll and timesheet integration. Working days are calculated
-            automatically from the date range.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="overflow-y-auto px-6 py-4">
           <VacationAbsenceForm
-            key={formKey}
+            key={`${formKey}-${editingRecord?.id || "new"}`}
+            mode={mode}
             employees={employees}
+            employeeId={employeeId}
+            editingRecord={editingRecord}
             defaultEmployeeId={defaultEmployeeId}
-            onAddLeave={handleAddLeave}
+            onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
           />
         </div>

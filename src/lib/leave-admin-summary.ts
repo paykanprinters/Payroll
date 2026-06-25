@@ -1,5 +1,6 @@
 import { format, eachDayOfInterval, isWeekend } from "date-fns";
 import { LeaveEntry, MockEmployee } from "@/lib/mock-data-interfaces";
+import { normalizeLeaveStatus } from "@/lib/leave-status";
 
 export interface LeaveAdminSummary {
   total: number;
@@ -7,6 +8,7 @@ export interface LeaveAdminSummary {
   annualDays: number;
   sickDays: number;
   unpaidDays: number;
+  pendingCount: number;
   uniqueEmployees: number;
   leaveTypeDistribution: { name: string; value: number }[];
   monthlyLeaveData: { name: string; days: number }[];
@@ -15,6 +17,7 @@ export interface LeaveAdminSummary {
 export interface LeaveRecordFilters {
   employeeId: string;
   leaveType: string;
+  status: string;
   dateStart: string;
   dateEnd: string;
   search: string;
@@ -56,9 +59,11 @@ export function buildLeaveAdminSummary(records: LeaveEntry[]): LeaveAdminSummary
   let annualDays = 0;
   let sickDays = 0;
   let unpaidDays = 0;
+  let pendingCount = 0;
 
   records.forEach((record) => {
     employeeIds.add(record.employeeId);
+    if (normalizeLeaveStatus(record.status) === "Pending") pendingCount += 1;
     const days = record.workingDays || 0;
     workingDays += days;
     leaveTypeMap.set(record.leaveType, (leaveTypeMap.get(record.leaveType) || 0) + days);
@@ -74,6 +79,7 @@ export function buildLeaveAdminSummary(records: LeaveEntry[]): LeaveAdminSummary
     annualDays,
     sickDays,
     unpaidDays,
+    pendingCount,
     uniqueEmployees: employeeIds.size,
     leaveTypeDistribution: Array.from(leaveTypeMap.entries()).map(([name, value]) => ({ name, value })),
     monthlyLeaveData: buildMonthlyLeaveData(records),
@@ -92,6 +98,7 @@ export function filterLeaveRecords(
   return records.filter((record) => {
     if (filters.employeeId !== "all" && record.employeeId !== filters.employeeId) return false;
     if (filters.leaveType !== "all" && record.leaveType !== filters.leaveType) return false;
+    if (filters.status !== "all" && normalizeLeaveStatus(record.status) !== filters.status) return false;
 
     if (filters.dateStart && record.endDate < filters.dateStart) return false;
     if (filters.dateEnd && record.startDate > filters.dateEnd) return false;
@@ -103,6 +110,7 @@ export function filterLeaveRecords(
         emp?.customEmployeeId || "",
         record.leaveType,
         record.reason || "",
+        normalizeLeaveStatus(record.status),
         record.startDate,
         record.endDate,
       ]

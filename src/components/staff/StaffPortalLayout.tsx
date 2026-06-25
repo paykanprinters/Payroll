@@ -7,14 +7,25 @@ import StaffPortalSidebar from "@/components/staff/StaffPortalSidebar";
 import { useStaffPortalContext } from "@/context/StaffPortalContext";
 import { supabase } from "@/integrations/supabase/client";
 import { STAFF_LOGIN_PATH } from "@/lib/staff-portal";
+import { recordAuthEvent } from "@/lib/audit-trail";
+import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const StaffPortalLayout: React.FC = () => {
   const { employee } = useStaffPortalContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
+    if (user) {
+      await recordAuthEvent("signed_out", {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        portal: "staff",
+      });
+    }
     await supabase.auth.signOut();
     navigate(STAFF_LOGIN_PATH, { replace: true });
   };

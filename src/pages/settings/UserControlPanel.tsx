@@ -23,6 +23,7 @@ import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDi
 import AdminPolicyBadge from "@/components/settings/AdminPolicyBadge";
 import LinkEmployeeDialog from "@/components/settings/LinkEmployeeDialog";
 import { showSuccess, showError } from "@/utils/toast";
+import { recordAuditEvent } from "@/lib/audit-trail";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { usePayrollProcessor } from "@/context/PayrollDataContext"; // Import usePayrollProcessor
@@ -212,6 +213,15 @@ const UserControlPanel: React.FC = () => {
     }
 
     showSuccess(`User ${userToDelete.name} deleted successfully!`);
+    void recordAuditEvent({
+      severity: "change",
+      module: "user",
+      action: "user_deleted",
+      message: `User deleted: ${userToDelete.name}`,
+      entityType: "user",
+      entityId: userToDelete.id,
+      metadata: { email: userToDelete.email, role: userToDelete.role },
+    });
     fetchUsers();
     setIsUserDeleteDialogOpen(false);
     setUserToDelete(null);
@@ -234,6 +244,15 @@ const UserControlPanel: React.FC = () => {
         showError("Failed to update user.");
       } else {
         showSuccess(`User ${userData.name} updated successfully!`);
+        void recordAuditEvent({
+          severity: "change",
+          module: "user",
+          action: "user_updated",
+          message: `User updated: ${userData.name}`,
+          entityType: "user",
+          entityId: userData.id,
+          metadata: { role: userData.role, status: userData.status },
+        });
         fetchUsers();
       }
 
@@ -297,6 +316,15 @@ const UserControlPanel: React.FC = () => {
           showError("Failed to set role on the new user profile.");
         } else {
           showSuccess(`User ${userData.name} added successfully!`);
+          void recordAuditEvent({
+            severity: "change",
+            module: "user",
+            action: "user_created",
+            message: `User created: ${userData.name}`,
+            entityType: "user",
+            entityId: authData.user.id,
+            metadata: { role: userData.role, email: userData.email },
+          });
           fetchUsers();
         }
       }

@@ -12,6 +12,7 @@ import React, {
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isStaffPortalPath, STAFF_LOGIN_PATH, staffPortalPath } from "@/lib/staff-portal";
+import { recordAuthEvent } from "@/lib/audit-trail";
 
 type UserRole = "Admin" | "Manager" | "Staff" | "Viewer";
 
@@ -50,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Guard refresh cycles
   const isRefreshingRef = useRef<boolean>(false);
   const lastRefreshTsRef = useRef<number>(0);
+  const userRef = useRef<AuthUser | null>(null);
 
   const buildAuthUserFromSession = useCallback((sessionUser: any): AuthUser => {
     const email = (sessionUser?.email as string) || "";
@@ -140,19 +142,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    const applySession = (sessionUser: { id: string }, event?: string) => {
+    const applySession = (sessionUser: { id: string; email?: string }, event?: string) => {
       void (async () => {
         setIsLoadingAuth(true);
         try {
           const dbProfile = await fetchProfile(sessionUser.id);
-          setUser(dbProfile ?? buildAuthUserFromSession(sessionUser));
+          const authUser = dbProfile ?? buildAuthUserFromSession(sessionUser);
+          setUser(authUser);
           setIsAuthenticated(true);
-          if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          if (event === "SIGNED_IN") {
+            void recordAuthEvent("signed_in", {
+              userId: authUser.id,
+              email: authUser.email,
+              role: authUser.role,
+              portal: isStaffPortalPath(location.pathname) ? "staff" : "admin",
+            });
+            redirectAfterLogin();
+          } else if (event === "INITIAL_SESSION") {
             redirectAfterLogin();
           }
         } catch (err: unknown) {
           console.error("AuthContext: profile fetch failed", err);
-          setUser(buildAuthUserFromSession(sessionUser));
+          const fallbackUser = buildAuthUserFromSession(sessionUser);
+          setUser(fallbackUser);
           setIsAuthenticated(true);
         } finally {
           setIsLoadingAuth(false);
@@ -168,6 +180,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.groupCollapsed(`AuthContext: onAuthStateChange event: ${event}`);
       try {
         if (!session) {
+          if (event === "SIGNED_OUT") {
+            const signedOutUser = userRef.current;
+            if (signedOutUser) {
+              void recordAuthEvent("signed_out", {
+                userId: signedOutUser.id,
+                email: signedOutUser.email,
+                role: signedOutUser.role,
+                portal: isStaffPortalPath(location.pathname) ? "staff" : "admin",
+              });
+            }
+          }
           setUser(null);
           setIsAuthenticated(false);
           setIsLoadingAuth(false);
@@ -227,6 +250,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("AuthContext: Unsubscribed auth listener.");
     };
   }, [buildAuthUserFromSession, fetchProfile, location.pathname, navigate, redirectAfterLogin]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     // Safety: never allow auth loading to block the app forever

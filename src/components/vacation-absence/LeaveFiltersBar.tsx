@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Filter, RefreshCcw, Search, X } from "lucide-react";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ALL_LEAVE_TYPES } from "@/lib/leave-admin-summary";
+import { LEAVE_STATUSES } from "@/lib/leave-status";
 
 interface LeaveFiltersBarProps {
   employees: MockEmployee[];
@@ -15,6 +16,8 @@ interface LeaveFiltersBarProps {
   onEmployeeFilterChange: (value: string) => void;
   leaveTypeFilter: string;
   onLeaveTypeFilterChange: (value: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
   dateStart: string;
   onDateStartChange: (value: string) => void;
   dateEnd: string;
@@ -33,6 +36,8 @@ const LeaveFiltersBar: React.FC<LeaveFiltersBarProps> = ({
   onEmployeeFilterChange,
   leaveTypeFilter,
   onLeaveTypeFilterChange,
+  statusFilter,
+  onStatusFilterChange,
   dateStart,
   onDateStartChange,
   dateEnd,
@@ -47,13 +52,14 @@ const LeaveFiltersBar: React.FC<LeaveFiltersBarProps> = ({
   const hasActiveFilters =
     employeeFilterId !== "all" ||
     leaveTypeFilter !== "all" ||
+    statusFilter !== "all" ||
     dateStart.length > 0 ||
     dateEnd.length > 0 ||
     search.trim().length > 0;
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="space-y-1">
           <Label htmlFor="leave-employee-filter">Employee</Label>
           <Select value={employeeFilterId} onValueChange={onEmployeeFilterChange}>
@@ -82,6 +88,23 @@ const LeaveFiltersBar: React.FC<LeaveFiltersBarProps> = ({
               {ALL_LEAVE_TYPES.map((type) => (
                 <SelectItem key={type} value={type}>
                   {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="leave-status-filter">Status</Label>
+          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+            <SelectTrigger id="leave-status-filter">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {LEAVE_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status}
                 </SelectItem>
               ))}
             </SelectContent>

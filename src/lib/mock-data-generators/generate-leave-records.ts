@@ -10,7 +10,8 @@ export const generateMockLeaveRecords = (): LeaveEntry[] => [
     totalDays: 5,
     workingDays: 5,
     reason: "Summer vacation",
-    documentUrl: undefined,
+    status: "Approved",
+    source: "admin",
   },
   {
     id: "LEAVE002",
@@ -21,6 +22,8 @@ export const generateMockLeaveRecords = (): LeaveEntry[] => [
     totalDays: 2,
     workingDays: 2,
     reason: "Flu",
-    documentUrl: "data:application/pdf;base64,JVBERi0xLjQKJcOvxo... (mock base64 PDF)", // Mock document
+    documentUrl: "data:application/pdf;base64,JVBERi0xLjQKJcOvxo... (mock base64 PDF)",
+    status: "Approved",
+    source: "admin",
   },
 ];
