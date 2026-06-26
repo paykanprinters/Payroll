@@ -1,0 +1,94 @@
+import { Capacitor } from "@capacitor/core";
+
+export type BlobDownloadMethod = "native-share" | "web-share" | "web-anchor";
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1]! : dataUrl;
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read blob"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** Safe filename for mobile filesystems and share intents. */
+export function sanitizeDownloadFilename(filename: string): string {
+  const trimmed = filename.trim() || "download";
+  return trimmed.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-").replace(/\s+/g, "_");
+}
+
+/**
+ * Save a blob on device. On Capacitor native shells, writes to cache and opens
+ * the system share sheet (Save to Files / Drive / open in PDF viewer). On web,
+ * uses the Web Share API when available, otherwise a download link.
+ */
+export async function downloadBlob(
+  blob: Blob,
+  filename: string,
+  mimeType = "application/octet-stream"
+): Promise<BlobDownloadMethod> {
+  const safeName = sanitizeDownloadFilename(filename);
+
+  if (Capacitor.isNativePlatform()) {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    const { Share } = await import("@capacitor/share");
+
+    const base64 = await blobToBase64(blob);
+    const written = await Filesystem.writeFile({
+      path: safeName,
+      data: base64,
+      directory: Directory.Cache,
+    });
+
+    await Share.share({
+      title: safeName,
+      url: written.uri,
+      dialogTitle: "Save payslip",
+    });
+    return "native-share";
+  }
+
+  if (typeof navigator !== "undefined" && typeof File !== "undefined" && navigator.share) {
+    try {
+      const file = new File([blob], safeName, { type: mimeType });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: safeName });
+        return "web-share";
+      }
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") {
+        throw err;
+      }
+      // Fall through to anchor download.
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = safeName;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  return "web-anchor";
+}
+
+export function downloadSuccessMessage(filename: string, method: BlobDownloadMethod): string {
+  switch (method) {
+    case "native-share":
+    case "web-share":
+      return `Choose where to save ${filename}.`;
+    default:
+      return `${filename} downloaded successfully!`;
+  }
+}

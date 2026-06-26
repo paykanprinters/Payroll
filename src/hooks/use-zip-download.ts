@@ -1,6 +1,7 @@
 "use client";
 
 import JSZip from "jszip";
+import { downloadBlob } from "@/lib/native-blob-download";
 
 interface ZipFileEntry {
   filename: string;
@@ -15,19 +16,7 @@ export const useZipDownload = () => {
     });
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(zipBlob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = zipName;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    }, 1000);
+    await downloadBlob(zipBlob, zipName, "application/zip");
   };
 
   return { downloadZip };

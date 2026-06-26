@@ -3,20 +3,19 @@
 import React, { useCallback } from "react";
 import { pdf } from "@react-pdf/renderer";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import { downloadBlob, downloadSuccessMessage } from "@/lib/native-blob-download";
 
 export const usePdfVector = () => {
   const downloadPdf = useCallback(async (documentNode: React.ReactElement, filename: string) => {
     const toastId = showLoading(`Preparing ${filename} (vector PDF), please wait...`) as string;
     try {
       const blob = await pdf(documentNode).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      showSuccess(`${filename} downloaded successfully!`);
+      const method = await downloadBlob(blob, filename, "application/pdf");
+      showSuccess(downloadSuccessMessage(filename, method));
     } catch (err: any) {
+      if (err?.name === "AbortError") {
+        return;
+      }
       showError(`Vector PDF generation failed: ${err?.message || "Unknown error"}`);
       throw err;
     } finally {
