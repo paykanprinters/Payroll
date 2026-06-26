@@ -27,7 +27,13 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
       <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <AuthBrandPanel subtitle={panelSubtitle} features={features} />
 
-        <div className="relative flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14">
+        <div
+          className="relative flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14"
+          style={{
+            paddingTop: "calc(env(safe-area-inset-top) + 2.5rem)",
+            paddingBottom: "calc(env(safe-area-inset-bottom) + 2.5rem)",
+          }}
+        >
           <div className="kan-cmyk-bar pointer-events-none absolute left-0 right-0 top-0 h-1 lg:hidden" />
 
           <div className="mx-auto w-full max-w-md">

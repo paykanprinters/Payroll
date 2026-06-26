@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 
 export interface PayCycleSettings {
   id?: string;
@@ -34,7 +35,7 @@ export const convertPayCycleSettingsKeysToSnakeCase = (obj: Partial<PayCycleSett
 };
 
 export const fetchPayCycleSettingsFromSupabase = async (userId: string): Promise<PayCycleSettings | null> => {
-  console.log("pay-cycle-queries: Fetching live pay cycle settings from Supabase for user:", userId);
+  logger.debug("pay-cycle-queries: fetching live pay cycle settings");
   const { data, error } = await supabase
     .from('pay_cycle_settings')
     .select('*')
@@ -42,21 +43,19 @@ export const fetchPayCycleSettingsFromSupabase = async (userId: string): Promise
     .single();
 
   if (error && error.code !== "PGRST116") { // PGRST116 means no rows found
-    console.error("pay-cycle-queries: Error fetching live pay cycle settings:", error);
+    logger.error("pay-cycle-queries: error fetching live pay cycle settings:", toLogError(error));
     showError("Failed to load live pay cycle settings.");
     return null;
   } else if (data) {
     const camelCaseData = convertPayCycleSettingsKeysToCamelCase(data);
-    console.log("pay-cycle-queries: Live pay cycle settings fetched:", camelCaseData);
     return camelCaseData;
   }
-  console.log("pay-cycle-queries: No pay cycle settings found for user:", userId);
   return null;
 };
 
 export const upsertPayCycleSettingsToSupabase = async (settingsData: PayCycleSettings): Promise<PayCycleSettings | null> => {
   const snakeCasePayload = convertPayCycleSettingsKeysToSnakeCase(settingsData);
-  console.log("pay-cycle-queries: Upserting live pay cycle settings with payload:", snakeCasePayload);
+  logger.debug("pay-cycle-queries: upserting live pay cycle settings");
 
   const { data, error } = await supabase
     .from('pay_cycle_settings')
@@ -65,13 +64,13 @@ export const upsertPayCycleSettingsToSupabase = async (settingsData: PayCycleSet
     .single();
 
   if (error) {
-    console.error("pay-cycle-queries: Error upserting live pay cycle settings:", error);
-    showError(`Failed to save pay cycle settings: ${error.message}`);
+    logger.error("pay-cycle-queries: error upserting live pay cycle settings:", toLogError(error));
+    showError(`Failed to save pay cycle settings: ${toLogError(error)}`);
     return null;
   } else if (data) {
     const camelCaseData = convertPayCycleSettingsKeysToCamelCase(data);
     return camelCaseData;
   }
-  console.warn("pay-cycle-queries: Upsert succeeded but returned no data.");
+  logger.warn("pay-cycle-queries: upsert succeeded but returned no data.");
   return null;
 };

@@ -18,6 +18,8 @@ import {
 import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator";
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
+import type { TaxTableValidationResult } from "@/lib/tax-tables-validation";
+import { getTaxTableBlockingMessage } from "@/lib/tax-tables-validation";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { PayrollSavingsEntry } from "@/lib/savings-types";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
@@ -32,6 +34,7 @@ export const usePayrollProcessingLogic = (
   leaveRecords: LeaveEntry[],
   timesheets: TimesheetEntry[],
   taxTables: TaxTables | null,
+  taxTableValidation: TaxTableValidationResult | null,
   userTaxSettings: UserTaxSettings | null,
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
   workHoursSettings: WorkHoursSettings | null,
@@ -59,6 +62,13 @@ export const usePayrollProcessingLogic = (
       }
       if (!taxTables) {
         showError("Tax tables not loaded. Cannot run payroll.");
+        return;
+      }
+      if (taxTableValidation && !taxTableValidation.isReady) {
+        showError(
+          getTaxTableBlockingMessage(taxTableValidation) ??
+            "Tax tables are not ready. Apply or refresh them in Settings > Tax Liabilities."
+        );
         return;
       }
       if (!userTaxSettings) {
@@ -174,6 +184,7 @@ export const usePayrollProcessingLogic = (
       leaveRecords,
       timesheets,
       taxTables,
+      taxTableValidation,
       userTaxSettings,
       payrollSavingsEntries,
       workHoursSettings,
@@ -202,6 +213,13 @@ export const usePayrollProcessingLogic = (
       }
       if (!taxTables) {
         showError("Tax tables not loaded. Cannot generate payslip preview.");
+        return null;
+      }
+      if (taxTableValidation && !taxTableValidation.isReady) {
+        showError(
+          getTaxTableBlockingMessage(taxTableValidation) ??
+            "Tax tables are not ready. Apply or refresh them in Settings > Tax Liabilities."
+        );
         return null;
       }
       if (!userTaxSettings) {
@@ -264,6 +282,7 @@ export const usePayrollProcessingLogic = (
       leaveRecords,
       timesheets,
       taxTables,
+      taxTableValidation,
       userTaxSettings,
       payrollSavingsEntries,
       workHoursSettings,

@@ -89,15 +89,8 @@ const CompanyDetails: React.FC = () => {
     },
   });
 
-  // Watch all form values for debugging
-  const watchedFormValues = formMethods.watch();
-  React.useEffect(() => {
-    console.log("CompanyDetails.tsx: Current form values (watched):", watchedFormValues);
-  }, [watchedFormValues]);
-
   // Populate form with data from Supabase when it loads
   React.useEffect(() => {
-    console.log("CompanyDetails.tsx useEffect triggered. companyDetails from hook:", companyDetails, "isLoading from hook:", isLoading);
     if (companyDetails) {
       formMethods.reset({
         companyLegalName: companyDetails.companyLegalName || "",
@@ -126,7 +119,6 @@ const CompanyDetails: React.FC = () => {
         logoHeight: companyDetails.logoHeight || 60,
         logoFit: companyDetails.logoFit || "contain",
       });
-      console.log("CompanyDetails.tsx: Form reset with fetched data.");
     } else if (!isLoading) {
       // If no company details are found and not loading, reset to empty defaults
       formMethods.reset({
@@ -139,7 +131,6 @@ const CompanyDetails: React.FC = () => {
         branchCode: "", accountType: "Cheque", logoUrl: "",
         logoWidth: 100, logoHeight: 50, logoFit: "contain",
       });
-      console.log("CompanyDetails.tsx: Form reset with empty defaults for initial setup.");
     }
   }, [companyDetails, isLoading, formMethods]);
 
@@ -197,8 +188,6 @@ const CompanyDetails: React.FC = () => {
       </div>
     );
   }
-
-  console.log("CompanyDetails.tsx: Rendering forms with data:", companyDetails); // New log here
 
   return (
     <Card>

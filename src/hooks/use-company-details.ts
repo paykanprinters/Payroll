@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 import { recordSettingsChange } from "@/lib/audit-trail";
+import { logger, toLogError } from "@/lib/logger";
 
 // Define a mapping for Supabase column names to camelCase property names
 const columnToPropertyMap: { [key: string]: keyof MockCompanyDetails | 'updatedAt' } = {
@@ -69,30 +70,26 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
     setIsLoading(true);
     setError(null);
     try {
-      console.log("useCompanyDetails: Attempting to fetch company details from Supabase...");
+      logger.debug("useCompanyDetails: fetching company details");
       const { data, error } = await supabase
         .from("company_details")
         .select("*")
         .limit(1)
         .single();
 
-      console.log("useCompanyDetails: Raw Supabase response - data:", data, "error:", error); // NEW LOG
-
       if (error) {
-        console.error("useCompanyDetails: Supabase fetchCompanyDetails error:", error);
         if (error.code === "PGRST116") {
-          console.info("useCompanyDetails: No company details found in database (expected for initial setup). Setting companyDetails to null.");
+          logger.debug("useCompanyDetails: no company details found (expected for initial setup).");
           setCompanyDetails(prev => (prev !== null ? null : prev));
           setError(null);
         } else {
-          console.error("useCompanyDetails: Error fetching company details:", error);
+          logger.error("useCompanyDetails: error fetching company details:", toLogError(error));
           setError(error);
           setCompanyDetails(prev => (prev !== null ? null : prev));
-          showError(`Failed to load company details: ${error.message}`);
+          showError(`Failed to load company details: ${toLogError(error)}`);
         }
       } else {
         const camelCaseData = convertKeysToCamelCase(data);
-        console.log("useCompanyDetails: Supabase fetchCompanyDetails success. Data (camelCase):", camelCaseData);
         // Use functional update with deep compare to avoid unnecessary rerenders
         setCompanyDetails(prev => {
           const changed = JSON.stringify(prev) !== JSON.stringify(camelCaseData);
@@ -100,7 +97,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         });
       }
     } catch (err: any) {
-      console.error("useCompanyDetails: Unhandled error in fetchCompanyDetails:", err);
+      logger.error("useCompanyDetails: unhandled error in fetchCompanyDetails:", toLogError(err));
       setError(err);
       setCompanyDetails(prev => (prev !== null ? null : prev));
       showError('An unexpected error occurred while loading company details.');
@@ -149,7 +146,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         Object.entries(payload).filter(([, value]) => value !== undefined)
       );
 
-      console.log("useCompanyDetails: Attempting to upsert company details with payload:", cleanedPayload);
+      logger.debug("useCompanyDetails: upserting company details");
 
       const { data, error } = await supabase
         .from("company_details")
@@ -157,12 +154,11 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         .select();
 
       if (error) {
-        console.error("useCompanyDetails: Supabase upsertCompanyDetails error:", error);
-        showError(`Failed to save company details: ${error.message}`);
+        logger.error("useCompanyDetails: upsertCompanyDetails error:", toLogError(error));
+        showError(`Failed to save company details: ${toLogError(error)}`);
         setError(error);
       } else {
         const camelCaseData = convertKeysToCamelCase(data && data.length > 0 ? data[0] : null);
-        console.log("useCompanyDetails: Supabase upsertCompanyDetails success. Data (camelCase):", camelCaseData);
         setCompanyDetails(prev => {
           const changed = JSON.stringify(prev) !== JSON.stringify(camelCaseData);
           return changed ? camelCaseData : prev;

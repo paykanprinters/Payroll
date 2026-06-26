@@ -78,7 +78,10 @@ const StaffPortalSidebar: React.FC<StaffPortalSidebarProps> = ({ onSignOut }) =>
 
   const sidebarBody = (
     <div className="flex h-full flex-col">
-      <div className="border-b border-cyan-100 bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-4 py-5 text-white">
+      <div
+        className="border-b border-cyan-100 bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-4 py-5 text-white"
+        style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
+      >
         <BrandLogo variant="sidebar" alt={brand.name} className="brightness-0 invert" />
         <div className="mt-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
           Employee portal
@@ -92,7 +95,10 @@ const StaffPortalSidebar: React.FC<StaffPortalSidebarProps> = ({ onSignOut }) =>
         <NavItems />
       </div>
 
-      <div className="space-y-2 border-t border-cyan-100 p-4">
+      <div
+        className="space-y-2 border-t border-cyan-100 p-4"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+      >
         <Button asChild variant="outline" className="w-full justify-start border-cyan-200 text-xs">
           <Link to={staffPortalPath("install")}>
             <ExternalLink className="mr-2 h-4 w-4" />
@@ -127,6 +133,10 @@ const StaffPortalSidebar: React.FC<StaffPortalSidebarProps> = ({ onSignOut }) =>
             variant="outline"
             size="icon"
             className="fixed left-4 top-4 z-50 rounded-xl border-cyan-200 bg-white/90 shadow-sm backdrop-blur"
+            style={{
+              top: "calc(env(safe-area-inset-top) + 0.5rem)",
+              left: "calc(env(safe-area-inset-left) + 1rem)",
+            }}
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5 text-cyan-700" />

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
 import { PayCycleSettings, fetchPayCycleSettingsFromSupabase, upsertPayCycleSettingsToSupabase } from "@/integrations/supabase/pay-cycle-queries";
+import { logger } from "@/lib/logger";
 
 const LOCAL_STORAGE_KEY = "payCycleSettings";
 
@@ -28,7 +29,7 @@ export const usePayCycleSettings = ({ isMockDataEnabled, isAuthenticated, isLoad
 
   const fetchLiveSettings = useCallback(async () => {
     if (!user?.id) {
-      console.log("usePayCycleSettings: fetchLiveSettings - No user ID, skipping fetch.");
+      logger.debug("usePayCycleSettings: fetchLiveSettings - no user ID, skipping fetch.");
       setPayCycleSettings(null);
       setIsLoading(false);
       return;
@@ -45,7 +46,7 @@ export const usePayCycleSettings = ({ isMockDataEnabled, isAuthenticated, isLoad
 
   const saveLiveSettings = useCallback(async (settings: Omit<PayCycleSettings, 'id' | 'userId'> & { id?: string }) => {
     if (!user?.id) {
-      console.error("usePayCycleSettings: saveLiveSettings - No user ID, cannot save settings.");
+      logger.error("usePayCycleSettings: saveLiveSettings - no user ID, cannot save settings.");
       showError("User not authenticated. Cannot save pay cycle settings.");
       return null;
     }
@@ -75,7 +76,6 @@ export const usePayCycleSettings = ({ isMockDataEnabled, isAuthenticated, isLoad
     }
 
     if (isMockDataEnabled) {
-      console.log("usePayCycleSettings: useEffect - Mock data enabled. Loading from localStorage.");
       const storedSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedSettings) {
         setPayCycleSettings(JSON.parse(storedSettings));
@@ -84,10 +84,8 @@ export const usePayCycleSettings = ({ isMockDataEnabled, isAuthenticated, isLoad
       }
       setIsLoading(false);
     } else if (isAuthenticated) {
-      console.log("usePayCycleSettings: useEffect - Live data enabled and authenticated. Calling fetchLiveSettings.");
       fetchLiveSettings();
     } else {
-      console.log("usePayCycleSettings: useEffect - Live data enabled but not authenticated. Clearing settings.");
       setPayCycleSettings(null);
       setIsLoading(false);
     }

@@ -8,6 +8,8 @@ export type PayeBracketRow = {
 };
 
 export type SarsTaxYearTables = {
+  startDate: string;
+  endDate: string;
   periodLabel: string;
   sourceUrl: string;
   payeBrackets: PayeBracketRow[];
@@ -21,9 +23,16 @@ export type SarsTaxYearTables = {
     uif_cap: number;
     sdl_rate: number;
   };
+  medicalTaxCredits: {
+    mainMember: number;
+    firstDependant: number;
+    additionalDependant: number;
+  };
 };
 
 const TAX_YEAR_2026: SarsTaxYearTables = {
+  startDate: "2025-03-01",
+  endDate: "2026-02-28",
   periodLabel: "1 March 2025 – 28 February 2026",
   sourceUrl: "https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/",
   payeBrackets: [
@@ -37,9 +46,12 @@ const TAX_YEAR_2026: SarsTaxYearTables = {
   ],
   rebates: { under65: 17_235, sixtyFiveToSeventyFour: 9_444, seventyFivePlus: 3_145 },
   uifSdlRates: { uif_rate: 0.01, uif_cap: 177.12, sdl_rate: 0.01 },
+  medicalTaxCredits: { mainMember: 364, firstDependant: 364, additionalDependant: 246 },
 };
 
 const TAX_YEAR_2027: SarsTaxYearTables = {
+  startDate: "2026-03-01",
+  endDate: "2027-02-28",
   periodLabel: "1 March 2026 – 28 February 2027",
   sourceUrl: "https://www.sars.gov.za/guide-for-employers-in-respect-of-employees-tax-2027/",
   payeBrackets: [
@@ -53,6 +65,7 @@ const TAX_YEAR_2027: SarsTaxYearTables = {
   ],
   rebates: { under65: 17_820, sixtyFiveToSeventyFour: 9_765, seventyFivePlus: 3_249 },
   uifSdlRates: { uif_rate: 0.01, uif_cap: 177.12, sdl_rate: 0.01 },
+  medicalTaxCredits: { mainMember: 376, firstDependant: 376, additionalDependant: 252 },
 };
 
 export const SARS_TAX_TABLES_BY_YEAR: Record<number, SarsTaxYearTables> = {
@@ -62,4 +75,20 @@ export const SARS_TAX_TABLES_BY_YEAR: Record<number, SarsTaxYearTables> = {
 
 export function getSarsTaxTablesForYear(taxYear: number): SarsTaxYearTables | null {
   return SARS_TAX_TABLES_BY_YEAR[taxYear] ?? null;
+}
+
+export function buildSarsTaxYearDetails(taxYear: number) {
+  const tables = getSarsTaxTablesForYear(taxYear);
+  if (!tables) return null;
+  return {
+    year: taxYear,
+    start_date: tables.startDate,
+    end_date: tables.endDate,
+    description: `SARS tax year (${tables.periodLabel})`,
+    rebates: {
+      under65: tables.rebates.under65,
+      sixtyFiveToSeventyFour: tables.rebates.sixtyFiveToSeventyFour,
+      seventyFivePlus: tables.rebates.seventyFivePlus,
+    },
+  };
 }

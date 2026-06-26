@@ -3,12 +3,19 @@
 import { MockEmployee, TimesheetEntry, MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 
+import type { TaxTables } from "@/hooks/use-tax-tables";
+import {
+  getTaxTableBlockingMessage,
+  validateLoadedTaxTables,
+} from "@/lib/tax-tables-validation";
+
 export type ReadinessBlockerType =
   | "BANK_INFO"
   | "EMPLOYEE_TAX_INFO"
   | "COMPANY_TAX_INFO"
   | "TIMESHEET_DRAFT"
-  | "MISSING_TIMESHEET";
+  | "MISSING_TIMESHEET"
+  | "TAX_TABLES";
 
 export type ReadinessBlocker = {
   type: ReadinessBlockerType;
@@ -47,7 +54,9 @@ export const useReadinessGates = () => {
     companyDetails: MockCompanyDetails | null,
     userTaxSettings: UserTaxSettings | null,
     periodStart: Date,
-    periodEnd: Date
+    periodEnd: Date,
+    taxTables: TaxTables | null = null,
+    activeTaxYear: number = new Date().getFullYear()
   ): ReadinessBlocker[] => {
     const blockers: ReadinessBlocker[] = [];
 
@@ -60,6 +69,19 @@ export const useReadinessGates = () => {
         severity: "error",
         message: "Company tax number is missing (required when PAYE applies).",
       });
+    }
+
+    if (applyPAYE) {
+      const taxValidation = validateLoadedTaxTables(taxTables, activeTaxYear);
+      if (!taxValidation.isReady) {
+        blockers.push({
+          type: "TAX_TABLES",
+          severity: taxValidation.status === "stale" ? "warning" : "error",
+          message:
+            getTaxTableBlockingMessage(taxValidation) ??
+            `Tax tables for ${activeTaxYear} are not ready for payroll.`,
+        });
+      }
     }
 
     employees.forEach((e) => {

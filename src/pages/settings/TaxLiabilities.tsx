@@ -13,11 +13,16 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
+import { logger, toLogError } from "@/lib/logger";
 import { useAuth } from '@/context/AuthContext';
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // Corrected import path for UserTaxSettings
 import { getSarsTaxTablesForYear, SUPPORTED_SARS_TAX_YEARS } from "@/lib/sars-tax-tables";
+import {
+  getTaxTableStatusLabel,
+  validateLoadedTaxTables,
+} from "@/lib/tax-tables-validation";
 
 const DEFAULT_IRP5_FONT_SIZE = 12; // Default font size for IRP5 content
 const MIN_IRP5_FONT_SIZE = 10;
@@ -31,13 +36,14 @@ const taxLiabilitiesSchema = z.object({
   enableIrp5Export: z.boolean().default(false),
   irp5ContentFontSize: z.number().min(MIN_IRP5_FONT_SIZE).max(MAX_IRP5_FONT_SIZE).default(DEFAULT_IRP5_FONT_SIZE),
   proRateUifCapByFrequency: z.boolean().default(false), // NEW
+  applyMedicalAidTaxCredit: z.boolean().default(true), // COMP-07
 });
 
 type TaxLiabilitiesFormValues = z.infer<typeof taxLiabilitiesSchema>;
 
 const TaxLiabilities: React.FC = () => {
   const { user } = useAuth();
-  const { isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYearForCalculations, setActiveTaxYearForCalculations } = usePayrollProcessor(); // include activeTaxYearForCalculations
+  const { isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYearForCalculations, setActiveTaxYearForCalculations, taxTables, taxTableValidation, isLoadingTaxTables, refetchTaxTables } = usePayrollProcessor(); // include activeTaxYearForCalculations
   const { userTaxSettings, isLoadingUserTaxSettings, saveUserTaxSettings } = useUserTaxSettings({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
   const taxYears = SUPPORTED_SARS_TAX_YEARS.map(String);
@@ -51,6 +57,7 @@ const TaxLiabilities: React.FC = () => {
       enableIrp5Export: false,
       irp5ContentFontSize: DEFAULT_IRP5_FONT_SIZE,
       proRateUifCapByFrequency: false, // NEW default
+      applyMedicalAidTaxCredit: true, // COMP-07 default
     },
   });
 
@@ -64,6 +71,7 @@ const TaxLiabilities: React.FC = () => {
         enableIrp5Export: userTaxSettings.enableIrp5Export,
         irp5ContentFontSize: userTaxSettings.irp5ContentFontSize,
         proRateUifCapByFrequency: userTaxSettings.proRateUifCapByFrequency ?? false, // NEW
+        applyMedicalAidTaxCredit: userTaxSettings.applyMedicalAidTaxCredit ?? true, // COMP-07
       });
     } else if (!isLoadingUserTaxSettings) {
       form.reset({
@@ -73,6 +81,7 @@ const TaxLiabilities: React.FC = () => {
         enableIrp5Export: false,
         irp5ContentFontSize: DEFAULT_IRP5_FONT_SIZE,
         proRateUifCapByFrequency: false, // NEW
+        applyMedicalAidTaxCredit: true, // COMP-07
       });
     }
   }, [userTaxSettings, isLoadingUserTaxSettings, form, activeTaxYearForCalculations]);
@@ -87,6 +96,22 @@ const TaxLiabilities: React.FC = () => {
 
   const selectedTaxYear = form.watch("taxYear");
   const selectedYearMeta = selectedTaxYear ? getSarsTaxTablesForYear(parseInt(selectedTaxYear, 10)) : null;
+  const selectedYearNum = selectedTaxYear ? parseInt(selectedTaxYear, 10) : activeTaxYearForCalculations;
+  const tableStatusForSelectedYear = React.useMemo(() => {
+    if (selectedYearNum === activeTaxYearForCalculations) {
+      return (
+        taxTableValidation ??
+        validateLoadedTaxTables(taxTables, selectedYearNum, { isLoading: isLoadingTaxTables })
+      );
+    }
+    return validateLoadedTaxTables(null, selectedYearNum);
+  }, [
+    selectedYearNum,
+    activeTaxYearForCalculations,
+    taxTableValidation,
+    taxTables,
+    isLoadingTaxTables,
+  ]);
   const irp5ContentFontSize = form.watch("irp5ContentFontSize");
 
   const handleFetchTaxTables = async () => {
@@ -101,7 +126,6 @@ const TaxLiabilities: React.FC = () => {
     }
 
     const toastId = showLoading(`Applying SARS tax tables for ${selectedTaxYear}...`) as string;
-    console.log(`Attempting to fetch tax tables for year: ${selectedTaxYear}`);
 
     try {
       const { data, error } = await supabase.functions.invoke("fetch-sars-tax-tables", {
@@ -109,17 +133,17 @@ const TaxLiabilities: React.FC = () => {
       });
 
       if (error) {
-        console.error('Error invoking fetch-sars-tax-tables Edge Function:', error);
-        showError(`Failed to fetch tax tables: ${error.message}`);
+        logger.error('Error invoking fetch-sars-tax-tables Edge Function:', toLogError(error));
+        showError(`Failed to fetch tax tables: ${toLogError(error)}`);
       } else {
-        console.log('Fetch tax tables Edge Function response:', data);
         showSuccess(`Tax tables for ${selectedTaxYear} fetched and applied successfully!`);
         setActiveTaxYearForCalculations(parseInt(selectedTaxYear, 10));
+        await refetchTaxTables(parseInt(selectedTaxYear, 10));
         window.dispatchEvent(new Event('taxTablesUpdated'));
       }
     } catch (error: any) {
-      console.error('Error calling fetch-sars-tax-tables Edge Function:', error);
-      showError(`An unexpected error occurred: ${error.message}`);
+      logger.error('Error calling fetch-sars-tax-tables Edge Function:', toLogError(error));
+      showError(`An unexpected error occurred: ${toLogError(error)}`);
     } finally {
       dismissToast(toastId);
     }
@@ -134,6 +158,7 @@ const TaxLiabilities: React.FC = () => {
         enableIrp5Export: data.enableIrp5Export,
         irp5ContentFontSize: data.irp5ContentFontSize,
         proRateUifCapByFrequency: data.proRateUifCapByFrequency, // NEW
+        applyMedicalAidTaxCredit: data.applyMedicalAidTaxCredit, // COMP-07
       };
       await saveUserTaxSettings(settingsToSave);
     } else {
@@ -242,6 +267,34 @@ const TaxLiabilities: React.FC = () => {
                 </a>
               </p>
             )}
+            {tableStatusForSelectedYear && (
+              <div
+                className={`rounded-lg border p-3 text-sm ${
+                  tableStatusForSelectedYear.isReady
+                    ? "border-green-300 bg-green-50 text-green-900"
+                    : tableStatusForSelectedYear.status === "loading"
+                      ? "border-muted bg-muted/40 text-muted-foreground"
+                      : tableStatusForSelectedYear.status === "stale"
+                        ? "border-amber-300 bg-amber-50 text-amber-900"
+                        : "border-red-300 bg-red-50 text-red-900"
+                }`}
+              >
+                <p className="font-medium">{getTaxTableStatusLabel(tableStatusForSelectedYear)}</p>
+                {selectedYearNum !== activeTaxYearForCalculations && (
+                  <p className="mt-1 text-xs opacity-90">
+                    Active payroll calculations use TY{activeTaxYearForCalculations}. Apply tables
+                    for {selectedYearNum} to activate that year.
+                  </p>
+                )}
+                {tableStatusForSelectedYear.issues.length > 0 && (
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
+                    {tableStatusForSelectedYear.issues.map((issue) => (
+                      <li key={issue.code}>{issue.message}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <Button onClick={handleFetchTaxTables} disabled={!selectedTaxYear || !canManageTaxSettings || isMockDataEnabled}>
               Apply Tax Tables
             </Button>
@@ -277,16 +330,41 @@ const TaxLiabilities: React.FC = () => {
                 Apply PAYE (Pay As You Earn)
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start space-x-2">
               <Checkbox
                 id="applySDL"
                 checked={form.watch("applySDL")}
                 onCheckedChange={(checked) => form.setValue("applySDL", checked as boolean)}
                 disabled={!canManageTaxSettings || isMockDataEnabled}
+                className="mt-1"
               />
-              <Label htmlFor="applySDL">
-                Apply SDL (Skills Development Levy)
-              </Label>
+              <div className="grid gap-0.5">
+                <Label htmlFor="applySDL">
+                  Employer is SDL-liable (Skills Development Levy)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  SDL is a 1% employer levy paid to SARS — it is never deducted from
+                  employees. Leave off if exempt (total annual payroll ≤ R500,000).
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="applyMedicalAidTaxCredit"
+                checked={form.watch("applyMedicalAidTaxCredit")}
+                onCheckedChange={(checked) => form.setValue("applyMedicalAidTaxCredit", checked as boolean)}
+                disabled={!canManageTaxSettings || isMockDataEnabled}
+                className="mt-1"
+              />
+              <div className="grid gap-0.5">
+                <Label htmlFor="applyMedicalAidTaxCredit">
+                  Apply medical scheme fees tax credit (Section 6A)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Reduces monthly PAYE for employees flagged as medical-scheme members
+                  (main member + dependants). Configure membership per employee.
+                </p>
+              </div>
             </div>
             <Button type="submit" disabled={!canManageTaxSettings || isMockDataEnabled}>Save Deductions Settings</Button>
           </form>
@@ -333,7 +411,11 @@ const TaxLiabilities: React.FC = () => {
           <div className="mt-8 p-4 border rounded-lg bg-purple-50 text-purple-800">
             <h3 className="font-semibold text-lg mb-2">IRP5 Export Note:</h3>
             <p className="text-sm">
-              Enabling this option will make the IRP5 export button visible in the Payslips section. The generated IRP5 is a simplified mock-up for demonstration purposes and does not represent a legally compliant SARS IRP5 certificate. A real IRP5 export requires complex tax calculations and official SARS integration.
+              Enabling this option makes the IRP5 export available from Payslips. Certificates use
+              SARS source codes (3601, 4003, 4102, 4116, 4141, etc.) aggregated from recorded
+              payslips for the selected tax year (1 March – 28 February). SDL is excluded from the
+              employee certificate (employer EMP201). Bulk e@syFile submission is a separate step
+              (see Reports).
             </p>
           </div>
         </CardContent>

@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
-import { getSarsTaxTablesForYear } from "@/lib/sars-tax-tables";
+import { getSarsTaxTablesForYear, buildSarsTaxYearDetails } from "@/lib/sars-tax-tables";
+import {
+  validateLoadedTaxTables,
+  type TaxTableValidationResult,
+} from "@/lib/tax-tables-validation";
+import { logger } from "@/lib/logger";
 
 interface TaxBracketPAYE {
   min_income: number;
@@ -39,16 +44,11 @@ export interface TaxTables {
 
 function buildMockTaxTables(year: number): TaxTables {
   const sars = getSarsTaxTablesForYear(year) ?? getSarsTaxTablesForYear(2027)!;
+  const taxYearDetails = buildSarsTaxYearDetails(year) ?? buildSarsTaxYearDetails(2027)!;
   return {
     payeBrackets: sars.payeBrackets,
     uifSdlRates: sars.uifSdlRates,
-    taxYearDetails: {
-      year,
-      start_date: `${year}-03-01`,
-      end_date: `${year + 1}-02-28`,
-      description: `SARS tax year (${sars.periodLabel})`,
-      rebates: sars.rebates,
-    },
+    taxYearDetails,
   };
 }
 
@@ -75,7 +75,7 @@ async function fetchTaxTablesFromDb(year: number): Promise<TaxTables> {
     throw new Error(payeError?.message || taxYearDetailsError?.message || "Failed to load tax tables");
   }
   if (uifSdlError) {
-    console.warn("useTaxTables: UIF/SDL rates missing for year", year, uifSdlError.message);
+    logger.warn("useTaxTables: UIF/SDL rates missing for year", taxYear);
   }
 
   const payeBrackets = payeData || [];
@@ -138,8 +138,18 @@ export const useTaxTables = ({
     ? buildMockTaxTables(activeTaxYear)
     : data ?? null;
 
+  const taxTableValidation: TaxTableValidationResult = useMemo(
+    () =>
+      validateLoadedTaxTables(taxTables, activeTaxYear, {
+        isLoading: enabled && isLoading,
+      }),
+    [taxTables, activeTaxYear, enabled, isLoading]
+  );
+
   return {
     taxTables,
+    taxTableValidation,
+    isTaxTablesReady: taxTableValidation.isReady,
     isLoadingTaxTables: isLoadingAuth || (enabled && isLoading),
     refetchTaxTables,
   };

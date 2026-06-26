@@ -7,6 +7,7 @@ import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast
 import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
 import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
+import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
 const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
@@ -66,29 +67,27 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
   const refetchEmployees = useCallback(async () => { // Renamed from fetchLiveEmployees
     setIsLoading(true); // Only set loading for full refetch
     try {
-      console.log("useEmployeesData: Fetching live employees from Supabase...");
+      logger.debug("useEmployeesData: fetching live employees");
       const { data, error } = await supabase
         .from('employees')
         .select('*')
         .order('first_name', { ascending: true });
 
       if (error) {
-        console.error("useEmployeesData: Error fetching live employees:", error);
+        logger.error("useEmployeesData: error fetching live employees:", toLogError(error));
         showError("Failed to load live employee data.");
         setEmployees([]);
       } else {
         const camelCaseData = data.map(convertEmployeeKeysToCamelCase);
-        console.log("useEmployeesData: Live employees fetched:", camelCaseData);
-        console.log(`useEmployeesData: Successfully fetched ${camelCaseData.length} employees from Supabase.`);
+        logger.debug(`useEmployeesData: fetched ${camelCaseData.length} employees`);
         setEmployees(camelCaseData);
       }
     } catch (err) {
-      console.error("useEmployeesData: Unhandled error fetching live employees:", err);
+      logger.error("useEmployeesData: unhandled error fetching live employees:", toLogError(err));
       showError("An unexpected error occurred while loading live employee data.");
       setEmployees([]);
     } finally {
       setIsLoading(false);
-      console.log("useEmployeesData: refetchEmployees finished. isLoading set to false.");
     }
   }, []); // No dependencies needed for refetchEmployees itself
 
@@ -135,16 +134,33 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
       } as any;
 
       const snakeCasePayload = convertEmployeeKeysToSnakeCase(payloadWithCustomId);
-      console.log("useEmployeesData: Upserting live employee with payload:", snakeCasePayload);
+      logger.debug("useEmployeesData: upserting live employee");
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('employees')
         .upsert(snakeCasePayload, { onConflict: 'id' })
         .select();
 
+      // Graceful fallback if the COMP-07/08 migration (20260626120000) hasn't been
+      // applied yet: retry without the new columns so saves don't break.
+      if (error && /(medical_aid_(member|dependants)|retirement_fund_contribution_(percent|fixed))/.test(error.message || "")) {
+        logger.warn(
+          "useEmployeesData: medical_aid_* / retirement_fund_contribution_* columns missing — apply migration 20260626120000_medical_aid_tax_credit.sql. Saving without those fields for now."
+        );
+        const fallbackPayload = { ...snakeCasePayload };
+        delete fallbackPayload.medical_aid_member;
+        delete fallbackPayload.medical_aid_dependants;
+        delete fallbackPayload.retirement_fund_contribution_percent;
+        delete fallbackPayload.retirement_fund_contribution_fixed;
+        ({ data, error } = await supabase
+          .from('employees')
+          .upsert(fallbackPayload, { onConflict: 'id' })
+          .select());
+      }
+
       if (error) {
-        console.error("useEmployeesData: Error upserting live employee:", error);
-        showError(`Failed to save employee: ${error.message}`);
+        logger.error("useEmployeesData: error upserting live employee:", toLogError(error));
+        showError(`Failed to save employee: ${toLogError(error)}`);
         return null;
       } else if (data && data.length > 0) {
         const camelCaseData = convertEmployeeKeysToCamelCase(data[0]);
@@ -159,18 +175,17 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         showSuccess("Employee saved successfully!");
         return camelCaseData;
       } else {
-        console.warn("useEmployeesData: Upsert succeeded but returned no data. This might indicate an RLS issue or unexpected behavior.");
+        logger.warn("useEmployeesData: upsert succeeded but returned no data. This might indicate an RLS issue or unexpected behavior.");
         showError("Employee saved, but data could not be retrieved. Please refresh.");
         return null;
       }
     } catch (err) {
-      console.error("useEmployeesData: Unhandled error upserting live employee:", err);
+      logger.error("useEmployeesData: unhandled error upserting live employee:", toLogError(err));
       showError("An unexpected error occurred while saving employee data.");
       return null;
     } finally {
       dismissToast(toastId);
       setIsMutating(false); // Reset mutating state
-      console.log("useEmployeesData: upsertLiveEmployee finished. isMutating set to false.");
     }
   }, [employees, companyName]); // `employees` is a dependency here because `customEmployeeIdToUse` generation depends on it.
 
@@ -178,26 +193,25 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
     const toastId = showLoading("Deleting employee...") as string;
     setIsMutating(true); // Set mutating for this specific operation
     try {
-      console.log("useEmployeesData: Deleting live employee with ID:", employeeId);
+      logger.debug("useEmployeesData: deleting live employee");
       const { error } = await supabase
         .from('employees')
         .delete()
         .eq('id', employeeId);
 
       if (error) {
-        console.error("useEmployeesData: Error deleting live employee:", error);
-        showError(`Failed to delete employee: ${error.message}`);
+        logger.error("useEmployeesData: error deleting live employee:", toLogError(error));
+        showError(`Failed to delete employee: ${toLogError(error)}`);
       } else {
         setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
         showSuccess("Employee deleted successfully!");
       }
     } catch (err) {
-      console.error("useEmployeesData: Unhandled error deleting live employee:", err);
+      logger.error("useEmployeesData: unhandled error deleting live employee:", toLogError(err));
       showError("An unexpected error occurred while deleting employee data.");
     } finally {
       dismissToast(toastId);
       setIsMutating(false); // Reset mutating state
-      console.log("useEmployeesData: deleteLiveEmployee finished. isMutating set to false.");
     }
   }, []);
 
@@ -290,23 +304,19 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
 
   // Effect to load data based on mockDataEnabled status
   useEffect(() => {
-    console.log("useEmployeesData: Main useEffect triggered. isMockDataEnabled:", isMockDataEnabled, "isAuthenticated:", isAuthenticated, "isLoadingAuth:", isLoadingAuth);
     if (isLoadingAuth) {
       setIsLoading(true); // Keep loading true while auth is loading
       return;
     }
 
     if (isMockDataEnabled) {
-      console.log("useEmployeesData: Mock data enabled. Loading from localStorage.");
       const storedMockEmployees = localStorage.getItem("mockEmployees");
       setEmployees(storedMockEmployees ? JSON.parse(storedMockEmployees) : []);
       setIsLoading(false);
     } else if (isAuthenticated) {
-      console.log("useEmployeesData: Live data enabled and authenticated. Calling refetchEmployees.");
       refetchEmployees(); // Use refetchEmployees here
     } else {
       // Not mock data, not authenticated, and auth is done loading
-      console.log("useEmployeesData: Live data enabled but not authenticated. Clearing employees.");
       setEmployees([]);
       setIsLoading(false);
     }

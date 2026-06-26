@@ -19,6 +19,10 @@ export type PayeBracketRow = {
 };
 
 export type SarsTaxYearTables = {
+  /** SA fiscal window start (YYYY-MM-DD), e.g. 2026-03-01 for tax year 2027. */
+  startDate: string;
+  /** SA fiscal window end (YYYY-MM-DD). Leap-year 29 Feb is handled in COMP-06. */
+  endDate: string;
   periodLabel: string;
   sourceUrl: string;
   payeBrackets: PayeBracketRow[];
@@ -32,10 +36,23 @@ export type SarsTaxYearTables = {
     uif_cap: number;
     sdl_rate: number;
   };
+  /**
+   * Section 6A medical scheme fees tax credit (monthly, in Rands). Subtracted
+   * from PAYE after rebates. `mainMember` covers the principal member, the same
+   * amount typically applies to the first dependant, and `additionalDependant`
+   * applies to each further dependant.
+   */
+  medicalTaxCredits: {
+    mainMember: number;
+    firstDependant: number;
+    additionalDependant: number;
+  };
 };
 
 /** Tax year 2026 — 1 March 2025 to 28 February 2026 (unchanged in Budget 2025). */
 const TAX_YEAR_2026: SarsTaxYearTables = {
+  startDate: "2025-03-01",
+  endDate: "2026-02-28",
   periodLabel: "1 March 2025 – 28 February 2026",
   sourceUrl: "https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/",
   payeBrackets: [
@@ -57,10 +74,17 @@ const TAX_YEAR_2026: SarsTaxYearTables = {
     uif_cap: 177.12,
     sdl_rate: 0.01,
   },
+  medicalTaxCredits: {
+    mainMember: 364,
+    firstDependant: 364,
+    additionalDependant: 246,
+  },
 };
 
 /** Tax year 2027 — 1 March 2026 to 28 February 2027 (Budget 2026, effective 1 March 2026). */
 const TAX_YEAR_2027: SarsTaxYearTables = {
+  startDate: "2026-03-01",
+  endDate: "2027-02-28",
   periodLabel: "1 March 2026 – 28 February 2027",
   sourceUrl: "https://www.sars.gov.za/guide-for-employers-in-respect-of-employees-tax-2027/",
   payeBrackets: [
@@ -82,6 +106,11 @@ const TAX_YEAR_2027: SarsTaxYearTables = {
     uif_cap: 177.12,
     sdl_rate: 0.01,
   },
+  medicalTaxCredits: {
+    mainMember: 376,
+    firstDependant: 376,
+    additionalDependant: 252,
+  },
 };
 
 export const SARS_TAX_TABLES_BY_YEAR: Record<number, SarsTaxYearTables> = {
@@ -95,4 +124,46 @@ export const SUPPORTED_SARS_TAX_YEARS = Object.keys(SARS_TAX_TABLES_BY_YEAR)
 
 export function getSarsTaxTablesForYear(taxYear: number): SarsTaxYearTables | null {
   return SARS_TAX_TABLES_BY_YEAR[taxYear] ?? null;
+}
+
+export type MedicalTaxCredits = SarsTaxYearTables["medicalTaxCredits"];
+
+/** Section 6A monthly medical scheme fees tax credits for a tax year. */
+export function getSarsMedicalTaxCredits(taxYear: number): MedicalTaxCredits | null {
+  return getSarsTaxTablesForYear(taxYear)?.medicalTaxCredits ?? null;
+}
+
+/**
+ * Monthly Section 6A medical scheme fees tax credit.
+ * @param isMember whether the employee is the principal medical-scheme member.
+ * @param dependants number of dependants (excluding the main member).
+ * @param credits the tax-year credit amounts.
+ */
+export function computeMonthlyMedicalTaxCredit(
+  isMember: boolean,
+  dependants: number,
+  credits: MedicalTaxCredits | null
+): number {
+  if (!isMember || !credits) return 0;
+  const safeDependants = Math.max(0, Math.floor(dependants || 0));
+  const firstDependant = safeDependants >= 1 ? credits.firstDependant : 0;
+  const additional = Math.max(0, safeDependants - 1) * credits.additionalDependant;
+  return credits.mainMember + firstDependant + additional;
+}
+
+/** Tax-year metadata for DB persistence and payroll (single source of truth). */
+export function buildSarsTaxYearDetails(taxYear: number) {
+  const tables = getSarsTaxTablesForYear(taxYear);
+  if (!tables) return null;
+  return {
+    year: taxYear,
+    start_date: tables.startDate,
+    end_date: tables.endDate,
+    description: `SARS tax year (${tables.periodLabel})`,
+    rebates: {
+      under65: tables.rebates.under65,
+      sixtyFiveToSeventyFour: tables.rebates.sixtyFiveToSeventyFour,
+      seventyFivePlus: tables.rebates.seventyFivePlus,
+    },
+  };
 }

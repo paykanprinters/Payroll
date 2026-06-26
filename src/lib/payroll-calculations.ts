@@ -1,6 +1,7 @@
 import { eachDayOfInterval, isWeekend, format, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, getDay, getDate, setDate, setDay } from "date-fns";
 import { TaxTables } from "@/hooks/use-tax-tables"; // Import TaxTables interface
 import { bankersRound } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 export const calculateWorkingDays = (start: Date, end: Date): number => {
   let count = 0;
@@ -27,11 +28,10 @@ export const calculatePAYE = (
   payeBrackets: TaxTables['payeBrackets'],
   taxYearDetails: TaxTables['taxYearDetails'] | null,
   employeeAge: number | null,
-  payFrequency: "Monthly" | "Weekly" | "Bi-Weekly"
+  payFrequency: "Monthly" | "Weekly" | "Bi-Weekly",
+  /** Annual Section 6A medical scheme tax credit, subtracted from PAYE after rebates. */
+  annualMedicalCredit: number = 0
 ): number => {
-  console.log(`[calculatePAYE] START - taxableIncome: ${taxableIncome}, payFrequency: ${payFrequency}, employeeAge: ${employeeAge}`);
-  console.log(`[calculatePAYE] taxYearDetails:`, taxYearDetails);
-
   let annualizationFactor = 1;
   let deAnnualizationFactor = 1;
 
@@ -55,21 +55,24 @@ export const calculatePAYE = (
   const annualIncome = taxableIncome * annualizationFactor;
   let annualPAYE = 0;
 
-  console.log(`[calculatePAYE] Annualization Factor: ${annualizationFactor}, Annualized Income: ${annualIncome}`);
-
   // Ensure payeBrackets is not empty before iterating
   if (payeBrackets.length === 0) {
-    console.warn("[calculatePAYE] No PAYE brackets provided. Returning 0.");
+    logger.warn("[calculatePAYE] No PAYE brackets provided. Returning 0.");
     return 0;
   }
 
+  // SARS marginal formula: tax = deduction + rate * (income - lowerThreshold),
+  // where lowerThreshold is the bottom of the bracket (the previous bracket's
+  // max_income, or 0 for the first bracket) and `deduction` is the cumulative
+  // tax at that threshold. This MUST use the threshold, not bracket.min_income
+  // (which is threshold + 1), otherwise PAYE is understated by ~rate per year.
+  let lowerThreshold = 0;
   for (const bracket of payeBrackets) {
-    console.log(`[calculatePAYE] Checking bracket: min_income=${bracket.min_income}, max_income=${bracket.max_income}, rate=${bracket.rate}, deduction=${bracket.deduction}`);
     if (annualIncome >= bracket.min_income && (bracket.max_income === null || annualIncome <= bracket.max_income)) {
-      annualPAYE = (annualIncome - bracket.min_income) * bracket.rate + bracket.deduction;
-      console.log(`[calculatePAYE] Matched bracket. Calculation: (${annualIncome} - ${bracket.min_income}) * ${bracket.rate} + ${bracket.deduction} = ${annualPAYE}`);
+      annualPAYE = (annualIncome - lowerThreshold) * bracket.rate + bracket.deduction;
       break;
     }
+    lowerThreshold = bracket.max_income ?? lowerThreshold;
   }
 
   // Apply rebates if taxYearDetails is available.
@@ -88,15 +91,18 @@ export const calculatePAYE = (
       totalRebate = rebates.under65 + rebates.sixtyFiveToSeventyFour + rebates.seventyFivePlus;
     }
 
-    console.log(`[calculatePAYE] Applying total rebate: ${totalRebate} (age: ${employeeAge ?? 'unknown'})`);
     annualPAYE = Math.max(0, annualPAYE - totalRebate); // Ensure PAYE doesn't go negative
+  }
+
+  // Section 6A medical scheme fees tax credit is applied AFTER rebates and
+  // cannot create a refund (floored at zero).
+  if (annualMedicalCredit > 0) {
+    annualPAYE = Math.max(0, annualPAYE - annualMedicalCredit);
   }
 
   // De-annualize PAYE to get the amount for the current pay period
   const periodPAYERaw = annualPAYE / deAnnualizationFactor;
   const periodPAYE = bankersRound(periodPAYERaw, 2);
-  console.log(`[calculatePAYE] Annual PAYE (after rebates): ${annualPAYE}, Period PAYE (raw): ${periodPAYERaw}, Period PAYE (rounded): ${periodPAYE}`);
-  console.log(`[calculatePAYE] END - Returning periodPAYE (rounded): ${periodPAYE}`);
   return periodPAYE;
 };
 

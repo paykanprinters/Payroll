@@ -23,6 +23,7 @@ import UserFormDialog, { UserFormValues } from "@/components/settings/UserFormDi
 import AdminPolicyBadge from "@/components/settings/AdminPolicyBadge";
 import LinkEmployeeDialog from "@/components/settings/LinkEmployeeDialog";
 import { showSuccess, showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 import { recordAuditEvent } from "@/lib/audit-trail";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -75,7 +76,7 @@ const UserControlPanel: React.FC = () => {
     const { data, error } = await supabase.from('users').select('*').order('name', { ascending: true });
 
     if (error) {
-      console.error("Error fetching users:", error);
+      logger.error("Error fetching users:", toLogError(error));
       showError("Failed to load users.");
       setUsers([]);
       setLinkedMap({});
@@ -88,7 +89,7 @@ const UserControlPanel: React.FC = () => {
         .select('id, user_id, first_name, last_name, custom_employee_id');
 
       if (empErr) {
-        console.error("Error fetching employees for link mapping:", empErr);
+        logger.error("Error fetching employees for link mapping:", toLogError(empErr));
         setLinkedMap({});
       } else {
         const map: Record<string, { id: string; name: string; customId: string } | null> = {};
@@ -120,15 +121,14 @@ const UserControlPanel: React.FC = () => {
       });
 
       if (response.error) {
-        console.error('Error seeding users via Edge Function:', response.error);
+        logger.error('Error seeding users via Edge Function:', toLogError(response.error));
         showError('Failed to seed initial users.');
       } else {
-        console.log('Seed users Edge Function response:', response.data);
         showSuccess('Initial users seeded successfully!');
         fetchUsers();
       }
     } catch (error) {
-      console.error('Error invoking seed-users Edge Function:', error);
+      logger.error('Error invoking seed-users Edge Function:', toLogError(error));
       showError('Failed to invoke user seeding process.');
     } finally {
       setIsSeeding(false);
@@ -149,11 +149,11 @@ const UserControlPanel: React.FC = () => {
       if (isAuthenticated && !isLoading && users.length === 0 && !isSeeding && !isMockDataEnabled) {
         const { count, error } = await supabase.from('users').select('id', { count: 'exact' });
         if (error) {
-          console.error('Error checking user count for seeding:', error);
+          logger.error('Error checking user count for seeding:', toLogError(error));
           return;
         }
         if (count === 0) {
-          console.log('No users found in database, initiating seeding process...');
+          logger.debug('No users found in database, initiating seeding process.');
           seedInitialUsers();
         }
       }
@@ -206,7 +206,7 @@ const UserControlPanel: React.FC = () => {
       .eq('id', userToDelete.id);
 
     if (profileError) {
-      console.error("Error deleting user profile:", profileError);
+      logger.error("Error deleting user profile:", toLogError(profileError));
       showError("Failed to delete user profile.");
       setIsLoading(false);
       return;
@@ -240,7 +240,7 @@ const UserControlPanel: React.FC = () => {
         .eq('id', userData.id);
 
       if (error) {
-        console.error("Error updating user:", error);
+        logger.error("Error updating user:", toLogError(error));
         showError("Failed to update user.");
       } else {
         showSuccess(`User ${userData.name} updated successfully!`);
@@ -264,11 +264,9 @@ const UserControlPanel: React.FC = () => {
       });
 
       if (resMeta.error) {
-        console.error("Error updating user metadata via Edge Function:", resMeta.error);
+        logger.error("Error updating user metadata via Edge Function:", toLogError(resMeta.error));
         const serverMsgMeta = typeof resMeta.error?.message === 'string' ? resMeta.error.message : (resMeta.data as any)?.error;
         showError(serverMsgMeta || "Failed to update user display name in Auth system.");
-      } else {
-        console.log("User metadata updated:", resMeta.data);
       }
 
       if (userData.password) {
@@ -276,7 +274,7 @@ const UserControlPanel: React.FC = () => {
           body: JSON.stringify({ userId: userData.id, newPassword: userData.password }),
         });
         if (res.error) {
-          console.error("Error updating user password via Edge Function:", res.error);
+          logger.error("Error updating user password via Edge Function:", toLogError(res.error));
           const serverMsg = typeof res.error?.message === 'string' ? res.error.message : (res.data as any)?.error;
           showError(serverMsg || "Failed to update user password.");
         } else {
@@ -299,7 +297,7 @@ const UserControlPanel: React.FC = () => {
       });
 
       if (authError) {
-        console.error("Error signing up new user:", authError);
+        logger.error("Error signing up new user:", toLogError(authError));
         showError(authError.message);
       } else if (authData.user) {
         const { error: profileError } = await supabase
@@ -312,7 +310,7 @@ const UserControlPanel: React.FC = () => {
           .eq('id', authData.user.id);
 
         if (profileError) {
-          console.error("Error updating new user profile:", profileError);
+          logger.error("Error updating new user profile:", toLogError(profileError));
           showError("Failed to set role on the new user profile.");
         } else {
           showSuccess(`User ${userData.name} added successfully!`);

@@ -98,6 +98,7 @@ const Reports: React.FC = () => {
             <ReportsCatalog
               employees={employees}
               payslips={periodPayslips}
+              allPayslips={payslips}
               leaveRecords={periodLeave}
               companyDetails={companyDetails}
               reportDesignSettings={reportDesignSettings}

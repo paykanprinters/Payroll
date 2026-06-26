@@ -22,6 +22,7 @@ import PayslipPdfDocument from "@/components/payslips/PayslipPdfDocument";
 import { Printer, Download } from "lucide-react";
 import { showError } from "@/utils/toast";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+import { getTaxTableBlockingMessage } from "@/lib/tax-tables-validation";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface CalculatePaycheckDialogProps {
@@ -31,21 +32,31 @@ interface CalculatePaycheckDialogProps {
 }
 
 const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpen, onClose, payslipDesignSettings }) => {
-  const { employees, calculateSinglePayslipPreview, companyDetails, taxTables, payCycleSettings, timesheets, workHoursSettings } = usePayrollProcessor();
+  const {
+    employees,
+    calculateSinglePayslipPreview,
+    companyDetails,
+    taxTableValidation,
+    isTaxTablesReady,
+    userTaxSettings,
+    payCycleSettings,
+    timesheets,
+    workHoursSettings,
+  } = usePayrollProcessor();
   const { downloadPdf, openPdf } = usePdfVector();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [previewPayslip, setPreviewPayslip] = useState<MockPayslip | null>(null);
   const [currentPeriodStart, setCurrentPeriodStart] = useState<Date | null>(null);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<Date | null>(null);
-  const [isTaxTablesMissing, setIsTaxTablesMissing] = useState<boolean>(false);
+  const [taxTablesBlockMessage, setTaxTablesBlockMessage] = useState<string | null>(null);
 
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setSelectedEmployeeId("");
       setPreviewPayslip(null);
-      setIsTaxTablesMissing(false);
+      setTaxTablesBlockMessage(null);
       // Determine current period based on configured pay cycle for preview
       const today = new Date();
       const settings = payCycleSettings ? {
@@ -92,23 +103,20 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
     setCurrentPeriodStart(periodStart);
     setCurrentPeriodEnd(periodEnd);
 
-      // Guard — do not attempt preview calculation if tax tables aren't loaded
-      const tablesMissing =
-        !taxTables ||
-        !taxTables.payeBrackets ||
-        taxTables.payeBrackets.length === 0;
-
-      if (tablesMissing) {
-        setIsTaxTablesMissing(true);
-        // Do not call calculateSinglePayslipPreview here (avoids toast)
+      const payeApplies = userTaxSettings?.applyPaye ?? false;
+      if (payeApplies && !isTaxTablesReady) {
+        setTaxTablesBlockMessage(
+          (taxTableValidation && getTaxTableBlockingMessage(taxTableValidation)) ??
+            "PAYE tax tables are not ready. Apply or refresh them in Settings → Tax Liabilities."
+        );
         return;
       }
 
-      setIsTaxTablesMissing(false);
+      setTaxTablesBlockMessage(null);
       const calculatedPayslip = calculateSinglePayslipPreview(employeeId, periodStart, periodEnd);
       setPreviewPayslip(calculatedPayslip);
     }
-  }, [employees, companyDetails, calculateSinglePayslipPreview, taxTables, payCycleSettings]);
+  }, [employees, calculateSinglePayslipPreview, taxTableValidation, isTaxTablesReady, userTaxSettings, payCycleSettings]);
 
   const handlePrintOrDownload = useCallback(async (action: 'print' | 'download') => {
     if (!previewPayslip || !currentPeriodStart || !currentPeriodEnd) {
@@ -172,12 +180,11 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
             </Select>
           </div>
 
-          {selectedEmployeeId && isTaxTablesMissing && (
+          {selectedEmployeeId && taxTablesBlockMessage && (
             <Alert className="bg-amber-50 border-amber-200 text-amber-900">
-              <AlertTitle>Tax tables not loaded</AlertTitle>
+              <AlertTitle>Tax tables not ready</AlertTitle>
               <AlertDescription>
-                We need PAYE tax tables to generate the payslip preview. Go to Settings → Tax Liabilities to fetch tables,
-                then return here. Print/Download are disabled until tables are available.
+                {taxTablesBlockMessage} Print/Download are disabled until tables are ready.
               </AlertDescription>
             </Alert>
           )}
@@ -217,7 +224,9 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
               </div>
             </div>
           ) : (
-            selectedEmployeeId && !isTaxTablesMissing && <p className="text-center text-muted-foreground mt-8">Select an employee to see a preview.</p>
+            selectedEmployeeId && !taxTablesBlockMessage && (
+              <p className="text-center text-muted-foreground mt-8">Select an employee to see a preview.</p>
+            )
           )}
         </div>
         <DialogFooter>

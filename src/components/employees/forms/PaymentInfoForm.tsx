@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type PaymentInfoFormProps = {
   initialFocus?: "basic" | "personal" | "payment" | "bank" | "tax";
@@ -166,6 +167,82 @@ const PaymentInfoForm: React.FC<PaymentInfoFormProps> = ({ initialFocus }) => {
               <Label htmlFor="uifNumber">UIF Number (If applicable)</Label>
               <Input id="uifNumber" {...register("uifNumber")} />
               {errors.uifNumber && (<p className="text-red-500 text-sm">{errors.uifNumber.message as string}</p>)}
+            </div>
+          </div>
+
+          <div className="mt-4 border-t pt-4">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="medicalAidMember"
+                checked={!!watch("medicalAidMember")}
+                onCheckedChange={(checked) => setValue("medicalAidMember", checked === true, { shouldDirty: true })}
+                className="mt-1"
+              />
+              <div className="grid gap-0.5">
+                <Label htmlFor="medicalAidMember">Medical scheme member</Label>
+                <p className="text-xs text-muted-foreground">
+                  Principal member of a registered medical scheme. Enables the SARS Section 6A
+                  medical scheme fees tax credit, reducing monthly PAYE.
+                </p>
+              </div>
+            </div>
+
+            {watch("medicalAidMember") && (
+              <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="space-y-1">
+                  <Label htmlFor="medicalAidDependants">Dependants (excluding main member)</Label>
+                  <Input
+                    id="medicalAidDependants"
+                    type="number"
+                    min={0}
+                    step={1}
+                    {...register("medicalAidDependants", { valueAsNumber: true })}
+                  />
+                  {errors.medicalAidDependants && (
+                    <p className="text-red-500 text-sm">{errors.medicalAidDependants.message as string}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 border-t pt-4">
+            <div className="grid gap-0.5">
+              <Label>Retirement fund contribution (pre-tax)</Label>
+              <p className="text-xs text-muted-foreground">
+                Employee contribution to a pension / provident / RA fund. Deducted before PAYE,
+                limited per SARS Section 11F (27.5% of remuneration, max R350,000/year).
+                Set a percentage of gross, a fixed amount, or both.
+              </p>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-1">
+                <Label htmlFor="retirementFundContributionPercent">% of gross</Label>
+                <Input
+                  id="retirementFundContributionPercent"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  {...register("retirementFundContributionPercent", { valueAsNumber: true })}
+                />
+                {errors.retirementFundContributionPercent && (
+                  <p className="text-red-500 text-sm">{errors.retirementFundContributionPercent.message as string}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="retirementFundContributionFixed">Fixed amount (R / period)</Label>
+                <Input
+                  id="retirementFundContributionFixed"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  {...register("retirementFundContributionFixed", { valueAsNumber: true })}
+                />
+                {errors.retirementFundContributionFixed && (
+                  <p className="text-red-500 text-sm">{errors.retirementFundContributionFixed.message as string}</p>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

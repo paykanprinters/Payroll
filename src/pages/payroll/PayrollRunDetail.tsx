@@ -9,13 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
-import { fetchPayslipsFromSupabase } from "@/integrations/supabase/payslip-queries";
+import { fetchPayslipsFromSupabase, deletePayslipsByIds } from "@/integrations/supabase/payslip-queries";
 import { logAuditEvent } from "@/utils/audit";
 import {
   fetchPayrollRunById,
   fetchRunItems,
   addRunItems,
   updatePayrollRunStatus,
+  voidPayrollRun,
   PayrollRun,
   PayrollRunItem,
   PayrollRunStatus,
@@ -24,8 +25,19 @@ import {
   createPaymentBatch,
   addBatchItems,
   fetchPaymentBatchByRunId,
+  deletePaymentBatch,
   PaymentBatch,
 } from "@/integrations/supabase/payment-batch-queries";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { insertAuditLog, fetchAuditLogsForEntity } from "@/integrations/supabase/audit-queries";
 import { createRunSnapshot } from "@/integrations/supabase/run-snapshot-queries";
 import { useOvertimeRules } from "@/hooks/use-overtime-rules";
@@ -35,7 +47,7 @@ import PayrollRunHeader from "@/components/payroll/PayrollRunHeader";
 import PayrollRunStepper, { PayrollRunStepId } from "@/components/payroll/PayrollRunStepper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, CheckCircle2, FileText, Landmark, Lock, Mail, Play, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, FileText, Landmark, Lock, Mail, Play, ShieldCheck } from "lucide-react";
 
 const statusFlow: Record<PayrollRunStatus, PayrollRunStatus[]> = {
   Draft: ["Reviewed"],
@@ -43,6 +55,7 @@ const statusFlow: Record<PayrollRunStatus, PayrollRunStatus[]> = {
   Approved: ["Locked"],
   Locked: ["Paid"],
   Paid: [],
+  Cancelled: [],
 };
 
 const statusToStep: Record<PayrollRunStatus, PayrollRunStepId> = {
@@ -51,7 +64,12 @@ const statusToStep: Record<PayrollRunStatus, PayrollRunStepId> = {
   Approved: "approval",
   Locked: "payments",
   Paid: "paid",
+  Cancelled: "items",
 };
+
+// A run can be voided up to (but not including) Paid. Once money has been
+// disbursed it must be corrected via a reversal/adjustment run, not a void.
+const VOIDABLE_STATUSES: PayrollRunStatus[] = ["Draft", "Reviewed", "Approved", "Locked"];
 
 const blockerBadgeClass = (severity: "error" | "warning") => {
   return severity === "error"
@@ -71,6 +89,7 @@ const PayrollRunDetailPage: React.FC = () => {
     companyDetails,
     userTaxSettings,
     taxTables,
+    activeTaxYearForCalculations,
     updateTimesheetStatus,
   } = usePayrollProcessor({ silent: true });
   const { rules: overtimeRules } = useOvertimeRules();
@@ -83,6 +102,9 @@ const PayrollRunDetailPage: React.FC = () => {
   const [blockers, setBlockers] = useState<ReadinessBlocker[]>([]);
   const [activeTab, setActiveTab] = useState<"workflow" | "items" | "audit">("workflow");
   const [paymentBatch, setPaymentBatch] = useState<PaymentBatch | null>(null);
+  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState("");
+  const [isVoiding, setIsVoiding] = useState(false);
 
   const targetPeriod = useMemo(() => {
     if (!run) return null;
@@ -112,11 +134,13 @@ const PayrollRunDetailPage: React.FC = () => {
         companyDetails || null,
         userTaxSettings || null,
         targetPeriod.start,
-        targetPeriod.end
+        targetPeriod.end,
+        taxTables,
+        activeTaxYearForCalculations
       );
       setBlockers(b);
     }
-  }, [run, employees, timesheets, companyDetails, userTaxSettings, computeBlockers, targetPeriod]);
+  }, [run, employees, timesheets, companyDetails, userTaxSettings, taxTables, activeTaxYearForCalculations, computeBlockers, targetPeriod]);
 
   const currentStep: PayrollRunStepId = useMemo(() => {
     if (!run) return "readiness";
@@ -280,6 +304,76 @@ const PayrollRunDetailPage: React.FC = () => {
     }
   };
 
+  const handleVoidRun = async () => {
+    if (!run || !id) return;
+    const reason = voidReason.trim();
+    if (reason.length < 5) {
+      showError("Please provide a reason (at least 5 characters) for voiding this run.");
+      return;
+    }
+    if (isMockDataEnabled) {
+      showError("Disable mock data to void live payroll runs.");
+      return;
+    }
+    if (!VOIDABLE_STATUSES.includes(run.status)) {
+      showError("Only Draft, Reviewed, Approved or Locked runs can be voided.");
+      return;
+    }
+
+    setIsVoiding(true);
+    const toastId = showLoading("Voiding run...") as string;
+    try {
+      // 1) Reverse a pending payment batch (block if money is already in motion).
+      const batch = await fetchPaymentBatchByRunId(id);
+      if (batch) {
+        if (batch.status === "Exported" || batch.status === "Reconciled") {
+          showError(
+            `This run has an ${batch.status.toLowerCase()} payment batch. Resolve the batch before voiding.`
+          );
+          return;
+        }
+        const batchOk = await deletePaymentBatch(batch.id);
+        if (!batchOk) return;
+        setPaymentBatch(null);
+      }
+
+      // 2) Reverse generated payslips so the run no longer affects YTD/reports.
+      const runItems = await fetchRunItems(id);
+      const payslipIds = runItems.map((it) => it.payslipId).filter((x): x is string => !!x);
+      const payslipsOk = await deletePayslipsByIds(payslipIds);
+      if (!payslipsOk) return;
+
+      // 3) Mark the run Cancelled (record retained for audit).
+      const ok = await voidPayrollRun(id, reason, user?.id ?? null);
+      if (!ok) return;
+
+      const updated: PayrollRun = {
+        ...run,
+        status: "Cancelled",
+        cancelledBy: user?.id ?? null,
+        cancelledAt: new Date().toISOString(),
+        cancellationReason: reason,
+      };
+      setRun(updated);
+      setItems(await fetchRunItems(id));
+      setVoidDialogOpen(false);
+      setVoidReason("");
+      showSuccess("Run voided.");
+
+      await insertAuditLog("payroll_run", id, "Run voided", {
+        by: user?.id || null,
+        reason,
+        payslipsRemoved: payslipIds.length,
+        batchRemoved: !!batch,
+      });
+      setAudits(await fetchAuditLogsForEntity("payroll_run", id));
+      await logAuditEvent(`Run ${id} voided`, "payroll_run", id, { by: user?.id || null, reason });
+    } finally {
+      dismissToast(toastId);
+      setIsVoiding(false);
+    }
+  };
+
   const autoLockPendingTimesheets = async () => {
     if (!run || !targetPeriod) return;
     const list = timesheets.filter(
@@ -357,7 +451,10 @@ const PayrollRunDetailPage: React.FC = () => {
 
   const nextStatuses = statusFlow[run.status];
   const cutOffReached = targetPeriod ? isPastCutOff(targetPeriod.end) : false;
-  const canGenerateItems = blockers.filter((b) => b.severity === "error").length === 0;
+  const isCancelled = run.status === "Cancelled";
+  const canGenerateItems =
+    blockers.filter((b) => b.severity === "error").length === 0 && !isCancelled;
+  const canVoid = VOIDABLE_STATUSES.includes(run.status) && !isMockDataEnabled;
 
   const paymentBadgeClass = (status: string) => {
     if (status === "Reconciled") return "bg-emerald-50 text-emerald-700 border-emerald-200";
@@ -386,6 +483,27 @@ const PayrollRunDetailPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="workflow" className="mt-4 space-y-4">
+          {isCancelled && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
+              <div className="flex items-center gap-2 font-semibold">
+                <Ban className="h-4 w-4" />
+                This run has been voided
+              </div>
+              <div className="mt-1 text-sm text-rose-800">
+                Generated payslips and any pending payment batch were reversed. The run is kept as a
+                read-only record for audit. No further actions can be taken.
+              </div>
+              {run.cancellationReason && (
+                <div className="mt-2 text-sm">
+                  <span className="font-medium">Reason:</span> {run.cancellationReason}
+                </div>
+              )}
+              <div className="mt-1 text-xs text-rose-700">
+                Voided by <span className="font-mono">{run.cancelledBy || "-"}</span>
+                {run.cancelledAt ? ` on ${new Date(run.cancelledAt).toLocaleString()}` : ""}
+              </div>
+            </div>
+          )}
           <Card className="rounded-2xl border bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl">Run details</CardTitle>
@@ -481,7 +599,7 @@ const PayrollRunDetailPage: React.FC = () => {
                       <Button
                         variant="outline"
                         onClick={handleCreatePaymentBatch}
-                        disabled={items.length === 0}
+                        disabled={items.length === 0 || isCancelled}
                         title={items.length === 0 ? "Generate items first." : ""}
                         size="sm"
                       >
@@ -579,9 +697,26 @@ const PayrollRunDetailPage: React.FC = () => {
               </div>
 
               <div className="rounded-2xl border bg-white p-4">
-                <div className="text-sm font-medium">Approvals</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Use the buttons below to move the run through maker-checker approvals.
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">Approvals</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {isCancelled
+                        ? "This run is voided and read-only."
+                        : "Use the buttons below to move the run through maker-checker approvals."}
+                    </div>
+                  </div>
+                  {canVoid && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                      onClick={() => setVoidDialogOpen(true)}
+                    >
+                      <Ban className="h-4 w-4" />
+                      Void run
+                    </Button>
+                  )}
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -729,6 +864,52 @@ const PayrollRunDetailPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={voidDialogOpen} onOpenChange={(o) => !isVoiding && setVoidDialogOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-700">
+              <Ban className="h-5 w-5" />
+              Void this payroll run
+            </DialogTitle>
+            <DialogDescription>
+              Voiding marks the run as <span className="font-medium">Cancelled</span> and keeps it as a
+              read-only audit record. This will permanently reverse the run's generated payslips
+              {paymentBatch ? " and its pending payment batch" : ""}, removing their impact on
+              year-to-date totals and statutory reports. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="void-reason">Reason for voiding</Label>
+            <Textarea
+              id="void-reason"
+              value={voidReason}
+              onChange={(e) => setVoidReason(e.target.value)}
+              placeholder="e.g. Run created for the wrong period / loaded by mistake."
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setVoidDialogOpen(false)}
+              disabled={isVoiding}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              onClick={handleVoidRun}
+              disabled={isVoiding || voidReason.trim().length < 5}
+            >
+              <Ban className="h-4 w-4" />
+              {isVoiding ? "Voiding..." : "Void run"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

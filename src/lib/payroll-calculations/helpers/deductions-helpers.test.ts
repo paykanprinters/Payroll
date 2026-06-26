@@ -10,7 +10,7 @@ const taxTables: TaxTables = {
   ],
   uifSdlRates: { uif_rate: 0.01, uif_cap: 177.12, sdl_rate: 0.01 },
   taxYearDetails: {
-    year: 2026,
+    year: 2027,
     start_date: "2026-03-01",
     end_date: "2027-02-28",
     description: "Test",
@@ -39,10 +39,11 @@ function find(breakdown: { name: string; amount: number }[], name: string) {
 }
 
 describe("buildDeductions — statutory", () => {
-  it("levies SDL on gross remuneration, not on PAYE-taxable income + UIF", () => {
-    // Regression guard for the SDL base bug. With gross 30000 and sdl_rate 0.01,
-    // SDL must be exactly 300.00. The previous buggy formula produced ~475.35.
-    const { deductionsBreakdown } = buildDeductions(
+  it("does NOT deduct SDL from the employee; reports it as an employer cost (COMP-01)", () => {
+    // SDL is an EMPLOYER levy (1% of leviable remuneration) and must never reduce
+    // employee net pay. It must be absent from the employee deductions breakdown
+    // and surfaced separately via employerSdl. With gross 30000 -> employerSdl 300.
+    const { deductionsBreakdown, employerSdl } = buildDeductions(
       employee,
       30000,
       [],
@@ -54,7 +55,25 @@ describe("buildDeductions — statutory", () => {
       "2026-03",
       [],
     );
-    expect(find(deductionsBreakdown, "SDL")).toBe(300);
+    expect(find(deductionsBreakdown, "SDL")).toBeUndefined();
+    expect(employerSdl).toBe(300);
+  });
+
+  it("reports zero employer SDL when the employer is SDL-exempt (toggle off)", () => {
+    const { deductionsBreakdown, employerSdl } = buildDeductions(
+      employee,
+      30000,
+      [],
+      [],
+      taxTables,
+      { applyPaye: false, applySdl: false } as any,
+      periodStart,
+      periodEnd,
+      "2026-03",
+      [],
+    );
+    expect(find(deductionsBreakdown, "SDL")).toBeUndefined();
+    expect(employerSdl).toBe(0);
   });
 
   it("caps UIF at the monthly ceiling for high earners", () => {
@@ -89,9 +108,12 @@ describe("buildDeductions — statutory", () => {
     expect(find(deductionsBreakdown, "UIF")).toBe(100);
   });
 
-  it("excludes UIF from the PAYE taxable base", () => {
-    // With PAYE enabled, taxable base is gross - UIF. UIF is still 177.12 capped.
-    const { deductionsBreakdown, totalDeductions } = buildDeductions(
+  it("levies PAYE on remuneration (UIF is NOT deducted from the taxable base)", () => {
+    // COMP-02: PAYE must be computed on gross remuneration, not gross - UIF.
+    // gross 30000 -> annual 360000, second bracket (lower threshold 237100):
+    //   42678 + 0.26 * (360000 - 237100) - 16425 = 58207 / 12 = 4850.58.
+    // The old (buggy) gross-minus-UIF base produced ~4804.51.
+    const { deductionsBreakdown, totalDeductions, employerSdl } = buildDeductions(
       employee,
       30000,
       [],
@@ -103,9 +125,12 @@ describe("buildDeductions — statutory", () => {
       "2026-03",
       [],
     );
-    expect(find(deductionsBreakdown, "UIF")).toBe(177.12);
-    expect(find(deductionsBreakdown, "SDL")).toBe(300);
-    expect(find(deductionsBreakdown, "PAYE")).toBeGreaterThan(0);
-    expect(totalDeductions).toBeGreaterThan(177.12 + 300);
+    const uif = find(deductionsBreakdown, "UIF")!;
+    const paye = find(deductionsBreakdown, "PAYE")!;
+    expect(uif).toBe(177.12);
+    expect(paye).toBeCloseTo(4850.58, 2);
+    expect(find(deductionsBreakdown, "SDL")).toBeUndefined();
+    expect(employerSdl).toBe(300);
+    expect(totalDeductions).toBeCloseTo(uif + paye, 2);
   });
 });

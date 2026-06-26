@@ -6,6 +6,8 @@ import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queri
 import { bankersRound } from "@/lib/utils";
 import { sumMoney } from "@/lib/money";
 import { calculatePAYE } from "@/lib/payroll-calculations";
+import { computeMonthlyMedicalTaxCredit, getSarsMedicalTaxCredits } from "@/lib/sars-tax-tables";
+import { computeRetirementContribution } from "@/lib/retirement-fund";
 
 const computeUIF = (
   grossEarnings: number,
@@ -44,12 +46,28 @@ const computePAYE = (
   if (emp.dateOfBirth) {
     employeeAge = differenceInYears(new Date(), new Date(emp.dateOfBirth));
   }
+
+  // Section 6A medical scheme fees tax credit (COMP-07). Default ON unless the
+  // employer explicitly disables it. Credits are sourced per tax year.
+  const applyMedicalCredit = userTaxSettings?.applyMedicalAidTaxCredit !== false;
+  const monthlyMedicalCredit = applyMedicalCredit
+    ? computeMonthlyMedicalTaxCredit(
+        emp.medicalAidMember ?? false,
+        emp.medicalAidDependants ?? 0,
+        getSarsMedicalTaxCredits(taxYearDetails?.year ?? -1)
+      )
+    : 0;
+  // The credit is a fixed monthly amount; annualize it for the PAYE engine,
+  // which divides the annual result back down by the period count per year.
+  const annualMedicalCredit = monthlyMedicalCredit * 12;
+
   const paye = calculatePAYE(
     taxableIncomeForPAYE,
     payeBrackets,
     taxYearDetails,
     employeeAge,
-    emp.payFrequency
+    emp.payFrequency,
+    annualMedicalCredit
   );
   return paye > 0 ? bankersRound(paye, 2) : 0;
 };
@@ -113,8 +131,32 @@ export const buildDeductions = (
   const savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] = [];
 
   const uif = computeUIF(grossEarnings, taxTables.uifSdlRates, emp, userTaxSettings);
-  const taxableForPAYE = Math.max(0, grossEarnings - uif);
+
+  // COMP-08: pre-tax retirement-fund contribution (Section 11F). The full
+  // employee contribution is withheld from net pay, but only the deductible
+  // portion (within the 27.5% / R350,000-a-year caps) reduces the PAYE base.
+  const retirementProration = getPeriodProrationFactor(
+    emp.payFrequency ?? "Monthly",
+    periodStart,
+    periodEnd
+  );
+  const retirement = computeRetirementContribution(
+    grossEarnings,
+    emp,
+    emp.payFrequency,
+    retirementProration
+  );
+
+  // PAYE is levied on remuneration. The employee UIF contribution is NOT
+  // deductible for income tax, so it must not reduce the PAYE taxable base.
+  // Pre-tax retirement-fund contributions DO reduce it (capped per Section 11F).
+  const taxableForPAYE = Math.max(0, grossEarnings - retirement.taxDeductible);
   const paye = computePAYE(taxableForPAYE, taxTables, emp, userTaxSettings);
+
+  if (retirement.total > 0) {
+    deductionsBreakdown.push({ name: "Retirement Fund", amount: retirement.total });
+    totalDeductions += retirement.total;
+  }
 
   deductionsBreakdown.push({ name: "UIF", amount: uif });
   totalDeductions += uif;
@@ -124,19 +166,15 @@ export const buildDeductions = (
     totalDeductions += paye;
   }
 
+  // SDL is an EMPLOYER levy (Skills Development Levies Act): 1% of leviable
+  // remuneration, paid by the employer to SARS. It must NEVER reduce employee
+  // net pay, so it is intentionally NOT added to deductionsBreakdown. It is
+  // returned separately as an employer-cost figure for statutory reporting
+  // (EMP201 / IRP5). The applySdl flag reflects whether the employer is
+  // SDL-liable (employers with total annual payroll <= R500,000 are exempt).
   const applySDLFlag = userTaxSettings?.applySdl ?? true;
-  if (applySDLFlag) {
-    if (taxTables.uifSdlRates) {
-      const sdlRaw = grossEarnings * taxTables.uifSdlRates.sdl_rate;
-      const sdl = bankersRound(sdlRaw, 2);
-      deductionsBreakdown.push({ name: "SDL", amount: sdl });
-      totalDeductions += sdl;
-    } else {
-      const sdl = bankersRound(grossEarnings * 0.01, 2);
-      deductionsBreakdown.push({ name: "SDL", amount: sdl });
-      totalDeductions += sdl;
-    }
-  }
+  const sdlRate = taxTables.uifSdlRates?.sdl_rate ?? 0.01;
+  const employerSdl = applySDLFlag ? bankersRound(grossEarnings * sdlRate, 2) : 0;
 
   loans.forEach((loan) => {
     if (loan.employeeId !== emp.id || loan.status === "completed" || new Date(loan.startDate) > periodEnd) return;
@@ -297,5 +335,5 @@ export const buildDeductions = (
   }
 
   totalDeductions = sumMoney(deductionsBreakdown.map((d) => d.amount));
-  return { deductionsBreakdown, totalDeductions, savingPaymentsToRecord };
+  return { deductionsBreakdown, totalDeductions, savingPaymentsToRecord, employerSdl };
 };

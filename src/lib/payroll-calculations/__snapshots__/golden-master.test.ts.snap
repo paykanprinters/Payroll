@@ -1,0 +1,122 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E01 (Under-65 salaried, monthly, R30,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 25141.88,
+  "paye": 4681,
+  "sdl": 0,
+  "totalDeductions": 4858.12,
+  "uif": 177.12,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E02 (65–74 salaried, monthly, R30,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 25955.63,
+  "paye": 3867.25,
+  "sdl": 0,
+  "totalDeductions": 4044.37,
+  "uif": 177.12,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E03 (75+ salaried, monthly, R30,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 26226.38,
+  "paye": 3596.5,
+  "sdl": 0,
+  "totalDeductions": 3773.62,
+  "uif": 177.12,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E04 (Weekly, under 65, R3,000/week) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 2772.69,
+  "paye": 197.31,
+  "sdl": 0,
+  "totalDeductions": 227.31,
+  "uif": 30,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E05 (Bi-weekly, under 65, R6,000/fortnight) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 5545.38,
+  "paye": 394.62,
+  "sdl": 0,
+  "totalDeductions": 454.62,
+  "uif": 60,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E06 (High earner above UIF cap, monthly, R80,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 57165.13,
+  "paye": 22657.75,
+  "sdl": 0,
+  "totalDeductions": 22834.87,
+  "uif": 177.12,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E07 (Medical-aid member (main + 1 dependant), monthly, R30,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 25893.88,
+  "paye": 3929,
+  "sdl": 0,
+  "totalDeductions": 4106.12,
+  "uif": 177.12,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E08 (Retirement-fund member (7.5% pension), monthly, R30,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 23476.88,
+  "paye": 4096,
+  "sdl": 0,
+  "totalDeductions": 6523.12,
+  "uif": 177.12,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E09 (Mid-month starter (part period), monthly, R15,000 earned) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 13635,
+  "paye": 1215,
+  "sdl": 0,
+  "totalDeductions": 1365,
+  "uif": 150,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E10 (Zero-tax low earner, monthly, R7,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 6930,
+  "paye": 0,
+  "sdl": 0,
+  "totalDeductions": 70,
+  "uif": 70,
+}
+`;
+
+exports[`COMP-00 golden master — characterization (current engine output, TY2027) > E11 (Medical (main + 2 deps) + 7.5% retirement, monthly, R50,000) current statutory output 1`] = `
+{
+  "hasSdlDeduction": false,
+  "net": 37351.3,
+  "paye": 8721.58,
+  "sdl": 0,
+  "totalDeductions": 12648.7,
+  "uif": 177.12,
+}
+`;

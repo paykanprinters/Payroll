@@ -15,8 +15,8 @@ const payeBrackets: TaxTables["payeBrackets"] = [
 
 const taxYearDetails: TaxTables["taxYearDetails"] = {
   year: 2026,
-  start_date: "2026-03-01",
-  end_date: "2027-02-28",
+  start_date: "2025-03-01",
+  end_date: "2026-02-28",
   description: "Test tax year",
   rebates: {
     under65: 16425,
@@ -41,10 +41,11 @@ describe("bankersRound", () => {
 
 describe("calculatePAYE", () => {
   it("computes monthly PAYE in the second bracket with the under-65 rebate", () => {
-    // Monthly taxable 30000 -> annual 360000, bracket 237101-370500.
-    // (360000 - 237101) * 0.26 + 42678 - 16425 = 58206.74 annual -> /12
+    // Monthly remuneration 30000 -> annual 360000, bracket 237101-370500.
+    // SARS marginal formula uses the bracket's lower threshold (237100), not
+    // min_income: 42678 + 0.26 * (360000 - 237100) - 16425 = 58207 annual -> /12.
     const paye = calculatePAYE(30000, payeBrackets, taxYearDetails, 40, "Monthly");
-    expect(paye).toBeCloseTo(4850.56, 2);
+    expect(paye).toBeCloseTo(4850.58, 2);
   });
 
   it("returns 0 when income is fully covered by the rebate", () => {

@@ -80,7 +80,7 @@ export const usePayrollProcessorState = (options?: { silent?: boolean }) => {
   const { companyDetails: supabaseCompanyDetails, isLoading: isLoadingCompanyDetails, refetchCompanyDetails, upsertCompanyDetails } =
     useCompanyDetails({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 
-  const { taxTables, isLoadingTaxTables, refetchTaxTables } = useTaxTables({
+  const { taxTables, isLoadingTaxTables, refetchTaxTables, taxTableValidation, isTaxTablesReady } = useTaxTables({
     isMockDataEnabled,
     isAuthenticated,
     isLoadingAuth,
@@ -222,6 +222,7 @@ export const usePayrollProcessorState = (options?: { silent?: boolean }) => {
     leaveRecords,
     timesheets,
     taxTables,
+    taxTableValidation,
     userTaxSettings,
     payrollSavingsEntries,
     workHoursSettings || null,
@@ -332,6 +333,8 @@ export const usePayrollProcessorState = (options?: { silent?: boolean }) => {
     isLoadingCompanyDetails,
     isMockDataEnabled,
     taxTables,
+    taxTableValidation,
+    isTaxTablesReady,
     isLoadingTaxTables,
     workHoursSettings,
     isLoadingWorkHoursSettings,

@@ -11,6 +11,7 @@ import {
   upsertSavingPlanToSupabase,
   deleteSavingPlanFromSupabase,
 } from "@/integrations/supabase/saving-queries";
+import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
 const convertSavingPlanKeysToCamelCase = (obj: any): SavingPlan => {
@@ -52,7 +53,7 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
   const fetchLiveSavingPlans = useCallback(async () => {
     setIsLoadingSavingPlans(true);
     try {
-      console.log("useSavingPlansData: Fetching live saving plans from Supabase...");
+      logger.debug("useSavingPlansData: fetching live saving plans");
       const data = await fetchSavingPlansFromSupabase();
       setSavingPlans(data);
     } finally {
@@ -65,7 +66,7 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
     setIsLoadingSavingPlans(true);
     try {
       const snakeCasePayload = convertSavingPlanKeysToSnakeCase(savingPlanData);
-      console.log("useSavingPlansData: Upserting live saving plan with payload:", snakeCasePayload);
+      logger.debug("useSavingPlansData: upserting live saving plan");
 
       const { data, error } = await supabase
         .from('saving_plans')
@@ -73,8 +74,8 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
         .select();
 
       if (error) {
-        console.error("useSavingPlansData: Error upserting live saving plan:", error);
-        showError(`Failed to save saving plan: ${error.message}`);
+        logger.error("useSavingPlansData: error upserting live saving plan:", toLogError(error));
+        showError(`Failed to save saving plan: ${toLogError(error)}`);
       } else if (data && data.length > 0) {
         const camelCaseData = convertSavingPlanKeysToCamelCase(data[0]);
         setSavingPlans(prev => {
@@ -87,12 +88,12 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
         });
         showSuccess("Savings plan saved successfully!");
       } else {
-        console.warn("useSavingPlansData: Upsert succeeded but returned no data. Refetching to ensure consistency.");
+        logger.warn("useSavingPlansData: upsert succeeded but returned no data. Refetching to ensure consistency.");
         showError("Savings plan saved, but data could not be retrieved. Please refresh.");
         fetchLiveSavingPlans();
       }
     } catch (err) {
-      console.error("useSavingPlansData: Unhandled error upserting live saving plan:", err);
+      logger.error("useSavingPlansData: unhandled error upserting live saving plan:", toLogError(err));
       showError("An unexpected error occurred while saving saving plan data.");
     } finally {
       dismissToast(toastId);

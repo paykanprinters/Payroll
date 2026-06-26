@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Building2, CalendarDays, RefreshCcw, ShieldCheck, ArrowRight } from "lucide-react";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { getTaxTableStatusLabel } from "@/lib/tax-tables-validation";
 
 function StatusBadge({ ok, labelOk = "Ready", labelBad = "Needs setup" }: { ok: boolean; labelOk?: string; labelBad?: string }) {
   return (
@@ -25,7 +26,7 @@ function StatusBadge({ ok, labelOk = "Ready", labelBad = "Needs setup" }: { ok: 
 }
 
 const SetupHealthCard: React.FC = () => {
-  const { companyDetails, payCycleSettings, userTaxSettings, taxTables, activeTaxYearForCalculations } = usePayrollProcessor({ silent: true });
+  const { companyDetails, payCycleSettings, userTaxSettings, taxTables, taxTableValidation, isTaxTablesReady, activeTaxYearForCalculations } = usePayrollProcessor({ silent: true });
 
   const companyNameOk = !!(companyDetails?.companyTradingName || companyDetails?.companyLegalName);
   const payeApplies = userTaxSettings?.applyPaye ?? false;
@@ -35,9 +36,7 @@ const SetupHealthCard: React.FC = () => {
   const payCycleOk = !!payCycleSettings?.payCycleType;
 
   const taxSettingsOk = !!userTaxSettings;
-  const taxTablesOk = !payeApplies
-    ? true
-    : !!(taxTables && Array.isArray(taxTables.payeBrackets) && taxTables.payeBrackets.length > 0);
+  const taxTablesOk = !payeApplies ? true : isTaxTablesReady;
   const taxOk = taxSettingsOk && taxTablesOk;
 
   const items = useMemo(
@@ -68,13 +67,17 @@ const SetupHealthCard: React.FC = () => {
         title: "Tax settings & tables",
         ok: taxOk,
         description: payeApplies
-          ? `PAYE is enabled • Tables must be loaded for ${activeTaxYearForCalculations}.`
+          ? taxTableValidation?.isReady
+            ? `PAYE enabled • TY${activeTaxYearForCalculations} tables ready.`
+            : taxTableValidation
+              ? `${getTaxTableStatusLabel(taxTableValidation)} for TY${activeTaxYearForCalculations}.`
+              : `PAYE enabled • load tables for ${activeTaxYearForCalculations}.`
           : "Enable PAYE/SDL and manage export settings.",
         href: "/settings/tax-liabilities",
         action: payeApplies && !taxTablesOk ? "Fetch tables" : "Open",
       },
     ],
-    [companyOk, payCycleOk, taxOk, payeApplies, activeTaxYearForCalculations, taxTablesOk]
+    [companyOk, payCycleOk, taxOk, payeApplies, activeTaxYearForCalculations, taxTablesOk, taxTableValidation]
   );
 
   const completed = items.filter((i) => i.ok).length;

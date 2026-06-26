@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { getSarsTaxTablesForYear } from "../_shared/sars-tax-tables.ts";
+import { getSarsTaxTablesForYear, buildSarsTaxYearDetails } from "../_shared/sars-tax-tables.ts";
 
 serve(async (req) => {
   const corsHeaders = {
@@ -90,19 +90,13 @@ serve(async (req) => {
 
     const payeBrackets = selected.payeBrackets;
     const uifSdlRates = { tax_year: taxYear, ...selected.uifSdlRates };
-    const startDate = `${taxYear}-03-01`;
-    const endDate = `${taxYear + 1}-02-28`;
-    const taxYearDetails = {
-      year: taxYear,
-      start_date: startDate,
-      end_date: endDate,
-      description: `SARS tax year (${selected.periodLabel})`,
-      rebates: {
-        under65: selected.rebates.under65,
-        sixtyFiveToSeventyFour: selected.rebates.sixtyFiveToSeventyFour,
-        seventyFivePlus: selected.rebates.seventyFivePlus,
-      },
-    };
+    const taxYearDetails = buildSarsTaxYearDetails(taxYear);
+    if (!taxYearDetails) {
+      return new Response(JSON.stringify({ error: `Failed to build tax year details for ${taxYear}` }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Upsert tax_years
     {

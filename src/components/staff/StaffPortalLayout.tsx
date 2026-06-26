@@ -35,7 +35,10 @@ const StaffPortalLayout: React.FC = () => {
       <StaffPortalSidebar onSignOut={handleSignOut} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-cyan-100/80 bg-white/85 px-4 py-4 backdrop-blur-md md:px-8">
+        <header
+          className="sticky top-0 z-30 border-b border-cyan-100/80 bg-white/85 px-4 pb-4 backdrop-blur-md md:px-8"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
+        >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1 pt-10 md:pt-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -67,7 +70,10 @@ const StaffPortalLayout: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+        <main
+          className="flex-1 px-4 py-6 md:px-8 md:py-8"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
+        >
           <Suspense
             fallback={
               <div className="flex min-h-[40vh] items-center justify-center">

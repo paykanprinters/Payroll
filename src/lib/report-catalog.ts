@@ -13,6 +13,8 @@ import {
   generateOvertimeBonusReportContent,
   generatePayrollSummaryReportContent,
   generateTaxStatutoryReportContent,
+  generateEmp201ReportContent,
+  generateEmp501ReportContent,
 } from "@/lib/report-generators";
 
 export type ReportCategoryId = "payroll" | "statutory" | "hr" | "finance" | "compliance";
@@ -28,6 +30,8 @@ export const REPORT_CATEGORY_LABELS: Record<ReportCategoryId, string> = {
 export interface ReportGenerateContext {
   employees: MockEmployee[];
   payslips: MockPayslip[];
+  /** Full payslip set before period pre-filter (needed for SA fiscal-year statutory reports). */
+  allPayslips?: MockPayslip[];
   leaveRecords: LeaveEntry[];
   selectedDate: Date | undefined;
   periodType: ReportPeriodType;
@@ -93,6 +97,22 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
     requiresPayslips: true,
     generate: (ctx) =>
       generateTaxStatutoryReportContent(
+        ctx.periodType === "yearly" ? (ctx.allPayslips ?? ctx.payslips) : ctx.payslips,
+        ctx.employees,
+        ctx.selectedDate,
+        ctx.periodType
+      ),
+  },
+  {
+    id: "emp201",
+    category: "statutory",
+    title: "EMP201 monthly declaration",
+    description: "Monthly PAYE, SDL, and UIF (2%) totals payable to SARS, with the amount due.",
+    confidentiality: "statutory",
+    periodTypes: ["monthly"],
+    requiresPayslips: true,
+    generate: (ctx) =>
+      generateEmp201ReportContent(
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
@@ -100,10 +120,29 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
       ),
   },
   {
+    id: "emp501",
+    category: "statutory",
+    title: "EMP501 reconciliation",
+    description:
+      "Annual reconciliation of monthly EMP201 declarations against year-end IRP5 / IT3(a) certificate totals, with PAYE and UIF difference checks.",
+    confidentiality: "statutory",
+    periodTypes: ["yearly"],
+    requiresPayslips: true,
+    generate: (ctx) =>
+      generateEmp501ReportContent(
+        ctx.allPayslips ?? ctx.payslips,
+        ctx.employees,
+        ctx.selectedDate,
+        ctx.periodType,
+        ctx.companyDetails
+      ),
+  },
+  {
     id: "irp5-export",
     category: "statutory",
     title: "IRP5 / IT3(a) export",
-    description: "Year-end tax certificates per employee. Configure in Tax settings, then export from Payslips.",
+    description:
+      "Year-end employee tax certificates with SARS source codes (3601, 4102, 4116, 4141, etc.) plus a bulk e@syFile CSV for all employees. Configure in Tax settings, then export from Payslips.",
     confidentiality: "statutory",
     periodTypes: ["yearly"],
     externalHref: "/payslips/irp5-export",

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { showError, showSuccess } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
 import { UserTaxSettings, fetchUserTaxSettingsFromSupabase, upsertUserTaxSettingsToSupabase } from "@/integrations/supabase/user-tax-settings-queries";
+import { logger } from "@/lib/logger";
 
 const LOCAL_STORAGE_KEY = "userTaxSettings"; // For mock data
 
@@ -29,7 +30,7 @@ export const useUserTaxSettings = ({ isMockDataEnabled, isAuthenticated, isLoadi
 
   const fetchLiveSettings = useCallback(async () => {
     if (!user?.id) {
-      console.log("useUserTaxSettings: fetchLiveSettings - No user ID, skipping fetch.");
+      logger.debug("useUserTaxSettings: fetchLiveSettings - no user ID, skipping fetch.");
       setUserTaxSettings(null);
       setIsLoading(false);
       return;
@@ -46,7 +47,7 @@ export const useUserTaxSettings = ({ isMockDataEnabled, isAuthenticated, isLoadi
 
   const saveLiveSettings = useCallback(async (settings: Omit<UserTaxSettings, 'id' | 'userId'> & { id?: string }) => {
     if (!user?.id) {
-      console.error("useUserTaxSettings: saveLiveSettings - No user ID, cannot save settings.");
+      logger.error("useUserTaxSettings: saveLiveSettings - no user ID, cannot save settings.");
       showError("User not authenticated. Cannot save tax settings.");
       return null;
     }
@@ -76,7 +77,6 @@ export const useUserTaxSettings = ({ isMockDataEnabled, isAuthenticated, isLoadi
     }
 
     if (isMockDataEnabled) {
-      console.log("useUserTaxSettings: useEffect - Mock data enabled. Loading from localStorage.");
       const storedSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedSettings) {
         setUserTaxSettings(JSON.parse(storedSettings));
@@ -85,10 +85,8 @@ export const useUserTaxSettings = ({ isMockDataEnabled, isAuthenticated, isLoadi
       }
       setIsLoading(false);
     } else if (isAuthenticated) {
-      console.log("useUserTaxSettings: useEffect - Live data enabled and authenticated. Calling fetchLiveSettings.");
       fetchLiveSettings();
     } else {
-      console.log("useUserTaxSettings: useEffect - Live data enabled but not authenticated. Clearing settings.");
       setUserTaxSettings(null);
       setIsLoading(false);
     }

@@ -2,8 +2,12 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 
-export type PayrollRunStatus = 'Draft' | 'Reviewed' | 'Approved' | 'Locked' | 'Paid';
+// 'Cancelled' is the voided terminal state. A run is voided (rather than deleted)
+// once it has progressed beyond an empty Draft, so the record is preserved for
+// SARS auditability while its financial artefacts (payslips/batch) are reversed.
+export type PayrollRunStatus = 'Draft' | 'Reviewed' | 'Approved' | 'Locked' | 'Paid' | 'Cancelled';
 
 export interface PayrollRun {
   id: string;
@@ -12,10 +16,15 @@ export interface PayrollRun {
   periodEnd: string;   // yyyy-mm-dd
   payCycleType: string;
   status: PayrollRunStatus;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
   approvedBy?: string | null;
   approvedAt?: string | null;
   lockedAt?: string | null;
   paidAt?: string | null;
+  cancelledBy?: string | null;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
   notes?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -73,8 +82,8 @@ export const createPayrollRun = async (payload: Omit<PayrollRun, "id"|"status"|"
     .select();
 
   if (error) {
-    console.error("payroll-run-queries: createPayrollRun error", error);
-    showError(`Failed to create run: ${error.message}`);
+    logger.error("payroll-run-queries: createPayrollRun error", toLogError(error));
+    showError(`Failed to create run: ${toLogError(error)}`);
     return null;
   }
   return data && data[0] ? toCamel(data[0]) as PayrollRun : null;
@@ -87,7 +96,7 @@ export const fetchPayrollRuns = async (): Promise<PayrollRun[]> => {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("payroll-run-queries: fetchPayrollRuns error", error);
+    logger.error("payroll-run-queries: fetchPayrollRuns error", toLogError(error));
     showError("Failed to load payroll runs.");
     return [];
   }
@@ -102,7 +111,7 @@ export const fetchPayrollRunById = async (id: string): Promise<PayrollRun | null
     .single();
 
   if (error) {
-    console.error("payroll-run-queries: fetchPayrollRunById error", error);
+    logger.error("payroll-run-queries: fetchPayrollRunById error", toLogError(error));
     showError("Failed to load run.");
     return null;
   }
@@ -133,8 +142,32 @@ export const updatePayrollRunStatus = async (id: string, status: PayrollRunStatu
     .eq("id", id);
 
   if (error) {
-    console.error("payroll-run-queries: updatePayrollRunStatus error", error);
-    showError(`Failed to update status: ${error.message}`);
+    logger.error("payroll-run-queries: updatePayrollRunStatus error", toLogError(error));
+    showError(`Failed to update status: ${toLogError(error)}`);
+    return false;
+  }
+  return true;
+};
+
+// Void (cancel) a run. The run record is retained as a Cancelled audit entry
+// with the actor and reason; financial artefacts are reversed by the caller.
+export const voidPayrollRun = async (
+  id: string,
+  reason: string,
+  actorId?: string | null
+): Promise<boolean> => {
+  const snake = toSnake({
+    status: "Cancelled" as PayrollRunStatus,
+    cancelledBy: actorId ?? null,
+    cancelledAt: new Date().toISOString(),
+    cancellationReason: reason,
+  });
+
+  const { error } = await supabase.from("payroll_runs").update(snake).eq("id", id);
+
+  if (error) {
+    logger.error("payroll-run-queries: voidPayrollRun error", toLogError(error));
+    showError(`Failed to void run: ${toLogError(error)}`);
     return false;
   }
   return true;
@@ -149,7 +182,7 @@ export const fetchRunItems = async (runId: string): Promise<PayrollRunItem[]> =>
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("payroll-run-queries: fetchRunItems error", error);
+    logger.error("payroll-run-queries: fetchRunItems error", toLogError(error));
     showError("Failed to load run items.");
     return [];
   }
@@ -163,8 +196,8 @@ export const addRunItems = async (runId: string, items: Omit<PayrollRunItem, "id
     .insert(payloads);
 
   if (error) {
-    console.error("payroll-run-queries: addRunItems error", error);
-    showError(`Failed to add items: ${error.message}`);
+    logger.error("payroll-run-queries: addRunItems error", toLogError(error));
+    showError(`Failed to add items: ${toLogError(error)}`);
     return false;
   }
   return true;

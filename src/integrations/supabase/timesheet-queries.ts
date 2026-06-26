@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 // Removed: import { sql } from '@supabase/supabase-js'; // Import sql for raw SQL expressions
 
 // Helper to convert snake_case to camelCase for Supabase data
@@ -28,26 +29,25 @@ export const convertTimesheetKeysToSnakeCase = (obj: Partial<TimesheetEntry>): a
 };
 
 export const fetchTimesheetsFromSupabase = async (): Promise<TimesheetEntry[]> => {
-  console.log("timesheet-queries: Fetching live timesheets from Supabase...");
+  logger.debug("timesheet-queries: fetching live timesheets");
   const { data, error } = await supabase
     .from('timesheets')
     .select('*')
     .order('date', { ascending: false });
 
   if (error) {
-    console.error("timesheet-queries: Error fetching live timesheets:", error);
+    logger.error("timesheet-queries: error fetching live timesheets:", toLogError(error));
     showError("Failed to load live timesheet data.");
     return [];
   } else {
     const camelCaseData = data.map(convertTimesheetKeysToCamelCase);
-    console.log("timesheet-queries: Live timesheets fetched:", camelCaseData);
     return camelCaseData;
   }
 };
 
 export const upsertTimesheetToSupabase = async (timesheetData: TimesheetEntry): Promise<TimesheetEntry | null> => {
   const snakeCasePayload = convertTimesheetKeysToSnakeCase(timesheetData);
-  console.log("timesheet-queries: Upserting live timesheet with payload:", snakeCasePayload);
+  logger.debug("timesheet-queries: upserting live timesheet");
 
   const { data, error } = await supabase
     .from('timesheets')
@@ -55,28 +55,28 @@ export const upsertTimesheetToSupabase = async (timesheetData: TimesheetEntry): 
     .select();
 
   if (error) {
-    console.error("timesheet-queries: Error upserting live timesheet:", error);
-    showError(`Failed to save timesheet: ${error.message}`);
+    logger.error("timesheet-queries: error upserting live timesheet:", toLogError(error));
+    showError(`Failed to save timesheet: ${toLogError(error)}`);
     return null;
   } else if (data && data.length > 0) {
     const camelCaseData = convertTimesheetKeysToCamelCase(data[0]);
     return camelCaseData;
   } else {
-    console.warn("timesheet-queries: Upsert succeeded but returned no data.");
+    logger.warn("timesheet-queries: upsert succeeded but returned no data.");
     return null;
   }
 };
 
 export const deleteTimesheetFromSupabase = async (timesheetId: string): Promise<boolean> => {
-  console.log("timesheet-queries: Deleting live timesheet with ID:", timesheetId);
+  logger.debug("timesheet-queries: deleting live timesheet");
   const { error } = await supabase
     .from('timesheets')
     .delete()
     .eq('id', timesheetId);
 
   if (error) {
-    console.error("timesheet-queries: Error deleting live timesheet:", error);
-    showError(`Failed to delete timesheet: ${error.message}`);
+    logger.error("timesheet-queries: error deleting live timesheet:", toLogError(error));
+    showError(`Failed to delete timesheet: ${toLogError(error)}`);
     return false;
   } else {
     return true;
@@ -92,8 +92,8 @@ export const updateTimesheetStatusInSupabase = async (timesheetId: string, newSt
     .single();
 
   if (fetchError) {
-    console.error("timesheet-queries: Error fetching existing timesheet for status update:", fetchError);
-    showError(`Failed to update timesheet status: ${fetchError.message}`);
+    logger.error("timesheet-queries: error fetching existing timesheet for status update:", toLogError(fetchError));
+    showError(`Failed to update timesheet status: ${toLogError(fetchError)}`);
     return null;
   }
 
@@ -109,14 +109,14 @@ export const updateTimesheetStatusInSupabase = async (timesheetId: string, newSt
     .select();
 
   if (error) {
-    console.error("timesheet-queries: Error updating live timesheet status:", error);
-    showError(`Failed to update timesheet status: ${error.message}`);
+    logger.error("timesheet-queries: error updating live timesheet status:", toLogError(error));
+    showError(`Failed to update timesheet status: ${toLogError(error)}`);
     return null;
   } else if (data && data.length > 0) {
     const camelCaseData = convertTimesheetKeysToCamelCase(data[0]);
     return camelCaseData;
   } else {
-    console.warn("timesheet-queries: Status update succeeded but returned no data.");
+    logger.warn("timesheet-queries: status update succeeded but returned no data.");
     return null;
   }
 };
@@ -130,8 +130,8 @@ export const batchUpsertTimesheetsToSupabase = async (timesheetsToUpsert: Timesh
     .upsert(snakeCasePayloads, { onConflict: 'id' });
 
   if (error) {
-    console.error("timesheet-queries: Error batch upserting live timesheets:", error);
-    showError(`Failed to import timesheets: ${error.message}`);
+    logger.error("timesheet-queries: error batch upserting live timesheets:", toLogError(error));
+    showError(`Failed to import timesheets: ${toLogError(error)}`);
     return false;
   }
 
@@ -146,7 +146,7 @@ export const fetchExistingTimesheetsForBatch = async (employeeIds: string[], dat
     .in('date', dates);
 
   if (fetchError) {
-    console.error("timesheet-queries: Error fetching existing timesheets for batch:", fetchError);
+    logger.error("timesheet-queries: error fetching existing timesheets for batch:", toLogError(fetchError));
     showError("Failed to check for existing timesheets during import.");
     return [];
   }

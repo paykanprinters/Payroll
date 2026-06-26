@@ -24,6 +24,29 @@ describe("computeSetupReadyCount", () => {
       })
     ).toBe(3);
   });
+
+  it("requires validated tax tables when PAYE applies", () => {
+    expect(
+      computeSetupReadyCount({
+        companyDetails: { companyLegalName: "Acme", companyTaxNumber: "123" } as never,
+        payCycleSettings: { payCycleType: "Monthly" } as never,
+        userTaxSettings: { applyPaye: true } as never,
+        taxTables: null,
+        activeTaxYearForCalculations: 2027,
+      })
+    ).toBe(2);
+  });
+  it("requires validated tax tables when PAYE applies", () => {
+    expect(
+      computeSetupReadyCount({
+        companyDetails: { companyLegalName: "Acme", companyTaxNumber: "123" } as never,
+        payCycleSettings: { payCycleType: "Monthly" } as never,
+        userTaxSettings: { applyPaye: true } as never,
+        taxTables: null,
+        activeTaxYearForCalculations: 2027,
+      })
+    ).toBe(2);
+  });
 });
 
 describe("buildDashboardAdminSummary", () => {

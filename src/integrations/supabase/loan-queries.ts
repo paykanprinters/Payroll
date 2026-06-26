@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Loan } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
 export const convertLoanKeysToCamelCase = (obj: any): Loan => {
@@ -27,26 +28,25 @@ export const convertLoanKeysToSnakeCase = (obj: Partial<Loan>): any => {
 };
 
 export const fetchLoansFromSupabase = async (): Promise<Loan[]> => {
-  console.log("loan-queries: Fetching live loans from Supabase...");
+  logger.debug("loan-queries: fetching live loans");
   const { data, error } = await supabase
     .from('loans')
     .select('*')
     .order('start_date', { ascending: false });
 
   if (error) {
-    console.error("loan-queries: Error fetching live loans:", error);
+    logger.error("loan-queries: error fetching live loans:", toLogError(error));
     showError("Failed to load live loan data.");
     return [];
   } else {
     const camelCaseData = data.map(convertLoanKeysToCamelCase);
-    console.log("loan-queries: Live loans fetched:", camelCaseData);
     return camelCaseData;
   }
 };
 
 export const upsertLoanToSupabase = async (loanData: Loan): Promise<Loan | null> => {
   const snakeCasePayload = convertLoanKeysToSnakeCase(loanData);
-  console.log("loan-queries: Upserting live loan with payload:", snakeCasePayload);
+  logger.debug("loan-queries: upserting live loan");
 
   const { data, error } = await supabase
     .from('loans')
@@ -54,28 +54,28 @@ export const upsertLoanToSupabase = async (loanData: Loan): Promise<Loan | null>
     .select();
 
   if (error) {
-    console.error("loan-queries: Error upserting live loan:", error);
-    showError(`Failed to save loan: ${error.message}`);
+    logger.error("loan-queries: error upserting live loan:", toLogError(error));
+    showError(`Failed to save loan: ${toLogError(error)}`);
     return null;
   } else if (data && data.length > 0) {
     const camelCaseData = convertLoanKeysToCamelCase(data[0]);
     return camelCaseData;
   } else {
-    console.warn("loan-queries: Upsert succeeded but returned no data.");
+    logger.warn("loan-queries: upsert succeeded but returned no data.");
     return null;
   }
 };
 
 export const deleteLoanFromSupabase = async (loanId: string): Promise<boolean> => {
-  console.log("loan-queries: Deleting live loan with ID:", loanId);
+  logger.debug("loan-queries: deleting live loan");
   const { error } = await supabase
     .from('loans')
     .delete()
     .eq('id', loanId);
 
   if (error) {
-    console.error("loan-queries: Error deleting live loan:", error);
-    showError(`Failed to delete loan: ${error.message}`);
+    logger.error("loan-queries: error deleting live loan:", toLogError(error));
+    showError(`Failed to delete loan: ${toLogError(error)}`);
     return false;
   } else {
     return true;

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { getTaxTableStatusLabel } from "@/lib/tax-tables-validation";
 
 function StatusBadge({ ok }: { ok: boolean }) {
   return (
@@ -24,7 +25,7 @@ function StatusBadge({ ok }: { ok: boolean }) {
 }
 
 const SetupHealthSummaryCard: React.FC = () => {
-  const { companyDetails, payCycleSettings, userTaxSettings, taxTables, activeTaxYearForCalculations } =
+  const { companyDetails, payCycleSettings, userTaxSettings, taxTableValidation, isTaxTablesReady, activeTaxYearForCalculations } =
     usePayrollProcessor({ silent: true });
 
   const companyNameOk = !!(companyDetails?.companyTradingName || companyDetails?.companyLegalName);
@@ -35,9 +36,7 @@ const SetupHealthSummaryCard: React.FC = () => {
   const payCycleOk = !!payCycleSettings?.payCycleType;
 
   const taxSettingsOk = !!userTaxSettings;
-  const taxTablesOk = !payeApplies
-    ? true
-    : !!(taxTables && Array.isArray(taxTables.payeBrackets) && taxTables.payeBrackets.length > 0);
+  const taxTablesOk = !payeApplies ? true : isTaxTablesReady;
   const taxOk = taxSettingsOk && taxTablesOk;
 
   const rows = [
@@ -62,7 +61,13 @@ const SetupHealthSummaryCard: React.FC = () => {
       icon: ShieldCheck,
       title: "Tax",
       ok: taxOk,
-      helper: payeApplies ? `Tables for ${activeTaxYearForCalculations}` : "PAYE/SDL settings",
+      helper: payeApplies
+        ? taxTablesOk
+          ? `Tables ready for ${activeTaxYearForCalculations}`
+          : taxTableValidation
+            ? `${getTaxTableStatusLabel(taxTableValidation)} for ${activeTaxYearForCalculations}`
+            : `Tables for ${activeTaxYearForCalculations}`
+        : "PAYE/SDL settings",
       to: "/settings/tax-liabilities",
     },
   ];

@@ -7,6 +7,8 @@ import { MockPayslip } from "@/lib/mock-data-interfaces";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { differenceInYears } from "date-fns";
 import { bankersRound } from "@/lib/utils";
+import { computeMonthlyMedicalTaxCredit, getSarsMedicalTaxCredits } from "@/lib/sars-tax-tables";
+import { computeRetirementContribution } from "@/lib/retirement-fund";
 
 type Props = {
   open: boolean;
@@ -27,11 +29,12 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
     const payFrequency = employee.payFrequency || "Monthly";
     const applyPayeFlag = userTaxSettings?.applyPaye ?? true;
 
-    // Get UIF from the payslip itself to match final numbers precisely
-    const uifFromPayslip = payslip.deductionsBreakdown.find(d => d.name === "UIF")?.amount ?? 0;
-
     const gross = payslip.grossEarnings;
-    const taxableForPAYE = Math.max(0, gross - uifFromPayslip);
+    // Pre-tax retirement-fund contribution (Section 11F) reduces the PAYE base.
+    const retirement = computeRetirementContribution(gross, employee, payFrequency);
+    // PAYE is levied on remuneration less deductible retirement contributions;
+    // UIF is not deductible for income tax.
+    const taxableForPAYE = Math.max(0, gross - retirement.taxDeductible);
 
     // Annualization factors aligned with our calculation logic
     let annualizationFactor = 12;
@@ -45,12 +48,19 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
       return { error: "PAYE tax tables are not loaded. Please fetch and apply the tax tables." } as const;
     }
 
-    // Determine bracket used
-    const bracket = taxTables.payeBrackets.find(b =>
+    // Determine bracket used (and its lower threshold for the marginal formula).
+    const bracketIndex = taxTables.payeBrackets.findIndex(b =>
       annualIncome >= b.min_income && (b.max_income === null || annualIncome <= b.max_income)
-    ) ?? taxTables.payeBrackets[taxTables.payeBrackets.length - 1];
+    );
+    const bracket = bracketIndex >= 0
+      ? taxTables.payeBrackets[bracketIndex]
+      : taxTables.payeBrackets[taxTables.payeBrackets.length - 1];
+    // Lower threshold = previous bracket's upper bound (0 for the first bracket).
+    const lowerThreshold = bracketIndex > 0
+      ? (taxTables.payeBrackets[bracketIndex - 1].max_income ?? 0)
+      : 0;
 
-    const annualPAYEBeforeRebate = (annualIncome - bracket.min_income) * bracket.rate + bracket.deduction;
+    const annualPAYEBeforeRebate = (annualIncome - lowerThreshold) * bracket.rate + bracket.deduction;
 
     // Determine rebate based on age
     const rebates = taxTables.taxYearDetails?.rebates || null;
@@ -82,7 +92,20 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
     }
 
     const annualPAYEAfterRebate = Math.max(0, annualPAYEBeforeRebate - totalRebate);
-    const periodPayeraw = annualPAYEAfterRebate / deAnnualizationFactor;
+
+    // Section 6A medical scheme fees tax credit (COMP-07), applied after rebates.
+    const applyMedicalCredit = userTaxSettings?.applyMedicalAidTaxCredit !== false;
+    const monthlyMedicalCredit = applyMedicalCredit
+      ? computeMonthlyMedicalTaxCredit(
+          employee.medicalAidMember ?? false,
+          employee.medicalAidDependants ?? 0,
+          getSarsMedicalTaxCredits(taxTables.taxYearDetails?.year ?? -1)
+        )
+      : 0;
+    const annualMedicalCredit = monthlyMedicalCredit * 12;
+    const annualPAYEAfterCredit = Math.max(0, annualPAYEAfterRebate - annualMedicalCredit);
+
+    const periodPayeraw = annualPAYEAfterCredit / deAnnualizationFactor;
     const periodPayeRounded = bankersRound(periodPayeraw, 2);
 
     const payeFromPayslip = payslip.deductionsBreakdown.find(d => d.name === "PAYE")?.amount ?? 0;
@@ -91,15 +114,19 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
       employeeName: `${employee.firstName} ${employee.lastName}`,
       payFrequency,
       gross,
-      uifFromPayslip,
+      retirementDeductible: retirement.taxDeductible,
       taxableForPAYE,
       annualizationFactor,
       annualIncome,
       bracket,
+      lowerThreshold,
       annualPAYEBeforeRebate,
       totalRebate,
       rebateLabel,
       annualPAYEAfterRebate,
+      monthlyMedicalCredit,
+      annualMedicalCredit,
+      annualPAYEAfterCredit,
       deAnnualizationFactor,
       periodPayeraw,
       periodPayeRounded,
@@ -128,9 +155,12 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
             <Separator />
 
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span>Gross Earnings</span><span className="font-medium">{currency(breakdown.gross)}</span></div>
-              <div className="flex justify-between"><span>Less: UIF (employee)</span><span className="font-medium">- {currency(breakdown.uifFromPayslip)}</span></div>
+              <div className="flex justify-between"><span>Gross Earnings (Remuneration)</span><span className="font-medium">{currency(breakdown.gross)}</span></div>
+              {breakdown.retirementDeductible > 0 && (
+                <div className="flex justify-between"><span>Less: Retirement fund (deductible)</span><span className="font-medium">- {currency(breakdown.retirementDeductible)}</span></div>
+              )}
               <div className="flex justify-between"><span>Taxable Income for PAYE</span><span className="font-medium">{currency(breakdown.taxableForPAYE)}</span></div>
+              <p className="text-xs text-muted-foreground">UIF is not deductible for income tax, so PAYE is calculated on remuneration (less any pre-tax retirement contribution).</p>
             </div>
 
             <Separator />
@@ -144,7 +174,7 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
                 </span>
               </div>
               <div className="flex justify-between"><span>Rate</span><span className="font-medium">{(breakdown.bracket.rate * 100).toFixed(2)}%</span></div>
-              <div className="flex justify-between"><span>Threshold (min)</span><span className="font-medium">{currency(breakdown.bracket.min_income)}</span></div>
+              <div className="flex justify-between"><span>Threshold (lower bound)</span><span className="font-medium">{currency(breakdown.lowerThreshold)}</span></div>
               <div className="flex justify-between"><span>Base Deduction</span><span className="font-medium">{currency(breakdown.bracket.deduction)}</span></div>
               <div className="flex justify-between"><span>Annual PAYE (before rebates)</span><span className="font-medium">{currency(breakdown.annualPAYEBeforeRebate)}</span></div>
             </div>
@@ -156,6 +186,18 @@ const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) =
               <div className="flex justify-between"><span>Total Rebate</span><span className="font-medium">- {currency(breakdown.totalRebate)}</span></div>
               <div className="flex justify-between"><span>Annual PAYE (after rebates)</span><span className="font-medium">{currency(breakdown.annualPAYEAfterRebate)}</span></div>
             </div>
+
+            {breakdown.monthlyMedicalCredit > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between"><span>Medical credit (Section 6A, monthly)</span><span className="font-medium">{currency(breakdown.monthlyMedicalCredit)}</span></div>
+                  <div className="flex justify-between"><span>Annual medical credit</span><span className="font-medium">- {currency(breakdown.annualMedicalCredit)}</span></div>
+                  <div className="flex justify-between"><span>Annual PAYE (after medical credit)</span><span className="font-medium">{currency(breakdown.annualPAYEAfterCredit)}</span></div>
+                  <p className="text-xs text-muted-foreground">Medical scheme fees tax credit reduces PAYE after rebates and cannot create a refund.</p>
+                </div>
+              </>
+            )}
 
             <Separator />
 

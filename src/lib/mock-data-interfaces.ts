@@ -91,6 +91,15 @@ export interface MockEmployee {
   paymentMode?: "Bank Transfer" | "Cash" | "Cheque";
   payFrequency?: "Monthly" | "Weekly" | "Bi-Weekly"; // New field
   standardDailyHours?: number; // Added for timesheet calculations
+
+  // Medical scheme (Section 6A tax credit, COMP-07)
+  medicalAidMember?: boolean; // True when the employee is the principal medical-scheme member
+  medicalAidDependants?: number; // Number of dependants (excluding the main member)
+
+  // Retirement fund (Section 11F pre-tax deduction, COMP-08)
+  retirementFundContributionPercent?: number; // Employee contribution as % of gross (pensionable) earnings
+  retirementFundContributionFixed?: number; // Fixed employee contribution per pay period (Rands)
+
   ignoredIncompleteFields?: string[]; // New field to store intentionally blank fields
 }
 
@@ -159,6 +168,12 @@ export interface MockPayslip {
   grossEarnings: number;
   totalDeductions: number;
   netPay: number;
+  /**
+   * Employer-paid Skills Development Levy (1% of leviable remuneration).
+   * This is an EMPLOYER cost for statutory reporting only — it is NOT deducted
+   * from the employee and is excluded from totalDeductions / netPay.
+   */
+  employerSdl?: number;
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
   leaveSummary: { annual: number; sick: number; unpaid: number };

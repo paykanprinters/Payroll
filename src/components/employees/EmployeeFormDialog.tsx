@@ -95,6 +95,31 @@ const employeeSchema = z.object({
   paymentMode: z.enum(["Bank Transfer", "Cash", "Cheque"]).optional(),
   payFrequency: z.enum(["Monthly", "Weekly", "Bi-Weekly"]).optional(),
   standardDailyHours: z.number().min(1).max(24).optional(),
+  medicalAidMember: z.boolean().default(false).optional(),
+  medicalAidDependants: z.preprocess(
+    (val) => {
+      if (val === null || val === "" || val === undefined) return 0;
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    },
+    z.number().min(0, "Dependants cannot be negative").max(30).optional()
+  ),
+  retirementFundContributionPercent: z.preprocess(
+    (val) => {
+      if (val === null || val === "" || val === undefined) return 0;
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    },
+    z.number().min(0, "Cannot be negative").max(100, "Cannot exceed 100%").optional()
+  ),
+  retirementFundContributionFixed: z.preprocess(
+    (val) => {
+      if (val === null || val === "" || val === undefined) return 0;
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    },
+    z.number().min(0, "Cannot be negative").optional()
+  ),
   ignoredIncompleteFields: z.array(z.string()).optional(),
 }).superRefine((data, ctx) => {
   if (!data.salary && !data.hourlyRate) {
@@ -162,6 +187,10 @@ const emptyDefaults: EmployeeFormValues = {
   paymentMode: "Bank Transfer",
   payFrequency: undefined,
   standardDailyHours: 8,
+  medicalAidMember: false,
+  medicalAidDependants: 0,
+  retirementFundContributionPercent: 0,
+  retirementFundContributionFixed: 0,
   customEmployeeId: "",
   ignoredIncompleteFields: [],
 };
@@ -218,6 +247,10 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         bankAccountType: initialEmployee.bankAccountType || "Cheque",
         portalAccess: initialEmployee.portalAccess ?? false,
         standardDailyHours: initialEmployee.standardDailyHours ?? 8,
+        medicalAidMember: initialEmployee.medicalAidMember ?? false,
+        medicalAidDependants: initialEmployee.medicalAidDependants ?? 0,
+        retirementFundContributionPercent: initialEmployee.retirementFundContributionPercent ?? 0,
+        retirementFundContributionFixed: initialEmployee.retirementFundContributionFixed ?? 0,
         ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [],
         fathersName: initialEmployee.fathersName || "",
         molId: initialEmployee.molId || "",

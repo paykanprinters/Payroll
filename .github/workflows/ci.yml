@@ -23,6 +23,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Annual Budget gate (COMP-17): fails once curated SARS tables for the live
+      # tax year are missing. Runbook: docs/ANNUAL_TAX_TABLE_UPDATE.md
+      - name: Verify SARS tax tables are current
+        run: pnpm check:tax-tables
+
+      # COMP-18: parallel-run regression vs hand-calculated SARS figures (all years).
+      - name: SARS compliance regression (parallel run)
+        run: pnpm check:sars-compliance
+
       - name: Test
         run: pnpm test
 

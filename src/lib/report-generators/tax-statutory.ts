@@ -1,6 +1,11 @@
 import { MockEmployee, MockPayslip } from "../mock-data-interfaces";
-import { getEmployeeName } from "../utils"; // Import from shared utils
-import { format, isSameMonth, isSameYear, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { sumEmployerSdl } from "@/lib/sdl";
+import {
+  filterPayslipsForSarsTaxYear,
+  getSarsTaxYearPeriodLabel,
+  taxYearFromSelectedDate,
+} from "@/lib/tax-year-period";
+import { format, isSameMonth, isSameYear, parseISO } from "date-fns";
 
 export const generateTaxStatutoryReportContent = (
   payslips: MockPayslip[],
@@ -20,12 +25,9 @@ export const generateTaxStatutoryReportContent = (
       });
       reportPeriodDescription = format(selectedDate, "MMMM yyyy");
     } else if (periodType === "yearly") {
-      filteredPayslips = payslips.filter(p => {
-        const [startPeriodStr] = p.payPeriod.split(' - ');
-        const payslipDate = parseISO(startPeriodStr);
-        return isSameYear(payslipDate, selectedDate);
-      });
-      reportPeriodDescription = format(selectedDate, "yyyy");
+      const taxYear = taxYearFromSelectedDate(selectedDate);
+      filteredPayslips = filterPayslipsForSarsTaxYear(payslips, taxYear);
+      reportPeriodDescription = `Tax year ${taxYear} (${getSarsTaxYearPeriodLabel(taxYear)})`;
     }
   }
 
@@ -36,11 +38,17 @@ export const generateTaxStatutoryReportContent = (
   const taxDeductionsMap = new Map<string, number>();
   filteredPayslips.forEach(p => {
     p.deductionsBreakdown.forEach(d => {
-      if (["PAYE", "UIF", "SDL"].includes(d.name)) { // Focus on statutory
+      if (["PAYE", "UIF"].includes(d.name)) { // Employee statutory deductions
         taxDeductionsMap.set(d.name, (taxDeductionsMap.get(d.name) || 0) + d.amount);
       }
     });
   });
+
+  // SDL is an employer levy (not deducted from the employee) — report separately.
+  const totalEmployerSdl = sumEmployerSdl(filteredPayslips);
+  if (totalEmployerSdl > 0) {
+    taxDeductionsMap.set("SDL (Employer Contribution)", totalEmployerSdl);
+  }
 
   let html = `
     <p>This report summarizes statutory deductions for compliance with SARS for ${reportPeriodDescription}.</p>

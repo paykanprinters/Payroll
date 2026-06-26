@@ -2,6 +2,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 
 export type PaymentBatchStatus = "Pending" | "Exported" | "Reconciled" | "Failed";
 export type PaymentItemStatus = "Pending" | "Paid" | "Failed" | "Returned";
@@ -57,7 +58,7 @@ export const fetchPaymentBatches = async (): Promise<PaymentBatch[]> => {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("payment-batch-queries: fetchPaymentBatches error", error);
+    logger.error("payment-batch-queries: fetchPaymentBatches error", toLogError(error));
     showError("Failed to load payment batches.");
     return [];
   }
@@ -68,7 +69,7 @@ export const fetchPaymentBatchById = async (id: string): Promise<PaymentBatch | 
   const { data, error } = await supabase.from("payment_batches").select("*").eq("id", id).single();
 
   if (error) {
-    console.error("payment-batch-queries: fetchPaymentBatchById error", error);
+    logger.error("payment-batch-queries: fetchPaymentBatchById error", toLogError(error));
     showError("Failed to load payment batch.");
     return null;
   }
@@ -84,7 +85,7 @@ export const fetchPaymentBatchByRunId = async (runId: string): Promise<PaymentBa
     .limit(1);
 
   if (error) {
-    console.error("payment-batch-queries: fetchPaymentBatchByRunId error", error);
+    logger.error("payment-batch-queries: fetchPaymentBatchByRunId error", toLogError(error));
     showError("Failed to load payment batch for this run.");
     return null;
   }
@@ -113,8 +114,8 @@ export const createPaymentBatch = async (
   const { data, error } = await supabase.from("payment_batches").insert(payload).select();
 
   if (error) {
-    console.error("payment-batch-queries: createPaymentBatch error", error);
-    showError(`Failed to create payment batch: ${error.message}`);
+    logger.error("payment-batch-queries: createPaymentBatch error", toLogError(error));
+    showError(`Failed to create payment batch: ${toLogError(error)}`);
     return null;
   }
   return data && data[0] ? (toCamel(data[0]) as PaymentBatch) : null;
@@ -128,7 +129,7 @@ export const fetchBatchItems = async (batchId: string): Promise<PaymentBatchItem
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("payment-batch-queries: fetchBatchItems error", error);
+    logger.error("payment-batch-queries: fetchBatchItems error", toLogError(error));
     showError("Failed to load payment batch items.");
     return [];
   }
@@ -143,8 +144,33 @@ export const addBatchItems = async (
   const { error } = await supabase.from("payment_batch_items").insert(payloads);
 
   if (error) {
-    console.error("payment-batch-queries: addBatchItems error", error);
-    showError(`Failed to add payment items: ${error.message}`);
+    logger.error("payment-batch-queries: addBatchItems error", toLogError(error));
+    showError(`Failed to add payment items: ${toLogError(error)}`);
+    return false;
+  }
+  return true;
+};
+
+// Deletes a payment batch and its items. Used when voiding a payroll run so the
+// pending batch is reversed alongside the run's payslips. Items are removed first
+// in case the FK is not configured to cascade.
+export const deletePaymentBatch = async (batchId: string): Promise<boolean> => {
+  const { error: itemsError } = await supabase
+    .from("payment_batch_items")
+    .delete()
+    .eq("batch_id", batchId);
+
+  if (itemsError) {
+    logger.error("payment-batch-queries: deletePaymentBatch items error", toLogError(itemsError));
+    showError(`Failed to remove payment items: ${toLogError(itemsError)}`);
+    return false;
+  }
+
+  const { error } = await supabase.from("payment_batches").delete().eq("id", batchId);
+
+  if (error) {
+    logger.error("payment-batch-queries: deletePaymentBatch error", toLogError(error));
+    showError(`Failed to remove payment batch: ${toLogError(error)}`);
     return false;
   }
   return true;
@@ -154,8 +180,8 @@ export const updateBatchStatus = async (batchId: string, status: PaymentBatchSta
   const { error } = await supabase.from("payment_batches").update(toSnake({ status })).eq("id", batchId);
 
   if (error) {
-    console.error("payment-batch-queries: updateBatchStatus error", error);
-    showError(`Failed to update batch status: ${error.message}`);
+    logger.error("payment-batch-queries: updateBatchStatus error", toLogError(error));
+    showError(`Failed to update batch status: ${toLogError(error)}`);
     return false;
   }
   return true;
@@ -172,8 +198,8 @@ export const updateItemStatus = async (
     .eq("id", itemId);
 
   if (error) {
-    console.error("payment-batch-queries: updateItemStatus error", error);
-    showError(`Failed to update item: ${error.message}`);
+    logger.error("payment-batch-queries: updateItemStatus error", toLogError(error));
+    showError(`Failed to update item: ${toLogError(error)}`);
     return false;
   }
   return true;

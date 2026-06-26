@@ -2,6 +2,11 @@ import { format, parseISO, subMonths } from "date-fns";
 import type { MockCompanyDetails, MockPayslip, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import type { PayCycleSettings } from "@/integrations/supabase/pay-cycle-queries";
 import type { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
+import type { TaxTables } from "@/hooks/use-tax-tables";
+import {
+  validateLoadedTaxTables,
+  type TaxTableValidationResult,
+} from "@/lib/tax-tables-validation";
 
 export type DashboardChartPeriod = "3m" | "6m" | "12m" | "all";
 
@@ -51,7 +56,9 @@ export function computeSetupReadyCount(input: {
   companyDetails: MockCompanyDetails | null;
   payCycleSettings: PayCycleSettings | null;
   userTaxSettings: UserTaxSettings | null;
-  taxTables: { payeBrackets?: unknown[] } | null;
+  taxTables: TaxTables | { payeBrackets?: unknown[] } | null;
+  activeTaxYearForCalculations?: string | number;
+  taxTableValidation?: TaxTableValidationResult | null;
 }): number {
   const payeApplies = input.userTaxSettings?.applyPaye ?? false;
 
@@ -64,13 +71,16 @@ export function computeSetupReadyCount(input: {
   const payCycleOk = !!input.payCycleSettings?.payCycleType;
 
   const taxSettingsOk = !!input.userTaxSettings;
+  const taxYear =
+    typeof input.activeTaxYearForCalculations === "number"
+      ? input.activeTaxYearForCalculations
+      : parseInt(String(input.activeTaxYearForCalculations ?? new Date().getFullYear()), 10);
   const taxTablesOk = !payeApplies
     ? true
-    : !!(
-        input.taxTables &&
-        Array.isArray(input.taxTables.payeBrackets) &&
-        input.taxTables.payeBrackets.length > 0
-      );
+    : (
+        input.taxTableValidation ??
+        validateLoadedTaxTables(input.taxTables as TaxTables | null, taxYear)
+      ).isReady;
   const taxOk = taxSettingsOk && taxTablesOk;
 
   return [companyOk, payCycleOk, taxOk].filter(Boolean).length;
@@ -84,7 +94,9 @@ export function buildDashboardAdminSummary(input: {
   companyDetails: MockCompanyDetails | null;
   payCycleSettings: PayCycleSettings | null;
   userTaxSettings: UserTaxSettings | null;
-  taxTables: { payeBrackets?: unknown[] } | null;
+  taxTables: TaxTables | { payeBrackets?: unknown[] } | null;
+  activeTaxYearForCalculations?: string | number;
+  taxTableValidation?: TaxTableValidationResult | null;
 }): DashboardAdminSummary {
   const currentMonthKey = format(new Date(), "yyyy-MM");
   const currentMonthGrossPayroll = input.payslips

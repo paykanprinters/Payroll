@@ -3,6 +3,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { PayrollSavingsEntry, SavingsStatus, updateStatusClient } from "@/lib/savings-types";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 
 // snake <-> camel helpers
 const toCamel = (row: any): PayrollSavingsEntry => ({
@@ -46,7 +47,7 @@ export async function getEntryByPlanId(planId: string): Promise<PayrollSavingsEn
     .maybeSingle();
 
   if (error && error.code !== "PGRST116") {
-    console.error("getEntryByPlanId error:", error);
+    logger.error("getEntryByPlanId error:", toLogError(error));
     showError("Failed to load savings entry.");
     return null;
   }
@@ -62,7 +63,7 @@ export async function upsertEntry(partial: Partial<PayrollSavingsEntry>): Promis
     .maybeSingle();
 
   if (error) {
-    console.error("upsertEntry error:", error);
+    logger.error("upsertEntry error:", toLogError(error));
     showError("Failed to save savings entry.");
     return null;
   }

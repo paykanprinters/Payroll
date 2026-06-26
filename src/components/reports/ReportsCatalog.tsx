@@ -54,6 +54,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 interface ReportsCatalogProps {
   employees: MockEmployee[];
   payslips: MockPayslip[];
+  allPayslips: MockPayslip[];
   leaveRecords: LeaveEntry[];
   companyDetails: MockCompanyDetails | null;
   reportDesignSettings: ReportDesignSettings;
@@ -66,6 +67,7 @@ interface ReportsCatalogProps {
 const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   employees,
   payslips,
+  allPayslips,
   leaveRecords,
   companyDetails,
   reportDesignSettings,
@@ -96,6 +98,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   const generateContext: ReportGenerateContext = {
     employees,
     payslips,
+    allPayslips,
     leaveRecords,
     selectedDate: selectedReportDate,
     periodType: reportPeriodType,

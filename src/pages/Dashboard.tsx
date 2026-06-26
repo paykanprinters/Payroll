@@ -59,6 +59,8 @@ const Dashboard: React.FC = () => {
     payCycleSettings,
     taxTables,
     userTaxSettings,
+    activeTaxYearForCalculations,
+    taxTableValidation,
     runPayrollProcess,
     calculateSinglePayslipPreview,
     markToDoAsDone,
@@ -72,7 +74,6 @@ const Dashboard: React.FC = () => {
     isLoadingLoans,
     isLoadingPayrollSavingsEntries,
     isMockDataEnabled,
-    activeTaxYearForCalculations,
   } = usePayrollProcessor();
 
   const { settings: payslipDesignSettings, isLoading: isLoadingPayslipDesign } = usePayslipDesignSettings();
@@ -116,6 +117,8 @@ const Dashboard: React.FC = () => {
         payCycleSettings,
         userTaxSettings,
         taxTables,
+        activeTaxYearForCalculations,
+        taxTableValidation,
       }),
     [
       employees.length,
@@ -126,6 +129,8 @@ const Dashboard: React.FC = () => {
       payCycleSettings,
       userTaxSettings,
       taxTables,
+      activeTaxYearForCalculations,
+      taxTableValidation,
     ]
   );
 

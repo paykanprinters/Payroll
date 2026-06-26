@@ -2,6 +2,11 @@ import { computeSetupReadyCount } from "@/lib/dashboard-admin-summary";
 import type { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import type { PayCycleSettings } from "@/integrations/supabase/pay-cycle-queries";
 import type { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
+import {
+  getTaxTableStatusLabel,
+  validateLoadedTaxTables,
+  type TaxTableValidationResult,
+} from "@/lib/tax-tables-validation";
 
 export type HealthStatus = "ok" | "warning" | "critical" | "info";
 
@@ -32,6 +37,7 @@ export function buildSystemHealthReport(input: {
   payCycleSettings: PayCycleSettings | null;
   userTaxSettings: UserTaxSettings | null;
   taxTables: { payeBrackets?: unknown[] } | null;
+  taxTableValidation?: TaxTableValidationResult | null;
   pendingTodoCount: number;
   criticalTodoCount: number;
   timesheetsAwaitingAction: number;
@@ -47,8 +53,22 @@ export function buildSystemHealthReport(input: {
     payCycleSettings: input.payCycleSettings,
     userTaxSettings: input.userTaxSettings,
     taxTables: input.taxTables,
+    activeTaxYearForCalculations: input.activeTaxYearForCalculations,
+    taxTableValidation: input.taxTableValidation,
   });
   const setupTotal = 3;
+
+  const payeApplies = input.userTaxSettings?.applyPaye ?? false;
+  const taxYear =
+    typeof input.activeTaxYearForCalculations === "number"
+      ? input.activeTaxYearForCalculations
+      : parseInt(String(input.activeTaxYearForCalculations), 10);
+  const taxValidation =
+    input.taxTableValidation ??
+    validateLoadedTaxTables(
+      input.taxTables as Parameters<typeof validateLoadedTaxTables>[0],
+      taxYear
+    );
 
   const checks: SystemHealthCheck[] = [
     {
@@ -124,10 +144,29 @@ export function buildSystemHealthReport(input: {
       actionUrl: "/timesheet",
     },
     {
+      key: "tax-tables",
+      title: "Tax tables",
+      status: !payeApplies
+        ? "ok"
+        : taxValidation.isReady
+          ? "ok"
+          : taxValidation.status === "loading"
+            ? "info"
+            : taxValidation.status === "stale"
+              ? "warning"
+              : "critical",
+      message: !payeApplies
+        ? "PAYE is off — statutory tables are not required for payroll runs."
+        : taxValidation.isReady
+          ? `TY${taxYear} tables are loaded and match curated SARS values.`
+          : `${getTaxTableStatusLabel(taxValidation)} for TY${taxYear}.`,
+      actionUrl: "/settings/tax-liabilities",
+    },
+    {
       key: "tax-year",
-      title: "Tax year",
+      title: "Active tax year",
       status: "info",
-      message: `Statutory calculations use tax year ${input.activeTaxYearForCalculations}.`,
+      message: `Payroll calculations use tax year ${taxYear}.`,
       actionUrl: "/settings/tax-liabilities",
     },
   ];

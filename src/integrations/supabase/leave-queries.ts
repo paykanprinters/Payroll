@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
 import { normalizeLeaveStatus } from "@/lib/leave-status";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 
 const SNAKE_TO_CAMEL: Record<string, keyof LeaveEntry | string> = {
   employee_id: "employeeId",
@@ -65,7 +66,7 @@ export const fetchLeaveRecordsFromSupabase = async (): Promise<LeaveEntry[]> => 
     .order("start_date", { ascending: false });
 
   if (error) {
-    console.error("leave-queries: Error fetching live leave records:", error);
+    logger.error("leave-queries: error fetching live leave records:", toLogError(error));
     showError("Failed to load live leave record data.");
     return [];
   }
@@ -85,8 +86,8 @@ export const upsertLeaveRecordToSupabase = async (leaveRecordData: LeaveEntry): 
     .select();
 
   if (error) {
-    console.error("leave-queries: Error upserting live leave record:", error);
-    showError(`Failed to save leave record: ${error.message}`);
+    logger.error("leave-queries: error upserting live leave record:", toLogError(error));
+    showError(`Failed to save leave record: ${toLogError(error)}`);
     return null;
   }
 
@@ -101,8 +102,8 @@ export const deleteLeaveRecordFromSupabase = async (id: string): Promise<boolean
   const { error } = await supabase.from("leave_records").delete().eq("id", id);
 
   if (error) {
-    console.error("leave-queries: Error deleting leave record:", error);
-    showError(`Failed to delete leave record: ${error.message}`);
+    logger.error("leave-queries: error deleting leave record:", toLogError(error));
+    showError(`Failed to delete leave record: ${toLogError(error)}`);
     return false;
   }
 

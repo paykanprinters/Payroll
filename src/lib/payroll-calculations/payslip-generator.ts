@@ -184,8 +184,12 @@ export const generatePayslipsForPeriod = (
       payPeriodEnd
     );
 
-    const { deductionsBreakdown, totalDeductions, savingPaymentsToRecord: empSavingPayments } =
-      buildDeductions(
+    const {
+      deductionsBreakdown,
+      totalDeductions,
+      savingPaymentsToRecord: empSavingPayments,
+      employerSdl,
+    } = buildDeductions(
         emp,
         withComponents.grossEarnings,
         processingLoans,
@@ -231,6 +235,7 @@ export const generatePayslipsForPeriod = (
       grossEarnings: withComponents.grossEarnings,
       totalDeductions,
       netPay,
+      employerSdl,
       earningsBreakdown: withComponents.earningsBreakdown,
       deductionsBreakdown: finalDeductions,
       leaveSummary,

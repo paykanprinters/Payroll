@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { logger, toLogError } from "@/lib/logger";
 
 export interface UserTaxSettings {
   id?: string;
@@ -9,6 +10,7 @@ export interface UserTaxSettings {
   enableIrp5Export: boolean;
   irp5ContentFontSize: number;
   proRateUifCapByFrequency?: boolean; // NEW: control pro-rated UIF cap
+  applyMedicalAidTaxCredit?: boolean; // COMP-07: apply Section 6A medical scheme tax credit
 }
 
 // Helper to convert snake_case to camelCase for Supabase data
@@ -36,7 +38,7 @@ export const convertUserTaxSettingsKeysToSnakeCase = (obj: Partial<UserTaxSettin
 };
 
 export const fetchUserTaxSettingsFromSupabase = async (userId: string): Promise<UserTaxSettings | null> => {
-  console.log("user-tax-settings-queries: Fetching live user tax settings from Supabase for user:", userId);
+  logger.debug("user-tax-settings-queries: fetching live user tax settings");
   const { data, error } = await supabase
     .from('user_tax_settings')
     .select('*')
@@ -44,7 +46,7 @@ export const fetchUserTaxSettingsFromSupabase = async (userId: string): Promise<
     .single();
 
   if (error && error.code !== "PGRST116") { // PGRST116 means no rows found
-    console.error("user-tax-settings-queries: Error fetching live user tax settings:", error);
+    logger.error("user-tax-settings-queries: error fetching live user tax settings:", toLogError(error));
     showError("Failed to load live user tax settings.");
     return null;
   } else if (data) {
@@ -53,31 +55,48 @@ export const fetchUserTaxSettingsFromSupabase = async (userId: string): Promise<
     if (camelCaseData.proRateUifCapByFrequency === undefined) {
       camelCaseData.proRateUifCapByFrequency = false;
     }
-    console.log("user-tax-settings-queries: Live user tax settings fetched:", camelCaseData);
+    // Medical scheme tax credit defaults ON (statutory) when not yet configured.
+    if (camelCaseData.applyMedicalAidTaxCredit === undefined) {
+      camelCaseData.applyMedicalAidTaxCredit = true;
+    }
     return camelCaseData;
   }
-  console.log("user-tax-settings-queries: No user tax settings found for user:", userId);
   return null;
 };
 
 export const upsertUserTaxSettingsToSupabase = async (settingsData: UserTaxSettings): Promise<UserTaxSettings | null> => {
   const snakeCasePayload = convertUserTaxSettingsKeysToSnakeCase(settingsData);
-  console.log("user-tax-settings-queries: Upserting live user tax settings with payload:", snakeCasePayload);
+  logger.debug("user-tax-settings-queries: upserting live user tax settings");
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('user_tax_settings')
     .upsert(snakeCasePayload, { onConflict: 'user_id' }) // Upsert based on user_id
     .select()
     .single();
 
+  // Graceful fallback if the COMP-07 migration (20260626120000) hasn't been
+  // applied yet: retry without the medical-credit column so settings still save.
+  if (error && /apply_medical_aid_tax_credit/.test(error.message || "")) {
+    logger.warn(
+      "user-tax-settings-queries: apply_medical_aid_tax_credit column missing — apply migration 20260626120000_medical_aid_tax_credit.sql. Saving without it for now."
+    );
+    const fallbackPayload = { ...snakeCasePayload };
+    delete fallbackPayload.apply_medical_aid_tax_credit;
+    ({ data, error } = await supabase
+      .from('user_tax_settings')
+      .upsert(fallbackPayload, { onConflict: 'user_id' })
+      .select()
+      .single());
+  }
+
   if (error) {
-    console.error("user-tax-settings-queries: Error upserting live user tax settings:", error);
-    showError(`Failed to save user tax settings: ${error.message}`);
+    logger.error("user-tax-settings-queries: error upserting live user tax settings:", toLogError(error));
+    showError(`Failed to save user tax settings: ${toLogError(error)}`);
     return null;
   } else if (data) {
     const camelCaseData = convertUserTaxSettingsKeysToCamelCase(data);
     return camelCaseData;
   }
-  console.warn("user-tax-settings-queries: Upsert succeeded but returned no data.");
+  logger.warn("user-tax-settings-queries: upsert succeeded but returned no data.");
   return null;
 };

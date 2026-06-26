@@ -12,6 +12,20 @@ import { fetchPayrollRuns, createPayrollRun, PayrollRun } from "@/integrations/s
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarDays, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const runStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case "Cancelled":
+      return "border-rose-200 bg-rose-50 text-rose-700 line-through";
+    case "Paid":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "Locked":
+      return "border-sky-200 bg-sky-50 text-sky-700";
+    default:
+      return "";
+  }
+};
 
 const PayrollRunsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -142,7 +156,7 @@ const PayrollRunsPage: React.FC = () => {
                     <TableCell className="font-medium">{r.periodStart} → {r.periodEnd}</TableCell>
                     <TableCell>{r.payCycleType}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{r.status}</Badge>
+                      <Badge variant="outline" className={cn(runStatusBadgeClass(r.status))}>{r.status}</Badge>
                     </TableCell>
                     <TableCell>{r.createdAt ? new Date(r.createdAt).toLocaleString() : "-"}</TableCell>
                     <TableCell className="text-right">

@@ -58,7 +58,6 @@ const ReportDesign: React.FC = () => {
   }, [form]);
 
   const onSubmit = (data: ReportDesignFormValues) => {
-    console.log("Report Design settings submitted:", data);
     localStorage.setItem('reportDesignPaperSize', data.defaultReportPaperSize);
     localStorage.setItem('reportDesignIncludeLogo', data.includeCompanyLogo.toString());
     localStorage.setItem('reportDesignIncludeDetails', data.includeCompanyDetails.toString());
