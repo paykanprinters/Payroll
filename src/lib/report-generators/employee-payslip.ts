@@ -1,18 +1,24 @@
 import { MockEmployee, MockPayslip } from "../mock-data-interfaces";
 import { getEmployeeName } from "../utils"; // Import from shared utils
-import { format, isSameMonth, isSameYear, parseISO, isSameWeek } from "date-fns";
+import { format, isSameMonth, isSameYear, parseISO } from "date-fns";
+import {
+  DEFAULT_PAY_CYCLE_FILTER_SETTINGS,
+  filterPayslipsForBulkPeriod,
+} from "../payslip-period-filter";
+import type { ReportContentOptions } from "./payroll-summary";
 
 export const generateEmployeePayslipReportContent = (
   payslips: MockPayslip[],
   employees: MockEmployee[],
   selectedDate: Date | undefined,
   periodType: "monthly" | "yearly" | "weekly",
-  auditLevel: "minimal" | "standard" | "detailed" = "standard"
+  auditLevel: "minimal" | "standard" | "detailed" = "standard",
+  options?: ReportContentOptions
 ): string => {
   let filteredPayslips = payslips;
-  let reportPeriodDescription = "All Periods";
+  let reportPeriodDescription = options?.reportPeriodDescription ?? "All Periods";
 
-  if (selectedDate) {
+  if (selectedDate && !options?.skipDateFilter) {
     if (periodType === "monthly") {
       filteredPayslips = payslips.filter(p => {
         const [startPeriodStr] = p.payPeriod.split(' - ');
@@ -28,13 +34,17 @@ export const generateEmployeePayslipReportContent = (
       });
       reportPeriodDescription = format(selectedDate, "yyyy");
     } else if (periodType === "weekly") {
-      filteredPayslips = payslips.filter(p => {
-        const [startPeriodStr] = p.payPeriod.split(' - ');
-        const payslipDate = parseISO(startPeriodStr);
-        return isSameWeek(payslipDate, selectedDate, { weekStartsOn: 1 }) && isSameYear(payslipDate, selectedDate);
-      });
+      const settings = options?.payCycleSettings ?? DEFAULT_PAY_CYCLE_FILTER_SETTINGS;
+      filteredPayslips = filterPayslipsForBulkPeriod(payslips, employees, selectedDate, "weekly", settings);
       reportPeriodDescription = format(selectedDate, "PPP");
     }
+  } else if (selectedDate && options?.skipDateFilter && !options.reportPeriodDescription) {
+    reportPeriodDescription =
+      periodType === "monthly"
+        ? format(selectedDate, "MMMM yyyy")
+        : periodType === "yearly"
+          ? format(selectedDate, "yyyy")
+          : format(selectedDate, "PPP");
   }
 
   if (filteredPayslips.length === 0) {

@@ -11,7 +11,10 @@ type AuditLevel = "minimal" | "standard" | "detailed";
 type Mode = "monthly" | "weekly";
 
 interface Props {
+  /** Full payslip history — used for period-over-period deltas in detailed mode. */
   payslips: MockPayslip[];
+  /** Pre-filtered payslips for the selected pay period (matches bulk payslip export logic). */
+  periodPayslips?: MockPayslip[];
   employees: MockEmployee[];
   companyDetails: MockCompanyDetails | null;
   reportDesignSettings: ReportDesignSettings;
@@ -47,6 +50,7 @@ const styles = StyleSheet.create({
 
 const ReportPdfDocument: React.FC<Props> = ({
   payslips,
+  periodPayslips,
   employees,
   companyDetails,
   reportDesignSettings,
@@ -71,20 +75,22 @@ const ReportPdfDocument: React.FC<Props> = ({
   // Exclude cash employees for reports (match existing behavior)
   const nonCashEmployees = employees.filter((e) => e.paymentMode !== "Cash");
   const nonCashIds = new Set(nonCashEmployees.map((e) => e.id));
-  // Filter by selected period (so we can still use the full history to compute deltas)
-  let filteredPayslips = payslips.filter((p) => nonCashIds.has(p.employeeId));
-  if (mode === "monthly") {
-    filteredPayslips = filteredPayslips.filter((p) => {
-      const [startStr] = p.payPeriod.split(" - ");
-      const d = parseISO(startStr);
-      return isSameMonth(d, selectedDate) && isSameYear(d, selectedDate);
-    });
-  } else {
-    filteredPayslips = filteredPayslips.filter((p) => {
-      const [startStr] = p.payPeriod.split(" - ");
-      const d = parseISO(startStr);
-      return isSameWeek(d, selectedDate, { weekStartsOn: 1 }) && isSameYear(d, selectedDate);
-    });
+  // Use pre-filtered period payslips when provided (pay-cycle aligned); otherwise fall back to calendar filters.
+  let filteredPayslips = (periodPayslips ?? payslips).filter((p) => nonCashIds.has(p.employeeId));
+  if (!periodPayslips) {
+    if (mode === "monthly") {
+      filteredPayslips = filteredPayslips.filter((p) => {
+        const [startStr] = p.payPeriod.split(" - ");
+        const d = parseISO(startStr);
+        return isSameMonth(d, selectedDate) && isSameYear(d, selectedDate);
+      });
+    } else {
+      filteredPayslips = filteredPayslips.filter((p) => {
+        const [startStr] = p.payPeriod.split(" - ");
+        const d = parseISO(startStr);
+        return isSameWeek(d, selectedDate, { weekStartsOn: 1 }) && isSameYear(d, selectedDate);
+      });
+    }
   }
 
   // Totals

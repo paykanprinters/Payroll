@@ -2,8 +2,9 @@
 
 import React, { useCallback } from "react";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
-import { format, isSameMonth, isSameYear, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+import { filterPayslipsForBulkPeriod } from "@/lib/payslip-period-filter";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import BulkPayslipActions from "./BulkPayslipActions";
@@ -151,30 +152,17 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
 
     const settings = payCycleSettings ? {
-      payCycleType: payCycleSettings.payCycleType,
       cutOffDay: payCycleSettings.cutOffDay,
       payDayOffset: payCycleSettings.payDayOffset,
-    } : { payCycleType: "Weekly", cutOffDay: 2, payDayOffset: 0 };
+    } : { cutOffDay: 2, payDayOffset: 0 };
 
-    const payslipsForPeriod = payslips.filter(p => {
-      const employee = allEmployees.find(emp => emp.id === p.employeeId);
-      if (!employee) return false;
-
-      const [startPeriodStr] = p.payPeriod.split(' - ');
-      if (mode === "monthly" && employee.payFrequency === "Monthly") {
-        const payslipStartDate = new Date(startPeriodStr);
-        return isSameMonth(payslipStartDate, selectedPayPeriodDate) && isSameYear(payslipStartDate, selectedPayPeriodDate);
-      } else if (mode === "weekly" && (employee.payFrequency === "Weekly" || employee.payFrequency === "Bi-Weekly")) {
-        const { payPeriodStart } = calculatePayPeriodDetails(
-          selectedPayPeriodDate,
-          employee.payFrequency === "Bi-Weekly" ? "Bi-Weekly" : "Weekly",
-          settings.cutOffDay,
-          settings.payDayOffset
-        );
-        return startPeriodStr === format(payPeriodStart, "yyyy-MM-dd");
-      }
-      return false;
-    });
+    const payslipsForPeriod = filterPayslipsForBulkPeriod(
+      payslips,
+      allEmployees,
+      selectedPayPeriodDate,
+      mode,
+      settings
+    );
 
     if (payslipsForPeriod.length === 0) {
       showError(`No ${mode} payslips found for the selected period (${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}). Generate payslips for that period first.`);
@@ -188,8 +176,11 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
       const payslipsForReports = payslipsForPeriod.filter(p => nonCashIds.has(p.employeeId));
 
-      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForReports, nonCashEmployees, selectedPayPeriodDate, mode, level);
-      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, selectedPayPeriodDate, mode, level);
+      const reportPeriodLabel = format(selectedPayPeriodDate, mode === "monthly" ? "MMMM yyyy" : "PPP");
+      const reportOptions = { skipDateFilter: true, reportPeriodDescription: reportPeriodLabel };
+
+      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForReports, nonCashEmployees, selectedPayPeriodDate, mode, level, reportOptions);
+      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, selectedPayPeriodDate, mode, level, reportOptions);
       const combinedHtml = `
         <h3>Payroll Summary Report</h3>
         ${payrollSummaryHtml}
@@ -205,6 +196,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     const reportsDoc = (
       <ReportPdfDocument
         payslips={payslips}
+        periodPayslips={payslipsForPeriod}
         employees={allEmployees}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
@@ -304,9 +296,12 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
       const payslipsForReports = payslipsForCurrentPeriod.filter(p => nonCashIds.has(p.employeeId));
 
+      const reportPeriodLabel = format(today, "PPP");
+      const reportOptions = { skipDateFilter: true, reportPeriodDescription: reportPeriodLabel };
+
       const mode: "monthly" | "weekly" = "monthly";
-      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel);
-      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel);
+      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel, reportOptions);
+      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel, reportOptions);
       const combinedHtml = `
         <h3>Payroll Summary Report</h3>
         ${payrollSummaryHtml}
@@ -322,6 +317,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     const reportsDoc = (
       <ReportPdfDocument
         payslips={payslips}
+        periodPayslips={payslipsForCurrentPeriod}
         employees={allEmployees}
         companyDetails={companyDetails}
         reportDesignSettings={reportDesignSettings}
