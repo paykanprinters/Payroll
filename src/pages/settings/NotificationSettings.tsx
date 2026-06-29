@@ -17,6 +17,9 @@ import {
   type NotificationLogEntry,
 } from "@/integrations/supabase/notification-queries";
 
+// Sender must be on the Resend-verified domain (pay.kanprinters.co.za).
+const DEFAULT_SENDER_EMAIL = "info@pay.kanprinters.co.za";
+
 const NotificationSettings: React.FC = () => {
   const { user } = useAuth();
   const { isAuthenticated, isLoadingAuth } = usePayrollProcessor();
@@ -40,8 +43,19 @@ const NotificationSettings: React.FC = () => {
     if (isAuthenticated && !isLoadingAuth) loadLog();
   }, [isAuthenticated, isLoadingAuth, loadLog]);
 
+  // Default to the Resend-verified sender when no address has been configured yet.
+  useEffect(() => {
+    if (isLoading || settings.fromEmail.trim()) return;
+    setSettings((prev) => ({ ...prev, fromEmail: DEFAULT_SENDER_EMAIL }));
+  }, [isLoading, settings.fromEmail, setSettings]);
+
   const handleSave = async () => {
-    if (settings.fromEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.fromEmail.trim())) {
+    const fromEmail = settings.fromEmail.trim();
+    if (!fromEmail) {
+      showError("Sender email is required. Use an address on your verified Resend domain.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
       showError("Enter a valid sender email address.");
       return;
     }
@@ -49,6 +63,15 @@ const NotificationSettings: React.FC = () => {
   };
 
   const handleTest = async () => {
+    const fromEmail = settings.fromEmail.trim();
+    if (!fromEmail) {
+      showError("Set a sender email and click Save before sending a test.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
+      showError("Enter a valid sender email address, then save settings.");
+      return;
+    }
     const to = testTo.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       showError("Enter a valid email address to send the test to.");
@@ -56,6 +79,11 @@ const NotificationSettings: React.FC = () => {
     }
     const toastId = showLoading("Sending test email…") as string;
     try {
+      const saved = await save(settings);
+      if (!saved) {
+        dismissToast(toastId);
+        return;
+      }
       const result = await sendTestEmail(to, settings.fromName || "Payroll");
       dismissToast(toastId);
       if (result.ok) {
@@ -109,11 +137,14 @@ const NotificationSettings: React.FC = () => {
               <Label htmlFor="from-email">Sender email (verified domain)</Label>
               <Input
                 id="from-email"
-                placeholder="payroll@kanprinters.co.za"
+                placeholder="info@pay.kanprinters.co.za"
                 value={settings.fromEmail}
                 onChange={(e) => setSettings({ ...settings, fromEmail: e.target.value })}
                 disabled={isLoading}
               />
+              <p className="text-xs text-muted-foreground">
+                Required. Must be on a domain verified in Resend. Save settings before sending a test.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="reply-to">Reply-to (optional)</Label>

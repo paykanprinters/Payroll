@@ -35,10 +35,12 @@ CREATE TABLE IF NOT EXISTS public.notification_settings (
 );
 
 -- Seed the singleton row used by the app (fixed id for stable upserts).
-INSERT INTO public.notification_settings (id, from_name, portal_url)
+-- Sender must be on the Resend-verified domain (pay.kanprinters.co.za).
+INSERT INTO public.notification_settings (id, from_name, from_email, portal_url)
 VALUES (
   '00000000-0000-0000-0000-000000000001',
   'Kan Printers Payroll',
+  'info@pay.kanprinters.co.za',
   'https://payroll.kanprinters.co.za/staff/login'
 )
 ON CONFLICT (id) DO NOTHING;

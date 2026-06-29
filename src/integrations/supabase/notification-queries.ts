@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger, toLogError } from "@/lib/logger";
+import { parseFunctionError } from "@/lib/parse-function-error";
 import type { PayslipEmailPayload } from "@/lib/email/build-payslip-email-payload";
 
 export const NOTIFICATION_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
@@ -126,7 +127,7 @@ export async function sendTestEmail(to: string, companyName: string): Promise<Se
   const { data, error } = await supabase.functions.invoke("send-payslip-email", {
     body: { test: true, to, companyName },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: parseFunctionError(error, data) };
   const result = data as SendResult;
   return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
 }
@@ -144,7 +145,7 @@ export async function sendPayslipEmail(
       pdfFilename: payload.pdfFilename,
     },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: parseFunctionError(error, data) };
   const result = data as SendResult;
   return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
 }
