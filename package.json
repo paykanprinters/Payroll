@@ -15,6 +15,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "gen:acb-sample": "node scripts/gen-acb-sample.mjs",
     "check:tax-tables": "vitest run src/lib/sars-tax-tables-coverage.test.ts src/lib/sars-tax-tables.test.ts",
     "check:sars-compliance": "vitest run src/lib/payroll-calculations/sars-regression.test.ts src/lib/payroll-calculations/golden-master.test.ts src/lib/tax-tables-validation.test.ts"
   },

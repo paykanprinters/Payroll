@@ -22,6 +22,24 @@ export function sanitizeDownloadFilename(filename: string): string {
 }
 
 /**
+ * The Web Share API is desirable on phones/tablets (it offers "Save to Files",
+ * messaging apps, etc.), but on desktop browsers it pops the OS share sheet
+ * instead of a plain download. We only opt into web-share on touch mobile
+ * devices so desktop users get a straightforward file download.
+ */
+function shouldUseWebShare(): boolean {
+  if (typeof navigator === "undefined" || typeof File === "undefined" || !navigator.share) {
+    return false;
+  }
+  const ua = navigator.userAgent || "";
+  const isMobileUa = /Android|iPhone|iPad|iPod/i.test(ua);
+  // iPadOS reports as desktop Safari but exposes touch points.
+  const isTouchTablet =
+    /Macintosh/.test(ua) && typeof navigator.maxTouchPoints === "number" && navigator.maxTouchPoints > 1;
+  return isMobileUa || isTouchTablet;
+}
+
+/**
  * Save a blob on device. On Capacitor native shells, writes to cache and opens
  * the system share sheet (Save to Files / Drive / open in PDF viewer). On web,
  * uses the Web Share API when available, otherwise a download link.
@@ -52,7 +70,7 @@ export async function downloadBlob(
     return "native-share";
   }
 
-  if (typeof navigator !== "undefined" && typeof File !== "undefined" && navigator.share) {
+  if (shouldUseWebShare()) {
     try {
       const file = new File([blob], safeName, { type: mimeType });
       if (navigator.canShare?.({ files: [file] })) {
