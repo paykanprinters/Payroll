@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, Mail } from "lucide-react";
+import { CalendarCheck, Mail, MessageSquare } from "lucide-react";
 import IndividualPayslipActions from "./IndividualPayslipActions";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
 
@@ -13,6 +13,7 @@ interface IndividualActionsPanelProps {
   onPrint: () => void;
   onDownload: () => void;
   onEmail?: () => void;
+  onSmsAlert?: () => void;
 }
 
 const IndividualActionsPanel: React.FC<IndividualActionsPanelProps> = ({
@@ -22,6 +23,7 @@ const IndividualActionsPanel: React.FC<IndividualActionsPanelProps> = ({
   onPrint,
   onDownload,
   onEmail,
+  onSmsAlert,
 }) => {
   return (
     <div className="flex flex-col gap-3">
@@ -42,6 +44,12 @@ const IndividualActionsPanel: React.FC<IndividualActionsPanelProps> = ({
       {onEmail && (
         <Button variant="outline" onClick={onEmail} disabled={!selectedPayslip}>
           <Mail className="mr-2 h-4 w-4" /> Email Payslip to Employee
+        </Button>
+      )}
+
+      {onSmsAlert && (
+        <Button variant="outline" onClick={onSmsAlert} disabled={!selectedPayslip}>
+          <MessageSquare className="mr-2 h-4 w-4" /> SMS Payslip Alert to Employee
         </Button>
       )}
     </div>

@@ -20,6 +20,7 @@ const FUNCTIONS = {
   "seed-users": true,
   "send-payroll-reminders": true,
   "send-payslip-email": true,
+  "send-sms": true,
   "update-user-metadata": true,
   "update-user-password": true,
 };
@@ -49,6 +50,8 @@ function collectFiles(functionName) {
     "_shared/sars-tax-tables.ts",
     "_shared/resend.ts",
     "_shared/email-templates.ts",
+    "_shared/smsportal.ts",
+    "_shared/sms-templates.ts",
   ]) {
     const content = readIfExists(shared);
     if (content) files.push({ name: shared, content });

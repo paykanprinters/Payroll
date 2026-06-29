@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Send, Save } from "lucide-react";
+import { Mail, Send, Save, MessageSquare } from "lucide-react";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
@@ -14,8 +14,10 @@ import { useNotificationSettings } from "@/hooks/use-notification-settings";
 import {
   fetchNotificationLog,
   sendTestEmail,
+  sendTestSms,
   type NotificationLogEntry,
 } from "@/integrations/supabase/notification-queries";
+import { isValidSaMobile } from "@/lib/sms/normalize-sa-msisdn";
 
 // Sender must be on the Resend-verified domain (pay.kanprinters.co.za).
 const DEFAULT_SENDER_EMAIL = "info@pay.kanprinters.co.za";
@@ -30,6 +32,7 @@ const NotificationSettings: React.FC = () => {
   });
 
   const [testTo, setTestTo] = useState("");
+  const [testSmsTo, setTestSmsTo] = useState("");
   const [log, setLog] = useState<NotificationLogEntry[]>([]);
 
   const isAdmin = user?.role === "Admin";
@@ -95,6 +98,37 @@ const NotificationSettings: React.FC = () => {
     } catch (e) {
       dismissToast(toastId);
       showError(e instanceof Error ? e.message : "Failed to send test email.");
+    }
+  };
+
+  const handleTestSms = async () => {
+    if (!settings.smsSenderId.trim()) {
+      showError("Set a Sender ID and click Save before sending a test SMS.");
+      return;
+    }
+    const to = testSmsTo.trim();
+    if (!isValidSaMobile(to)) {
+      showError("Enter a valid South African mobile number (e.g. 0821234567).");
+      return;
+    }
+    const toastId = showLoading("Sending test SMS…") as string;
+    try {
+      const saved = await save(settings);
+      if (!saved) {
+        dismissToast(toastId);
+        return;
+      }
+      const result = await sendTestSms(to);
+      dismissToast(toastId);
+      if (result.ok) {
+        showSuccess(`Test SMS sent to ${to}.`);
+        loadLog();
+      } else {
+        showError(result.error ?? "Failed to send test SMS.");
+      }
+    } catch (e) {
+      dismissToast(toastId);
+      showError(e instanceof Error ? e.message : "Failed to send test SMS.");
     }
   };
 
@@ -241,11 +275,95 @@ const NotificationSettings: React.FC = () => {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" /> SMS Notifications (SMS Portal)
+          </CardTitle>
+          <CardDescription>
+            Send SMS via SMS Portal. Credentials (Client ID &amp; API Secret) are stored securely on the server as
+            secrets and never exposed here. SMS is billed per message.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="sms-sender">Sender ID</Label>
+              <Input
+                id="sms-sender"
+                placeholder="KanPrint"
+                value={settings.smsSenderId}
+                onChange={(e) => setSettings({ ...settings, smsSenderId: e.target.value })}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                The name/number messages are sent from. Must be registered on your SMS Portal account.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Enable SMS notifications</p>
+                <p className="text-sm text-muted-foreground">Master switch for all outgoing SMS.</p>
+              </div>
+              <Switch
+                checked={settings.smsEnabled}
+                onCheckedChange={(v) => setSettings({ ...settings, smsEnabled: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Payslip-ready SMS alerts</p>
+                <p className="text-sm text-muted-foreground">Text employees when their payslip is available.</p>
+              </div>
+              <Switch
+                checked={settings.sendPayslipSms}
+                disabled={!settings.smsEnabled}
+                onCheckedChange={(v) => setSettings({ ...settings, sendPayslipSms: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">SMS payroll reminders</p>
+                <p className="text-sm text-muted-foreground">Text staff about blockers before a payroll run.</p>
+              </div>
+              <Switch
+                checked={settings.sendSmsReminders}
+                disabled={!settings.smsEnabled}
+                onCheckedChange={(v) => setSettings({ ...settings, sendSmsReminders: v })}
+              />
+            </div>
+          </div>
+
+          <Button onClick={handleSave} disabled={isLoading || isSaving}>
+            <Save className="mr-2 h-4 w-4" />
+            {isSaving ? "Saving…" : "Save settings"}
+          </Button>
+
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-end">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="test-sms-to">Send a test SMS</Label>
+              <Input
+                id="test-sms-to"
+                placeholder="0821234567"
+                value={testSmsTo}
+                onChange={(e) => setTestSmsTo(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" onClick={handleTestSms} disabled={!settings.smsEnabled}>
+              <Send className="mr-2 h-4 w-4" /> Send test SMS
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {log.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Recent deliveries</CardTitle>
-            <CardDescription>Last {log.length} email events.</CardDescription>
+            <CardDescription>Last {log.length} email &amp; SMS events.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -253,6 +371,7 @@ const NotificationSettings: React.FC = () => {
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="py-2 pr-4">When</th>
+                    <th className="py-2 pr-4">Channel</th>
                     <th className="py-2 pr-4">Type</th>
                     <th className="py-2 pr-4">Recipient</th>
                     <th className="py-2 pr-4">Status</th>
@@ -262,6 +381,7 @@ const NotificationSettings: React.FC = () => {
                   {log.map((row) => (
                     <tr key={row.id} className="border-b last:border-0">
                       <td className="py-2 pr-4 whitespace-nowrap">{new Date(row.createdAt).toLocaleString()}</td>
+                      <td className="py-2 pr-4 uppercase">{row.channel}</td>
                       <td className="py-2 pr-4 capitalize">{row.category}</td>
                       <td className="py-2 pr-4">{row.recipient}</td>
                       <td className="py-2 pr-4">

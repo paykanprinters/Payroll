@@ -43,6 +43,7 @@ import { createRunSnapshot } from "@/integrations/supabase/run-snapshot-queries"
 import { useOvertimeRules } from "@/hooks/use-overtime-rules";
 import { useReadinessGates, ReadinessBlocker } from "@/hooks/use-readiness-gates";
 import { supabase } from "@/integrations/supabase/client";
+import { sendSmsReminders } from "@/integrations/supabase/notification-queries";
 import PayrollRunHeader from "@/components/payroll/PayrollRunHeader";
 import PayrollRunStepper, { PayrollRunStepId } from "@/components/payroll/PayrollRunStepper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -406,12 +407,17 @@ const PayrollRunDetailPage: React.FC = () => {
       const name = emp ? `${emp.firstName ?? ""} ${emp.lastName ?? ""}`.trim() : undefined;
       return {
         email: emp?.email,
+        phone: emp?.phoneNumber,
         name,
         message: `${name ? name + ": " : ""}${g.messages.join("; ")}`,
       };
     });
     const runLabel = run ? `${run.periodStart} – ${run.periodEnd}` : undefined;
-    const payload = { runId: id, runLabel, reminders };
+    const payload = {
+      runId: id,
+      runLabel,
+      reminders: reminders.map(({ email, name, message }) => ({ email, name, message })),
+    };
     const toastId = showLoading("Sending reminders...") as string;
     try {
       const { data, error } = await supabase.functions.invoke("send-payroll-reminders", { body: payload });
@@ -425,6 +431,19 @@ const PayrollRunDetailPage: React.FC = () => {
           showSuccess(`Reminders sent: ${r.sent ?? 0}${r.failed ? `, ${r.failed} failed` : ""}.`);
           await insertAuditLog("payroll_run", id, `Reminders sent`, { sent: r.sent ?? 0, failed: r.failed ?? 0 });
         }
+      }
+
+      // SMS reminders run in parallel; the edge function no-ops when SMS is disabled.
+      try {
+        const smsItems = reminders.map(({ phone, name, message }) => ({ phone, name, message }));
+        const smsResult = await sendSmsReminders(smsItems, id, runLabel);
+        if (smsResult.ok && (smsResult.sent ?? 0) > 0) {
+          showSuccess(`SMS reminders sent: ${smsResult.sent}${smsResult.skipped ? `, ${smsResult.skipped} skipped` : ""}.`);
+        } else if (!smsResult.ok && !smsResult.disabled && smsResult.error) {
+          showError(`SMS reminders: ${smsResult.error}`);
+        }
+      } catch {
+        // SMS is best-effort; email reminder result already reported.
       }
     } finally {
       dismissToast(toastId);

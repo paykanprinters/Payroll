@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logger, toLogError } from "@/lib/logger";
 import { parseFunctionError } from "@/lib/parse-function-error";
 import type { PayslipEmailPayload } from "@/lib/email/build-payslip-email-payload";
+import type { PayslipSmsPayload } from "@/lib/sms/build-payslip-sms-payload";
 
 export const NOTIFICATION_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -15,6 +16,10 @@ export interface NotificationSettings {
   sendPayslipEmails: boolean;
   sendReminders: boolean;
   portalUrl: string;
+  smsEnabled: boolean;
+  smsSenderId: string;
+  sendPayslipSms: boolean;
+  sendSmsReminders: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -27,6 +32,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   sendPayslipEmails: true,
   sendReminders: true,
   portalUrl: "",
+  smsEnabled: false,
+  smsSenderId: "",
+  sendPayslipSms: false,
+  sendSmsReminders: false,
 };
 
 function rowToSettings(row: Record<string, unknown>): NotificationSettings {
@@ -40,6 +49,10 @@ function rowToSettings(row: Record<string, unknown>): NotificationSettings {
     sendPayslipEmails: row.send_payslip_emails !== false,
     sendReminders: row.send_reminders !== false,
     portalUrl: (row.portal_url as string) ?? "",
+    smsEnabled: !!row.sms_enabled,
+    smsSenderId: (row.sms_sender_id as string) ?? "",
+    sendPayslipSms: !!row.send_payslip_sms,
+    sendSmsReminders: !!row.send_sms_reminders,
   };
 }
 
@@ -71,6 +84,10 @@ export async function upsertNotificationSettings(
     send_payslip_emails: settings.sendPayslipEmails,
     send_reminders: settings.sendReminders,
     portal_url: settings.portalUrl.trim() || null,
+    sms_enabled: settings.smsEnabled,
+    sms_sender_id: settings.smsSenderId.trim() || null,
+    send_payslip_sms: settings.sendPayslipSms,
+    send_sms_reminders: settings.sendSmsReminders,
     updated_at: new Date().toISOString(),
     updated_by: updatedBy ?? null,
   };
@@ -88,6 +105,7 @@ export async function upsertNotificationSettings(
 
 export interface NotificationLogEntry {
   id: string;
+  channel: string;
   category: string;
   recipient: string;
   subject: string | null;
@@ -99,7 +117,7 @@ export interface NotificationLogEntry {
 export async function fetchNotificationLog(limit = 50): Promise<NotificationLogEntry[]> {
   const { data, error } = await supabase
     .from("notification_log")
-    .select("id, category, recipient, subject, status, error, created_at")
+    .select("id, channel, category, recipient, subject, status, error, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -109,6 +127,7 @@ export async function fetchNotificationLog(limit = 50): Promise<NotificationLogE
   }
   return (data ?? []).map((row) => ({
     id: row.id as string,
+    channel: (row.channel as string) ?? "email",
     category: row.category as string,
     recipient: row.recipient as string,
     subject: (row.subject as string) ?? null,
@@ -130,6 +149,55 @@ export async function sendTestEmail(to: string, companyName: string): Promise<Se
   if (error) return { ok: false, error: parseFunctionError(error, data) };
   const result = data as SendResult;
   return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
+}
+
+export interface SmsReminderItem {
+  phone?: string;
+  name?: string;
+  message: string;
+}
+
+export async function sendTestSms(to: string): Promise<SendResult> {
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: { test: true, to },
+  });
+  if (error) return { ok: false, error: parseFunctionError(error, data) };
+  const result = data as SendResult;
+  return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
+}
+
+export async function sendPayslipSms(payload: PayslipSmsPayload): Promise<SendResult> {
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: { category: "payslip", employee: payload.employee, payslip: payload.payslip },
+  });
+  if (error) return { ok: false, error: parseFunctionError(error, data) };
+  const result = data as SendResult;
+  return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
+}
+
+export interface SmsBatchResult {
+  ok: boolean;
+  sent?: number;
+  skipped?: number;
+  error?: string;
+  disabled?: boolean;
+}
+
+export async function sendSmsReminders(
+  reminders: SmsReminderItem[],
+  runId?: string,
+  runLabel?: string
+): Promise<SmsBatchResult> {
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: { category: "reminder", reminders, runId, runLabel },
+  });
+  if (error) {
+    const parsed = data as { reason?: string } | null;
+    return { ok: false, error: parseFunctionError(error, data), disabled: parsed?.reason === "disabled" };
+  }
+  const result = data as SmsBatchResult & { reason?: string };
+  if (result?.ok) return { ok: true, sent: result.sent, skipped: result.skipped };
+  return { ok: false, error: result?.error ?? "Unknown error", disabled: result?.reason === "disabled" };
 }
 
 export async function sendPayslipEmail(

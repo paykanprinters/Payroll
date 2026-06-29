@@ -6,7 +6,8 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { filterPayslipsForBulkPeriod } from "@/lib/payslip-period-filter";
 import { buildPayslipEmailPayload } from "@/lib/email/build-payslip-email-payload";
-import { sendPayslipEmail } from "@/integrations/supabase/notification-queries";
+import { buildPayslipSmsPayload } from "@/lib/sms/build-payslip-sms-payload";
+import { sendPayslipEmail, sendPayslipSms } from "@/integrations/supabase/notification-queries";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import BulkPayslipActions from "./BulkPayslipActions";
@@ -527,6 +528,88 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     [selectedPayPeriodDate, payCycleSettings, payslips, allEmployees, emailOnePayslip]
   );
 
+  const smsOnePayslip = useCallback(
+    async (slip: MockPayslip): Promise<{ ok: boolean; reason?: string; error?: string }> => {
+      const employee = allEmployees.find((e) => e.id === slip.employeeId);
+      if (!employee) return { ok: false, reason: "no-employee" };
+
+      const built = buildPayslipSmsPayload(employee, slip, companyNameForEmail);
+      if (!built.ok) return { ok: false, reason: built.reason };
+
+      return sendPayslipSms(built.payload);
+    },
+    [allEmployees, companyNameForEmail]
+  );
+
+  const handleSmsIndividualPayslip = useCallback(async () => {
+    if (!selectedPayslip) {
+      showError("Select a payslip first.");
+      return;
+    }
+    const toastId = showLoading("Sending SMS alert…") as string;
+    try {
+      const res = await smsOnePayslip(selectedPayslip);
+      if (res.ok) {
+        showSuccess("Payslip SMS alert sent to employee.");
+      } else if (res.reason === "no-phone") {
+        showError("That employee has no valid mobile number on file.");
+      } else {
+        showError(res.error || "Failed to send SMS alert.");
+      }
+    } catch (e: any) {
+      showError(`Failed to send SMS: ${e?.message || "Unknown error"}`);
+    } finally {
+      dismissToast(toastId);
+    }
+  }, [selectedPayslip, smsOnePayslip]);
+
+  const handleSmsAllPayslips = useCallback(
+    async (mode: "monthly" | "weekly") => {
+      if (!selectedPayPeriodDate) {
+        showError("Select a pay period date first.");
+        return;
+      }
+      const settings = payCycleSettings
+        ? { cutOffDay: payCycleSettings.cutOffDay, payDayOffset: payCycleSettings.payDayOffset }
+        : { cutOffDay: 2, payDayOffset: 0 };
+
+      const periodSlips = filterPayslipsForBulkPeriod(
+        payslips,
+        allEmployees,
+        selectedPayPeriodDate,
+        mode,
+        settings
+      );
+
+      if (periodSlips.length === 0) {
+        showError(`No ${mode} payslips found for the selected period.`);
+        return;
+      }
+
+      const toastId = showLoading(`Sending ${periodSlips.length} SMS alert(s)…`) as string;
+      let sent = 0;
+      let skipped = 0;
+      let failed = 0;
+      try {
+        for (const slip of periodSlips) {
+          const res = await smsOnePayslip(slip);
+          if (res.ok) sent++;
+          else if (res.reason === "no-phone" || res.reason === "no-employee") skipped++;
+          else failed++;
+        }
+      } finally {
+        dismissToast(toastId);
+      }
+
+      const parts = [`Sent ${sent} SMS alert(s).`];
+      if (skipped) parts.push(`${skipped} skipped (no mobile).`);
+      if (failed) parts.push(`${failed} failed.`);
+      if (failed) showError(parts.join(" "));
+      else showSuccess(parts.join(" "));
+    },
+    [selectedPayPeriodDate, payCycleSettings, payslips, allEmployees, smsOnePayslip]
+  );
+
   return (
     <div className="space-y-6">
       {/* Row 1: Employee & payslip selection + actions */}
@@ -553,6 +636,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             onPrint={() => handlePrintOrDownloadIndividual('print')}
             onDownload={() => handlePrintOrDownloadIndividual('download')}
             onEmail={handleEmailIndividualPayslip}
+            onSmsAlert={handleSmsIndividualPayslip}
           />
         </div>
       </div>
@@ -572,6 +656,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             onPrintAll={handlePrintOrDownloadAll}
             onDownloadAll={handlePrintOrDownloadAll}
             onEmailAll={handleEmailAllPayslips}
+            onSmsAlertAll={handleSmsAllPayslips}
             auditLevel={auditLevel}
             setAuditLevel={setAuditLevel}
           />
