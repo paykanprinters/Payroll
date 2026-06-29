@@ -400,18 +400,31 @@ const PayrollRunDetailPage: React.FC = () => {
       showError("No blockers to send reminders for.");
       return;
     }
-    const payload = {
-      runId: id,
-      reminders: buildReminderPayload(blockers),
-    };
+    const grouped = buildReminderPayload(blockers);
+    const reminders = grouped.map((g) => {
+      const emp = employees.find((e) => e.id === g.employeeId);
+      const name = emp ? `${emp.firstName ?? ""} ${emp.lastName ?? ""}`.trim() : undefined;
+      return {
+        email: emp?.email,
+        name,
+        message: `${name ? name + ": " : ""}${g.messages.join("; ")}`,
+      };
+    });
+    const runLabel = run ? `${run.periodStart} – ${run.periodEnd}` : undefined;
+    const payload = { runId: id, runLabel, reminders };
     const toastId = showLoading("Sending reminders...") as string;
     try {
-      const { error } = await supabase.functions.invoke("send-payroll-reminders", { body: payload });
+      const { data, error } = await supabase.functions.invoke("send-payroll-reminders", { body: payload });
       if (error) {
         showError(`Failed to send reminders: ${error.message}`);
       } else {
-        showSuccess("Reminders queued.");
-        await insertAuditLog("payroll_run", id, `Reminders queued`, { count: payload.reminders.length });
+        const r = (data ?? {}) as { ok?: boolean; sent?: number; failed?: number; error?: string };
+        if (r.ok === false && r.error) {
+          showError(r.error);
+        } else {
+          showSuccess(`Reminders sent: ${r.sent ?? 0}${r.failed ? `, ${r.failed} failed` : ""}.`);
+          await insertAuditLog("payroll_run", id, `Reminders sent`, { sent: r.sent ?? 0, failed: r.failed ?? 0 });
+        }
       }
     } finally {
       dismissToast(toastId);

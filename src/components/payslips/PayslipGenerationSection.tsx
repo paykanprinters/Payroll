@@ -5,13 +5,15 @@ import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } 
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { filterPayslipsForBulkPeriod } from "@/lib/payslip-period-filter";
+import { buildPayslipEmailPayload } from "@/lib/email/build-payslip-email-payload";
+import { sendPayslipEmail } from "@/integrations/supabase/notification-queries";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import BulkPayslipActions from "./BulkPayslipActions";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { saveGeneratedReport, computeChecksum } from "@/integrations/supabase/generated-reports";
 import { generatePayrollSummaryReportContent, generateEmployeePayslipReportContent } from "@/lib/report-generators";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { pdf as pdfRenderer } from "@react-pdf/renderer";
 
 // Vector PDF helpers
@@ -418,6 +420,113 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     }
   }, [selectedEmployeeId, allEmployees, payslips, setSelectedPayslipId, payCycleSettings]);
 
+  const companyNameForEmail =
+    companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Payroll";
+
+  const blobToBase64 = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        resolve(result.includes(",") ? result.split(",")[1] : result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+  const emailOnePayslip = useCallback(
+    async (slip: MockPayslip): Promise<{ ok: boolean; reason?: string; error?: string }> => {
+      const employee = allEmployees.find((e) => e.id === slip.employeeId);
+      if (!employee) return { ok: false, reason: "no-employee" };
+
+      const built = buildPayslipEmailPayload(employee, slip, companyNameForEmail);
+      if (!built.ok) return { ok: false, reason: built.reason };
+
+      const doc = (
+        <PayslipPdfDocument
+          payslips={[slip]}
+          employees={allEmployees}
+          companyDetails={companyDetails}
+          payslipDesignSettings={payslipDesignSettings}
+          getEmployeeName={getEmployeeName}
+        />
+      );
+      const blob = await pdfRenderer(doc).toBlob();
+      const pdfBase64 = await blobToBase64(blob);
+      return sendPayslipEmail(built.payload, pdfBase64);
+    },
+    [allEmployees, companyDetails, companyNameForEmail, payslipDesignSettings, getEmployeeName]
+  );
+
+  const handleEmailIndividualPayslip = useCallback(async () => {
+    if (!selectedPayslip) {
+      showError("Select a payslip first.");
+      return;
+    }
+    const toastId = showLoading("Emailing payslip…") as string;
+    try {
+      const res = await emailOnePayslip(selectedPayslip);
+      if (res.ok) {
+        showSuccess("Payslip emailed to employee.");
+      } else if (res.reason === "no-email") {
+        showError("That employee has no email address on file.");
+      } else {
+        showError(res.error || "Failed to email payslip.");
+      }
+    } catch (e: any) {
+      showError(`Failed to email payslip: ${e?.message || "Unknown error"}`);
+    } finally {
+      dismissToast(toastId);
+    }
+  }, [selectedPayslip, emailOnePayslip]);
+
+  const handleEmailAllPayslips = useCallback(
+    async (mode: "monthly" | "weekly") => {
+      if (!selectedPayPeriodDate) {
+        showError("Select a pay period date first.");
+        return;
+      }
+      const settings = payCycleSettings
+        ? { cutOffDay: payCycleSettings.cutOffDay, payDayOffset: payCycleSettings.payDayOffset }
+        : { cutOffDay: 2, payDayOffset: 0 };
+
+      const periodSlips = filterPayslipsForBulkPeriod(
+        payslips,
+        allEmployees,
+        selectedPayPeriodDate,
+        mode,
+        settings
+      );
+
+      if (periodSlips.length === 0) {
+        showError(`No ${mode} payslips found for the selected period.`);
+        return;
+      }
+
+      const toastId = showLoading(`Emailing ${periodSlips.length} payslip(s)…`) as string;
+      let sent = 0;
+      let skipped = 0;
+      let failed = 0;
+      try {
+        for (const slip of periodSlips) {
+          const res = await emailOnePayslip(slip);
+          if (res.ok) sent++;
+          else if (res.reason === "no-email" || res.reason === "no-employee") skipped++;
+          else failed++;
+        }
+      } finally {
+        dismissToast(toastId);
+      }
+
+      const parts = [`Emailed ${sent} payslip(s).`];
+      if (skipped) parts.push(`${skipped} skipped (no email).`);
+      if (failed) parts.push(`${failed} failed.`);
+      if (failed) showError(parts.join(" "));
+      else showSuccess(parts.join(" "));
+    },
+    [selectedPayPeriodDate, payCycleSettings, payslips, allEmployees, emailOnePayslip]
+  );
+
   return (
     <div className="space-y-6">
       {/* Row 1: Employee & payslip selection + actions */}
@@ -443,6 +552,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             onSelectCurrentPeriodPayslip={handleSelectCurrentPeriodPayslip}
             onPrint={() => handlePrintOrDownloadIndividual('print')}
             onDownload={() => handlePrintOrDownloadIndividual('download')}
+            onEmail={handleEmailIndividualPayslip}
           />
         </div>
       </div>
@@ -461,6 +571,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
             setBulkGenerationMode={setBulkGenerationMode}
             onPrintAll={handlePrintOrDownloadAll}
             onDownloadAll={handlePrintOrDownloadAll}
+            onEmailAll={handleEmailAllPayslips}
             auditLevel={auditLevel}
             setAuditLevel={setAuditLevel}
           />

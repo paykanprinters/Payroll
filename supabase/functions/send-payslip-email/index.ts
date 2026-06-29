@@ -2,21 +2,16 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { isResendConfigured, sendEmail } from "../_shared/resend.ts";
-import { renderReminderEmail } from "../_shared/email-templates.ts";
-
-interface ReminderItem {
-  /** Recipient email; when absent the item is grouped under the admin digest. */
-  email?: string;
-  name?: string;
-  message: string;
-}
+import { renderPayslipEmail, renderTestEmail } from "../_shared/email-templates.ts";
 
 interface NotificationSettings {
   from_name: string | null;
   from_email: string | null;
   reply_to: string | null;
   admin_email: string | null;
-  send_reminders: boolean | null;
+  cc_admins: boolean | null;
+  send_payslip_emails: boolean | null;
+  portal_url: string | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,16 +57,6 @@ serve(async (req) => {
     return jsonResponse({ ok: false, error: "Forbidden" }, 403, corsHeaders);
   }
 
-  let body: { runId?: string; runLabel?: string; reminders?: ReminderItem[] };
-  try {
-    body = await req.json();
-  } catch {
-    return jsonResponse({ ok: false, error: "Invalid payload" }, 400, corsHeaders);
-  }
-
-  const reminders = Array.isArray(body.reminders) ? body.reminders : [];
-  console.log("[send-payroll-reminders] received", { count: reminders.length, runId: body.runId });
-
   if (!isResendConfigured()) {
     return jsonResponse(
       { ok: false, error: "Email is not configured. Set the RESEND_API_KEY secret on the server." },
@@ -82,15 +67,11 @@ serve(async (req) => {
 
   const { data: settingsRow } = await supabaseAdmin
     .from("notification_settings")
-    .select("from_name, from_email, reply_to, admin_email, send_reminders")
+    .select("from_name, from_email, reply_to, admin_email, cc_admins, send_payslip_emails, portal_url")
     .limit(1)
     .maybeSingle();
 
   const settings = (settingsRow ?? {}) as NotificationSettings;
-  if (settings.send_reminders === false) {
-    return jsonResponse({ ok: false, error: "Reminder emails are disabled in notification settings." }, 409, corsHeaders);
-  }
-
   const fromEmail = settings.from_email?.trim();
   if (!fromEmail || !EMAIL_RE.test(fromEmail)) {
     return jsonResponse(
@@ -102,60 +83,87 @@ serve(async (req) => {
   const fromName = settings.from_name?.trim() || "Payroll";
   const from = `${fromName} <${fromEmail}>`;
   const replyTo = settings.reply_to?.trim() || undefined;
-  const adminEmail = settings.admin_email?.trim();
 
-  // Group reminder items by recipient; items without an email fall back to the admin digest.
-  const byRecipient = new Map<string, { name?: string; items: string[] }>();
-  for (const item of reminders) {
-    const target = item.email?.trim() && EMAIL_RE.test(item.email.trim())
-      ? item.email.trim()
-      : adminEmail && EMAIL_RE.test(adminEmail)
-        ? adminEmail
-        : null;
-    if (!target) continue;
-    const entry = byRecipient.get(target) ?? { name: item.name, items: [] };
-    entry.items.push(item.message);
-    byRecipient.set(target, entry);
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse({ ok: false, error: "Invalid JSON body" }, 400, corsHeaders);
   }
 
-  if (byRecipient.size === 0) {
-    return jsonResponse(
-      { ok: false, error: "No deliverable recipients. Add employee emails or set an admin email in notification settings." },
-      400,
-      corsHeaders
-    );
-  }
+  const companyName = (body.companyName as string)?.trim() || fromName;
 
-  let sent = 0;
-  let failed = 0;
-  const logRows: Record<string, unknown>[] = [];
-
-  for (const [to, entry] of byRecipient) {
-    const { subject, html } = renderReminderEmail({
-      companyName: fromName,
-      recipientName: entry.name,
-      runLabel: body.runLabel,
-      items: entry.items,
-    });
+  // Test-email mode (used by the settings "send test" button).
+  if (body.test === true) {
+    const to = (body.to as string)?.trim();
+    if (!to || !EMAIL_RE.test(to)) {
+      return jsonResponse({ ok: false, error: "A valid test recipient address is required." }, 400, corsHeaders);
+    }
+    const { subject, html } = renderTestEmail(companyName);
     const result = await sendEmail({ from, to, subject, html, replyTo });
-    if (result.ok) sent++;
-    else failed++;
-    logRows.push({
+    await supabaseAdmin.from("notification_log").insert({
       channel: "email",
-      category: "reminder",
+      category: "test",
       recipient: to,
       subject,
       status: result.ok ? "sent" : "failed",
       provider_id: result.id ?? null,
       error: result.ok ? null : result.error ?? "Unknown error",
-      metadata: { runId: body.runId ?? null, itemCount: entry.items.length },
       created_by: userResult.user.id,
     });
+    return jsonResponse(result, result.ok ? 200 : 502, corsHeaders);
   }
 
-  if (logRows.length > 0) {
-    await supabaseAdmin.from("notification_log").insert(logRows);
+  // Payslip-email mode.
+  if (settings.send_payslip_emails === false) {
+    return jsonResponse({ ok: false, error: "Payslip emails are disabled in notification settings." }, 409, corsHeaders);
   }
 
-  return jsonResponse({ ok: failed === 0, sent, failed }, failed === 0 ? 200 : 207, corsHeaders);
+  const employee = (body.employee ?? {}) as { name?: string; email?: string };
+  const payslip = (body.payslip ?? {}) as {
+    periodLabel?: string;
+    netPay?: number;
+    grossEarnings?: number;
+    totalDeductions?: number;
+  };
+  const to = employee.email?.trim();
+  if (!to || !EMAIL_RE.test(to)) {
+    return jsonResponse({ ok: false, error: "Employee has no valid email address." }, 400, corsHeaders);
+  }
+  if (!payslip.periodLabel) {
+    return jsonResponse({ ok: false, error: "payslip.periodLabel is required." }, 400, corsHeaders);
+  }
+
+  const pdfBase64 = (body.pdfBase64 as string)?.trim();
+  const attachments = pdfBase64
+    ? [{ filename: (body.pdfFilename as string)?.trim() || "payslip.pdf", content: pdfBase64 }]
+    : undefined;
+
+  const { subject, html } = renderPayslipEmail({
+    companyName,
+    employeeName: employee.name?.trim() || "there",
+    periodLabel: payslip.periodLabel,
+    netPay: Number(payslip.netPay ?? 0),
+    grossEarnings: typeof payslip.grossEarnings === "number" ? payslip.grossEarnings : undefined,
+    totalDeductions: typeof payslip.totalDeductions === "number" ? payslip.totalDeductions : undefined,
+    hasAttachment: !!attachments,
+    portalUrl: settings.portal_url?.trim() || undefined,
+  });
+
+  const cc = settings.cc_admins && settings.admin_email?.trim() ? settings.admin_email.trim() : undefined;
+  const result = await sendEmail({ from, to, subject, html, replyTo, cc, attachments });
+
+  await supabaseAdmin.from("notification_log").insert({
+    channel: "email",
+    category: "payslip",
+    recipient: to,
+    subject,
+    status: result.ok ? "sent" : "failed",
+    provider_id: result.id ?? null,
+    error: result.ok ? null : result.error ?? "Unknown error",
+    metadata: { periodLabel: payslip.periodLabel },
+    created_by: userResult.user.id,
+  });
+
+  return jsonResponse(result, result.ok ? 200 : 502, corsHeaders);
 });

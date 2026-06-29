@@ -19,6 +19,7 @@ const FUNCTIONS = {
   "seed-company-branding": true,
   "seed-users": true,
   "send-payroll-reminders": true,
+  "send-payslip-email": true,
   "update-user-metadata": true,
   "update-user-password": true,
 };
@@ -42,7 +43,13 @@ function collectFiles(functionName) {
   }
   files.push({ name: entry.replace(/\\/g, "/"), content: readIfExists(entry) });
 
-  for (const shared of ["_shared/cors.ts", "_shared/url-security.ts", "_shared/sars-tax-tables.ts"]) {
+  for (const shared of [
+    "_shared/cors.ts",
+    "_shared/url-security.ts",
+    "_shared/sars-tax-tables.ts",
+    "_shared/resend.ts",
+    "_shared/email-templates.ts",
+  ]) {
     const content = readIfExists(shared);
     if (content) files.push({ name: shared, content });
   }

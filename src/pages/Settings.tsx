@@ -12,6 +12,7 @@ import ReportDesign from "./settings/ReportDesign";
 import WorkHours from "./settings/WorkHours";
 import UserControlPanel from "./settings/UserControlPanel";
 import PayCycleSettingsPage from "./settings/PayCycleSettings";
+import NotificationSettings from "./settings/NotificationSettings";
 import AuditTrail from "./settings/AuditTrail";
 
 const Settings: React.FC = () => {
@@ -29,6 +30,7 @@ const Settings: React.FC = () => {
         <Route path="report-design" element={<ReportDesign />} />
         <Route path="data-visuals" element={<DataVisuals />} />
         <Route path="user-control-panel" element={<UserControlPanel />} />
+        <Route path="notifications" element={<NotificationSettings />} />
         <Route path="audit-trail" element={<AuditTrail />} />
       </Route>
     </Routes>

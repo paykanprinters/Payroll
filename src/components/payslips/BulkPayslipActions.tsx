@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, Printer, Download } from "lucide-react";
+import { CalendarIcon, Printer, Download, Mail } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ interface BulkPayslipActionsProps {
   setBulkGenerationMode: (mode: "monthly" | "weekly") => void;
   onPrintAll: (action: 'print' | 'download', mode: "monthly" | "weekly", auditLevel: "minimal" | "standard" | "detailed") => void;
   onDownloadAll: (action: 'print' | 'download', mode: "monthly" | "weekly", auditLevel: "minimal" | "standard" | "detailed") => void;
+  onEmailAll?: (mode: "monthly" | "weekly") => void;
   auditLevel: "minimal" | "standard" | "detailed";
   setAuditLevel: (level: "minimal" | "standard" | "detailed") => void;
 }
@@ -34,6 +35,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
   setBulkGenerationMode,
   onPrintAll,
   onDownloadAll,
+  onEmailAll,
   auditLevel,
   setAuditLevel,
 }) => {
@@ -157,6 +159,14 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
           >
             <Download className="mr-2 h-4 w-4" /> Download All Payslips PDF
           </DropdownMenuItem>
+          {onEmailAll && (
+            <DropdownMenuItem
+              disabled={bulkDisabled}
+              onSelect={() => onEmailAll(bulkGenerationMode)}
+            >
+              <Mail className="mr-2 h-4 w-4" /> Email All Payslips to Employees
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>
