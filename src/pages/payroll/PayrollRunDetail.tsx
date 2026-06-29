@@ -273,7 +273,7 @@ const PayrollRunDetailPage: React.FC = () => {
         return;
       }
       const totalAmount = runItems.reduce((sum, it) => sum + Number(it.netPay || 0), 0);
-      const batch = await createPaymentBatch(id, "EFT-CSV", runItems.length, totalAmount);
+      const batch = await createPaymentBatch(id, "Bankserv-ACB", runItems.length, totalAmount);
       if (!batch) return;
 
       const itemsToInsert = runItems.map((ri) => {
