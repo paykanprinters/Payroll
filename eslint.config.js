@@ -5,7 +5,16 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "supabase/functions/**"] },
+  {
+    ignores: [
+      "dist",
+      "dist-ssr",
+      "dev-dist",
+      "build",
+      "android",
+      "supabase/functions/**",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -24,6 +33,10 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
+      // Supabase row payloads are widely typed as `any` in the query layer.
+      // Tracked as tech debt (warning) rather than a build-blocking error so
+      // lint errors stay meaningful for genuine problems.
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 );

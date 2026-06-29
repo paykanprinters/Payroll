@@ -49,7 +49,7 @@ export const calculateTimesheetMetrics = (
   const expectedEnd = isFriday && opts?.fridayEndTime ? opts.fridayEndTime : defaultEnd;
 
   let totalWorkHours = 0;
-  let overtimeHours = 0; // weekly authority elsewhere
+  const overtimeHours = 0; // weekly authority elsewhere
   let lateArrival = false;
   let earlyDeparture = false;
   let absent = false;
@@ -116,7 +116,7 @@ export const calculateTimesheetMetrics = (
  */
 export const getWeeklyPeriodContaining = (date: Date, cutOffDay: number) => {
   const targetDayOfWeek = cutOffDay === 7 ? 0 : cutOffDay;
-  let candidateCutOff = setDay(date, targetDayOfWeek, { weekStartsOn: 1 });
+  const candidateCutOff = setDay(date, targetDayOfWeek, { weekStartsOn: 1 });
   const end = candidateCutOff < date ? addWeeks(candidateCutOff, 1) : candidateCutOff;
   const start = addDays(subWeeks(end, 1), 1);
   return { start, end };

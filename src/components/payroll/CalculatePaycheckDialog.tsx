@@ -81,9 +81,6 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
 
     const employee = employees.find(emp => emp.id === employeeId);
     if (employee) {
-    let periodStart: Date;
-    let periodEnd: Date;
-
     const today = new Date();
     const settings = payCycleSettings ? {
       payCycleType: payCycleSettings.payCycleType,
@@ -97,8 +94,8 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       settings.cutOffDay,
       settings.payDayOffset
     );
-    periodStart = payPeriodStart;
-    periodEnd = payPeriodEnd;
+    const periodStart = payPeriodStart;
+    const periodEnd = payPeriodEnd;
 
     setCurrentPeriodStart(periodStart);
     setCurrentPeriodEnd(periodEnd);

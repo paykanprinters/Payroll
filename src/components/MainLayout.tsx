@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getBranding } from "@/config/branding";
 import { recordAuthEvent } from "@/lib/audit-trail";
 
-interface MainLayoutProps {}
+type MainLayoutProps = Record<string, never>;
 
 declare global {
   interface Window {

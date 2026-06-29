@@ -124,7 +124,7 @@ export const calculatePayPeriodDetails = (
   let payPeriodEnd: Date;
 
   if (payCycleType === "Monthly") {
-    let candidateCutOff = setDate(referenceDate, cutOffDay);
+    const candidateCutOff = setDate(referenceDate, cutOffDay);
     
     // If the candidate cut-off date is before or on the reference date,
     // and the reference date is *after* the cut-off day of its month,
@@ -148,7 +148,7 @@ export const calculatePayPeriodDetails = (
     // date-fns getDay returns 0=Sun, 1=Mon, ..., 6=Sat. We need to convert cutOffDay (1=Mon, 7=Sun)
     const targetDayOfWeek = cutOffDay === 7 ? 0 : cutOffDay; // Convert 7 (Sunday) to 0 for date-fns
 
-    let candidateCutOff = setDay(referenceDate, targetDayOfWeek, { weekStartsOn: 1 }); // weekStartsOn: 1 means Monday is 1
+    const candidateCutOff = setDay(referenceDate, targetDayOfWeek, { weekStartsOn: 1 }); // weekStartsOn: 1 means Monday is 1
 
     // If the candidate cut-off date is before or on the reference date,
     // and the reference date is *after* the cut-off day of its week,

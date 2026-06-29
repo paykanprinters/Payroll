@@ -18,6 +18,8 @@ function blobToBase64(blob: Blob): Promise<string> {
 /** Safe filename for mobile filesystems and share intents. */
 export function sanitizeDownloadFilename(filename: string): string {
   const trimmed = filename.trim() || "download";
+  // Intentionally strips control characters (\u0000-\u001f) from filenames.
+  // eslint-disable-next-line no-control-regex
   return trimmed.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-").replace(/\s+/g, "_");
 }
 

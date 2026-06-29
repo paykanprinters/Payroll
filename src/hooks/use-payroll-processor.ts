@@ -382,7 +382,6 @@ export const usePayrollProcessorState = (options?: { silent?: boolean }) => {
     refetchEmployees,
     refetchPayslips,
     refetchPayrollSavingsEntries,
-    refetchLeaveRecords,
     activeTaxYearForCalculations,
     setActiveTaxYearForCalculations,
     publicHolidays,
