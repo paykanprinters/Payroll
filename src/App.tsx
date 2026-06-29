@@ -48,6 +48,7 @@ const StaffLoansPage = lazy(() => import("./pages/staff/StaffLoansPage"));
 const StaffSavingsPage = lazy(() => import("./pages/staff/StaffSavingsPage"));
 const StaffLeavePage = lazy(() => import("./pages/staff/StaffLeavePage"));
 const StaffProfilePage = lazy(() => import("./pages/staff/StaffProfilePage"));
+const StaffPrivacyPage = lazy(() => import("./pages/staff/StaffPrivacyPage"));
 const StaffInstallPage = lazy(() => import("./pages/staff/StaffInstallPage"));
 
 const queryClient = new QueryClient();
@@ -115,6 +116,7 @@ const App = () => {
                   <Route path="savings" element={<StaffSavingsPage />} />
                   <Route path="loans" element={<StaffLoansPage />} />
                   <Route path="profile" element={<StaffProfilePage />} />
+                  <Route path="privacy" element={<StaffPrivacyPage />} />
                   <Route path="*" element={<Navigate to="/staff" replace />} />
                 </Route>
               </Route>

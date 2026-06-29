@@ -9,6 +9,7 @@ import {
   PiggyBank,
   HandCoins,
   User,
+  ShieldCheck,
   Menu,
   LogOut,
   ExternalLink,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { to: staffPortalPath("savings"), icon: PiggyBank, label: "Savings" },
   { to: staffPortalPath("loans"), icon: HandCoins, label: "Loans" },
   { to: staffPortalPath("profile"), icon: User, label: "My profile" },
+  { to: staffPortalPath("privacy"), icon: ShieldCheck, label: "Privacy" },
 ] as const;
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
