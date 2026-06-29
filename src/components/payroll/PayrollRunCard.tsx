@@ -133,7 +133,17 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
             </div>
 
             {isAdminManager && (
-              <Button onClick={() => navigate('/payroll/runs')} className="w-full">
+              <Button
+                onClick={() =>
+                  navigate("/payroll/runs", {
+                    state: {
+                      periodStart: format(payPeriodStart, "yyyy-MM-dd"),
+                      periodEnd: format(payPeriodEnd, "yyyy-MM-dd"),
+                    },
+                  })
+                }
+                className="w-full"
+              >
                 Go to Payroll Runs
               </Button>
             )}
