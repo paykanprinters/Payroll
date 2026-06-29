@@ -109,18 +109,22 @@
 }
 
 @layer components {
-  /* Buttons: gentle lift + shadow */
-  button.bg-primary {
+  /* Buttons: gentle lift + shadow.
+     Uses [class~="..."] (attribute) instead of a `.bg-primary` class compound
+     selector so the CSS minifier does not merge these with Radix
+     `data-[state=checked]:bg-primary` variant utilities (which produced an
+     invalid `[data-state="checked"]button` selector and a build warning). */
+  button[class~="bg-primary"] {
     @apply transition-all duration-200;
   }
-  button.bg-primary:hover {
+  button[class~="bg-primary"]:hover {
     @apply -translate-y-0.5 shadow-md;
   }
 
-  button.border {
+  button[class~="border"] {
     @apply transition-all duration-200;
   }
-  button.border:hover {
+  button[class~="border"]:hover {
     @apply -translate-y-0.5 shadow-sm;
   }
 

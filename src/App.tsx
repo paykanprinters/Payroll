@@ -13,6 +13,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { PayrollDataProvider } from "./context/PayrollDataContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React, { Suspense, lazy } from "react";
+import { Loader2 } from "lucide-react";
 import AutoRefreshOnFocus from "./components/AutoRefreshOnFocus";
 import GlobalErrorLogger from "./components/GlobalErrorLogger";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -55,6 +56,12 @@ const queryClient = new QueryClient();
 
 const portalType = (import.meta.env.VITE_PORTAL || "admin").toLowerCase();
 
+const routeFallback = (
+  <div className="flex min-h-screen items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+);
+
 const App = () => {
   const deploymentConfigError = getDeploymentConfigMessage();
   if (deploymentConfigError) {
@@ -92,7 +99,7 @@ const App = () => {
               <Route
                 path="/staff/install"
                 element={
-                  <Suspense fallback={null}>
+                  <Suspense fallback={routeFallback}>
                     <StaffInstallPage />
                   </Suspense>
                 }
