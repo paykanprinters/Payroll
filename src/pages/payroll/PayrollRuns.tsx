@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { fetchPayrollRuns, createPayrollRun, PayrollRun } from "@/integrations/supabase/payroll-run-queries";
@@ -29,10 +29,15 @@ const runStatusBadgeClass = (status: string) => {
 
 const PayrollRunsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // A period carried over from the dashboard "Go to Payroll Runs" button, if any.
+  const carriedPeriod = location.state as
+    | { periodStart?: string; periodEnd?: string }
+    | null;
   const { isMockDataEnabled, payCycleSettings } = usePayrollProcessor({ silent: true });
   const [runs, setRuns] = useState<PayrollRun[]>([]);
-  const [periodStart, setPeriodStart] = useState<string>("");
-  const [periodEnd, setPeriodEnd] = useState<string>("");
+  const [periodStart, setPeriodStart] = useState<string>(carriedPeriod?.periodStart ?? "");
+  const [periodEnd, setPeriodEnd] = useState<string>(carriedPeriod?.periodEnd ?? "");
 
   useEffect(() => {
     const load = async () => {
@@ -43,6 +48,11 @@ const PayrollRunsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // If the user arrived from the dashboard with a specific period, keep it
+    // instead of resetting to the current cycle window.
+    if (carriedPeriod?.periodStart && carriedPeriod?.periodEnd) {
+      return;
+    }
     if (payCycleSettings) {
       // Default to current week/month window if available
       const today = new Date();
