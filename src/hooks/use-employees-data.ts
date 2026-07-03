@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import { sendEmployeeWelcome } from "@/integrations/supabase/message-template-queries";
+import { formatWelcomeDeliverySummary } from "@/lib/notification-delivery";
 import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for mock data generation
 import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
@@ -51,6 +53,24 @@ const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
   return newObj;
 };
 
+const sanitizeEmployeeDbPayload = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const sanitized = { ...payload };
+  for (const [key, value] of Object.entries(sanitized)) {
+    if (value === "") {
+      sanitized[key] = null;
+    }
+  }
+  return sanitized;
+};
+
+const formatEmployeeSaveError = (error: unknown): string => {
+  const message = toLogError(error);
+  if (/row-level security|permission denied|42501/i.test(message)) {
+    return "You do not have permission to save employee records. Only Admin and Manager roles can add or update employees.";
+  }
+  return `Failed to save employee: ${message}`;
+};
+
 interface UseEmployeesDataProps {
   isMockDataEnabled: boolean;
   companyName: string;
@@ -92,6 +112,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
   }, []); // No dependencies needed for refetchEmployees itself
 
   const upsertLiveEmployee = useCallback(async (employeeData: EmployeeFormValues): Promise<MockEmployee | null> => {
+    const isNewEmployee = !employeeData.id;
     const toastId = showLoading(employeeData.id ? "Updating employee..." : "Adding new employee...") as string;
     setIsMutating(true); // Set mutating for this specific operation
     try {
@@ -119,6 +140,9 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
 
       // Enforce exclusivity: if salary is set, clear hourly; if hourly is set, clear salary
       const exclusivePayload: EmployeeFormValues = { ...employeeData };
+      if (!exclusivePayload.id) {
+        exclusivePayload.id = uuidv4();
+      }
       if (exclusivePayload.salary !== undefined && exclusivePayload.salary > 0) {
         exclusivePayload.hourlyRate = undefined;
       } else if (exclusivePayload.hourlyRate !== undefined && exclusivePayload.hourlyRate > 0) {
@@ -133,7 +157,9 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         hourlyRate: exclusivePayload.hourlyRate ?? null,
       } as any;
 
-      const snakeCasePayload = convertEmployeeKeysToSnakeCase(payloadWithCustomId);
+      const snakeCasePayload = sanitizeEmployeeDbPayload(
+        convertEmployeeKeysToSnakeCase(payloadWithCustomId)
+      );
       logger.debug("useEmployeesData: upserting live employee");
 
       let { data, error } = await supabase
@@ -160,7 +186,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
 
       if (error) {
         logger.error("useEmployeesData: error upserting live employee:", toLogError(error));
-        showError(`Failed to save employee: ${toLogError(error)}`);
+        showError(formatEmployeeSaveError(error));
         return null;
       } else if (data && data.length > 0) {
         const camelCaseData = convertEmployeeKeysToCamelCase(data[0]);
@@ -173,6 +199,30 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
           }
         });
         showSuccess("Employee saved successfully!");
+        if (isNewEmployee) {
+          void sendEmployeeWelcome(camelCaseData.id).then((welcome) => {
+            if (!welcome.ok) {
+              showError(
+                welcome.error ??
+                  "Welcome email/SMS could not be sent. Open Settings → Notifications → Delivery log for details."
+              );
+              return;
+            }
+            const summary = formatWelcomeDeliverySummary(welcome.results);
+            const anySent =
+              welcome.results?.email === "sent" || welcome.results?.sms === "sent";
+            const anyFailed =
+              welcome.results?.email?.startsWith("failed") ||
+              welcome.results?.sms?.startsWith("failed");
+            if (anySent && !anyFailed) {
+              showSuccess("Welcome email/SMS sent to the new employee.");
+            } else if (anySent) {
+              showSuccess(`Partially sent. ${summary}`);
+            } else {
+              showError(`${summary} View Settings → Notifications → Delivery log.`);
+            }
+          });
+        }
         return camelCaseData;
       } else {
         logger.warn("useEmployeesData: upsert succeeded but returned no data. This might indicate an RLS issue or unexpected behavior.");
@@ -216,7 +266,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
   }, []);
 
   // --- Unified Employee Management Functions ---
-  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues) => {
+  const addOrUpdateEmployee = useCallback(async (employeeData: EmployeeFormValues): Promise<boolean> => {
     if (isMockDataEnabled) {
       setEmployees(prevEmployees => {
         let updatedEmployees: MockEmployee[];
@@ -280,11 +330,14 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: updatedEmployees }));
         return updatedEmployees;
       });
+      return true;
     } else {
       const result = await upsertLiveEmployee(employeeData);
       if (!result) {
         refetchEmployees(); // Call refetchEmployees if upsert didn't return data
+        return false;
       }
+      return true;
     }
   }, [isMockDataEnabled, upsertLiveEmployee, companyName, refetchEmployees]); // Added refetchEmployees to dependencies
 

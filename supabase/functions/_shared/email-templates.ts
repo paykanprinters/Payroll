@@ -20,11 +20,15 @@ interface ShellOptions {
   heading: string;
   bodyHtml: string;
   footerNote?: string;
+  logoUrl?: string;
 }
 
 /** Wraps body content in a consistent, email-client-safe shell (inline styles only). */
 export function renderEmailShell(opts: ShellOptions): string {
   const year = new Date().getFullYear();
+  const logoBlock = opts.logoUrl
+    ? `<img src="${escapeHtml(opts.logoUrl)}" alt="${escapeHtml(opts.companyName)} logo" width="160" style="display:block;max-width:160px;height:auto;margin:0 0 12px;" />`
+    : "";
   return `<!DOCTYPE html>
 <html>
   <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
@@ -34,6 +38,7 @@ export function renderEmailShell(opts: ShellOptions): string {
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
             <tr>
               <td style="background:#111827;padding:20px 28px;">
+                ${logoBlock}
                 <span style="color:#ffffff;font-size:18px;font-weight:bold;">${escapeHtml(opts.companyName)}</span>
               </td>
             </tr>

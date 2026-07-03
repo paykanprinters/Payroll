@@ -18,6 +18,7 @@ const sidebarNavItems = [
   { title: "Data Visuals", href: "/settings/data-visuals" },
   { title: "User Control Panel", href: "/settings/user-control-panel" },
   { title: "Notifications", href: "/settings/notifications" },
+  { title: "Message templates", href: "/settings/message-templates" },
   { title: "Privacy & POPIA", href: "/settings/privacy-compliance" },
   { title: "Audit Trail", href: "/settings/audit-trail" },
 ];
