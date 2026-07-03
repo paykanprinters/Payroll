@@ -1,11 +1,10 @@
 "use client";
 
 import React from "react";
-import { useForm, FormProvider, type FieldErrors } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { showError } from "@/utils/toast";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +17,7 @@ import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateCustomEmployeeId } from "@/lib/utils";
+import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { Loader2 } from "lucide-react";
 
 import BasicInfoForm from "./forms/BasicInfoForm";
@@ -59,6 +59,8 @@ const employeeSchema = z.object({
 
   idNumber: z.string().optional(),
   phoneNumber: z.string().optional(),
+  fathersName: z.string().optional(),
+  molId: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactNumber: z.string().optional(),
   emergencyContactAddress: z.string().optional(),
@@ -139,40 +141,10 @@ export type EmployeeFormValues = z.infer<typeof employeeSchema>;
 interface EmployeeFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (employee: EmployeeFormValues) => boolean | Promise<boolean>;
+  onSave: (employee: EmployeeFormValues) => void | Promise<void>;
   initialEmployee?: MockEmployee | null;
   initialFocus?: "basic" | "personal" | "payment" | "bank" | "tax";
   isSaving?: boolean;
-  /** Passed from the parent so the dialog does not subscribe to the full payroll store. */
-  allEmployees: MockEmployee[];
-  companyName: string;
-}
-
-const PERSONAL_TAB_FIELDS = new Set([
-  "idNumber",
-  "phoneNumber",
-  "emergencyContactName",
-  "emergencyContactNumber",
-  "emergencyContactAddress",
-  "addressLine1",
-  "addressLine2",
-  "city",
-  "province",
-  "postalCode",
-  "dateOfBirth",
-  "gender",
-  "department",
-  "workLocation",
-  "dateOfConfirmation",
-  "originCountry",
-  "employmentType",
-  "permanentAddress",
-]);
-
-function tabForField(field: string): "basic" | "personal" | "payment" {
-  if (PERSONAL_TAB_FIELDS.has(field)) return "personal";
-  if (field === "salary" || field === "hourlyRate") return "payment";
-  return "basic";
 }
 
 const emptyDefaults: EmployeeFormValues = {
@@ -186,6 +158,8 @@ const emptyDefaults: EmployeeFormValues = {
   personalId: "",
   idNumber: "",
   phoneNumber: "",
+  fathersName: "",
+  molId: "",
   emergencyContactName: "",
   emergencyContactNumber: "",
   emergencyContactAddress: "",
@@ -228,9 +202,10 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   initialEmployee,
   initialFocus,
   isSaving = false,
-  allEmployees,
-  companyName,
 }) => {
+  const { employees: allEmployees, companyDetails } = usePayrollProcessor();
+  const companyName = companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Acme Corp";
+
   const formMethods = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
     defaultValues: emptyDefaults,
@@ -243,24 +218,12 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   }, [initialFocus]);
 
   const [tab, setTab] = React.useState<"basic" | "personal" | "payment">(initialTab);
-  const formInitKeyRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (isOpen) setTab(initialTab);
   }, [isOpen, initialTab]);
 
   React.useEffect(() => {
-    if (!isOpen) {
-      formInitKeyRef.current = null;
-      return;
-    }
-
-    const initKey = initialEmployee?.id ?? "__new__";
-    if (formInitKeyRef.current === initKey) {
-      return;
-    }
-    formInitKeyRef.current = initKey;
-
     if (initialEmployee) {
       let customEmployeeIdToUse = initialEmployee.customEmployeeId || "";
 
@@ -289,6 +252,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         retirementFundContributionPercent: initialEmployee.retirementFundContributionPercent ?? 0,
         retirementFundContributionFixed: initialEmployee.retirementFundContributionFixed ?? 0,
         ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [],
+        fathersName: initialEmployee.fathersName || "",
+        molId: initialEmployee.molId || "",
         emergencyContactName: initialEmployee.emergencyContactName || "",
         emergencyContactNumber: initialEmployee.emergencyContactNumber || "",
         emergencyContactAddress: initialEmployee.emergencyContactAddress || "",
@@ -309,21 +274,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         customEmployeeId: newCustomEmployeeId,
       });
     }
-  }, [isOpen, initialEmployee, formMethods, allEmployees, companyName]);
-
-  const onInvalid = (errors: FieldErrors<EmployeeFormValues>) => {
-    const firstField = Object.keys(errors)[0];
-    if (firstField) {
-      setTab(tabForField(firstField));
-    }
-    showError("Please complete the required fields highlighted in the form before saving.");
-  };
+  }, [initialEmployee, formMethods, allEmployees, companyName]);
 
   const onSubmit = async (data: EmployeeFormValues) => {
-    const saved = await onSave(data);
-    if (saved) {
-      onClose();
-    }
+    await onSave(data);
+    onClose();
   };
 
   return (
@@ -348,7 +303,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           </div>
 
           <FormProvider {...formMethods}>
-            <form onSubmit={formMethods.handleSubmit(onSubmit, onInvalid)} className="flex min-h-0 flex-1 flex-col">
+            <form onSubmit={formMethods.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
               <ScrollArea className="flex-1 px-6">
                 <div className="grid gap-4 py-4">
                   <TabsContent value="basic" className="m-0">

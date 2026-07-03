@@ -228,8 +228,8 @@ const Employees: React.FC = () => {
     }
   };
 
-  const handleSaveEmployee = async (employeeData: EmployeeFormValues): Promise<boolean> => {
-    return addOrUpdateEmployee(employeeData);
+  const handleSaveEmployee = async (employeeData: EmployeeFormValues) => {
+    await addOrUpdateEmployee(employeeData);
   };
 
   const handleDownloadProfile = async (employee: MockEmployee) => {
@@ -330,12 +330,6 @@ const Employees: React.FC = () => {
         initialEmployee={editingEmployee}
         initialFocus={employeeDialogFocus}
         isSaving={isMutatingEmployee}
-        allEmployees={employees}
-        companyName={
-          companyDetails?.companyLegalName ||
-          companyDetails?.companyTradingName ||
-          "Company"
-        }
       />
 
       <DeleteEmployeeDialog

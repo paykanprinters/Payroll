@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Send, Save, MessageSquare, RefreshCw } from "lucide-react";
+import { Mail, Send, Save, MessageSquare } from "lucide-react";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
@@ -19,7 +18,6 @@ import {
   type NotificationLogEntry,
 } from "@/integrations/supabase/notification-queries";
 import { isValidSaMobile } from "@/lib/sms/normalize-sa-msisdn";
-import { statusBadgeClass } from "@/lib/notification-delivery";
 
 // Sender must be on the Resend-verified domain (pay.kanprinters.co.za).
 const DEFAULT_SENDER_EMAIL = "info@pay.kanprinters.co.za";
@@ -36,22 +34,13 @@ const NotificationSettings: React.FC = () => {
   const [testTo, setTestTo] = useState("");
   const [testSmsTo, setTestSmsTo] = useState("");
   const [log, setLog] = useState<NotificationLogEntry[]>([]);
-  const [isLogLoading, setIsLogLoading] = useState(false);
-  const [logFilter, setLogFilter] = useState<"all" | "email" | "sms">("all");
 
   const isAdmin = user?.role === "Admin";
 
   const loadLog = React.useCallback(async () => {
-    setIsLogLoading(true);
-    const rows = await fetchNotificationLog(50);
+    const rows = await fetchNotificationLog(20);
     setLog(rows);
-    setIsLogLoading(false);
   }, []);
-
-  const filteredLog = React.useMemo(() => {
-    if (logFilter === "all") return log;
-    return log.filter((row) => row.channel === logFilter);
-  }, [log, logFilter]);
 
   useEffect(() => {
     if (isAuthenticated && !isLoadingAuth) loadLog();
@@ -156,90 +145,6 @@ const NotificationSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-          <div>
-            <CardTitle>Delivery log</CardTitle>
-            <CardDescription>
-              Track every email and SMS the system attempted to send — including welcome messages,
-              payslips, reminders, and tests. Failed and skipped rows show the reason in the Details
-              column.
-            </CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={loadLog} disabled={isLogLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLogLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {(["all", "email", "sms"] as const).map((value) => (
-              <Button
-                key={value}
-                size="sm"
-                variant={logFilter === value ? "default" : "outline"}
-                onClick={() => setLogFilter(value)}
-              >
-                {value === "all" ? "All" : value.toUpperCase()}
-              </Button>
-            ))}
-          </div>
-          {filteredLog.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {isLogLoading
-                ? "Loading delivery history…"
-                : "No deliveries recorded yet. After you add an employee or send a test message, results will appear here with sent, skipped, or failed status."}
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="py-2 pr-4">When</th>
-                    <th className="py-2 pr-4">Channel</th>
-                    <th className="py-2 pr-4">Type</th>
-                    <th className="py-2 pr-4">Recipient</th>
-                    <th className="py-2 pr-4">Subject</th>
-                    <th className="py-2 pr-4">Status</th>
-                    <th className="py-2 pr-4">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLog.map((row) => (
-                    <tr key={row.id} className="border-b align-top last:border-0">
-                      <td className="py-2 pr-4 whitespace-nowrap">{new Date(row.createdAt).toLocaleString()}</td>
-                      <td className="py-2 pr-4 uppercase">{row.channel}</td>
-                      <td className="py-2 pr-4 capitalize">{row.category}</td>
-                      <td className="py-2 pr-4 max-w-[10rem] break-all">{row.recipient}</td>
-                      <td className="py-2 pr-4 max-w-[12rem] break-words">{row.subject ?? "—"}</td>
-                      <td className={`py-2 pr-4 capitalize ${statusBadgeClass(row.status)}`}>{row.status}</td>
-                      <td className="py-2 pr-4 max-w-[18rem] text-xs text-muted-foreground break-words">
-                        {row.error ?? (row.status === "sent" ? "Delivered" : "—")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-base">Message wording & templates</CardTitle>
-          <CardDescription>
-            Customise welcome, payslip, and payroll message text — including on/off switches per
-            template and optional company logo in emails.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline">
-            <Link to="/settings/message-templates">Open message templates</Link>
-          </Button>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -453,6 +358,46 @@ const NotificationSettings: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {log.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent deliveries</CardTitle>
+            <CardDescription>Last {log.length} email &amp; SMS events.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="py-2 pr-4">When</th>
+                    <th className="py-2 pr-4">Channel</th>
+                    <th className="py-2 pr-4">Type</th>
+                    <th className="py-2 pr-4">Recipient</th>
+                    <th className="py-2 pr-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {log.map((row) => (
+                    <tr key={row.id} className="border-b last:border-0">
+                      <td className="py-2 pr-4 whitespace-nowrap">{new Date(row.createdAt).toLocaleString()}</td>
+                      <td className="py-2 pr-4 uppercase">{row.channel}</td>
+                      <td className="py-2 pr-4 capitalize">{row.category}</td>
+                      <td className="py-2 pr-4">{row.recipient}</td>
+                      <td className="py-2 pr-4">
+                        <span className={row.status === "sent" ? "text-emerald-600" : "text-destructive"}>
+                          {row.status}
+                        </span>
+                        {row.error ? <span className="block text-xs text-muted-foreground">{row.error}</span> : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

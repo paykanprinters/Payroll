@@ -24,9 +24,6 @@ export function parseFunctionError(
   if (message === "Edge Function returned a non-2xx status code") {
     return "The email service rejected the request. Check Settings → Notifications: save a verified sender address, then try again.";
   }
-  if (/function not found|404|send-employee-welcome/i.test(message)) {
-    return "The welcome notification service is not deployed yet. Ask your administrator to deploy the send-employee-welcome edge function.";
-  }
 
   return message;
 }
