@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { format, isPast, subMonths, isBefore, isWithinInterval, parseISO } from "https://esm.sh/date-fns@2.30.0";
+import { format, isPast, subMonths, isWithinInterval, parseISO } from "https://esm.sh/date-fns@2.30.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 // Define fields to check for incompleteness and generate To-Dos
@@ -66,7 +66,7 @@ serve(async (req) => {
 
     const { data: loans, error: loansError } = await supabaseAdmin
       .from('loans')
-      .select('id, employee_id, paused, start_date, status');
+      .select('id, employee_id, paused');
     if (loansError) throw loansError;
     console.log(`generate-todos: Fetched ${loans.length} loans.`);
 
@@ -223,49 +223,43 @@ serve(async (req) => {
     console.log('generate-todos: Finished checking payslip To-Dos.');
 
     // --- Loans & Advancements To-Dos ---
+    // Loans are admin-created (active | completed only). There is no employee
+    // application / approval workflow — creating the loan is the approval.
+    // Retire any legacy "pending approval" todos that can never be resolved.
     console.log('generate-todos: Checking loans To-Dos...');
-    const pausedLoans = loans.filter(loan => loan.paused);
-    const pausedLoansMessage = `${pausedLoans.length} loans are currently paused and require review.`;
-    if (pausedLoans.length > 0) {
-      if (!existingToDoMap.has(pausedLoansMessage)) {
-        newToDosToInsert.push({
-          message: pausedLoansMessage,
-          level: "warning",
-          module: "Loans & Advancements",
-          action_url: "/loans-advancements",
-          status: "pending",
-          assigned_to: "Finance",
-          employee_id: null, // Explicitly null
-          related_field: null, // Explicitly null
-        });
-      }
-    } else {
-      const existingId = existingToDoMap.get(pausedLoansMessage);
-      if (existingId) {
-        toDosToUpdateToDone.push(existingId);
+    for (const todo of existingToDos) {
+      if (
+        todo.status === "pending" &&
+        typeof todo.message === "string" &&
+        todo.message.includes("loan requests pending approval or review")
+      ) {
+        toDosToUpdateToDone.push(todo.id);
       }
     }
 
-    const pendingLoanRequests = loans.filter(loan => loan.status === "active" && isBefore(parseISO(loan.start_date), today));
-    const pendingLoanRequestsMessage = `${pendingLoanRequests.length} loan requests pending approval or review.`;
-    if (pendingLoanRequests.length > 0) {
-      if (!existingToDoMap.has(pendingLoanRequestsMessage)) {
-        newToDosToInsert.push({
-          message: pendingLoanRequestsMessage,
-          level: "warning",
-          module: "Loans & Advancements",
-          action_url: "/loans-advancements",
-          status: "pending",
-          assigned_to: "Finance",
-          employee_id: null, // Explicitly null
-          related_field: null, // Explicitly null
-        });
+    const pausedLoans = loans.filter(loan => loan.paused);
+    const pausedLoansMessage = `${pausedLoans.length} loans are currently paused and require review.`;
+    for (const todo of existingToDos) {
+      if (
+        todo.status === "pending" &&
+        typeof todo.message === "string" &&
+        todo.message.includes("loans are currently paused and require review") &&
+        (pausedLoans.length === 0 || todo.message !== pausedLoansMessage)
+      ) {
+        toDosToUpdateToDone.push(todo.id);
       }
-    } else {
-      const existingId = existingToDoMap.get(pendingLoanRequestsMessage);
-      if (existingId) {
-        toDosToUpdateToDone.push(existingId);
-      }
+    }
+    if (pausedLoans.length > 0 && !existingToDoMap.has(pausedLoansMessage)) {
+      newToDosToInsert.push({
+        message: pausedLoansMessage,
+        level: "warning",
+        module: "Loans & Advancements",
+        action_url: "/loans-advancements",
+        status: "pending",
+        assigned_to: "Finance",
+        employee_id: null,
+        related_field: null,
+      });
     }
     console.log('generate-todos: Finished checking loans To-Dos.');
 

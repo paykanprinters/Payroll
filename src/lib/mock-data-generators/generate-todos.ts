@@ -1,5 +1,5 @@
 import { ToDoEntry, MockEmployee, MockPayslip, Loan, SavingPlan, LeaveEntry, TimesheetEntry } from "../mock-data-interfaces";
-import { format, isPast, subMonths, isBefore, isWithinInterval, parseISO } from "date-fns";
+import { format, isPast, subMonths, isWithinInterval, parseISO } from "date-fns";
 import { v4 as uuidv4 } from 'uuid';
 
 // Define fields to check for incompleteness and generate To-Dos
@@ -104,26 +104,14 @@ export const generateMockToDos = (
   }
 
   // --- Loans & Advancements To-Dos ---
+  // Loans are admin-created (active | completed only). There is no employee
+  // application / approval workflow, so do not invent "pending approval" items.
+  // Paused deductions are the only loan state that still needs attention.
   const pausedLoans = loans.filter(loan => loan.paused);
   if (pausedLoans.length > 0) {
     mockToDos.push({
       id: uuidv4(),
       message: `${pausedLoans.length} loans are currently paused and require review.`,
-      level: "warning",
-      module: "Loans & Advancements",
-      actionUrl: "/loans-advancements",
-      status: "pending",
-      assignedTo: "Finance",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  const pendingLoanRequests = loans.filter(loan => loan.status === "active" && isBefore(parseISO(loan.startDate), today));
-  if (pendingLoanRequests.length > 0) {
-    mockToDos.push({
-      id: uuidv4(),
-      message: `${pendingLoanRequests.length} loan requests pending approval or review.`,
       level: "warning",
       module: "Loans & Advancements",
       actionUrl: "/loans-advancements",
