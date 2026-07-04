@@ -25,6 +25,11 @@ import { PayrollSavingsEntry } from "@/lib/savings-types";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import type { OvertimePremiumRules } from "@/lib/payroll-calculations/helpers/earnings-helpers";
+import type {
+  DeductionComponent,
+  EarningComponent,
+  EmployeeComponentAssignment,
+} from "@/integrations/supabase/compensation-queries";
 
 export const usePayrollProcessingLogic = (
   employees: MockEmployee[],
@@ -48,9 +53,9 @@ export const usePayrollProcessingLogic = (
   recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
   isMockDataEnabled: boolean,
   // Phase 3 inputs (forwarded to generator)
-  earningComponents?: any[],
-  deductionComponents?: any[],
-  assignments?: any[],
+  earningComponents?: EarningComponent[],
+  deductionComponents?: DeductionComponent[],
+  assignments?: EmployeeComponentAssignment[],
   overtimeRules?: OvertimePremiumRules
 ) => {
 

@@ -13,6 +13,8 @@ dist-ssr
 dev-dist
 *.local
 tmp/
+tmp-*
+tmp-fn-deploy/
 
 # Editor directories and files
 .vscode/*

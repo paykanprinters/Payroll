@@ -247,7 +247,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       authListener.subscription.unsubscribe();
-      console.log("AuthContext: Unsubscribed auth listener.");
     };
   }, [buildAuthUserFromSession, fetchProfile, location.pathname, navigate, redirectAfterLogin]);
 

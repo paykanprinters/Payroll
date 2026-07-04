@@ -378,7 +378,6 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
   // Listen for specific update events to re-fetch/update state
   useEffect(() => {
     const handleEmployeesUpdated = (event: CustomEvent<MockEmployee[]>) => {
-      console.log("useEmployeesData: 'employeesUpdated' event received. Updating state.");
       if (isMockDataEnabled) {
         setEmployees(event.detail);
       }

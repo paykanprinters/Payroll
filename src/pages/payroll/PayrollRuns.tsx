@@ -90,7 +90,7 @@ const PayrollRunsPage: React.FC = () => {
         );
       }
     }
-  }, [payCycleSettings]);
+  }, [payCycleSettings, carriedPeriod?.periodStart, carriedPeriod?.periodEnd]);
 
   const handleCreateRun = async () => {
     if (isMockDataEnabled) {
