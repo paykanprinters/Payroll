@@ -26,8 +26,9 @@ interface ShellOptions {
 /** Wraps body content in a consistent, email-client-safe shell (inline styles only). */
 export function renderEmailShell(opts: ShellOptions): string {
   const year = new Date().getFullYear();
-  // Email logos are the light-background mark (black artwork on white). Never put
-  // the dark-background mark (white text / black canvas) on a black header.
+  // Brand logos ship with a solid black canvas. Use pure black (#000) behind the
+  // image so it does not sit on a mismatched dark-grey header and look smudged.
+  // Skip the text company name when a logo is present — the mark already includes it.
   const headerContent = opts.logoUrl
     ? `<img src="${escapeHtml(opts.logoUrl)}" alt="${escapeHtml(opts.companyName)} logo" width="220" style="display:block;max-width:220px;height:auto;border:0;outline:none;text-decoration:none;" />
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px;">
@@ -35,10 +36,10 @@ export function renderEmailShell(opts: ShellOptions): string {
                     <td width="36" height="4" style="background:#00AEEF;font-size:0;line-height:0;">&nbsp;</td>
                     <td width="36" height="4" style="background:#EC008C;font-size:0;line-height:0;">&nbsp;</td>
                     <td width="36" height="4" style="background:#FFDE00;font-size:0;line-height:0;">&nbsp;</td>
-                    <td width="36" height="4" style="background:#141414;font-size:0;line-height:0;">&nbsp;</td>
+                    <td width="36" height="4" style="background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
                   </tr>
                 </table>`
-    : `<span style="color:#111827;font-size:18px;font-weight:bold;">${escapeHtml(opts.companyName)}</span>`;
+    : `<span style="color:#ffffff;font-size:18px;font-weight:bold;">${escapeHtml(opts.companyName)}</span>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -48,7 +49,7 @@ export function renderEmailShell(opts: ShellOptions): string {
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
             <tr>
-              <td style="background:#ffffff;padding:22px 28px;border-bottom:1px solid #e5e7eb;">
+              <td style="background:#000000;padding:22px 28px;">
                 ${headerContent}
               </td>
             </tr>

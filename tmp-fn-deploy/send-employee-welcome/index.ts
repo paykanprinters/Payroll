@@ -24,32 +24,6 @@ function jsonResponse(body: unknown, status: number, corsHeaders: Record<string,
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Light-background mark (black artwork). Never use company_details.logourl here —
- * that asset is the dark-background mark and reads as black-on-black in email. */
-const EMAIL_LOGO_PATH = "/brand/kanprinters_horizontal_mono_black.png";
-const EMAIL_LOGO_FALLBACK_ORIGINS = [
-  "https://payroll.kanprinters.co.za",
-  "https://payroll-beta-orcin.vercel.app",
-];
-
-function originFromUrl(value?: string | null): string | null {
-  const raw = value?.trim();
-  if (!raw) return null;
-  try {
-    return new URL(raw).origin;
-  } catch {
-    return null;
-  }
-}
-
-function resolveEmailLogoUrl(portalUrl?: string | null): string {
-  const origins = [
-    originFromUrl(portalUrl),
-    ...EMAIL_LOGO_FALLBACK_ORIGINS,
-  ].filter((o): o is string => !!o);
-  return `${origins[0]}${EMAIL_LOGO_PATH}`;
-}
-
 type DeliveryStatus = "sent" | "failed" | "skipped";
 
 interface LogDeliveryInput {
@@ -255,9 +229,7 @@ serve(async (req) => {
           companyName,
           heading: "Welcome to the team",
           bodyHtml,
-          logoUrl: emailTemplate.include_logo
-            ? resolveEmailLogoUrl(settingsRow?.portal_url)
-            : undefined,
+          logoUrl: emailTemplate.include_logo ? companyRow?.logourl ?? undefined : undefined,
           footerNote: "This message was sent because your employee record was created in payroll.",
         });
         const sendResult = await sendEmail({

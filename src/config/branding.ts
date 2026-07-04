@@ -19,18 +19,22 @@ export const KAN_BRAND = {
   shortName: "Kan Printers",
   tagline: "KAN DO IT — since 2000",
   logoUrl: "/brand/kanprinters_horizontal_color.png",
-  logoUrlLight: "/brand/kanprinters_horizontal_color.png",
+  /** Black artwork on white — use on light/white backgrounds (email headers, light docs). */
+  logoUrlLight: "/brand/kanprinters_horizontal_mono_black.png",
+  /** White artwork on black — use on dark backgrounds (sidebar, auth panel). */
   logoUrlDark: "/brand/kanprinters_horizontal_dark.png",
   iconUrl: "/brand/kanprinters_icon_color.png",
   logoWidth: 240,
   logoHeight: 72,
   logoFit: "contain" as const,
-  /** Horizontal logo on dark sidebar — bundled asset, not Supabase upload */
+  /** Horizontal logo on dark sidebar — white-on-black mark */
   sidebarLogoUrl: "/brand/kanprinters_horizontal_dark.png",
   sidebarLogoHeight: 52,
   /** Large logo on auth brand panel (dark background) */
   authLogoUrl: "/brand/kanprinters_horizontal_dark.png",
   authLogoHeight: 80,
+  /** Email header logo (light background) */
+  emailLogoUrl: "/brand/kanprinters_horizontal_mono_black.png",
   colors: {
     panel: "#141414",
     magenta: "#EC008C",

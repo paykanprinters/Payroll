@@ -47,11 +47,25 @@ def trim(im: Image.Image) -> Image.Image:
     return im.crop(box)
 
 
-def pdf_to_png(pdf_path: Path, out_path: Path, max_width: int) -> None:
+def pdf_to_png(pdf_path: Path, out_path: Path, max_width: int, *, on_white: bool = False) -> None:
     doc = fitz.open(pdf_path)
     page = doc[0]
     scale = max_width / page.rect.width
     mat = fitz.Matrix(scale, scale)
+    # Light-background logos: render on white so black artwork is visible in email clients.
+    if on_white:
+        pix = page.get_pixmap(matrix=mat, alpha=False, colorspace=fitz.csRGB)
+        tmp = out_path.with_suffix(".tmp.png")
+        pix.save(tmp)
+        im = Image.open(tmp).convert("RGB")
+        # Force pure white canvas behind any near-white PDF page colour.
+        bg = Image.new("RGB", im.size, (255, 255, 255))
+        bg.paste(im, (0, 0))
+        bg.save(out_path, optimize=True)
+        tmp.unlink(missing_ok=True)
+        print(f"{out_path.name}: {bg.size[0]}x{bg.size[1]} (white canvas)")
+        return
+
     pix = page.get_pixmap(matrix=mat, alpha=True)
     tmp = out_path.with_suffix(".tmp.png")
     pix.save(tmp)
@@ -64,17 +78,20 @@ def pdf_to_png(pdf_path: Path, out_path: Path, max_width: int) -> None:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     exports = [
-        ("kanprinters_horizontal_color.pdf", "kanprinters_horizontal_color.png", 960),
-        ("kanprinters_horizontal_dark.pdf", "kanprinters_horizontal_dark.png", 960),
-        ("kanprinters_icon_color.pdf", "kanprinters_icon_color.png", 512),
-        ("kanprinters_stacked_color.pdf", "kanprinters_stacked_color.png", 640),
+        # color/dark PDFs render on black canvas — use on dark UI only
+        ("kanprinters_horizontal_color.pdf", "kanprinters_horizontal_color.png", 960, False),
+        ("kanprinters_horizontal_dark.pdf", "kanprinters_horizontal_dark.png", 960, False),
+        # mono black is for light/white backgrounds (email headers, light docs)
+        ("kanprinters_horizontal_mono_black.pdf", "kanprinters_horizontal_mono_black.png", 960, True),
+        ("kanprinters_icon_color.pdf", "kanprinters_icon_color.png", 512, False),
+        ("kanprinters_stacked_color.pdf", "kanprinters_stacked_color.png", 640, False),
     ]
-    for pdf_name, png_name, max_w in exports:
+    for pdf_name, png_name, max_w, on_white in exports:
         pdf = SRC / pdf_name
         if not pdf.exists():
             print(f"skip missing {pdf_name}")
             continue
-        pdf_to_png(pdf, OUT / png_name, max_w)
+        pdf_to_png(pdf, OUT / png_name, max_w, on_white=on_white)
 
 
 if __name__ == "__main__":
