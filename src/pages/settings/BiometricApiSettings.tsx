@@ -13,7 +13,7 @@ import { Link2, RefreshCcw } from "lucide-react";
 import { useBiometricApiSettings } from "@/hooks/use-biometric-api-settings";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useAuth } from "@/context/AuthContext";
-import { DEFAULT_BIOMETRIC_API_URL } from "@/lib/biometric-attendance-parser";
+import { BIOMETRIC_API_URL_PLACEHOLDER } from "@/lib/biometric-attendance-parser";
 
 const schema = z.object({
   apiUrl: z
@@ -36,7 +36,7 @@ const BiometricApiSettings: React.FC = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      apiUrl: DEFAULT_BIOMETRIC_API_URL,
+      apiUrl: "",
     },
   });
 
@@ -99,7 +99,7 @@ const BiometricApiSettings: React.FC = () => {
             <Label htmlFor="biometric-api-url">Biometric API URL</Label>
             <Input
               id="biometric-api-url"
-              placeholder={DEFAULT_BIOMETRIC_API_URL}
+              placeholder={BIOMETRIC_API_URL_PLACEHOLDER}
               {...form.register("apiUrl")}
               disabled={isLoading}
             />

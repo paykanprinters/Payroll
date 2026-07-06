@@ -136,30 +136,15 @@ const UserControlPanel: React.FC = () => {
   }, [fetchUsers, isMockDataEnabled]);
 
   React.useEffect(() => {
-    if (isAuthenticated && !isMockDataEnabled) { // Only fetch if authenticated and not using mock data
+    if (isAuthenticated && !isMockDataEnabled) {
       fetchUsers();
     } else if (isMockDataEnabled) {
-      setUsers([]); // Clear users if mock data is enabled
+      setUsers([]);
       setIsLoading(false);
     }
   }, [isAuthenticated, fetchUsers, isMockDataEnabled]);
 
-  React.useEffect(() => {
-    const checkAndSeed = async () => {
-      if (isAuthenticated && !isLoading && users.length === 0 && !isSeeding && !isMockDataEnabled) {
-        const { count, error } = await supabase.from('users').select('id', { count: 'exact' });
-        if (error) {
-          logger.error('Error checking user count for seeding:', toLogError(error));
-          return;
-        }
-        if (count === 0) {
-          logger.debug('No users found in database, initiating seeding process.');
-          seedInitialUsers();
-        }
-      }
-    };
-    checkAndSeed();
-  }, [isAuthenticated, isLoading, users.length, isSeeding, seedInitialUsers, isMockDataEnabled]);
+  // Seeding is manual only — never auto-invoke seed-users in production.
 
 
   const filteredUsers = users.filter(user => {
@@ -496,7 +481,7 @@ const UserControlPanel: React.FC = () => {
       <div className="mt-8 p-4 border rounded-lg bg-blue-50 text-blue-800">
         <h3 className="font-semibold text-lg mb-2">User Management Notes:</h3>
         <p className="text-sm">
-          This user control panel now interacts with a Supabase backend. User data is fetched from the `public.users` table, and actions like adding, editing, or deleting users involve API calls to manage user accounts and roles securely. Initial mock users are seeded automatically if the database is empty.
+          This user control panel interacts with the Supabase backend. User data is loaded from the `public.users` table; add, edit, and delete actions go through secured edge functions. Use the seed-users action only in controlled environments with `ALLOW_SEED=true`.
         </p>
       </div>
 

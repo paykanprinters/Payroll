@@ -2,8 +2,8 @@ import { format, isValid, max, min, parse } from "date-fns";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import type { AggregationError, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 
-/** Default Kan Printers biometric attendance log endpoint */
-export const DEFAULT_BIOMETRIC_API_URL = "http://102.69.157.253:8000/logs";
+/** Shown in settings UI when no URL is configured — not used as a default fetch target. */
+export const BIOMETRIC_API_URL_PLACEHOLDER = "https://your-clock-server.example/logs";
 
 /** Attendance logs use ISO dates: YYYY-MM-DD HH:mm:ss */
 export const BIOMETRIC_DATE_FORMAT = "yyyy-MM-dd";

@@ -62,6 +62,7 @@ interface ReportsCatalogProps {
   reportPeriodType: ReportPeriodType;
   auditLevel: ReportAuditLevel;
   periodPayslipCount: number;
+  auditLogs?: import("@/integrations/supabase/audit-queries").AuditLogEntry[];
 }
 
 const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
@@ -75,6 +76,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   reportPeriodType,
   auditLevel,
   periodPayslipCount,
+  auditLogs,
 }) => {
   const [category, setCategory] = useState<ReportCategoryId | "all">("all");
   const [search, setSearch] = useState("");
@@ -105,6 +107,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
     auditLevel,
     companyDetails,
     reportDesignSettings,
+    auditLogs,
   };
 
   const openPreview = (report: ReportCatalogItem) => {

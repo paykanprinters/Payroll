@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { assertSafeOutboundUrl } from "../_shared/url-security.ts";
 
 const BUCKET = "company-logos";
 const OBJECT_PATH = "company_logo.png";
@@ -70,10 +71,17 @@ serve(async (req) => {
       body.sourceUrl ||
       Deno.env.get("SEED_LOGO_SOURCE_URL") ||
       "https://payroll-beta-orcin.vercel.app/brand/kanprinters_horizontal_color.png";
-    const fetched = await fetch(sourceUrl);
+    const urlCheck = assertSafeOutboundUrl(sourceUrl);
+    if (!urlCheck.ok) {
+      return new Response(JSON.stringify({ error: urlCheck.error }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const fetched = await fetch(urlCheck.url.toString());
     if (!fetched.ok) {
       return new Response(
-        JSON.stringify({ error: `Failed to fetch logo from ${sourceUrl}`, status: fetched.status }),
+        JSON.stringify({ error: `Failed to fetch logo from ${urlCheck.url.toString()}`, status: fetched.status }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

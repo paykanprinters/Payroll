@@ -126,7 +126,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const dbProfile = await fetchProfile(session.user.id);
-        setUser(dbProfile ?? buildAuthUserFromSession(session.user));
+        if (!dbProfile) {
+          console.warn("AuthContext: no users profile for authenticated session — signing out.");
+          await supabase.auth.signOut();
+          setUser(null);
+          setIsAuthenticated(false);
+          return;
+        }
+        setUser(dbProfile);
         setIsAuthenticated(true);
       } catch (err: any) {
         console.error("AuthContext: refreshSession failed", { message: err?.message, err });
@@ -147,14 +154,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoadingAuth(true);
         try {
           const dbProfile = await fetchProfile(sessionUser.id);
-          const authUser = dbProfile ?? buildAuthUserFromSession(sessionUser);
-          setUser(authUser);
+          if (!dbProfile) {
+            console.warn("AuthContext: no users profile — signing out.");
+            await supabase.auth.signOut();
+            setUser(null);
+            setIsAuthenticated(false);
+            return;
+          }
+          setUser(dbProfile);
           setIsAuthenticated(true);
           if (event === "SIGNED_IN") {
             void recordAuthEvent("signed_in", {
-              userId: authUser.id,
-              email: authUser.email,
-              role: authUser.role,
+              userId: dbProfile.id,
+              email: dbProfile.email,
+              role: dbProfile.role,
               portal: isStaffPortalPath(location.pathname) ? "staff" : "admin",
             });
             redirectAfterLogin();
@@ -163,9 +176,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (err: unknown) {
           console.error("AuthContext: profile fetch failed", err);
-          const fallbackUser = buildAuthUserFromSession(sessionUser);
-          setUser(fallbackUser);
-          setIsAuthenticated(true);
+          await supabase.auth.signOut();
+          setUser(null);
+          setIsAuthenticated(false);
         } finally {
           setIsLoadingAuth(false);
         }

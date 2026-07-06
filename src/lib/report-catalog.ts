@@ -27,6 +27,8 @@ export const REPORT_CATEGORY_LABELS: Record<ReportCategoryId, string> = {
   compliance: "Compliance & audit",
 };
 
+import type { AuditLogEntry } from "@/integrations/supabase/audit-queries";
+
 export interface ReportGenerateContext {
   employees: MockEmployee[];
   payslips: MockPayslip[];
@@ -38,6 +40,8 @@ export interface ReportGenerateContext {
   auditLevel: ReportAuditLevel;
   companyDetails: MockCompanyDetails | null;
   reportDesignSettings: ReportDesignSettings;
+  /** Live audit log rows from Supabase (audit trail report). */
+  auditLogs?: AuditLogEntry[];
 }
 
 export interface ReportCatalogItem {
@@ -247,7 +251,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
     title: "Audit trail",
     description: "High-level log of payroll-related system events for the period.",
     periodTypes: ["monthly", "yearly"],
-    generate: (ctx) => generateAuditTrailReportContent(ctx.selectedDate, ctx.periodType),
+    generate: (ctx) => generateAuditTrailReportContent(ctx.selectedDate, ctx.periodType, ctx.auditLogs),
   },
 ];
 

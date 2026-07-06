@@ -11,7 +11,6 @@ import { invokeFetchBiometricLogs } from "@/lib/fetch-biometric-logs";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import {
   biometricLogTextToTimesheetRows,
-  DEFAULT_BIOMETRIC_API_URL,
   validateBiometricTimesheetRow,
 } from "@/lib/biometric-attendance-parser";
 import { ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
@@ -34,9 +33,13 @@ const BiometricImportSection: React.FC<BiometricImportSectionProps> = ({
   const [endDate, setEndDate] = React.useState("");
   const [isFetching, setIsFetching] = React.useState(false);
 
-  const resolvedApiUrl = apiUrl?.trim() || getStoredBiometricApiUrl() || DEFAULT_BIOMETRIC_API_URL;
+  const resolvedApiUrl = apiUrl?.trim() || getStoredBiometricApiUrl();
 
   const handleFetch = async () => {
+    if (!resolvedApiUrl) {
+      showError("Configure the biometric API URL under Settings → Biometric API.");
+      return;
+    }
     if (!startDate || !endDate) {
       showError("Select a start and end date for attendance.");
       return;

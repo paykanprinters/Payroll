@@ -281,7 +281,7 @@ const CorePayrollReportsSection: React.FC<CorePayrollReportsSectionProps> = ({
               title="Audit Trail"
               description="High-level audit trail style report for payroll actions and system events."
               onGenerate={handleOpenReportPreview}
-              reportContentGenerator={(ctx) => generateAuditTrailReportContent(ctx.selectedDate, ctx.periodType)}
+              reportContentGenerator={(ctx) => generateAuditTrailReportContent(ctx.selectedDate, ctx.periodType, [])}
               employees={employees}
               payslips={payslips}
               leaveRecords={leaveRecords}

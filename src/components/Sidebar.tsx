@@ -170,6 +170,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   const filteredSections = navSections
     .map((section) => {
       const items = section.items.filter((item) => {
+        if (user?.role === "Viewer") {
+          const viewerAllowed =
+            item.to === "/dashboard" ||
+            item.to.startsWith("/payslips") ||
+            item.to === "/analytics" ||
+            item.to === "/reports" ||
+            item.to === "/profile" ||
+            item.to === "/docs";
+          return viewerAllowed;
+        }
         // Admin/Manager-only
         if (
           item.to === "/employees" ||

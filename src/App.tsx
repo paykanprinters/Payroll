@@ -165,24 +165,31 @@ const App = () => {
                     <>
                       <Route path="/" element={<RootHome />} />
                       <Route path="/dashboard" element={<RootHome />} />
-                      <Route path="/todos" element={<ToDosPage />} />
-                      <Route path="/timesheet" element={<Timesheet />} />
                       <Route path="/payslips/*" element={<Payslips />} />
-                      <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
-                      <Route path="/savings" element={<Savings />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/docs" element={<Docs />} />
-                      
+
+                      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager', 'Staff']} />}>
+                        <Route path="/todos" element={<ToDosPage />} />
+                        <Route path="/timesheet" element={<Timesheet />} />
+                        <Route path="/loans-advancements" element={<LoansAndAdvancements />} />
+                        <Route path="/savings" element={<Savings />} />
+                      </Route>
+
                       {/* Staff-only analytics route */}
                       <Route element={<ProtectedRoute allowedRoles={['Staff']} />}>
                         <Route path="/analytics/staff" element={<AnalyticsStaff />} />
                       </Route>
 
+                      {/* Manager/Admin/Viewer insight routes */}
+                      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager', 'Viewer']} />}>
+                        <Route path="/analytics" element={<Analytics />} />
+                        <Route path="/reports" element={<Reports />} />
+                      </Route>
+
                       {/* Manager/Admin-only routes */}
                       <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager']} />}>
                         <Route path="/employees" element={<Employees />} />
-                        <Route path="/analytics" element={<Analytics />} />
-                        <Route path="/reports" element={<Reports />} />
                         <Route path="/payroll/runs" element={<PayrollRuns />} />
                         <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
                         <Route path="/payroll/batches" element={<PaymentBatches />} />

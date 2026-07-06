@@ -19,8 +19,8 @@ const DocsHeader: React.FC<DocsHeaderProps> = ({ onRefresh }) => {
   return (
     <KanPageBanner
       icon={BookOpen}
-      title="Documentation"
-      description="How the payroll system works, step-by-step workflows, and role-based guidance for daily use."
+      title="Documentation & training"
+      description="Training manuals for onboarding, reference guides for daily use, and role-based workflows."
       actions={
         <>
           {onRefresh && (

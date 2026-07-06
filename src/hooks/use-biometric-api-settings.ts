@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeFetchBiometricLogs } from "@/lib/fetch-biometric-logs";
-import { DEFAULT_BIOMETRIC_API_URL } from "@/lib/biometric-attendance-parser";
+import { BIOMETRIC_API_URL_PLACEHOLDER } from "@/lib/biometric-attendance-parser";
 import { validateOutboundHttpUrl } from "@/lib/url-security";
 import { showError, showSuccess } from "@/utils/toast";
 
@@ -20,8 +20,8 @@ interface UseBiometricApiSettingsProps {
 }
 
 export function getStoredBiometricApiUrl(): string {
-  if (typeof window === "undefined") return DEFAULT_BIOMETRIC_API_URL;
-  return localStorage.getItem(LOCAL_STORAGE_KEY) || DEFAULT_BIOMETRIC_API_URL;
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(LOCAL_STORAGE_KEY) || "";
 }
 
 export const useBiometricApiSettings = ({
@@ -47,7 +47,8 @@ export const useBiometricApiSettings = ({
 
       const apiUrl =
         (data as { biometric_api_url?: string | null } | null)?.biometric_api_url?.trim() ||
-        getStoredBiometricApiUrl();
+        getStoredBiometricApiUrl() ||
+        "";
 
       setSettings({ apiUrl });
       localStorage.setItem(LOCAL_STORAGE_KEY, apiUrl);

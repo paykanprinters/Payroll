@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import ReportsHeader from "@/components/reports/ReportsHeader";
@@ -18,6 +18,8 @@ import {
   type ReportAuditLevel,
   type ReportPeriodType,
 } from "@/lib/reports-admin-summary";
+import { fetchAuditLogs } from "@/integrations/supabase/audit-queries";
+import { format, endOfMonth, endOfYear, startOfMonth, startOfYear } from "date-fns";
 
 const Reports: React.FC = () => {
   const {
@@ -38,8 +40,33 @@ const Reports: React.FC = () => {
   const [reportPeriodType, setReportPeriodType] = useState<ReportPeriodType>("monthly");
   const [auditLevel, setAuditLevel] = useState<ReportAuditLevel>("standard");
   const [refreshTick, setRefreshTick] = useState(0);
+  const [auditLogs, setAuditLogs] = useState<Awaited<ReturnType<typeof fetchAuditLogs>>>([]);
 
   const isLoading = isLoadingEmployees || isLoadingPayslips || isLoadingLeaveRecords;
+
+  useEffect(() => {
+    if (isMockDataEnabled) {
+      setAuditLogs([]);
+      return;
+    }
+    const load = async () => {
+      const filters: Parameters<typeof fetchAuditLogs>[0] = { limit: 500 };
+      if (selectedReportDate) {
+        const start =
+          reportPeriodType === "monthly"
+            ? startOfMonth(selectedReportDate)
+            : startOfYear(selectedReportDate);
+        const end =
+          reportPeriodType === "monthly"
+            ? endOfMonth(selectedReportDate)
+            : endOfYear(selectedReportDate);
+        filters.dateStart = format(start, "yyyy-MM-dd");
+        filters.dateEnd = format(end, "yyyy-MM-dd");
+      }
+      setAuditLogs(await fetchAuditLogs(filters));
+    };
+    void load();
+  }, [isMockDataEnabled, selectedReportDate, reportPeriodType, refreshTick]);
 
   const periodPayslips = useMemo(
     () => filterPayslipsForReportPeriod(payslips, selectedReportDate, reportPeriodType),
@@ -106,6 +133,7 @@ const Reports: React.FC = () => {
               reportPeriodType={reportPeriodType}
               auditLevel={auditLevel}
               periodPayslipCount={summary.payslipCount}
+              auditLogs={auditLogs}
             />
           </ErrorBoundary>
         </>
