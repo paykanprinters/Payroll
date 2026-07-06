@@ -13,6 +13,7 @@ import {
   deleteLeaveRecordFromSupabase,
 } from "@/integrations/supabase/leave-queries";
 import { recordAuditEvent } from "@/lib/audit-trail";
+import { validateLeaveAgainstBalance } from "@/lib/leave-accrual";
 
 interface UseLeaveDataProps {
   initialLeaveRecords: LeaveEntry[];
@@ -153,6 +154,20 @@ export const useLeaveData = ({
     [employees]
   );
 
+  const assertSufficientLeaveBalance = useCallback(
+    (record: Pick<LeaveEntry, "id" | "employeeId" | "leaveType" | "workingDays" | "startDate" | "endDate">) => {
+      const employee = employees.find((emp) => emp.id === record.employeeId);
+      if (!employee) return true;
+      const validation = validateLeaveAgainstBalance(employee, leaveRecords, record);
+      if (!validation.ok) {
+        showError(validation.message);
+        return false;
+      }
+      return true;
+    },
+    [employees, leaveRecords]
+  );
+
   const addLeaveRecord = useCallback(
     async (newRecord: Omit<LeaveEntry, "id">, options?: AddLeaveRecordOptions) => {
       const now = new Date().toISOString();
@@ -166,6 +181,12 @@ export const useLeaveData = ({
         submittedAt: asStaffRequest ? now : newRecord.submittedAt,
         submittedByUserId: asStaffRequest ? user?.id : newRecord.submittedByUserId,
       };
+
+      if (!asStaffRequest && recordToAdd.status === "Approved") {
+        if (!assertSufficientLeaveBalance(recordToAdd)) {
+          return null;
+        }
+      }
 
       if (isMockDataEnabled) {
         setLeaveRecords((prevRecords) => {
@@ -205,11 +226,14 @@ export const useLeaveData = ({
       });
       return recordToAdd;
     },
-    [isMockDataEnabled, upsertLiveLeaveRecord, user?.id]
+    [isMockDataEnabled, upsertLiveLeaveRecord, user?.id, assertSufficientLeaveBalance]
   );
 
   const updateLeaveRecord = useCallback(
     async (record: LeaveEntry) => {
+      if (record.status === "Approved" && !assertSufficientLeaveBalance(record)) {
+        return null;
+      }
       if (isMockDataEnabled) {
         setLeaveRecords((prev) => {
           const updated = prev.map((r) => (r.id === record.id ? record : r));
@@ -242,7 +266,7 @@ export const useLeaveData = ({
       }
       return saved;
     },
-    [isMockDataEnabled, upsertLiveLeaveRecord]
+    [isMockDataEnabled, upsertLiveLeaveRecord, assertSufficientLeaveBalance]
   );
 
   const deleteLeaveRecord = useCallback(

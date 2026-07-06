@@ -1,6 +1,7 @@
 import { eachDayOfInterval, isWeekend, isWithinInterval, parseISO } from "date-fns";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { isLeaveEffectiveForPayroll } from "@/lib/leave-status";
+import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
 
 export function countUnpaidLeaveDays(
   emp: MockEmployee,
@@ -36,38 +37,13 @@ export function calculateLeaveSummary(
   periodStart: Date,
   periodEnd: Date,
   unpaidLeaveDaysInPeriod: number
-): { annual: number; sick: number; unpaid: number } {
-  let annualLeaveTaken = 0;
-  let sickLeaveTaken = 0;
-
-  leaveRecords
-    .filter((rec) => rec.employeeId === emp.id && isLeaveEffectiveForPayroll(rec))
-    .forEach((rec) => {
-      const leaveStart = parseISO(rec.startDate);
-      const leaveEnd = parseISO(rec.endDate);
-      if (
-        !isWithinInterval(leaveStart, { start: periodStart, end: periodEnd }) &&
-        !isWithinInterval(leaveEnd, { start: periodStart, end: periodEnd }) &&
-        !(leaveStart < periodStart && leaveEnd > periodEnd)
-      ) {
-        return;
-      }
-      const overlapStart = leaveStart > periodStart ? leaveStart : periodStart;
-      const overlapEnd = leaveEnd < periodEnd ? leaveEnd : periodEnd;
-      const daysInOverlap = eachDayOfInterval({ start: overlapStart, end: overlapEnd }).filter(
-        (d) => !isWeekend(d)
-      ).length;
-
-      if (rec.leaveType === "Annual Leave") annualLeaveTaken += daysInOverlap;
-      else if (rec.leaveType === "Sick Leave") sickLeaveTaken += daysInOverlap;
-    });
-
-  const mockAnnualLeaveBalance = 20;
-  const mockSickLeaveBalance = 10;
+): { annual: number; sick: number; unpaid: number; family?: number } {
+  const snapshot = computeEmployeeLeaveBalance(emp, leaveRecords, periodEnd);
 
   return {
-    annual: mockAnnualLeaveBalance - annualLeaveTaken,
-    sick: mockSickLeaveBalance - sickLeaveTaken,
+    annual: snapshot.annual.remaining,
+    sick: snapshot.sick.remaining,
     unpaid: unpaidLeaveDaysInPeriod,
+    family: snapshot.familyResponsibility.remaining,
   };
 }

@@ -16,9 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useStaffPortalContext } from "@/context/StaffPortalContext";
 import { formatRand, staffPortalPath } from "@/lib/staff-portal";
-import { calculateLeaveSummary } from "@/lib/leave-summary";
-import { buildStaffSavingsSummary } from "@/lib/staff-savings-summary";
-import { startOfYear, endOfYear } from "date-fns";
+import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
 
 const StaffPortalHome: React.FC = () => {
   const { employee } = useStaffPortalContext();
@@ -46,16 +44,10 @@ const StaffPortalHome: React.FC = () => {
     [employee, savingPlans, payrollSavingsEntries, payslips]
   );
 
-  const leaveSummary = useMemo(() => {
-    const now = new Date();
-    return calculateLeaveSummary(
-      employee,
-      leaveRecords,
-      startOfYear(now),
-      endOfYear(now),
-      0
-    );
-  }, [employee, leaveRecords]);
+  const leaveBalance = useMemo(
+    () => computeEmployeeLeaveBalance(employee, leaveRecords, new Date()),
+    [employee, leaveRecords]
+  );
 
   const ytdNet = myPayslips.reduce((sum, p) => sum + (p.netPay || 0), 0);
 
@@ -99,8 +91,8 @@ const StaffPortalHome: React.FC = () => {
         />
         <StatCard
           title="Annual leave left"
-          value={`${Math.max(0, leaveSummary.annual)} days`}
-          hint={`Sick leave: ${Math.max(0, leaveSummary.sick)} days`}
+          value={`${leaveBalance.annual.remaining} days`}
+          hint={`Sick: ${leaveBalance.sick.remaining} · Family: ${leaveBalance.familyResponsibility.remaining}`}
           icon={CalendarDays}
           accent="fuchsia"
         />

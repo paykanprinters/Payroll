@@ -12,6 +12,7 @@ import AbsenceCalendar from "@/components/vacation-absence/AbsenceCalendar";
 import LeaveRecordsTable from "@/components/vacation-absence/LeaveRecordsTable";
 import LeaveFiltersBar from "@/components/vacation-absence/LeaveFiltersBar";
 import LeaveRecordDialog from "@/components/vacation-absence/LeaveRecordDialog";
+import LeaveBalancesPanel from "@/components/vacation-absence/LeaveBalancesPanel";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import {
   buildLeaveAdminSummary,
@@ -106,6 +107,14 @@ const VacationAbsence: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <VacationAbsenceHeader onRecordAbsence={openCreateDialog} addDisabled={addDisabled} />
+
+      {!isLoading && employees && employees.length > 0 ? (
+        <LeaveBalancesPanel
+          employees={employees}
+          leaveRecords={leaveRecords}
+          employeeFilterId={employeeFilterId}
+        />
+      ) : null}
 
       <Card className="rounded-xl border">
         <CardHeader className="pb-2">

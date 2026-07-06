@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 import BasicInfoForm from "./forms/BasicInfoForm";
 import PersonalDetailsForm from "./forms/PersonalDetailsForm";
 import PaymentInfoForm from "./forms/PaymentInfoForm";
+import LeaveAccrualForm from "./forms/LeaveAccrualForm";
 
 const employeeSchema = z.object({
   id: z.string().optional(),
@@ -117,6 +118,42 @@ const employeeSchema = z.object({
       return isNaN(num) ? 0 : num;
     },
     z.number().min(0, "Cannot be negative").optional()
+  ),
+  leaveCycleStartDate: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().optional()
+  ),
+  leaveOpeningAnnualBalance: z.preprocess(
+    (val) => {
+      if (val === null || val === "" || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0, "Cannot be negative").optional()
+  ),
+  leaveOpeningSickBalance: z.preprocess(
+    (val) => {
+      if (val === null || val === "" || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0, "Cannot be negative").optional()
+  ),
+  leaveOpeningFamilyBalance: z.preprocess(
+    (val) => {
+      if (val === null || val === "" || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0, "Cannot be negative").optional()
+  ),
+  annualLeaveEntitlementDays: z.preprocess(
+    (val) => {
+      if (val === null || val === "" || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0, "Cannot be negative").max(365, "Cannot exceed 365 days").optional()
   ),
   ignoredIncompleteFields: z.array(z.string()).optional(),
 }).superRefine((data, ctx) => {
@@ -217,6 +254,11 @@ const emptyDefaults: EmployeeFormValues = {
   medicalAidDependants: 0,
   retirementFundContributionPercent: 0,
   retirementFundContributionFixed: 0,
+  leaveCycleStartDate: "",
+  leaveOpeningAnnualBalance: undefined,
+  leaveOpeningSickBalance: undefined,
+  leaveOpeningFamilyBalance: undefined,
+  annualLeaveEntitlementDays: undefined,
   customEmployeeId: "",
   ignoredIncompleteFields: [],
 };
@@ -288,6 +330,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         medicalAidDependants: initialEmployee.medicalAidDependants ?? 0,
         retirementFundContributionPercent: initialEmployee.retirementFundContributionPercent ?? 0,
         retirementFundContributionFixed: initialEmployee.retirementFundContributionFixed ?? 0,
+        leaveCycleStartDate: initialEmployee.leaveCycleStartDate || "",
+        leaveOpeningAnnualBalance: initialEmployee.leaveOpeningAnnualBalance,
+        leaveOpeningSickBalance: initialEmployee.leaveOpeningSickBalance,
+        leaveOpeningFamilyBalance: initialEmployee.leaveOpeningFamilyBalance,
+        annualLeaveEntitlementDays: initialEmployee.annualLeaveEntitlementDays,
         ignoredIncompleteFields: initialEmployee.ignoredIncompleteFields || [],
         emergencyContactName: initialEmployee.emergencyContactName || "",
         emergencyContactNumber: initialEmployee.emergencyContactNumber || "",
@@ -351,8 +398,9 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             <form onSubmit={formMethods.handleSubmit(onSubmit, onInvalid)} className="flex min-h-0 flex-1 flex-col">
               <ScrollArea className="flex-1 px-6">
                 <div className="grid gap-4 py-4">
-                  <TabsContent value="basic" className="m-0">
+                  <TabsContent value="basic" className="m-0 space-y-4">
                     <BasicInfoForm linkedUserId={initialEmployee?.userId} />
+                    <LeaveAccrualForm />
                   </TabsContent>
                   <TabsContent value="personal" className="m-0">
                     <PersonalDetailsForm />

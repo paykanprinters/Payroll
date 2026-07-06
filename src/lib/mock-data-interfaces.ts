@@ -101,6 +101,13 @@ export interface MockEmployee {
   retirementFundContributionFixed?: number; // Fixed employee contribution per pay period (Rands)
 
   ignoredIncompleteFields?: string[]; // New field to store intentionally blank fields
+
+  /** Leave accrual overrides (optional — defaults follow BCEA-aligned policy). */
+  leaveCycleStartDate?: string;
+  leaveOpeningAnnualBalance?: number;
+  leaveOpeningSickBalance?: number;
+  leaveOpeningFamilyBalance?: number;
+  annualLeaveEntitlementDays?: number;
 }
 
 export interface LoanDeductionHistoryEntry {
@@ -176,7 +183,7 @@ export interface MockPayslip {
   employerSdl?: number;
   earningsBreakdown: { name: string; amount: number }[];
   deductionsBreakdown: { name: string; amount: number }[];
-  leaveSummary: { annual: number; sick: number; unpaid: number };
+  leaveSummary: { annual: number; sick: number; unpaid: number; family?: number };
   ytdGrossEarnings: number;
   ytdTotalDeductions: number;
 

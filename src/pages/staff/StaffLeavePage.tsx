@@ -16,8 +16,8 @@ import { Button } from "@/components/ui/button";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useStaffPortalContext } from "@/context/StaffPortalContext";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
-import { calculateLeaveSummary } from "@/lib/leave-summary";
-import { format, startOfYear, endOfYear } from "date-fns";
+import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
+import { format, parseISO } from "date-fns";
 import LeaveStatusBadge from "@/components/vacation-absence/LeaveStatusBadge";
 import LeaveRecordDialog from "@/components/vacation-absence/LeaveRecordDialog";
 import { canStaffCancelLeave } from "@/lib/leave-status";
@@ -35,10 +35,10 @@ const StaffLeavePage: React.FC = () => {
     [employee.id, leaveRecords]
   );
 
-  const leaveSummary = useMemo(() => {
-    const now = new Date();
-    return calculateLeaveSummary(employee, leaveRecords, startOfYear(now), endOfYear(now), 0);
-  }, [employee, leaveRecords]);
+  const leaveBalance = useMemo(
+    () => computeEmployeeLeaveBalance(employee, leaveRecords, new Date()),
+    [employee, leaveRecords]
+  );
 
   const pendingCount = myLeave.filter((r) => r.status === "Pending").length;
 
@@ -68,14 +68,16 @@ const StaffLeavePage: React.FC = () => {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Card className="border-cyan-100">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">Annual leave remaining</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-cyan-800">{Math.max(0, leaveSummary.annual)} days</p>
-            <p className="mt-1 text-xs text-muted-foreground">Approved leave only</p>
+            <p className="text-3xl font-bold text-cyan-800">{leaveBalance.annual.remaining} days</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {leaveBalance.annual.taken} of {leaveBalance.annual.entitled} accrued this cycle
+            </p>
           </CardContent>
         </Card>
         <Card className="border-emerald-100">
@@ -83,7 +85,10 @@ const StaffLeavePage: React.FC = () => {
             <CardTitle className="text-sm text-muted-foreground">Sick leave remaining</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-emerald-800">{Math.max(0, leaveSummary.sick)} days</p>
+            <p className="text-3xl font-bold text-emerald-800">{leaveBalance.sick.remaining} days</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {leaveBalance.sick.inQualifyingPeriod ? "Qualifying period accrual" : "36-month cycle"}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-violet-100">
@@ -94,12 +99,24 @@ const StaffLeavePage: React.FC = () => {
             <p className="text-3xl font-bold text-violet-800">{pendingCount}</p>
           </CardContent>
         </Card>
-        <Card className="border-amber-100">
+        <Card className="border-rose-100">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Unpaid leave (period)</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Family responsibility</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-amber-800">{leaveSummary.unpaid} days</p>
+            <p className="text-3xl font-bold text-rose-800">
+              {leaveBalance.familyResponsibility.remaining} days
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Leave cycle ends</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-amber-800">
+              {format(parseISO(leaveBalance.annual.cycleEnd), "dd MMM yyyy")}
+            </p>
           </CardContent>
         </Card>
       </div>
