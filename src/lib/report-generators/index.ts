@@ -40,6 +40,17 @@ export type {
   EasyFileSkippedEmployee,
 } from "./easyfile-export";
 export {
+  validateEasyFileExport,
+  validateEasyFileCsvStructure,
+  mergeEasyFileValidation,
+  isValidPayeReference,
+  isValidIncomeTaxReference,
+} from "./easyfile-validation";
+export type {
+  EasyFileValidationIssue,
+  EasyFileValidationReport,
+} from "./easyfile-validation";
+export {
   buildEmployeeTaxCertificate,
   buildIrp5Certificate,
   determineEmployeeTaxCertificateType,

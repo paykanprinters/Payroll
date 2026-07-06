@@ -27,6 +27,8 @@ import {
   easyFileExportFilename,
   serializeEasyFileCsv,
 } from "@/lib/report-generators/easyfile-export";
+import { validateEasyFileCsvStructure } from "@/lib/report-generators/easyfile-validation";
+import EasyFileValidationPanel from "@/components/reports/EasyFileValidationPanel";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CalendarIcon, Download, FileText, Printer, Users } from "lucide-react";
@@ -188,7 +190,25 @@ const Irp5ExportPage: React.FC = () => {
       return;
     }
 
+    if (exportData.hasBlockingErrors) {
+      const preview = exportData.validation.errors
+        .slice(0, 3)
+        .map((e) => (e.employeeName ? `${e.employeeName}: ${e.message}` : e.message))
+        .join(" · ");
+      showError(
+        `e@syFile validation failed (${exportData.errorCount} error(s)). ${preview}${
+          exportData.errorCount > 3 ? " …" : ""
+        }`
+      );
+      return;
+    }
+
     const csv = serializeEasyFileCsv(exportData);
+    const structureIssues = validateEasyFileCsvStructure(csv);
+    if (structureIssues.some((i) => i.severity === "error")) {
+      showError(structureIssues.map((i) => i.message).join(" "));
+      return;
+    }
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -203,8 +223,8 @@ const Irp5ExportPage: React.FC = () => {
     if (exportData.skipped.length > 0) {
       notes.push(`${exportData.skipped.length} employee(s) skipped (no payslips)`);
     }
-    if (exportData.errorCount > 0) {
-      notes.push(`${exportData.errorCount} validation error(s) — review before submitting to SARS`);
+    if (exportData.warningCount > 0) {
+      notes.push(`${exportData.warningCount} warning(s) — review recommended before eFiling`);
     }
     showSuccess(notes.join(" · "));
   }, [userTaxSettings, selectedIrpYear, companyDetails, employees, payslips]);
@@ -326,34 +346,33 @@ const Irp5ExportPage: React.FC = () => {
             comma-delimited file for SARS e@syFile Employer. Amounts are declared in whole rands.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {bulkPreview && (
-            <div className="mb-4 rounded-lg border bg-muted/40 p-4 text-sm">
-              <p className="font-medium">
-                {bulkPreview.rows.length} certificate(s) ready for TY{bulkPreview.taxYear} (
-                {bulkPreview.periodLabel})
-              </p>
-              <p className="text-muted-foreground">
-                {bulkPreview.rows.filter((r) => r.certificate.certificateType === "IRP5").length} IRP5 ·{" "}
-                {bulkPreview.rows.filter((r) => r.certificate.certificateType === "IT3a").length} IT3(a)
-                {bulkPreview.skipped.length > 0
-                  ? ` · ${bulkPreview.skipped.length} skipped (no payslips)`
-                  : ""}
-              </p>
-              {bulkPreview.errorCount > 0 && (
-                <p className="mt-2 text-red-700">
-                  {bulkPreview.errorCount} validation error(s) across certificates — fix before
-                  submitting to SARS.
+            <>
+              <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+                <p className="font-medium">
+                  {bulkPreview.rows.length} certificate(s) ready for TY{bulkPreview.taxYear} (
+                  {bulkPreview.periodLabel})
                 </p>
-              )}
-              {bulkPreview.errorCount === 0 && bulkPreview.warningCount > 0 && (
-                <p className="mt-2 text-amber-700">
-                  {bulkPreview.warningCount} warning(s) — review recommended fields before eFiling.
+                <p className="text-muted-foreground">
+                  {bulkPreview.rows.filter((r) => r.certificate.certificateType === "IRP5").length} IRP5 ·{" "}
+                  {bulkPreview.rows.filter((r) => r.certificate.certificateType === "IT3a").length} IT3(a)
+                  {bulkPreview.skipped.length > 0
+                    ? ` · ${bulkPreview.skipped.length} skipped (no payslips)`
+                    : ""}
                 </p>
-              )}
-            </div>
+              </div>
+              <EasyFileValidationPanel
+                validation={bulkPreview.validation}
+                certificateCount={bulkPreview.rows.length}
+              />
+            </>
           )}
-          <Button className="rounded-full" onClick={handleBulkEasyFileExport} disabled={isBulkDisabled}>
+          <Button
+            className="rounded-full"
+            onClick={handleBulkEasyFileExport}
+            disabled={isBulkDisabled || Boolean(bulkPreview?.hasBlockingErrors)}
+          >
             <Users className="mr-2 h-4 w-4" />
             Download e@syFile CSV
           </Button>

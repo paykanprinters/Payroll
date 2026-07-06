@@ -6,6 +6,7 @@ import {
   type Irp5Certificate,
 } from "@/lib/irp5-certificate";
 import { filterPayslipsForSarsTaxYear, getSarsTaxYearPeriodLabel } from "@/lib/tax-year-period";
+import { mergeEasyFileValidation, type EasyFileValidationReport } from "./easyfile-validation";
 
 /**
  * SARS e@syFile bulk export (COMP-13).
@@ -88,6 +89,8 @@ export interface EasyFileExport {
   periodLabel: string;
   rows: EasyFileRow[];
   skipped: EasyFileSkippedEmployee[];
+  /** Full pre-submission validation report (certificate + e@syFile schema rules). */
+  validation: EasyFileValidationReport;
   /** Aggregate validation errors that would block a clean e@syFile import. */
   hasBlockingErrors: boolean;
   errorCount: number;
@@ -142,8 +145,6 @@ export function buildEasyFileExport(
 ): EasyFileExport {
   const rows: EasyFileRow[] = [];
   const skipped: EasyFileSkippedEmployee[] = [];
-  let errorCount = 0;
-  let warningCount = 0;
 
   for (const employee of employees) {
     const payslipsForYear = filterPayslipsForSarsTaxYear(allPayslips, taxYear, employee.id);
@@ -163,8 +164,6 @@ export function buildEasyFileExport(
       companyDetails,
       taxYear
     );
-    errorCount += certificate.validation.errors.length;
-    warningCount += certificate.validation.warnings.length;
 
     rows.push({
       employeeId: employee.id,
@@ -173,15 +172,25 @@ export function buildEasyFileExport(
     });
   }
 
-  return {
-    taxYear,
-    periodLabel: getSarsTaxYearPeriodLabel(taxYear),
-    rows,
-    skipped,
-    hasBlockingErrors: errorCount > 0,
-    errorCount,
-    warningCount,
-  };
+  return mergeEasyFileValidation(
+    {
+      taxYear,
+      periodLabel: getSarsTaxYearPeriodLabel(taxYear),
+      rows,
+      skipped,
+      validation: {
+        isValid: true,
+        errors: [],
+        warnings: [],
+        errorCount: 0,
+        warningCount: 0,
+      },
+      hasBlockingErrors: false,
+      errorCount: 0,
+      warningCount: 0,
+    },
+    companyDetails
+  );
 }
 
 /** RFC-4180 CSV field escaping (quote when the value contains a comma, quote, or newline). */
