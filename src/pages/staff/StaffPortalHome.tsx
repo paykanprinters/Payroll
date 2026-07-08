@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePayrollProcessor } from "@/context/PayrollDataContext";
 import { useStaffPortalContext } from "@/context/StaffPortalContext";
 import { formatRand, staffPortalPath } from "@/lib/staff-portal";
+import { buildStaffSavingsSummary } from "@/lib/staff-savings-summary";
 import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
 
 const StaffPortalHome: React.FC = () => {
