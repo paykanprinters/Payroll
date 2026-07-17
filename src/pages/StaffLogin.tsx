@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { authUiVariables } from "@/config/branding";
 import AuthLayout from "@/components/auth/AuthLayout";
 import { ShieldCheck, Building2, KeySquare } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { staffPortalPath } from "@/lib/staff-portal";
 import StaffPwaInstallPrompt from "@/components/staff/StaffPwaInstallPrompt";
 

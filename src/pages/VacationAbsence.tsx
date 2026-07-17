@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CalendarDays, Activity, Palmtree, Thermometer, Clock3 } from "lucide-react";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import VacationAbsenceHeader from "@/components/vacation-absence/VacationAbsenceHeader";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import LeaveAnalytics from "@/components/vacation-absence/LeaveAnalytics";

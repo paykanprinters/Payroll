@@ -21,7 +21,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { staffPortalPath } from "@/lib/staff-portal";
 import BrandLogo from "@/components/brand/BrandLogo";
 import { getBranding } from "@/config/branding";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 
 const NAV_ITEMS = [
   { to: staffPortalPath(), icon: LayoutDashboard, label: "Home", end: true },

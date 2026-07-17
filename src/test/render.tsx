@@ -8,5 +8,5 @@ afterEach(() => {
   cleanup();
 });
 
-export * from "@testing-library/react";
+export { fireEvent, render, screen } from "@testing-library/react";
 export { default as userEvent } from "@testing-library/user-event";

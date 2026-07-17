@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { ShieldAlert, Plus, Pencil } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import {
   fetchBreachIncidents,
   upsertBreachIncident,

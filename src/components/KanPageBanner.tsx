@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { LucideIcon } from "lucide-react";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useCompanyBannerName } from "@/hooks/use-company-banner-name";
 
 export interface KanPageBannerProps {
   icon: LucideIcon;
@@ -11,11 +11,6 @@ export interface KanPageBannerProps {
   companyName?: string;
   showCompanyName?: boolean;
   actions?: React.ReactNode;
-}
-
-export function useCompanyBannerName(): string {
-  const { companyDetails } = usePayrollProcessor();
-  return companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company";
 }
 
 const KanPageBanner: React.FC<KanPageBannerProps> = ({

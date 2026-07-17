@@ -24,8 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Download, UserX, FileSearch } from "lucide-react";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import {
   anonymizeEmployee,
   compilePersonalDataForEmployee,

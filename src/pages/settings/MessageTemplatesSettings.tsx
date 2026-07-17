@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Mail, MessageSquare, Save } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { showError, showSuccess } from "@/utils/toast";
 import {
   MESSAGE_TEMPLATE_CATEGORIES,

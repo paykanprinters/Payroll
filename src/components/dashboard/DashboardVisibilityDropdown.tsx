@@ -16,7 +16,7 @@ import {
   DashboardWidgetVisibility,
   DashboardWidgetKey,
 } from "@/hooks/use-dashboard-settings";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";

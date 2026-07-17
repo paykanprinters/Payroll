@@ -3,12 +3,13 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Building2, CalendarDays, RefreshCcw, ShieldCheck, ArrowRight } from "lucide-react";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { getTaxTableStatusLabel } from "@/lib/tax-tables-validation";
 
 function StatusBadge({ ok, labelOk = "Ready", labelBad = "Needs setup" }: { ok: boolean; labelOk?: string; labelBad?: string }) {

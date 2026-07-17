@@ -19,7 +19,7 @@ import {
   PaymentBatch,
   PaymentBatchItem,
 } from "@/integrations/supabase/payment-batch-queries";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { getEmployeeName } from "@/lib/utils";
 import { generateBankservAcbFile } from "@/lib/bank-disbursement/bankserv-acb";
 import { generateGenericPaymentCsv } from "@/lib/bank-disbursement/generic-csv";

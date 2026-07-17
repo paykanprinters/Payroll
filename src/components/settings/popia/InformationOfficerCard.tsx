@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, ShieldCheck } from "lucide-react";
 import { showError } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { usePopiaSettings } from "@/hooks/use-popia-settings";
 
 const InformationOfficerCard: React.FC = () => {

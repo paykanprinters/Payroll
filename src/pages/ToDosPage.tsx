@@ -10,7 +10,7 @@ import ToDosFiltersBar from "@/components/todos/ToDosFiltersBar";
 import ToDosStats from "@/components/todos/ToDosStats";
 import ToDosTaskList from "@/components/todos/ToDosTaskList";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import {
   buildTodosAdminSummary,
   filterTodos,

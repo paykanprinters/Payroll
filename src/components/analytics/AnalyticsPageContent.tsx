@@ -10,8 +10,8 @@ import SystemHealthPanel from "@/components/analytics/SystemHealthPanel";
 import DatabaseHealthPanel from "@/components/analytics/DatabaseHealthPanel";
 import DashboardPeriodFilterBar from "@/components/dashboard/DashboardPeriodFilterBar";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
-import { useAuth } from "@/context/AuthContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
+import { useAuth } from "@/hooks/use-auth";
 import { useDatabaseHealth } from "@/hooks/use-database-health";
 import { buildSystemHealthReport } from "@/lib/system-health";
 import {

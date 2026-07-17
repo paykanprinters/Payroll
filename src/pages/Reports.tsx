@@ -8,7 +8,7 @@ import ReportsPeriodBar from "@/components/reports/ReportsPeriodBar";
 import ReportsStats from "@/components/reports/ReportsStats";
 import ReportsCatalog from "@/components/reports/ReportsCatalog";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useReportDesignSettings } from "@/hooks/use-report-design-settings";
 import {
   buildReportsAdminSummary,

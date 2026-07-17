@@ -4,7 +4,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Landmark, ReceiptText, Settings, Users, Timer, CalendarDays } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
 const DashboardPrimaryActions: React.FC = () => {

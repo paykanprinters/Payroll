@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldCheck } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import InformationOfficerCard from "@/components/settings/popia/InformationOfficerCard";
 import DataSubjectRequestsCard from "@/components/settings/popia/DataSubjectRequestsCard";
 import ConsentManagerCard from "@/components/settings/popia/ConsentManagerCard";

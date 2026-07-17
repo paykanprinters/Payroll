@@ -28,7 +28,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { getBranding, SIDEBAR_LOGO_FALLBACK, SIDEBAR_LOGO_HEIGHT } from "@/config/branding";
 import BrandLogo from "@/components/brand/BrandLogo";

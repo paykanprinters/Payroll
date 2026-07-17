@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useLocation } from "react-router-dom";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { fetchPayrollRuns, createPayrollRun, PayrollRun } from "@/integrations/supabase/payroll-run-queries";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

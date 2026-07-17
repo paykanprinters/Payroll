@@ -14,8 +14,8 @@ import { Slider } from "@/components/ui/slider";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { supabase } from '@/integrations/supabase/client';
 import { logger, toLogError } from "@/lib/logger";
-import { useAuth } from '@/context/AuthContext';
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries"; // Corrected import path for UserTaxSettings
 import { getSarsTaxTablesForYear, SUPPORTED_SARS_TAX_YEARS } from "@/lib/sars-tax-tables";

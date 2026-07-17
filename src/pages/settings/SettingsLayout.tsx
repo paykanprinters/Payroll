@@ -3,7 +3,7 @@
 import React from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import SettingsHeader from "@/components/settings/SettingsHeader";
 import SetupHealthCard from "@/components/settings/SetupHealthCard";
 

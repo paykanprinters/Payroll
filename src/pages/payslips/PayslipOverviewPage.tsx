@@ -11,14 +11,14 @@ import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSec
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import PayslipPdfDocument from "@/components/payslips/PayslipPdfDocument";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import PayslipsHeader from "@/components/payslips/PayslipsHeader";
 import PayslipsOverviewToolbar from "@/components/payslips/overview/PayslipsOverviewToolbar";
 import PayslipsSummaryCards from "@/components/payslips/overview/PayslipsSummaryCards";
 import PayslipsTable from "@/components/payslips/overview/PayslipsTable";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import {
   usePayslipsOverviewSelectors,
   PayslipsOverviewFilters,

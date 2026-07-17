@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
-import { useStaffPortalContext } from "@/context/StaffPortalContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
+import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
 import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
 import { format, parseISO } from "date-fns";

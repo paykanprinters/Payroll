@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { fetchPayslipsFromSupabase, deletePayslipsByIds } from "@/integrations/supabase/payslip-queries";
 import { logAuditEvent } from "@/utils/audit";
 import {

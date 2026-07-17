@@ -9,7 +9,7 @@ import DocsWorkflowOverview from "@/components/docs/DocsWorkflowOverview";
 import DocsGuidePanel from "@/components/docs/DocsGuidePanel";
 import TrainingManualsSection from "@/components/docs/TrainingManualsSection";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import {
   ADMIN_GUIDE,
   ADMIN_QUICK_LINKS,

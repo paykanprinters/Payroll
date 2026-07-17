@@ -4,8 +4,8 @@ import React from "react";
 import { BookOpen, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/context/AuthContext";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import KanPageBanner from "@/components/KanPageBanner";
 
 interface DocsHeaderProps {

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError } from "@/utils/toast";
 import { seedKanBrandLogo } from "@/lib/seed-kan-logo";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
-import { usePayrollProcessor } from "@/context/PayrollDataContext"; // Import usePayrollProcessor
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context"; // Import usePayrollProcessor
 
 interface CompanyLogoUploadProps {
   canEdit: boolean;

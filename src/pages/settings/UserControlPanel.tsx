@@ -26,8 +26,8 @@ import { showSuccess, showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 import { recordAuditEvent } from "@/lib/audit-trail";
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
-import { usePayrollProcessor } from "@/context/PayrollDataContext"; // Import usePayrollProcessor
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context"; // Import usePayrollProcessor
 
 interface UserData {
   id: string;

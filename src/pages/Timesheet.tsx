@@ -12,7 +12,7 @@ import TimesheetEntryDialog from "@/components/timesheet/TimesheetEntryDialog";
 import TimesheetFiltersBar from "@/components/timesheet/TimesheetFiltersBar";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import TimesheetHeader from "@/components/timesheet/TimesheetHeader";
 import { buildTimesheetAdminSummary } from "@/lib/timesheet-admin-summary";

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { FileText, Plus, Pencil, CheckCircle2 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import {
   fetchPrivacyPolicies,
   publishPrivacyPolicy,

@@ -33,10 +33,7 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
-      // Supabase row payloads are widely typed as `any` in the query layer.
-      // Tracked as tech debt (warning) rather than a build-blocking error so
-      // lint errors stay meaningful for genuine problems.
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "error",
     },
   },
 );

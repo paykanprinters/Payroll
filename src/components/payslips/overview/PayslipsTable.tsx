@@ -25,17 +25,9 @@ import {
   PaginationItem,
   PaginationLink,
 } from "@/components/ui/pagination";
+import { groupPayslipsByEmployee } from "@/components/payslips/overview/group-payslips";
 
 const EMPLOYEES_PER_PAGE = 10;
-
-export type EmployeePayslipGroup = {
-  employeeId: string;
-  name: string;
-  customId: string;
-  payslips: MockPayslip[];
-  totalNet: number;
-  latestPeriodLabel: string;
-};
 
 const formatCurrencyZAR = (value: number | null | undefined) => {
   const n = typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -72,41 +64,6 @@ const formatPayPeriod = (payPeriod: string) => {
   }
   return `${format(start, "dd MMM yyyy")} – ${format(end, "dd MMM yyyy")}`;
 };
-
-export function groupPayslipsByEmployee(
-  payslips: MockPayslip[],
-  getEmployeeName: (employeeId: string) => string,
-  getEmployeeCustomId: (employeeId: string) => string
-): EmployeePayslipGroup[] {
-  const byEmployee = new Map<string, MockPayslip[]>();
-
-  payslips.forEach((p) => {
-    const list = byEmployee.get(p.employeeId) || [];
-    list.push(p);
-    byEmployee.set(p.employeeId, list);
-  });
-
-  const groups: EmployeePayslipGroup[] = [];
-
-  byEmployee.forEach((employeePayslips, employeeId) => {
-    const sorted = [...employeePayslips].sort((a, b) => b.payPeriod.localeCompare(a.payPeriod));
-    const totalNet = sorted.reduce(
-      (sum, p) => sum + (typeof p.netPay === "number" && Number.isFinite(p.netPay) ? p.netPay : 0),
-      0
-    );
-
-    groups.push({
-      employeeId,
-      name: getEmployeeName(employeeId),
-      customId: getEmployeeCustomId(employeeId),
-      payslips: sorted,
-      totalNet,
-      latestPeriodLabel: sorted[0] ? formatPayPeriod(sorted[0].payPeriod) : "—",
-    });
-  });
-
-  return groups.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-}
 
 interface PayslipsTableProps {
   payslips: MockPayslip[];

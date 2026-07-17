@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import { AppFooter } from "./made-with-dyad";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings as SettingsIcon, LayoutDashboard, User, Loader2 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { supabase } from "@/integrations/supabase/client";
 import { getBranding } from "@/config/branding";
 import { recordAuthEvent } from "@/lib/audit-trail";

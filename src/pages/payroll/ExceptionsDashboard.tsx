@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { usePublicHolidays } from "@/hooks/use-public-holidays";
 import { format, parseISO } from "date-fns";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";

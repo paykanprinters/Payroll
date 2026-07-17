@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import RetroFunkHeader from "@/components/dashboard/RetroFunkHeader";
 import DashboardPrimaryActions from "@/components/dashboard/DashboardPrimaryActions";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";

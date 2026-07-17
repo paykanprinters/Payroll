@@ -9,7 +9,7 @@ import { PayslipDesignSettings, MockPayslip, MockCompanyDetails, MockEmployee } 
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard"; // Import IndividualPayslipCard
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import { seedKanBrandLogo } from "@/lib/seed-kan-logo";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 
 // Import new modular components
 import PayslipLayoutOptions from "@/components/settings/payslip-design/PayslipLayoutOptions";

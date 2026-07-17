@@ -7,7 +7,7 @@ import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/E
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import EmployeeProfilePdfDocument from "@/components/reports/EmployeeProfilePdfDocument";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import EmployeesHeader from "@/components/employees/EmployeesHeader";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import EmployeesToolbar, { UNASSIGNED_DEPARTMENT } from "@/components/employees/EmployeesToolbar";

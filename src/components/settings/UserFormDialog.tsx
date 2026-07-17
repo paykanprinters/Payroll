@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { showSuccess, showError } from "@/utils/toast";
 import { Eye, EyeOff, RefreshCcw, Mail, ShieldCheck, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 
 const userSchema = z.object({
   id: z.string().optional(),

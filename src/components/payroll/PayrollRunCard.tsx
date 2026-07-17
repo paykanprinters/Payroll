@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { format, addDays, subDays, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, getDay, getDate, setDate, setDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import CalculatePaycheckDialog from "./CalculatePaycheckDialog";
 import { PayslipDesignSettings, MockEmployee, MockCompanyDetails, MockPayslip } from "@/lib/mock-data-interfaces";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";

@@ -5,7 +5,7 @@ import { format, eachDayOfInterval, isWeekend } from "date-fns";
 import { calculateWorkingDays } from "@/lib/payroll-calculations";
 import { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { v4 as uuidv4 } from "uuid";
 import {
   fetchLeaveRecordsFromSupabase,

@@ -5,9 +5,9 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Building2, CalendarDays, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { getTaxTableStatusLabel } from "@/lib/tax-tables-validation";
 
 function StatusBadge({ ok }: { ok: boolean }) {

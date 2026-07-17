@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import StaffHome from "./StaffHome";
 import Dashboard from "./Dashboard";
 

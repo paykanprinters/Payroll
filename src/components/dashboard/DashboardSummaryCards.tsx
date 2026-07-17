@@ -9,7 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import UpcomingPayrollSummaryCard from "@/components/payroll/UpcomingPayrollSummaryCard";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { differenceInCalendarDays } from "date-fns";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";

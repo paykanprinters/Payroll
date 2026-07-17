@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { Link2, RefreshCcw } from "lucide-react";
 import { useBiometricApiSettings } from "@/hooks/use-biometric-api-settings";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
-import { useAuth } from "@/context/AuthContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
+import { useAuth } from "@/hooks/use-auth";
 import { BIOMETRIC_API_URL_PLACEHOLDER } from "@/lib/biometric-attendance-parser";
 
 const schema = z.object({

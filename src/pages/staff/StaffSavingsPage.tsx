@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
-import { useStaffPortalContext } from "@/context/StaffPortalContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
+import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { buildStaffSavingsSummary, StaffSavingsPlanRow } from "@/lib/staff-savings-summary";
 import { formatRand, staffPortalPath } from "@/lib/staff-portal";
 import { format } from "date-fns";

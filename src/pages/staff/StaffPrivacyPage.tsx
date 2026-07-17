@@ -7,8 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, CheckCircle2 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
-import { useStaffPortalContext } from "@/context/StaffPortalContext";
+import { useAuth } from "@/hooks/use-auth";
+import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import {
   fetchActivePrivacyPolicy,
   fetchConsentForEmployee,

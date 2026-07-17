@@ -4,7 +4,7 @@ import React from "react";
 import { FileText, RefreshCcw, Loader2, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 import KanPageBanner from "@/components/KanPageBanner";
 

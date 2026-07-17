@@ -5,7 +5,7 @@ import StaffBranding from "@/components/staff/StaffBranding";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 
 const StaffHome: React.FC = () => {
   const { user } = useAuth();

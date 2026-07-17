@@ -1,8 +1,6 @@
 "use client";
 
 import React, {
-  createContext,
-  useContext,
   useState,
   useEffect,
   useRef,
@@ -14,32 +12,8 @@ import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isStaffPortalPath, STAFF_LOGIN_PATH, staffPortalPath } from "@/lib/staff-portal";
 import { recordAuthEvent } from "@/lib/audit-trail";
-
-type UserRole = "Admin" | "Manager" | "Staff" | "Viewer";
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: UserRole;
-  name: string;
-}
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoadingAuth: boolean;
-  refreshAuth: (opts?: { silent?: boolean; force?: boolean }) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextValue>({
-  user: null,
-  isAuthenticated: false,
-  isLoadingAuth: true,
-  refreshAuth: async () => {},
-});
-AuthContext.displayName = "AuthContext";
-
-export const useAuth = () => useContext(AuthContext);
+import { AuthContext } from "@/context/auth-context-state";
+import type { AuthContextValue, AuthUser, UserRole } from "@/context/auth-types";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);

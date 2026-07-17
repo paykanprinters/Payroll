@@ -16,7 +16,7 @@ import {
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 import { MockEmployee, SavingPlan } from "@/lib/mock-data-interfaces";
 import SavingsPlanManagerDialog from "@/components/savings/SavingsPlanManagerDialog";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useSavingPlansData } from "@/hooks/use-saving-plans-data";
 import SavingsHeader from "@/components/savings/SavingsHeader";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";

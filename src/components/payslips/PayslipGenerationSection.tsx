@@ -8,7 +8,7 @@ import { filterPayslipsForBulkPeriod } from "@/lib/payslip-period-filter";
 import { buildPayslipEmailPayload } from "@/lib/email/build-payslip-email-payload";
 import { buildPayslipSmsPayload } from "@/lib/sms/build-payslip-sms-payload";
 import { sendPayslipEmail, sendPayslipSms } from "@/integrations/supabase/notification-queries";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import BulkPayslipActions from "./BulkPayslipActions";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";

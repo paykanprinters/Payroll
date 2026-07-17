@@ -9,8 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Send, Save, MessageSquare, RefreshCw } from "lucide-react";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useNotificationSettings } from "@/hooks/use-notification-settings";
 import {
   fetchNotificationLog,

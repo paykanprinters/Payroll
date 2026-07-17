@@ -2,9 +2,9 @@
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
 import { supabase } from "@/integrations/supabase/client";
 import { getBranding } from "@/config/branding";

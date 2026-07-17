@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { differenceInYears } from "date-fns";
 import { bankersRound } from "@/lib/utils";
 import { computeMonthlyMedicalTaxCredit, getSarsMedicalTaxCredits } from "@/lib/sars-tax-tables";

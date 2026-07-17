@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { showError, showSuccess } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { UserTaxSettings, fetchUserTaxSettingsFromSupabase, upsertUserTaxSettingsToSupabase } from "@/integrations/supabase/user-tax-settings-queries";
 import { logger } from "@/lib/logger";
 

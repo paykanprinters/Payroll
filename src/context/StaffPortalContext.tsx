@@ -1,15 +1,9 @@
 "use client";
 
-import React, { createContext, useContext } from "react";
-import { MockEmployee } from "@/lib/mock-data-interfaces";
+import React from "react";
+import type { MockEmployee } from "@/lib/mock-data-interfaces";
 import { STAFF_PORTAL_BASE } from "@/lib/staff-portal";
-
-type StaffPortalContextValue = {
-  employee: MockEmployee;
-  basePath: string;
-};
-
-const StaffPortalContext = createContext<StaffPortalContextValue | null>(null);
+import { StaffPortalContext } from "@/context/staff-portal-context-state";
 
 export function StaffPortalProvider({
   employee,
@@ -23,12 +17,4 @@ export function StaffPortalProvider({
       {children}
     </StaffPortalContext.Provider>
   );
-}
-
-export function useStaffPortalContext(): StaffPortalContextValue {
-  const ctx = useContext(StaffPortalContext);
-  if (!ctx) {
-    throw new Error("useStaffPortalContext must be used within StaffPortalProvider");
-  }
-  return ctx;
 }

@@ -12,8 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 import { useWorkHoursSettings, WorkHoursSettings } from "@/hooks/use-work-hours-settings";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
-import { useAuth } from "@/context/AuthContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
+import { useAuth } from "@/hooks/use-auth";
 
 const timeToMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);

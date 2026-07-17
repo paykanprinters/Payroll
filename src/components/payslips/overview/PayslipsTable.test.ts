@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupPayslipsByEmployee } from "@/components/payslips/overview/PayslipsTable";
+import { groupPayslipsByEmployee } from "@/components/payslips/overview/group-payslips";
 import type { MockPayslip } from "@/lib/mock-data-interfaces";
 
 describe("groupPayslipsByEmployee", () => {

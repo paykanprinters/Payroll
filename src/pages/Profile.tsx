@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, User } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 
 import AccountProfileSection from "@/pages/profile/AccountProfileSection";
 import EmployeeProfileSection from "@/pages/profile/EmployeeProfileSection";

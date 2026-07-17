@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/select";
 import { FileCheck2 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
-import { useAuth } from "@/context/AuthContext";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
+import { useAuth } from "@/hooks/use-auth";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { CONSENT_TYPE_META, CONSENT_TYPES, type ConsentType } from "@/lib/popia/consent";
 import {
   fetchConsentForEmployee,

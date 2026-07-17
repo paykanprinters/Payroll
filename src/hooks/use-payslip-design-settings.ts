@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { PayslipDesignSettings } from "@/lib/mock-data-interfaces";
 import { fetchPayslipDesignSettings, upsertPayslipDesignSettings } from "@/integrations/supabase/payslip-design-settings-queries";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { showSuccess, showError } from "@/utils/toast";
 
 const DEFAULT_SETTINGS: PayslipDesignSettings = {

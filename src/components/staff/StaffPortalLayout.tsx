@@ -4,11 +4,11 @@ import React, { Suspense } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Loader2, Sparkles, LogOut } from "lucide-react";
 import StaffPortalSidebar from "@/components/staff/StaffPortalSidebar";
-import { useStaffPortalContext } from "@/context/StaffPortalContext";
+import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { supabase } from "@/integrations/supabase/client";
 import { STAFF_LOGIN_PATH } from "@/lib/staff-portal";
 import { recordAuthEvent } from "@/lib/audit-trail";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 

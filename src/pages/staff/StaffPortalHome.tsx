@@ -13,8 +13,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { usePayrollProcessor } from "@/context/PayrollDataContext";
-import { useStaffPortalContext } from "@/context/StaffPortalContext";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
+import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { formatRand, staffPortalPath } from "@/lib/staff-portal";
 import { buildStaffSavingsSummary } from "@/lib/staff-savings-summary";
 import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
