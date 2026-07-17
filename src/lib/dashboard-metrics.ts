@@ -13,6 +13,7 @@ import type {
   TimesheetEntry,
 } from "@/lib/mock-data-interfaces";
 import type { PayrollSavingsEntry, SavingsStatus } from "@/lib/savings-types";
+import { cleanPayslipBreakdownLabel } from "@/lib/payslip-label-utils";
 
 export type MonthValue = { name: string; value: number; key: string };
 
@@ -79,7 +80,7 @@ export function computeDeductionsBreakdown(payslips: MockPayslip[], opts?: { top
   const m = new Map<string, number>();
   for (const p of payslips) {
     for (const d of p.deductionsBreakdown || []) {
-      const key = (d.name || "Other").trim() || "Other";
+      const key = cleanPayslipBreakdownLabel(d.name || "Other") || "Other";
       m.set(key, (m.get(key) || 0) + (d.amount || 0));
     }
   }

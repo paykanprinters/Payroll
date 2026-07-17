@@ -2,6 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import { MockPayslip, MockEmployee } from "@/lib/mock-data-interfaces";
+import { cleanPayslipBreakdownLabel } from "@/lib/payslip-label-utils";
 
 export type FrequencyFilter = "all" | "Monthly" | "Weekly" | "Bi-Weekly";
 
@@ -12,9 +13,6 @@ export interface PayslipsOverviewFilters {
   dateEnd: string;   // YYYY-MM-DD or empty
   search: string;
 }
-
-const cleanLabel = (label: string) =>
-  label.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)\s*$/i, "");
 
 export const usePayslipsOverviewSelectors = (
   payslips: MockPayslip[],
@@ -103,7 +101,7 @@ export const usePayslipsOverviewSelectors = (
     const deductionsMap = new Map<string, number>();
     filteredPayslips.forEach(payslip => {
       payslip.deductionsBreakdown.forEach(deduction => {
-        const label = cleanLabel(deduction.name);
+        const label = cleanPayslipBreakdownLabel(deduction.name);
         deductionsMap.set(label, (deductionsMap.get(label) || 0) + deduction.amount);
       });
     });
