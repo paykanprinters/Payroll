@@ -60,22 +60,20 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const { downloadPdf, openPdf } = usePdfVector();
   const { downloadZip } = useZipDownload();
 
-  const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
-    defaultReportPaperSize: "A4",
-    includeCompanyLogo: true,
-    includeCompanyDetails: true,
-    reportContentFontSize: 14,
-    irp5ContentFontSize: 12,
-  };
-
   const loadReportDesignSettings = React.useCallback((): ReportDesignSettings => {
+    const defaults: ReportDesignSettings = {
+      defaultReportPaperSize: "A4",
+      includeCompanyLogo: true,
+      includeCompanyDetails: true,
+      reportContentFontSize: 14,
+      irp5ContentFontSize: 12,
+    };
     const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
     if (savedReportDesignSettings) {
       return JSON.parse(savedReportDesignSettings) as ReportDesignSettings;
-    } else {
-      localStorage.setItem("reportDesignSettings", JSON.stringify(DEFAULT_REPORT_DESIGN_SETTINGS));
-      return DEFAULT_REPORT_DESIGN_SETTINGS;
     }
+    localStorage.setItem("reportDesignSettings", JSON.stringify(defaults));
+    return defaults;
   }, []);
 
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);

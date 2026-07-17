@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CheckCircle, XCircle, PencilLine, Save, User } from "lucide-react";
 import { ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
@@ -79,7 +79,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
     };
   }, [workHoursSettings]);
 
-  const getRowWorkHours = (row: ParsedTimesheetRow) => {
+  const getRowWorkHours = useCallback((row: ParsedTimesheetRow) => {
     const dateObj = parse(normalizeDate(row.date), "yyyy-MM-dd", new Date());
     if (!isValid(dateObj)) return 0;
     const employee = employeesById.get(row.employeeId);
@@ -98,7 +98,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
       metricOpts
     );
     return totalWorkHours;
-  };
+  }, [employeesById, metricOpts]);
 
   const indexedRows = useMemo(
     () =>
@@ -108,8 +108,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
         workHours: getRowWorkHours(row),
         key: rowKeyFor(row),
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [validatedData, employeesById, metricOpts]
+    [validatedData, getRowWorkHours]
   );
 
   const rowByKey = useMemo(() => {

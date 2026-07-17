@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -77,11 +77,11 @@ const LoansAndAdvancements: React.FC = () => {
     return e ? `${e.firstName} ${e.lastName}` : "Unknown";
   };
 
-  const getEmployeeLabel = (employeeId: string) => {
+  const getEmployeeLabel = useCallback((employeeId: string) => {
     const e = employees.find((x) => x.id === employeeId);
     if (!e) return "Unknown";
     return `${e.firstName} ${e.lastName}${e.customEmployeeId ? ` • ${e.customEmployeeId}` : ""}`;
-  };
+  }, [employees]);
 
   const form = useForm<LoanFormValues>({
     resolver: zodResolver(loanSchema),
@@ -113,7 +113,7 @@ const LoansAndAdvancements: React.FC = () => {
         );
       })
       .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
-  }, [loans, employeeFilterId, search, employees]);
+  }, [loans, employeeFilterId, search, getEmployeeLabel]);
 
   const totals = useMemo(() => {
     const totalPrincipal = loans.reduce((s, l) => s + Number(l.loanAmount || 0), 0);

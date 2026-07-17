@@ -70,12 +70,12 @@ const Reports: React.FC = () => {
 
   const periodPayslips = useMemo(
     () => filterPayslipsForReportPeriod(payslips, selectedReportDate, reportPeriodType),
-    [payslips, selectedReportDate, reportPeriodType, refreshTick]
+    [payslips, selectedReportDate, reportPeriodType]
   );
 
   const periodLeave = useMemo(
     () => filterLeaveForReportPeriod(leaveRecords || [], selectedReportDate, reportPeriodType),
-    [leaveRecords, selectedReportDate, reportPeriodType, refreshTick]
+    [leaveRecords, selectedReportDate, reportPeriodType]
   );
 
   const summary = useMemo(() => buildReportsAdminSummary(periodPayslips), [periodPayslips]);

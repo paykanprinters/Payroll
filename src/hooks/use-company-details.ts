@@ -218,10 +218,12 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         biometricApiUrl: mockBiometricApiUrl,
       };
 
-      // Deep comparison for mock data as well
-      if (JSON.stringify(newMockCompanyDetails) !== JSON.stringify(companyDetails)) {
-        setCompanyDetails(newMockCompanyDetails);
-      }
+      // Deep comparison via functional update so companyDetails need not be a dep
+      setCompanyDetails((prev) =>
+        JSON.stringify(newMockCompanyDetails) !== JSON.stringify(prev)
+          ? newMockCompanyDetails
+          : prev
+      );
       setIsLoading(false);
     } else {
       // Live mode: fetch once per auth/mock-state change
@@ -229,7 +231,7 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
 
       // Focus refresh is handled centrally in usePayrollProcessor.
     }
-  }, [isMockDataEnabled, isLoadingAuth, isAuthenticated]); // REMOVED companyDetails and fetchCompanyDetails from deps
+  }, [isMockDataEnabled, isLoadingAuth, isAuthenticated, fetchCompanyDetails]);
 
   return { companyDetails, isLoading, error, upsertCompanyDetails, refetchCompanyDetails: fetchCompanyDetails };
 };

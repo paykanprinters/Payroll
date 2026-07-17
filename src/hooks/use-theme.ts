@@ -9,6 +9,16 @@ const STORAGE_KEY = "app-theme";
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>("light");
 
+  const applyTheme = useCallback((next: Theme) => {
+    const root = document.documentElement;
+    if (next === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem(STORAGE_KEY, next);
+  }, []);
+
   // Initialize theme from localStorage or system preference
   useEffect(() => {
     const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null);
@@ -19,17 +29,7 @@ export function useTheme() {
       // Default to light; you could read system preference if desired
       applyTheme("light");
     }
-  }, []);
-
-  const applyTheme = useCallback((next: Theme) => {
-    const root = document.documentElement;
-    if (next === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    localStorage.setItem(STORAGE_KEY, next);
-  }, []);
+  }, [applyTheme]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {

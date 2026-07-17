@@ -104,9 +104,10 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
     setOrDelete("dateStart", dateStart);
     setOrDelete("dateEnd", dateEnd);
     setOrDelete("search", search.trim());
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeFilterId, statusFilter, dateStart, dateEnd, search]);
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [employeeFilterId, statusFilter, dateStart, dateEnd, search, searchParams, setSearchParams]);
 
   const employeesById = React.useMemo(() => {
     const map = new Map<string, { name: string; customId: string }>();

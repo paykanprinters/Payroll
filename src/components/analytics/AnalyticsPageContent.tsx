@@ -70,7 +70,7 @@ const AnalyticsPageContent: React.FC<AnalyticsPageContentProps> = ({
       getAnalyticsScope(employees, payslips, leaveRecords || [], {
         staffUserId: variant === "staff" ? staffUserId : undefined,
       }),
-    [employees, payslips, leaveRecords, variant, staffUserId, refreshTick]
+    [employees, payslips, leaveRecords, variant, staffUserId]
   );
 
   const periodScope = useMemo(

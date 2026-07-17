@@ -50,7 +50,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   workHoursSettings,
   biometricApiUrl,
 }) => {
-  const safeEmployees: MockEmployee[] = Array.isArray(employees) ? employees : [];
+  const safeEmployees = useMemo(
+    () => (Array.isArray(employees) ? employees : []),
+    [employees]
+  );
   const [importSource, setImportSource] = useState<"api" | "csv">("api");
   const [apiAggregationErrors, setApiAggregationErrors] = useState<AggregationError[]>([]);
 

@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         lastRefreshTsRef.current = Date.now();
       }
     },
-    [buildAuthUserFromSession, fetchProfile]
+    [fetchProfile]
   );
 
   useEffect(() => {

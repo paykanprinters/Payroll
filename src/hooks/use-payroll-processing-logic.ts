@@ -293,7 +293,6 @@ export const usePayrollProcessingLogic = (
       workHoursSettings,
       publicHolidays,
       companyDetails,
-      isMockDataEnabled,
       earningComponents,
       deductionComponents,
       assignments,

@@ -250,7 +250,7 @@ export const useTimesheetData = ({
     }
     setIsEditing(false);
     setEditingTimesheet(null);
-  }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, weeklyThreshold, currentMetricOpts]);
+  }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, weeklyThreshold, currentMetricOpts, cutOffDay, workDays]);
 
   const addTimesheetBatch = useCallback(async (newEntries: ImportableTimesheetEntry[]) => {
     if (newEntries.length === 0) return;
@@ -452,7 +452,7 @@ export const useTimesheetData = ({
         }
       }
     }
-  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, workHoursSettings, weeklyThreshold, currentMetricOpts]);
+  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, weeklyThreshold, currentMetricOpts, cutOffDay, workDays]);
 
   const deleteTimesheet = useCallback(async (id: string) => {
     if (isMockDataEnabled) {

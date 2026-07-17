@@ -2,16 +2,15 @@
 
 import React, { useEffect, useRef } from "react";
 
+const MIN_INTERVAL_MS = 30000; // throttle to avoid spamming when switching apps
+const MIN_HIDDEN_DURATION_MS = 15000; // only refresh if tab was hidden for a bit
+// If the tab was hidden for a long time (sleep/lock), a clean reload is often the most reliable recovery.
+const FORCE_RELOAD_HIDDEN_MS = 3 * 60 * 1000; // 3 minutes
+const FORCE_RELOAD_COOLDOWN_MS = 10 * 60 * 1000; // don't reload repeatedly
+
 const AutoRefreshOnFocus: React.FC = () => {
   const lastTriggeredRef = useRef<number>(0);
   const lastHiddenAtRef = useRef<number | null>(null);
-
-  const MIN_INTERVAL_MS = 30000; // throttle to avoid spamming when switching apps
-  const MIN_HIDDEN_DURATION_MS = 15000; // only refresh if tab was hidden for a bit
-
-  // If the tab was hidden for a long time (sleep/lock), a clean reload is often the most reliable recovery.
-  const FORCE_RELOAD_HIDDEN_MS = 3 * 60 * 1000; // 3 minutes
-  const FORCE_RELOAD_COOLDOWN_MS = 10 * 60 * 1000; // don't reload repeatedly
 
   useEffect(() => {
     const onOnline = () => {

@@ -79,7 +79,8 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
       }
     };
 
-    imageRefs.current.forEach(img => {
+    const images = Array.from(imageRefs.current);
+    images.forEach(img => {
       if (img.complete) {
         handleImageLoad();
       } else {
@@ -89,7 +90,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     });
 
     return () => {
-      imageRefs.current.forEach(img => {
+      images.forEach(img => {
         img.removeEventListener('load', handleImageLoad);
         img.removeEventListener('error', handleImageLoad);
       });

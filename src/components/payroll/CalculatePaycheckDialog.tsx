@@ -73,7 +73,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       setCurrentPeriodStart(payPeriodStart);
       setCurrentPeriodEnd(payPeriodEnd);
     }
-  }, [isOpen]);
+  }, [isOpen, payCycleSettings]);
 
   const handleEmployeeSelect = useCallback((employeeId: string) => {
     setSelectedEmployeeId(employeeId);

@@ -98,9 +98,10 @@ const PayslipOverviewPage: React.FC = () => {
     setOrDelete("dateEnd", filters.dateEnd);
     setOrDelete("search", filters.search.trim());
 
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [filters, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (user?.role === "Staff") {
@@ -111,7 +112,7 @@ const PayslipOverviewPage: React.FC = () => {
         setSelectedEmployeeId(myId);
       }
     }
-  }, [user, employees]);
+  }, [user, employees, filters.employeeFilterId]);
 
   useEffect(() => {
     if (filters.employeeFilterId !== "all" && filters.employeeFilterId !== selectedEmployeeId) {
