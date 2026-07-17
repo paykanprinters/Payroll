@@ -75,7 +75,7 @@ async function fetchTaxTablesFromDb(year: number): Promise<TaxTables> {
     throw new Error(payeError?.message || taxYearDetailsError?.message || "Failed to load tax tables");
   }
   if (uifSdlError) {
-    logger.warn("useTaxTables: UIF/SDL rates missing for year", taxYear);
+    logger.warn("useTaxTables: UIF/SDL rates missing for year", year);
   }
 
   const payeBrackets = payeData || [];
