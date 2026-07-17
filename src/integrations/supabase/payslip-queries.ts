@@ -1,19 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
+import { keysToSnakeCase, mapKeysToCamelCase } from "@/lib/case-converters";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
-export const convertPayslipKeysToCamelCase = (obj: any): MockPayslip => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as MockPayslip;
-};
+export const convertPayslipKeysToCamelCase = (obj: unknown): MockPayslip =>
+  mapKeysToCamelCase<MockPayslip>(obj);
 
 // Fields that exist on MockPayslip in-memory but are not (yet) persisted columns.
 // employerSdl is computed at payroll-run time for reporting; its dedicated column
@@ -22,17 +15,14 @@ export const convertPayslipKeysToCamelCase = (obj: any): MockPayslip => {
 const NON_PERSISTED_PAYSLIP_KEYS = new Set(["employerSdl"]);
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-export const convertPayslipKeysToSnakeCase = (obj: Partial<MockPayslip>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      if (NON_PERSISTED_PAYSLIP_KEYS.has(key)) continue;
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+export const convertPayslipKeysToSnakeCase = (
+  obj: Partial<MockPayslip>
+): Record<string, unknown> =>
+  keysToSnakeCase(
+    Object.fromEntries(
+      Object.entries(obj).filter(([key]) => !NON_PERSISTED_PAYSLIP_KEYS.has(key))
+    )
+  );
 
 export const fetchPayslipsFromSupabase = async (): Promise<MockPayslip[]> => {
   logger.debug("payslip-queries: fetching live payslips");

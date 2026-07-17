@@ -1,32 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
+import { keysToSnakeCase, mapKeysToCamelCase } from "@/lib/case-converters";
 import { TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 // Removed: import { sql } from '@supabase/supabase-js'; // Import sql for raw SQL expressions
 
 // Helper to convert snake_case to camelCase for Supabase data
-export const convertTimesheetKeysToCamelCase = (obj: any): TimesheetEntry => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as TimesheetEntry;
-};
+export const convertTimesheetKeysToCamelCase = (obj: unknown): TimesheetEntry =>
+  mapKeysToCamelCase<TimesheetEntry>(obj);
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-export const convertTimesheetKeysToSnakeCase = (obj: Partial<TimesheetEntry>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+export const convertTimesheetKeysToSnakeCase = (
+  obj: Partial<TimesheetEntry>
+): Record<string, unknown> => keysToSnakeCase(obj);
 
 export const fetchTimesheetsFromSupabase = async (): Promise<TimesheetEntry[]> => {
   logger.debug("timesheet-queries: fetching live timesheets");

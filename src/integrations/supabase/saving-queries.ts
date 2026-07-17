@@ -1,31 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
+import { keysToSnakeCase, mapKeysToCamelCase } from "@/lib/case-converters";
 import { SavingPlan } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
-export const convertSavingPlanKeysToCamelCase = (obj: any): SavingPlan => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as SavingPlan;
-};
+export const convertSavingPlanKeysToCamelCase = (obj: unknown): SavingPlan =>
+  mapKeysToCamelCase<SavingPlan>(obj);
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-export const convertSavingPlanKeysToSnakeCase = (obj: Partial<SavingPlan>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+export const convertSavingPlanKeysToSnakeCase = (
+  obj: Partial<SavingPlan>
+): Record<string, unknown> => keysToSnakeCase(obj);
 
 export const fetchSavingPlansFromSupabase = async (): Promise<SavingPlan[]> => {
   logger.debug("saving-queries: fetching live saving plans");

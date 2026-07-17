@@ -2,7 +2,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export const createRunSnapshot = async (runId: string, snapshotType: 'Approved' | 'Locked', data: Record<string, any>): Promise<boolean> => {
+export const createRunSnapshot = async (
+  runId: string,
+  snapshotType: 'Approved' | 'Locked',
+  data: Record<string, unknown>
+): Promise<boolean> => {
   const { data: userRes } = await supabase.auth.getUser();
   const userId = userRes?.user?.id || null;
 

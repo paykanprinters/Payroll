@@ -1,31 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
+import { keysToSnakeCase, mapKeysToCamelCase } from "@/lib/case-converters";
 import { Loan } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
-export const convertLoanKeysToCamelCase = (obj: any): Loan => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as Loan;
-};
+export const convertLoanKeysToCamelCase = (obj: unknown): Loan => mapKeysToCamelCase<Loan>(obj);
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-export const convertLoanKeysToSnakeCase = (obj: Partial<Loan>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+export const convertLoanKeysToSnakeCase = (obj: Partial<Loan>): Record<string, unknown> =>
+  keysToSnakeCase(obj);
 
 export const fetchLoansFromSupabase = async (): Promise<Loan[]> => {
   logger.debug("loan-queries: fetching live loans");

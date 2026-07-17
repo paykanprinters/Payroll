@@ -1,30 +1,38 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+import { isRecord, type UnknownRecord } from "@/lib/case-converters";
 import { PayrollSavingsEntry, SavingsStatus, updateStatusClient } from "@/lib/savings-types";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
 // snake <-> camel helpers
-const toCamel = (row: any): PayrollSavingsEntry => ({
-  id: row.id,
-  employeeId: row.employee_id,
-  planId: row.plan_id,
-  originalAmount: Number(row.original_amount),
-  overrideAmount: row.override_amount !== null ? Number(row.override_amount) : null,
-  amountPaid: Number(row.amount_paid),
-  remainingBalance: Number(row.remaining_balance),
-  status: row.status as SavingsStatus,
-  paused: !!row.paused,
-  pauseStartDate: row.pause_start_date,
-  nextPaymentDate: row.next_payment_date,
-  pauseReason: row.pause_reason,
-  lastUpdated: row.last_updated,
-  createdAt: row.created_at,
-});
+const toCamel = (value: unknown): PayrollSavingsEntry => {
+  if (!isRecord(value)) {
+    throw new TypeError("Expected a payroll savings entry row.");
+  }
 
-const toSnake = (partial: Partial<PayrollSavingsEntry>) => {
-  const out: any = {};
+  const row = value as UnknownRecord;
+  return {
+    id: row.id as string,
+    employeeId: row.employee_id as string,
+    planId: row.plan_id as string,
+    originalAmount: Number(row.original_amount),
+    overrideAmount: row.override_amount !== null ? Number(row.override_amount) : null,
+    amountPaid: Number(row.amount_paid),
+    remainingBalance: Number(row.remaining_balance),
+    status: row.status as SavingsStatus,
+    paused: !!row.paused,
+    pauseStartDate: row.pause_start_date as string | null,
+    nextPaymentDate: row.next_payment_date as string | null,
+    pauseReason: row.pause_reason as string | null,
+    lastUpdated: row.last_updated as string,
+    createdAt: row.created_at as string,
+  };
+};
+
+const toSnake = (partial: Partial<PayrollSavingsEntry>): UnknownRecord => {
+  const out: UnknownRecord = {};
   if ("id" in partial) out.id = partial.id;
   if ("employeeId" in partial) out.employee_id = partial.employeeId;
   if ("planId" in partial) out.plan_id = partial.planId;

@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+import { keysToCamelCase, keysToSnakeCase } from "@/lib/case-converters";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
@@ -34,22 +35,8 @@ export interface PaymentBatchItem {
   updatedAt?: string | null;
 }
 
-const toCamel = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const camelKey = k.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-    out[camelKey] = obj[k];
-  }
-  return out;
-};
-const toSnake = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const snakeKey = k.replace(/[A-Z]/g, (L) => `_${L.toLowerCase()}`);
-    out[snakeKey] = obj[k];
-  }
-  return out;
-};
+const toCamel = (value: unknown): unknown => keysToCamelCase(value);
+const toSnake = keysToSnakeCase;
 
 export const fetchPaymentBatches = async (): Promise<PaymentBatch[]> => {
   const { data, error } = await supabase

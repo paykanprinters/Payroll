@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { keysToSnakeCase, mapKeysToCamelCase } from "@/lib/case-converters";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
@@ -14,28 +15,13 @@ export interface UserTaxSettings {
 }
 
 // Helper to convert snake_case to camelCase for Supabase data
-export const convertUserTaxSettingsKeysToCamelCase = (obj: any): UserTaxSettings => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as UserTaxSettings;
-};
+export const convertUserTaxSettingsKeysToCamelCase = (obj: unknown): UserTaxSettings =>
+  mapKeysToCamelCase<UserTaxSettings>(obj);
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-export const convertUserTaxSettingsKeysToSnakeCase = (obj: Partial<UserTaxSettings>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+export const convertUserTaxSettingsKeysToSnakeCase = (
+  obj: Partial<UserTaxSettings>
+): Record<string, unknown> => keysToSnakeCase(obj);
 
 export const fetchUserTaxSettingsFromSupabase = async (userId: string): Promise<UserTaxSettings | null> => {
   logger.debug("user-tax-settings-queries: fetching live user tax settings");

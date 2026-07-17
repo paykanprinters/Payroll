@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+import { keysToCamelCase, keysToSnakeCase } from "@/lib/case-converters";
 import { showError, showSuccess } from "@/utils/toast";
 
 export interface OvertimePremiumRules {
@@ -18,22 +19,8 @@ export interface OvertimePremiumRules {
   updatedAt?: string | null;
 }
 
-const toCamel = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const camelKey = k.replace(/_([a-z])/g, (_: any, c: string) => c.toUpperCase());
-    out[camelKey] = obj[k];
-  }
-  return out;
-};
-const toSnake = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const snakeKey = k.replace(/[A-Z]/g, (L) => `_${L.toLowerCase()}`);
-    out[snakeKey] = obj[k];
-  }
-  return out;
-};
+const toCamel = (value: unknown): unknown => keysToCamelCase(value);
+const toSnake = keysToSnakeCase;
 
 export const fetchOvertimeRules = async (): Promise<OvertimePremiumRules | null> => {
   const { data: session } = await supabase.auth.getUser();

@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+import { keysToCamelCase, keysToSnakeCase, type UnknownRecord } from "@/lib/case-converters";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
@@ -44,22 +45,8 @@ export interface PayrollRunItem {
 }
 
 // snake/camel helpers
-const toCamel = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const camelKey = k.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-    out[camelKey] = obj[k];
-  }
-  return out;
-};
-const toSnake = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const snakeKey = k.replace(/[A-Z]/g, (L) => `_${L.toLowerCase()}`);
-    out[snakeKey] = obj[k];
-  }
-  return out;
-};
+const toCamel = (value: unknown): unknown => keysToCamelCase(value);
+const toSnake = keysToSnakeCase;
 
 // Runs
 export const createPayrollRun = async (payload: Omit<PayrollRun, "id"|"status"|"userId"|"createdAt"|"updatedAt"> & { notes?: string | null }): Promise<PayrollRun | null> => {
@@ -119,7 +106,7 @@ export const fetchPayrollRunById = async (id: string): Promise<PayrollRun | null
 };
 
 export const updatePayrollRunStatus = async (id: string, status: PayrollRunStatus, actorId?: string | null): Promise<boolean> => {
-  const patch: any = { status };
+  const patch: UnknownRecord = { status };
   const now = new Date().toISOString();
 
   if (status === "Reviewed") {

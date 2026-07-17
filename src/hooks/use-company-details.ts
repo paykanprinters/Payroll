@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isRecord } from "@/lib/case-converters";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 import { recordSettingsChange } from "@/lib/audit-trail";
@@ -42,17 +43,21 @@ const columnToPropertyMap: { [key: string]: keyof MockCompanyDetails | 'updatedA
 };
 
 // Modified conversion function to use the explicit map
-const convertKeysToCamelCase = (obj: any): any => {
-  if (Array.isArray(obj)) {
-    return obj.map(v => convertKeysToCamelCase(v));
-  } else if (obj !== null && typeof obj === 'object') {
-    return Object.keys(obj).reduce((acc, key) => {
-      const newKey = columnToPropertyMap[key] || key; // Use mapping, fallback to original key if not found
-      acc[newKey] = convertKeysToCamelCase(obj[key]);
-      return acc;
-    }, {} as any);
+const convertKeysToCamelCase = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(convertKeysToCamelCase);
   }
-  return obj;
+
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        columnToPropertyMap[key] || key,
+        convertKeysToCamelCase(entry),
+      ])
+    );
+  }
+
+  return value;
 };
 
 interface UseCompanyDetailsProps {
@@ -64,7 +69,7 @@ interface UseCompanyDetailsProps {
 export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadingAuth }: UseCompanyDetailsProps) => {
   const [companyDetails, setCompanyDetails] = useState<MockCompanyDetails | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const fetchCompanyDetails = useCallback(async () => {
     setIsLoading(true);
@@ -89,14 +94,14 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
           showError(`Failed to load company details: ${toLogError(error)}`);
         }
       } else {
-        const camelCaseData = convertKeysToCamelCase(data);
+        const camelCaseData = convertKeysToCamelCase(data) as MockCompanyDetails;
         // Use functional update with deep compare to avoid unnecessary rerenders
         setCompanyDetails(prev => {
           const changed = JSON.stringify(prev) !== JSON.stringify(camelCaseData);
           return changed ? camelCaseData : prev;
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("useCompanyDetails: unhandled error in fetchCompanyDetails:", toLogError(err));
       setError(err);
       setCompanyDetails(prev => (prev !== null ? null : prev));
@@ -158,7 +163,9 @@ export const useCompanyDetails = ({ isMockDataEnabled, isAuthenticated, isLoadin
         showError(`Failed to save company details: ${toLogError(error)}`);
         setError(error);
       } else {
-        const camelCaseData = convertKeysToCamelCase(data && data.length > 0 ? data[0] : null);
+        const camelCaseData = convertKeysToCamelCase(
+          data && data.length > 0 ? data[0] : null
+        ) as MockCompanyDetails | null;
         setCompanyDetails(prev => {
           const changed = JSON.stringify(prev) !== JSON.stringify(camelCaseData);
           return changed ? camelCaseData : prev;

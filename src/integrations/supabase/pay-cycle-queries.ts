@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { keysToSnakeCase, mapKeysToCamelCase } from "@/lib/case-converters";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
@@ -11,28 +12,13 @@ export interface PayCycleSettings {
 }
 
 // Helper to convert snake_case to camelCase for Supabase data
-export const convertPayCycleSettingsKeysToCamelCase = (obj: any): PayCycleSettings => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
-  }
-  return newObj as PayCycleSettings;
-};
+export const convertPayCycleSettingsKeysToCamelCase = (obj: unknown): PayCycleSettings =>
+  mapKeysToCamelCase<PayCycleSettings>(obj);
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-export const convertPayCycleSettingsKeysToSnakeCase = (obj: Partial<PayCycleSettings>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
-  }
-  return newObj;
-};
+export const convertPayCycleSettingsKeysToSnakeCase = (
+  obj: Partial<PayCycleSettings>
+): Record<string, unknown> => keysToSnakeCase(obj);
 
 export const fetchPayCycleSettingsFromSupabase = async (userId: string): Promise<PayCycleSettings | null> => {
   logger.debug("pay-cycle-queries: fetching live pay cycle settings");

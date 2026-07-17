@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+import { keysToCamelCase, keysToSnakeCase } from "@/lib/case-converters";
 import { showError } from "@/utils/toast";
 
 export type AmountType = 'fixed' | 'percent_of_salary' | 'percent_of_hourly' | 'percent_of_gross';
@@ -48,22 +49,8 @@ export interface EmployeeComponentAssignment {
   updatedAt?: string | null;
 }
 
-const toCamel = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const camelKey = k.replace(/_([a-z])/g, (_: any, c: string) => c.toUpperCase());
-    out[camelKey] = obj[k];
-  }
-  return out;
-};
-const toSnake = (obj: any) => {
-  const out: any = {};
-  for (const k in obj) {
-    const snakeKey = k.replace(/[A-Z]/g, (L) => `_${L.toLowerCase()}`);
-    out[snakeKey] = obj[k];
-  }
-  return out;
-};
+const toCamel = (value: unknown): unknown => keysToCamelCase(value);
+const toSnake = keysToSnakeCase;
 
 /* Fetchers */
 export const fetchEarningComponents = async (): Promise<EarningComponent[]> => {
