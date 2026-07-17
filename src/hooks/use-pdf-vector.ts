@@ -1,15 +1,19 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { pdf } from "@react-pdf/renderer";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { downloadBlob, downloadSuccessMessage } from "@/lib/native-blob-download";
+
+const renderPdf = async (documentNode: React.ReactElement) => {
+  const { pdf } = await import("@react-pdf/renderer");
+  return pdf(documentNode).toBlob();
+};
 
 export const usePdfVector = () => {
   const downloadPdf = useCallback(async (documentNode: React.ReactElement, filename: string) => {
     const toastId = showLoading(`Preparing ${filename} (vector PDF), please wait...`) as string;
     try {
-      const blob = await pdf(documentNode).toBlob();
+      const blob = await renderPdf(documentNode);
       const method = await downloadBlob(blob, filename, "application/pdf");
       showSuccess(downloadSuccessMessage(filename, method));
     } catch (err: unknown) {
@@ -38,7 +42,7 @@ export const usePdfVector = () => {
     try {
       // Open a placeholder tab immediately so popup blockers don't interfere.
       const w = window.open("about:blank", "_blank");
-      const blob = await pdf(documentNode).toBlob();
+      const blob = await renderPdf(documentNode);
       const url = URL.createObjectURL(blob);
 
       if (w) {

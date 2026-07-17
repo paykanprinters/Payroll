@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { lazy, Suspense, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,10 @@ import { showSuccess, showError } from "@/utils/toast";
 import { format, addDays, subDays, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, subWeeks, addMonths, subMonths, getDay, getDate, setDate, setDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
-import CalculatePaycheckDialog from "./CalculatePaycheckDialog";
 import { PayslipDesignSettings, MockEmployee, MockCompanyDetails, MockPayslip } from "@/lib/mock-data-interfaces";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
+
+const CalculatePaycheckDialog = lazy(() => import("./CalculatePaycheckDialog"));
 
 interface PayrollRunCardProps {
   employees: MockEmployee[];
@@ -160,11 +161,15 @@ const PayrollRunCard: React.FC<PayrollRunCardProps> = ({
           </div>
         </div>
       </CardContent>
-      <CalculatePaycheckDialog
-        isOpen={isCalculatePaycheckDialogOpen}
-        onClose={() => setIsCalculatePaycheckDialogOpen(false)}
-        payslipDesignSettings={payslipDesignSettings}
-      />
+      {isCalculatePaycheckDialogOpen && (
+        <Suspense fallback={null}>
+          <CalculatePaycheckDialog
+            isOpen
+            onClose={() => setIsCalculatePaycheckDialogOpen(false)}
+            payslipDesignSettings={payslipDesignSettings}
+          />
+        </Suspense>
+      )}
     </Card>
   );
 };

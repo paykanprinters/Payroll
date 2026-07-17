@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { lazy, Suspense, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import ReportPreviewDialog from "@/components/reports/ReportPreviewDialog";
 import {
   REPORT_CATALOG,
   REPORT_CATEGORY_LABELS,
@@ -35,6 +34,8 @@ import { getReportPeriodLabel, type ReportAuditLevel, type ReportPeriodType } fr
 import { wrapReportHtml } from "@/lib/report-html-styles";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import type { LeaveEntry, MockCompanyDetails, MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
+
+const ReportPreviewDialog = lazy(() => import("@/components/reports/ReportPreviewDialog"));
 
 const ICON_MAP: Record<string, React.ElementType> = {
   "payroll-summary": DollarSign,
@@ -236,16 +237,20 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
         </CardContent>
       </Card>
 
-      <ReportPreviewDialog
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        reportTitle={previewTitle}
-        reportContent={previewContent}
-        companyDetails={companyDetails}
-        reportDesignSettings={reportDesignSettings}
-        documentType="report"
-        periodLabel={periodLabel}
-      />
+      {isPreviewOpen && (
+        <Suspense fallback={null}>
+          <ReportPreviewDialog
+            isOpen
+            onClose={() => setIsPreviewOpen(false)}
+            reportTitle={previewTitle}
+            reportContent={previewContent}
+            companyDetails={companyDetails}
+            reportDesignSettings={reportDesignSettings}
+            documentType="report"
+            periodLabel={periodLabel}
+          />
+        </Suspense>
+      )}
     </>
   );
 };

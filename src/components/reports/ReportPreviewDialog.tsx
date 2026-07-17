@@ -23,7 +23,6 @@ import { saveReportToSupabase } from "@/integrations/supabase/report-queries";
 import { useAuth } from "@/hooks/use-auth";
 import { sanitizeHtml } from "@/utils/sanitize-html";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
-import HtmlReportPdfDocument from "@/components/reports/HtmlReportPdfDocument";
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -76,6 +75,9 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   const sanitizedReportContent = React.useMemo(() => sanitizeHtml(reportContent), [reportContent]);
 
   const handlePrintOrDownload = async (action: "print" | "download") => {
+    const { default: HtmlReportPdfDocument } = await import(
+      "@/components/reports/HtmlReportPdfDocument"
+    );
     const doc = (
       <HtmlReportPdfDocument
         reportTitle={reportTitle}

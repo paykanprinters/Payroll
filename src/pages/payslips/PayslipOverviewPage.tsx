@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import PayslipGenerationSection from "@/components/payslips/PayslipGenerationSection";
 import PayslipSummaryCharts from "@/components/payslips/PayslipSummaryCharts";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
-import PayslipPdfDocument from "@/components/payslips/PayslipPdfDocument";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import PayslipsHeader from "@/components/payslips/PayslipsHeader";
@@ -181,6 +180,9 @@ const PayslipOverviewPage: React.FC = () => {
     async (payslip: MockPayslip) => {
       setIsDownloading(true);
       try {
+        const { default: PayslipPdfDocument } = await import(
+          "@/components/payslips/PayslipPdfDocument"
+        );
         const doc = (
           <PayslipPdfDocument
             payslips={[payslip]}

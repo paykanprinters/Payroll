@@ -6,7 +6,6 @@ import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
-import Irp5PdfDocument from "@/components/reports/Irp5PdfDocument";
 import { showError, showSuccess } from "@/utils/toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -148,6 +147,9 @@ const Irp5ExportPage: React.FC = () => {
         console.warn("IRP5 export warnings:", cert.validation.warnings);
       }
 
+      const { default: Irp5PdfDocument } = await import(
+        "@/components/reports/Irp5PdfDocument"
+      );
       const doc = (
         <Irp5PdfDocument
           employee={selectedEmployee}

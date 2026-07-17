@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Clock, CheckCircle2, FileClock, Lock } from "lucide-react";
 import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
-import ImportTimesheetDialog from "@/components/timesheet/ImportTimesheetDialog";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import TimesheetEntryDialog from "@/components/timesheet/TimesheetEntryDialog";
 import TimesheetFiltersBar from "@/components/timesheet/TimesheetFiltersBar";
@@ -16,6 +15,10 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import TimesheetHeader from "@/components/timesheet/TimesheetHeader";
 import { buildTimesheetAdminSummary } from "@/lib/timesheet-admin-summary";
+
+const ImportTimesheetDialog = React.lazy(
+  () => import("@/components/timesheet/ImportTimesheetDialog")
+);
 
 const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = ({
   staffEmployeeId,
@@ -325,14 +328,18 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
         </CardContent>
       </Card>
 
-      <ImportTimesheetDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleImportTimesheets}
-        employees={employees || []}
-        workHoursSettings={workHoursSettings}
-        biometricApiUrl={companyDetails?.biometricApiUrl}
-      />
+      {isImportDialogOpen && (
+        <React.Suspense fallback={null}>
+          <ImportTimesheetDialog
+            isOpen
+            onClose={() => setIsImportDialogOpen(false)}
+            onImport={handleImportTimesheets}
+            employees={employees || []}
+            workHoursSettings={workHoursSettings}
+            biometricApiUrl={companyDetails?.biometricApiUrl}
+          />
+        </React.Suspense>
+      )}
 
       <TimesheetEntryDialog
         open={isEntryDialogOpen}

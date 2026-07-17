@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
-import PayslipPdfDocument from "@/components/payslips/PayslipPdfDocument";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
@@ -58,6 +57,9 @@ const StaffPayslipsPage: React.FC = () => {
       showError("Select a payslip to download.");
       return;
     }
+    const { default: PayslipPdfDocument } = await import(
+      "@/components/payslips/PayslipPdfDocument"
+    );
     const doc = (
       <PayslipPdfDocument
         payslips={[selectedPayslip]}

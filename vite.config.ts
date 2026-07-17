@@ -57,9 +57,29 @@ export default defineConfig(() => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Export/import tooling is large and interaction-only. Cache these
+        // chunks after first use instead of downloading them at install time.
+        globIgnores: [
+          "**/react-pdf.browser-*.js",
+          "**/jszip.min-*.js",
+          "**/papaparse.min-*.js",
+          "**/*PdfDocument-*.js",
+        ],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern:
+              /\/assets\/(?:react-pdf\.browser|jszip\.min|papaparse\.min|[^/]*PdfDocument)-[^/]+\.js$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "on-demand-document-tools",
+              expiration: {
+                maxEntries: 16,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",

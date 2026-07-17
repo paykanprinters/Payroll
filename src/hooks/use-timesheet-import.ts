@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
-import Papa from "papaparse";
+import type { ParseResult } from "papaparse";
 import { format, parse, isValid, isAfter, min, max } from "date-fns";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
@@ -323,17 +323,18 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
     }
   }, []);
 
-  const handleParseFile = useCallback(() => {
+  const handleParseFile = useCallback(async () => {
     if (!file) {
       showError("Please select a CSV file to import.");
       return;
     }
     console.info("[TimesheetImport] Starting parse of file", { name: file.name, type: file.type, size: file.size });
     setIsParsing(true);
+    const { default: Papa } = await import("papaparse");
     Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: (results: ParseResult<CsvRow>) => {
         console.info("[TimesheetImport] Parse complete", {
           headers: results.meta.fields || [],
           rows: results.data?.length || 0,

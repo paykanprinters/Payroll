@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import EmployeeFormDialog, { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
-import EmployeeProfilePdfDocument from "@/components/reports/EmployeeProfilePdfDocument";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import EmployeesHeader from "@/components/employees/EmployeesHeader";
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
@@ -233,6 +232,9 @@ const Employees: React.FC = () => {
   };
 
   const handleDownloadProfile = async (employee: MockEmployee) => {
+    const { default: EmployeeProfilePdfDocument } = await import(
+      "@/components/reports/EmployeeProfilePdfDocument"
+    );
     const doc = (
       <EmployeeProfilePdfDocument employee={employee} companyDetails={companyDetails || null} />
     );

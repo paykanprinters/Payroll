@@ -15,12 +15,9 @@ import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { saveGeneratedReport, computeChecksum } from "@/integrations/supabase/generated-reports";
 import { generatePayrollSummaryReportContent, generateEmployeePayslipReportContent } from "@/lib/report-generators";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
-import { pdf as pdfRenderer } from "@react-pdf/renderer";
 
 // Vector PDF helpers
 import { usePdfVector } from "@/hooks/use-pdf-vector";
-import PayslipPdfDocument from "./PayslipPdfDocument";
-import ReportPdfDocument from "@/components/reports/ReportPdfDocument";
 import { useZipDownload } from "@/hooks/use-zip-download";
 
 // Modular panels
@@ -98,6 +95,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       return;
     }
 
+    const { default: PayslipPdfDocument } = await import("./PayslipPdfDocument");
     const doc = (
       <PayslipPdfDocument
         payslips={[selectedPayslip]}
@@ -194,6 +192,15 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await saveGeneratedReport(`Bulk Payslips Reports — ${mode} — ${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}`, combinedHtml);
     }
 
+    const [
+      { pdf: pdfRenderer },
+      { default: ReportPdfDocument },
+      { default: PayslipPdfDocument },
+    ] = await Promise.all([
+      import("@react-pdf/renderer"),
+      import("@/components/reports/ReportPdfDocument"),
+      import("./PayslipPdfDocument"),
+    ]);
     const reportsDoc = (
       <ReportPdfDocument
         payslips={payslips}
@@ -315,6 +322,15 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       await saveGeneratedReport(`Bulk Payslips Reports — Current Period — ${format(today, 'yyyy-MM-dd')}`, combinedHtml);
     }
 
+    const [
+      { pdf: pdfRenderer },
+      { default: ReportPdfDocument },
+      { default: PayslipPdfDocument },
+    ] = await Promise.all([
+      import("@react-pdf/renderer"),
+      import("@/components/reports/ReportPdfDocument"),
+      import("./PayslipPdfDocument"),
+    ]);
     const reportsDoc = (
       <ReportPdfDocument
         payslips={payslips}
@@ -441,6 +457,11 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       const built = buildPayslipEmailPayload(employee, slip, companyNameForEmail);
       if (!built.ok) return { ok: false, reason: built.reason };
 
+      const [{ pdf: pdfRenderer }, { default: PayslipPdfDocument }] =
+        await Promise.all([
+          import("@react-pdf/renderer"),
+          import("./PayslipPdfDocument"),
+        ]);
       const doc = (
         <PayslipPdfDocument
           payslips={[slip]}

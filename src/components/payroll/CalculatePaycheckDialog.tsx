@@ -18,7 +18,6 @@ import HoursBreakdown from "@/components/payslips/HoursBreakdown";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { format } from "date-fns";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
-import PayslipPdfDocument from "@/components/payslips/PayslipPdfDocument";
 import { Printer, Download } from "lucide-react";
 import { showError } from "@/utils/toast";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
@@ -121,6 +120,9 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
       return;
     }
 
+    const { default: PayslipPdfDocument } = await import(
+      "@/components/payslips/PayslipPdfDocument"
+    );
     const doc = (
       <PayslipPdfDocument
         payslips={[previewPayslip]}
