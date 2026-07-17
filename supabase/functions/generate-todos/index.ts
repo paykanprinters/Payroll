@@ -196,29 +196,67 @@ serve(async (req) => {
     console.log('generate-todos: Finished checking timesheet To-Dos.');
 
     // --- Payslips To-Dos ---
+    // Only remind about missing payslips when payroll work is actually expected
+    // (approved/locked timesheets for the month, or some payslips already exist).
+    // A fresh system with no timesheets/payslips should not create noise.
     console.log('generate-todos: Checking payslip To-Dos...');
-    const employeesWithoutPayslipLastMonth = employees.filter(emp =>
-      !payslips.some(p => p.employee_id === emp.id && p.pay_period.startsWith(lastMonth))
+    const lastMonthLabel = format(subMonths(today, 1), 'MMMM yyyy');
+    const hasApprovedTimesheetsLastMonth = timesheets.some((ts) => {
+      try {
+        return (
+          (ts.status === "Approved" || ts.status === "Locked") &&
+          format(parseISO(ts.date), "yyyy-MM") === lastMonth
+        );
+      } catch {
+        return false;
+      }
+    });
+    const hasAnyPayslipsLastMonth = payslips.some((p) =>
+      p.pay_period.startsWith(lastMonth)
     );
-    const payslipMissingMessage = `Payslips not generated for ${employeesWithoutPayslipLastMonth.length} employees for ${format(subMonths(today, 1), 'MMMM yyyy')}.`;
-    if (employeesWithoutPayslipLastMonth.length > 0) {
-      if (!existingToDoMap.has(payslipMissingMessage)) {
-        newToDosToInsert.push({
-          message: payslipMissingMessage,
-          level: "critical",
-          module: "Payslips",
-          action_url: "/payslips/overview",
-          status: "pending",
-          assigned_to: "Finance",
-          employee_id: null, // Explicitly null
-          related_field: null, // Explicitly null
-        });
+    const payrollExpectedLastMonth =
+      hasApprovedTimesheetsLastMonth || hasAnyPayslipsLastMonth;
+
+    const employeesWithoutPayslipLastMonth = employees.filter(
+      (emp) =>
+        !payslips.some(
+          (p) => p.employee_id === emp.id && p.pay_period.startsWith(lastMonth)
+        )
+    );
+    const payslipMissingMessage = `Payslips not generated for ${employeesWithoutPayslipLastMonth.length} employees for ${lastMonthLabel}.`;
+
+    // Retire stale/mismatched "Payslips not generated" reminders.
+    for (const todo of existingToDos) {
+      if (
+        todo.status === "pending" &&
+        typeof todo.message === "string" &&
+        todo.message.startsWith("Payslips not generated for ")
+      ) {
+        if (
+          !payrollExpectedLastMonth ||
+          employeesWithoutPayslipLastMonth.length === 0 ||
+          todo.message !== payslipMissingMessage
+        ) {
+          toDosToUpdateToDone.push(todo.id);
+        }
       }
-    } else {
-      const existingId = existingToDoMap.get(payslipMissingMessage);
-      if (existingId) {
-        toDosToUpdateToDone.push(existingId);
-      }
+    }
+
+    if (
+      payrollExpectedLastMonth &&
+      employeesWithoutPayslipLastMonth.length > 0 &&
+      !existingToDoMap.has(payslipMissingMessage)
+    ) {
+      newToDosToInsert.push({
+        message: payslipMissingMessage,
+        level: "critical",
+        module: "Payslips",
+        action_url: "/payslips/overview",
+        status: "pending",
+        assigned_to: "Finance",
+        employee_id: null,
+        related_field: null,
+      });
     }
     console.log('generate-todos: Finished checking payslip To-Dos.');
 
@@ -319,27 +357,32 @@ serve(async (req) => {
     console.log('generate-todos: Finished checking vacation & absence To-Dos.');
 
     // --- Reports To-Dos ---
+    // EMP201 is only due after payroll for that month exists. An empty payslip
+    // ledger (fresh start) must not create a critical EMP201 reminder.
     console.log('generate-todos: Checking reports To-Dos...');
-    const emp201SubmittedLastMonth = payslips.some(p => p.pay_period.startsWith(lastMonth));
-    const emp201Message = `EMP201 (Tax & Statutory Report) not generated for ${format(subMonths(today, 1), 'MMMM yyyy')}.`;
-    if (!emp201SubmittedLastMonth) {
-      if (!existingToDoMap.has(emp201Message)) {
-        newToDosToInsert.push({
-          message: emp201Message,
-          level: "critical",
-          module: "Reports",
-          action_url: "/reports",
-          status: "pending",
-          assigned_to: "Finance",
-          employee_id: null, // Explicitly null
-          related_field: null, // Explicitly null
-        });
+    const emp201Message = `EMP201 (Tax & Statutory Report) not generated for ${lastMonthLabel}.`;
+    for (const todo of existingToDos) {
+      if (
+        todo.status === "pending" &&
+        typeof todo.message === "string" &&
+        todo.message.startsWith("EMP201 (Tax & Statutory Report) not generated")
+      ) {
+        if (!hasAnyPayslipsLastMonth || todo.message !== emp201Message) {
+          toDosToUpdateToDone.push(todo.id);
+        }
       }
-    } else {
-      const existingId = existingToDoMap.get(emp201Message);
-      if (existingId) {
-        toDosToUpdateToDone.push(existingId);
-      }
+    }
+    if (hasAnyPayslipsLastMonth && !existingToDoMap.has(emp201Message)) {
+      newToDosToInsert.push({
+        message: emp201Message,
+        level: "critical",
+        module: "Reports",
+        action_url: "/reports",
+        status: "pending",
+        assigned_to: "Finance",
+        employee_id: null,
+        related_field: null,
+      });
     }
     console.log('generate-todos: Finished checking reports To-Dos.');
 

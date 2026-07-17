@@ -86,10 +86,30 @@ export const generateMockToDos = (
   }
 
   // --- Payslips To-Dos ---
-  const employeesWithoutPayslipLastMonth = employees.filter(emp =>
-    !payslips.some(p => p.employeeId === emp.id && p.payPeriod.startsWith(lastMonth))
+  // Only when payroll is expected (approved/locked timesheets or existing payslips).
+  const hasApprovedTimesheetsLastMonth = timesheets.some((ts) => {
+    try {
+      return (
+        (ts.status === "Approved" || ts.status === "Locked") &&
+        format(parseISO(ts.date), "yyyy-MM") === lastMonth
+      );
+    } catch {
+      return false;
+    }
+  });
+  const hasAnyPayslipsLastMonth = payslips.some((p) =>
+    p.payPeriod.startsWith(lastMonth)
   );
-  if (employeesWithoutPayslipLastMonth.length > 0) {
+  const employeesWithoutPayslipLastMonth = employees.filter(
+    (emp) =>
+      !payslips.some(
+        (p) => p.employeeId === emp.id && p.payPeriod.startsWith(lastMonth)
+      )
+  );
+  if (
+    (hasApprovedTimesheetsLastMonth || hasAnyPayslipsLastMonth) &&
+    employeesWithoutPayslipLastMonth.length > 0
+  ) {
     mockToDos.push({
       id: uuidv4(),
       message: `Payslips not generated for ${employeesWithoutPayslipLastMonth.length} employees for ${format(subMonths(today, 1), 'MMMM yyyy')}.`,
@@ -160,8 +180,8 @@ export const generateMockToDos = (
   }
 
   // --- Reports To-Dos ---
-  const emp201SubmittedLastMonth = payslips.some(p => p.payPeriod.startsWith(lastMonth));
-  if (!emp201SubmittedLastMonth) {
+  // EMP201 is only meaningful after payroll for that month exists.
+  if (hasAnyPayslipsLastMonth) {
     mockToDos.push({
       id: uuidv4(),
       message: `EMP201 (Tax & Statutory Report) not generated for ${format(subMonths(today, 1), 'MMMM yyyy')}.`,
