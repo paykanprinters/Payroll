@@ -285,7 +285,7 @@ export const applyAssignedEarnings = (
   grossEarnings: number,
   earningsBreakdown: { name: string; amount: number }[],
   earningComponents: { id: string; name?: string; amount?: number; amountType?: string }[] | undefined,
-  assignments: { componentType?: string; employeeId?: string; componentId?: string; overrideAmount?: number; effectiveStart?: string | null; effectiveEnd?: string | null }[] | undefined,
+  assignments: { componentType?: string; employeeId?: string; componentId?: string; overrideAmount?: number | null; effectiveStart?: string | null; effectiveEnd?: string | null }[] | undefined,
   periodStart: Date,
   periodEnd: Date
 ): { earningsBreakdown: { name: string; amount: number }[]; grossEarnings: number } => {

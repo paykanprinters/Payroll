@@ -23,7 +23,7 @@ interface UseToDosDataProps {
   initialToDos: ToDoEntry[];
   isMockDataEnabled: boolean;
   employees: MockEmployee[];
-  addOrUpdateEmployee: (employee: EmployeeFormValues) => Promise<void>;
+  addOrUpdateEmployee: (employee: EmployeeFormValues) => Promise<boolean>;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
 }
@@ -110,7 +110,8 @@ export const useToDosData = (
           };
 
           try {
-            await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee
+            const saved = await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee
+            if (!saved) return;
             showSuccess(`Field '${todoToMark.relatedField}' for ${employee.firstName} ${employee.lastName} marked as intentionally blank.`);
           } catch (error) {
             logger.error("useToDosData: failed to update employee with ignored field (mock):", toLogError(error));
@@ -158,7 +159,8 @@ export const useToDosData = (
             };
 
             try {
-              await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee to Supabase
+              const saved = await addOrUpdateEmployee(updatedEmployee); // Persist the updated employee to Supabase
+              if (!saved) return;
               showSuccess(`Field '${todoToMark.relatedField}' for ${employee.firstName} ${employee.lastName} marked as intentionally blank.`);
             } catch (error) {
               logger.error("useToDosData: failed to update employee with ignored field (live):", toLogError(error));

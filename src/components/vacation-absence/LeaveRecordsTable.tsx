@@ -15,9 +15,9 @@ interface LeaveRecordsTableProps {
   getEmployeeName: (employeeId: string) => string;
   getEmployeeCustomId: (employeeId: string) => string;
   onEdit?: (record: LeaveEntry) => void;
-  onApprove?: (id: string) => void | Promise<void>;
-  onReject?: (id: string, reason?: string) => void | Promise<void>;
-  onDelete?: (id: string) => void | Promise<void>;
+  onApprove?: (id: string) => void | Promise<unknown>;
+  onReject?: (id: string, reason?: string) => void | Promise<unknown>;
+  onDelete?: (id: string) => void | Promise<unknown>;
   actionsDisabled?: boolean;
   showActions?: boolean;
 }

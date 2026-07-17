@@ -34,6 +34,30 @@ const CAMEL_TO_SNAKE: Partial<Record<keyof LeaveEntry, string>> = {
   rejectionReason: "rejection_reason",
 };
 
+const LEAVE_TYPES: readonly LeaveEntry["leaveType"][] = [
+  "Annual Leave",
+  "Sick Leave",
+  "Unpaid Leave",
+  "Family Responsibility Leave",
+  "Maternity Leave",
+];
+
+const requireString = (obj: Record<string, unknown>, key: string): string => {
+  const value = obj[key];
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`Invalid leave record: '${key}' must be a non-empty string.`);
+  }
+  return value;
+};
+
+const requireNumber = (obj: Record<string, unknown>, key: string): number => {
+  const value = obj[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`Invalid leave record: '${key}' must be a finite number.`);
+  }
+  return value;
+};
+
 export const convertLeaveEntryKeysToCamelCase = (obj: Record<string, unknown>): LeaveEntry => {
   const newObj: Record<string, unknown> = {};
   for (const key in obj) {
@@ -41,9 +65,23 @@ export const convertLeaveEntryKeysToCamelCase = (obj: Record<string, unknown>): 
     const camelKey = SNAKE_TO_CAMEL[key] || key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
     newObj[camelKey] = obj[key];
   }
-  const entry = newObj as LeaveEntry;
-  entry.status = normalizeLeaveStatus(entry.status);
-  return entry;
+
+  const leaveType = requireString(newObj, "leaveType");
+  if (!LEAVE_TYPES.includes(leaveType as LeaveEntry["leaveType"])) {
+    throw new Error(`Invalid leave record: unsupported leave type '${leaveType}'.`);
+  }
+
+  return {
+    ...newObj,
+    id: requireString(newObj, "id"),
+    employeeId: requireString(newObj, "employeeId"),
+    leaveType: leaveType as LeaveEntry["leaveType"],
+    startDate: requireString(newObj, "startDate"),
+    endDate: requireString(newObj, "endDate"),
+    totalDays: requireNumber(newObj, "totalDays"),
+    workingDays: requireNumber(newObj, "workingDays"),
+    status: normalizeLeaveStatus(typeof newObj.status === "string" ? newObj.status : undefined),
+  };
 };
 
 export const convertLeaveEntryKeysToSnakeCase = (obj: Partial<LeaveEntry>): Record<string, unknown> => {

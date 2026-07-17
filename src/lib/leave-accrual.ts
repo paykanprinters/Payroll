@@ -329,7 +329,8 @@ const BALANCE_CHECKED_LEAVE_TYPES: LeaveEntry["leaveType"][] = [
 export function validateLeaveAgainstBalance(
   employee: MockEmployee,
   leaveRecords: LeaveEntry[],
-  proposed: Pick<LeaveEntry, "id" | "leaveType" | "workingDays" | "startDate" | "endDate">,
+  proposed: Pick<LeaveEntry, "leaveType" | "workingDays" | "startDate" | "endDate"> &
+    Partial<Pick<LeaveEntry, "id">>,
   asOf: Date = new Date()
 ): LeaveBalanceValidationResult {
   if (!BALANCE_CHECKED_LEAVE_TYPES.includes(proposed.leaveType)) {

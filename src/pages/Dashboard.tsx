@@ -25,7 +25,7 @@ import DashboardTimesheetStatusChart from "@/components/dashboard/DashboardTimes
 import DashboardSavingsStatusChart from "@/components/dashboard/DashboardSavingsStatusChart";
 import DashboardLoansOverviewCard from "@/components/dashboard/DashboardLoansOverviewCard";
 
-import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
+import { useDashboardSettings, type DashboardWidgetKey } from "@/hooks/use-dashboard-settings";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 
 import {
@@ -178,7 +178,7 @@ const Dashboard: React.FC = () => {
     [chartsOrder, visibleWidgets]
   );
 
-  const renderWidget = (key: keyof typeof visibleWidgets) => {
+  const renderWidget = (key: DashboardWidgetKey) => {
     if (!visibleWidgets || !visibleWidgets[key]) return null;
 
     switch (key) {

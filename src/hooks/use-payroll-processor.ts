@@ -334,6 +334,7 @@ export const usePayrollProcessorState = () => {
     taxTableValidation,
     isTaxTablesReady,
     isLoadingTaxTables,
+    refetchTaxTables,
     workHoursSettings,
     isLoadingWorkHoursSettings,
     isLoadingPublicHolidays,

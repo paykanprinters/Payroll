@@ -4,35 +4,50 @@ import { filterPayslipsForBulkPeriod } from "@/lib/payslip-period-filter";
 
 const weeklyEmployee: MockEmployee = {
   id: "e1",
+  customEmployeeId: "EMP-001",
   firstName: "Test",
   lastName: "Worker",
+  email: "weekly@example.com",
+  jobTitle: "Tester",
+  startDate: "2025-01-01",
   payFrequency: "Weekly",
-  paymentMode: "EFT",
-} as MockEmployee;
+  paymentMode: "Bank Transfer",
+};
 
 const monthlyEmployee: MockEmployee = {
   id: "e2",
+  customEmployeeId: "EMP-002",
   firstName: "Monthly",
   lastName: "Worker",
+  email: "monthly@example.com",
+  jobTitle: "Tester",
+  startDate: "2025-01-01",
   payFrequency: "Monthly",
-  paymentMode: "EFT",
-} as MockEmployee;
+  paymentMode: "Bank Transfer",
+};
+
+const payslip = (id: string, employeeId: string, payPeriod: string, grossEarnings: number): MockPayslip => ({
+  id,
+  employeeId,
+  payPeriod,
+  payDate: payPeriod.split(" - ")[1],
+  grossEarnings,
+  totalDeductions: grossEarnings / 10,
+  netPay: grossEarnings * 0.9,
+  earningsBreakdown: [],
+  deductionsBreakdown: [],
+  leaveSummary: { annual: 0, sick: 0, unpaid: 0 },
+  ytdGrossEarnings: grossEarnings,
+  ytdTotalDeductions: grossEarnings / 10,
+});
 
 describe("filterPayslipsForBulkPeriod", () => {
   it("includes weekly payslips whose period crosses a Monday boundary (Tue cut-off)", () => {
-    const payslip: MockPayslip = {
-      id: "p1",
-      employeeId: "e1",
-      payPeriod: "2026-01-14 - 2026-01-20",
-      grossEarnings: 1000,
-      totalDeductions: 100,
-      netPay: 900,
-      deductionsBreakdown: [],
-    } as MockPayslip;
+    const weeklyPayslip = payslip("p1", "e1", "2026-01-14 - 2026-01-20", 1000);
 
     const selectedDate = new Date(2026, 0, 20); // Tue 20 Jan 2026
     const filtered = filterPayslipsForBulkPeriod(
-      [payslip],
+      [weeklyPayslip],
       [weeklyEmployee],
       selectedDate,
       "weekly",
@@ -43,19 +58,11 @@ describe("filterPayslipsForBulkPeriod", () => {
   });
 
   it("excludes weekly payslips from the previous pay cycle", () => {
-    const payslip: MockPayslip = {
-      id: "p1",
-      employeeId: "e1",
-      payPeriod: "2026-01-07 - 2026-01-13",
-      grossEarnings: 1000,
-      totalDeductions: 100,
-      netPay: 900,
-      deductionsBreakdown: [],
-    } as MockPayslip;
+    const previousPayslip = payslip("p1", "e1", "2026-01-07 - 2026-01-13", 1000);
 
     const selectedDate = new Date(2026, 0, 20);
     const filtered = filterPayslipsForBulkPeriod(
-      [payslip],
+      [previousPayslip],
       [weeklyEmployee],
       selectedDate,
       "weekly",
@@ -66,19 +73,11 @@ describe("filterPayslipsForBulkPeriod", () => {
   });
 
   it("filters monthly payslips by calendar month", () => {
-    const payslip: MockPayslip = {
-      id: "p2",
-      employeeId: "e2",
-      payPeriod: "2026-01-01 - 2026-01-31",
-      grossEarnings: 5000,
-      totalDeductions: 500,
-      netPay: 4500,
-      deductionsBreakdown: [],
-    } as MockPayslip;
+    const monthlyPayslip = payslip("p2", "e2", "2026-01-01 - 2026-01-31", 5000);
 
     const selectedDate = new Date(2026, 0, 15);
     const filtered = filterPayslipsForBulkPeriod(
-      [payslip],
+      [monthlyPayslip],
       [monthlyEmployee],
       selectedDate,
       "monthly",

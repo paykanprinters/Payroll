@@ -230,7 +230,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
             return (
               <View key={i} style={styles.table}>
                 {b.rows.map((r, rIdx) => (
-                  <View key={rIdx} style={[styles.tr, r.isHeader ? styles.th : undefined]}>
+                  <View key={rIdx} style={[styles.tr, ...(r.isHeader ? [styles.th] : [])]}>
                     {Array.from({ length: colCount }).map((_, cIdx) => {
                       const cell = r.cells[cIdx];
                       const isLast = cIdx === colCount - 1;
@@ -239,9 +239,9 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
                           key={cIdx}
                           style={[
                             styles.cell,
-                            isLast ? styles.cellLast : undefined,
+                            ...(isLast ? [styles.cellLast] : []),
                             { flex: 1 },
-                            rIdx === b.rows.length - 1 ? { borderBottomWidth: 0 } : undefined,
+                            ...(rIdx === b.rows.length - 1 ? [{ borderBottomWidth: 0 }] : []),
                           ]}
                         >
                           {cell ? (

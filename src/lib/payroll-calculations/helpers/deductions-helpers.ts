@@ -121,7 +121,7 @@ export const buildDeductions = (
     componentType?: string;
     employeeId?: string;
     componentId?: string;
-    overrideAmount?: number;
+    overrideAmount?: number | null;
     effectiveStart?: string | null;
     effectiveEnd?: string | null;
   }[]
