@@ -27,7 +27,18 @@ South African payroll system for Kan Printers — employees, timesheets, leave, 
 
 ## Development
 
+### Prerequisites
+
+- Node.js 24 LTS (see `.nvmrc`)
+- pnpm 9.15.9 (pinned by `package.json#packageManager`)
+
+CI and Vercel use Node.js 24.x as the supported runtime. The GitHub workflow
+uses Node-24-compatible action versions, independently of the Node version used
+to run project commands.
+
 ```bash
+nvm use
+corepack enable
 pnpm install
 pnpm dev
 ```
