@@ -23,6 +23,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
       # Annual Budget gate (COMP-17): fails once curated SARS tables for the live
       # tax year are missing. Runbook: docs/ANNUAL_TAX_TABLE_UPDATE.md
       - name: Verify SARS tax tables are current
