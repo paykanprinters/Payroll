@@ -43,3 +43,11 @@ android/app/src/main/assets/public/
 !public/downloads/kan-printers-staff.apk
 !public/downloads/.gitkeep
 dev-dist/
+
+# Playwright
+.playwright-smoke/
+e2e/.auth/
+test-results/
+playwright-report/
+blob-report/
+.env.e2e
