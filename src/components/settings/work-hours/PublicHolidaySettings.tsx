@@ -18,7 +18,7 @@ type Props = {
 
 const PublicHolidaySettings: React.FC<Props> = () => {
   const { user } = useAuth();
-  const { isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYearForCalculations } = usePayrollProcessor({ silent: true });
+  const { isMockDataEnabled, isAuthenticated, isLoadingAuth, activeTaxYearForCalculations } = usePayrollProcessor();
   const { publicHolidays, isLoadingPublicHolidays, saveHoliday, deleteHoliday, importDefaultSouthAfricanHolidays } =
     usePublicHolidays({ isMockDataEnabled, isAuthenticated, isLoadingAuth });
 

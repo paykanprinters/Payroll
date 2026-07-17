@@ -92,7 +92,7 @@ const PayrollRunDetailPage: React.FC = () => {
     taxTables,
     activeTaxYearForCalculations,
     updateTimesheetStatus,
-  } = usePayrollProcessor({ silent: true });
+  } = usePayrollProcessor();
   const { rules: overtimeRules } = useOvertimeRules();
   const { computeBlockers, isPastCutOff, buildReminderPayload } = useReadinessGates();
 

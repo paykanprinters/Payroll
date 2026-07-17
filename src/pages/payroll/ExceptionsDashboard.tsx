@@ -30,7 +30,7 @@ const issueBadgeClass = (issue: string) => {
 };
 
 const ExceptionsDashboardPage: React.FC = () => {
-  const { timesheets, workHoursSettings, isMockDataEnabled, employees } = usePayrollProcessor({ silent: true });
+  const { timesheets, workHoursSettings, isMockDataEnabled, employees } = usePayrollProcessor();
   const { publicHolidays } = usePublicHolidays({ isMockDataEnabled, isAuthenticated: true, isLoadingAuth: false } as any);
 
   const employeesById = useMemo(() => {

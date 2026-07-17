@@ -19,7 +19,7 @@ type Props = {
 const currency = (n: number) => `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const PayeBreakdownDialog: React.FC<Props> = ({ open, onOpenChange, payslip }) => {
-  const { employees, taxTables, userTaxSettings } = usePayrollProcessor({ silent: true });
+  const { employees, taxTables, userTaxSettings } = usePayrollProcessor();
 
   const breakdown = useMemo(() => {
     const employee = employees.find(e => e.id === payslip.employeeId);

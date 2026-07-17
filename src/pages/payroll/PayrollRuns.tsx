@@ -34,7 +34,7 @@ const PayrollRunsPage: React.FC = () => {
   const carriedPeriod = location.state as
     | { periodStart?: string; periodEnd?: string }
     | null;
-  const { isMockDataEnabled, payCycleSettings } = usePayrollProcessor({ silent: true });
+  const { isMockDataEnabled, payCycleSettings } = usePayrollProcessor();
   const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [periodStart, setPeriodStart] = useState<string>(carriedPeriod?.periodStart ?? "");
   const [periodEnd, setPeriodEnd] = useState<string>(carriedPeriod?.periodEnd ?? "");

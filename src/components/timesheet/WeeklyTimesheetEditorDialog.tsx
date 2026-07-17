@@ -49,7 +49,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
   const employeeName = getEmployeeName(employeeId);
   const employeeCustomId = employee?.customEmployeeId || "N/A";
 
-  const { payCycleSettings } = usePayrollProcessor({ silent: true });
+  const { payCycleSettings } = usePayrollProcessor();
   const currentWeeklyPeriod = useMemo(() => {
     const refDate = (() => {
       if (!initialDateInWeek) return new Date();

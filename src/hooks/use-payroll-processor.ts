@@ -35,9 +35,8 @@ import {
 // Re-export TaxTables interface from use-tax-tables
 export type { TaxTables } from "./use-tax-tables";
 
-export const usePayrollProcessorState = (options?: { silent?: boolean }) => {
+export const usePayrollProcessorState = () => {
   const { isAuthenticated, isLoadingAuth, user } = useAuth();
-  const silent = options?.silent === true;
 
   // Mock mode removed: always live-only
   const isMockDataEnabled = false;
@@ -243,13 +242,12 @@ export const usePayrollProcessorState = (options?: { silent?: boolean }) => {
 
   // Initial To-Do generation when live + authenticated
   useEffect(() => {
-    if (silent) return;
     if (!isAuthenticated || isLoadingAuth) return;
 
     if (!hasTriggeredGenerateToDosRef.current) {
       safeTriggerGenerateToDos();
     }
-  }, [isAuthenticated, isLoadingAuth, safeTriggerGenerateToDos, silent]);
+  }, [isAuthenticated, isLoadingAuth, safeTriggerGenerateToDos]);
 
   // Central soft-refresh when app regains focus/visibility
   useEffect(() => {

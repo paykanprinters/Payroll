@@ -41,7 +41,7 @@ const BulkPayslipActions: React.FC<BulkPayslipActionsProps> = ({
   auditLevel,
   setAuditLevel,
 }) => {
-  const { payCycleSettings } = usePayrollProcessor({ silent: true });
+  const { payCycleSettings } = usePayrollProcessor();
 
   const periodHint = React.useMemo(() => {
     if (!selectedPayPeriodDate) return null;

@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
 
 const EmployeeAssignmentsPage: React.FC = () => {
-  const { employees } = usePayrollProcessor({ silent: true });
+  const { employees } = usePayrollProcessor();
   const [earnings, setEarnings] = useState<EarningComponent[]>([]);
   const [deductions, setDeductions] = useState<DeductionComponent[]>([]);
   const [assignments, setAssignments] = useState<EmployeeComponentAssignment[]>([]);

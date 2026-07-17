@@ -22,6 +22,7 @@ export const optionalFields = [
 ];
 
 export type ColumnMappings = { [key: string]: string | undefined };
+type CsvRow = Record<string, string | undefined>;
 
 export interface ParsedTimesheetRow {
   employeeId: string;
@@ -38,7 +39,7 @@ export interface ParsedTimesheetRow {
 }
 
 export interface AggregationError {
-  originalRow: any;
+  originalRow: CsvRow;
   personalIdAttempted: string;
   dateAttempted: string;
   error: string;
@@ -101,14 +102,16 @@ const validateRow = (row: ParsedTimesheetRow): ParsedTimesheetRow => {
 };
 
 const aggregateClockTimes = (
-  data: any[],
+  data: CsvRow[],
   currentMappings: ColumnMappings,
   employees: MockEmployee[]
 ): { aggregatedRows: Omit<ParsedTimesheetRow, "_isValid" | "_errors">[]; errors: AggregationError[] } => {
   const employeeDailyPunches = new Map<string, Map<string, Date[]>>();
   const currentAggregationErrors: AggregationError[] = [];
+  const personalIdColumn = currentMappings.personalId;
+  const combinedDateTimeColumn = currentMappings.combinedDateTime;
 
-  if (!currentMappings.personalId || !currentMappings.combinedDateTime) {
+  if (!personalIdColumn || !combinedDateTimeColumn) {
     currentAggregationErrors.push({
       originalRow: {},
       personalIdAttempted: "N/A",
@@ -119,8 +122,8 @@ const aggregateClockTimes = (
   }
 
   data.forEach((row) => {
-    const csvPersonalId = String(row[currentMappings.personalId] || "").trim();
-    const rawCombinedDateTime = String(row[currentMappings.combinedDateTime] || "").trim();
+    const csvPersonalId = String(row[personalIdColumn] || "").trim();
+    const rawCombinedDateTime = String(row[combinedDateTimeColumn] || "").trim();
 
     if (!csvPersonalId) {
       currentAggregationErrors.push({
@@ -254,7 +257,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
     });
     return initialMappings;
   });
-  const [parsedRawData, setParsedRawData] = useState<any[]>([]);
+  const [parsedRawData, setParsedRawData] = useState<CsvRow[]>([]);
   const [isParsing, setIsParsing] = useState(false);
 
   const autoMapColumns = useCallback((headers: string[]) => {
@@ -327,7 +330,7 @@ export const useTimesheetImport = (employees: MockEmployee[], isOpen: boolean) =
     }
     console.info("[TimesheetImport] Starting parse of file", { name: file.name, type: file.type, size: file.size });
     setIsParsing(true);
-    Papa.parse(file, {
+    Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {

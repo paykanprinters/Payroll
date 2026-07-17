@@ -33,7 +33,7 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
     workHoursSettings,
     isLoadingEmployees,
     companyDetails,
-  } = usePayrollProcessor({ silent: true });
+  } = usePayrollProcessor();
 
   const {
     timesheets,

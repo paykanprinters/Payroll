@@ -26,7 +26,7 @@ function StatusBadge({ ok, labelOk = "Ready", labelBad = "Needs setup" }: { ok: 
 }
 
 const SetupHealthCard: React.FC = () => {
-  const { companyDetails, payCycleSettings, userTaxSettings, taxTables, taxTableValidation, isTaxTablesReady, activeTaxYearForCalculations } = usePayrollProcessor({ silent: true });
+  const { companyDetails, payCycleSettings, userTaxSettings, taxTables, taxTableValidation, isTaxTablesReady, activeTaxYearForCalculations } = usePayrollProcessor();
 
   const companyNameOk = !!(companyDetails?.companyTradingName || companyDetails?.companyLegalName);
   const payeApplies = userTaxSettings?.applyPaye ?? false;
