@@ -31,7 +31,8 @@ const CRITICAL_TABLES: { table: string; label: string }[] = [
 async function probeTable(table: string, label: string): Promise<DatabaseTableHealth> {
   const start = performance.now();
   try {
-    const { error } = await supabase.from(table).select("id", { count: "exact", head: true });
+    // Use * so tables without an `id` PK (e.g. tax_years keyed by `year`) still probe cleanly.
+    const { error } = await supabase.from(table).select("*", { count: "exact", head: true });
     const latencyMs = Math.round(performance.now() - start);
 
     if (error) {
