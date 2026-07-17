@@ -15,6 +15,12 @@ interface DashboardEmployeeJobTitleDistributionChartProps {
   employeeJobTitleData: EmployeeJobTitleData[];
 }
 
+type LegendEntry = {
+  value?: string;
+  color?: string;
+  payload?: { value?: number };
+};
+
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#a4de6c", "#d0ed57"];
 
 const DashboardEmployeeJobTitleDistributionChart: React.FC<DashboardEmployeeJobTitleDistributionChartProps> = ({ employeeJobTitleData }) => {
@@ -22,10 +28,10 @@ const DashboardEmployeeJobTitleDistributionChart: React.FC<DashboardEmployeeJobT
   const totalJobTitles = employeeJobTitleData.reduce((sum, entry) => sum + entry.value, 0);
   const hasData = totalJobTitles > 0;
 
-  const WrappedLegend = ({ payload }: any) => (
+  const WrappedLegend = ({ payload }: { payload?: LegendEntry[] }) => (
     <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
-      {(payload || []).map((entry: any) => {
-        const pct = totalJobTitles > 0 ? Math.round((entry.payload?.value / totalJobTitles) * 100) : 0;
+      {(payload || []).map((entry) => {
+        const pct = totalJobTitles > 0 ? Math.round(((entry.payload?.value ?? 0) / totalJobTitles) * 100) : 0;
         return (
           <div key={entry.value} className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />

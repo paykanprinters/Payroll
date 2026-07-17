@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildDeductions } from "@/lib/payroll-calculations/helpers/deductions-helpers";
 import type { TaxTables } from "@/hooks/use-tax-tables";
 import type { MockEmployee } from "@/lib/mock-data-interfaces";
+import type { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 
 const taxTables: TaxTables = {
   payeBrackets: [
@@ -33,6 +34,13 @@ const employee = {
 
 const periodStart = new Date("2026-03-01T00:00:00Z");
 const periodEnd = new Date("2026-03-31T00:00:00Z");
+const taxSettings = (applyPaye: boolean, applySdl: boolean): UserTaxSettings => ({
+  userId: "test-user",
+  applyPaye,
+  applySdl,
+  enableIrp5Export: false,
+  irp5ContentFontSize: 12,
+});
 
 function find(breakdown: { name: string; amount: number }[], name: string) {
   return breakdown.find((d) => d.name === name)?.amount;
@@ -49,7 +57,7 @@ describe("buildDeductions — statutory", () => {
       [],
       [],
       taxTables,
-      { applyPaye: false, applySdl: true } as any,
+      taxSettings(false, true),
       periodStart,
       periodEnd,
       "2026-03",
@@ -66,7 +74,7 @@ describe("buildDeductions — statutory", () => {
       [],
       [],
       taxTables,
-      { applyPaye: false, applySdl: false } as any,
+      taxSettings(false, false),
       periodStart,
       periodEnd,
       "2026-03",
@@ -83,7 +91,7 @@ describe("buildDeductions — statutory", () => {
       [],
       [],
       taxTables,
-      { applyPaye: false, applySdl: false } as any,
+      taxSettings(false, false),
       periodStart,
       periodEnd,
       "2026-03",
@@ -99,7 +107,7 @@ describe("buildDeductions — statutory", () => {
       [],
       [],
       taxTables,
-      { applyPaye: false, applySdl: false } as any,
+      taxSettings(false, false),
       periodStart,
       periodEnd,
       "2026-03",
@@ -119,7 +127,7 @@ describe("buildDeductions — statutory", () => {
       [],
       [],
       taxTables,
-      { applyPaye: true, applySdl: true } as any,
+      taxSettings(true, true),
       periodStart,
       periodEnd,
       "2026-03",

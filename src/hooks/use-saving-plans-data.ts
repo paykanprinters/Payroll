@@ -14,25 +14,21 @@ import {
 import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
-const convertSavingPlanKeysToCamelCase = (obj: any): SavingPlan => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
+const convertSavingPlanKeysToCamelCase = (obj: object): SavingPlan => {
+  const newObj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+    newObj[camelKey] = value;
   }
-  return newObj as SavingPlan;
+  return newObj as unknown as SavingPlan;
 };
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-const convertSavingPlanKeysToSnakeCase = (obj: Partial<SavingPlan>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
+const convertSavingPlanKeysToSnakeCase = (obj: Partial<SavingPlan>): Record<string, unknown> => {
+  const newObj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    newObj[snakeKey] = value;
   }
   return newObj;
 };

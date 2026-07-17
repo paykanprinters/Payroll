@@ -127,7 +127,7 @@ const LoansAndAdvancements: React.FC = () => {
   const startDate = form.watch("startDate");
 
   const onSubmit = async (values: LoanFormValues) => {
-    const newLoan: Omit<Loan, "id" | "status" | "remainingBalance" | "deductionHistory" | "paused"> = {
+    const newLoan: Parameters<typeof addLoan>[0] = {
       employeeId: values.employeeId,
       loanType: values.loanType,
       loanAmount: values.loanAmount,
@@ -135,9 +135,13 @@ const LoansAndAdvancements: React.FC = () => {
       frequency: values.frequency,
       startDate: format(values.startDate, "yyyy-MM-dd"),
       notes: values.notes,
+      freezeMode: null,
+      freezeStartDate: null,
+      freezeEndDate: null,
+      freezeCyclesRemaining: null,
     };
 
-    await addLoan(newLoan as any);
+    await addLoan(newLoan);
 
     form.reset({
       employeeId: "",
@@ -176,7 +180,7 @@ const LoansAndAdvancements: React.FC = () => {
     const loan = loans.find((l) => l.id === loanId);
     if (!loan) return;
     setFreezeLoanId(loanId);
-    const initialMode = (loan.freezeMode as any) || "range";
+    const initialMode = loan.freezeMode || "range";
     setFreezeMode(initialMode === "cycles" ? "cycles" : "range");
     setFreezeStart(loan.freezeStartDate ? new Date(loan.freezeStartDate) : undefined);
     setFreezeEnd(loan.freezeEndDate ? new Date(loan.freezeEndDate) : undefined);
@@ -598,7 +602,7 @@ const LoansAndAdvancements: React.FC = () => {
           <div className="grid gap-4">
             <div className="space-y-1">
               <Label>Freeze type</Label>
-              <Select value={freezeMode} onValueChange={(v) => setFreezeMode(v as any)}>
+              <Select value={freezeMode} onValueChange={(v) => setFreezeMode(v === "cycles" ? "cycles" : "range")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

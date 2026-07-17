@@ -12,42 +12,39 @@ import { generateCustomEmployeeId } from "@/lib/utils"; // Import the new helper
 import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase data
-const convertEmployeeKeysToCamelCase = (obj: any): MockEmployee => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+const convertEmployeeKeysToCamelCase = (obj: object): MockEmployee => {
+  const newObj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
 
     // Explicitly map DB columns to expected form fields
     if (key === 'iban_number') {
-      newObj['accountNumber'] = obj[key];
+      newObj.accountNumber = value;
       continue;
     }
     if (key === 'routing_swift_code') {
-      newObj['branchCode'] = obj[key];
+      newObj.branchCode = value;
       continue;
     }
 
     // Generic snake_case -> camelCase
     const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-    newObj[camelKey] = obj[key];
+    newObj[camelKey] = value;
   }
-  return newObj as MockEmployee;
+  return newObj as unknown as MockEmployee;
 };
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-const convertEmployeeKeysToSnakeCase = (obj: Partial<MockEmployee>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      // Special handling for renamed fields
-      if (key === 'accountNumber') {
-        newObj['iban_number'] = (obj as any)[key];
-      } else if (key === 'branchCode') {
-        newObj['routing_swift_code'] = (obj as any)[key];
-      } else {
-        newObj[snakeKey] = (obj as any)[key];
-      }
+const convertEmployeeKeysToSnakeCase = (obj: object): Record<string, unknown> => {
+  const newObj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    // Special handling for renamed fields
+    if (key === 'accountNumber') {
+      newObj.iban_number = value;
+    } else if (key === 'branchCode') {
+      newObj.routing_swift_code = value;
+    } else {
+      newObj[snakeKey] = value;
     }
   }
   return newObj;
@@ -155,7 +152,7 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         customEmployeeId: customEmployeeIdToUse,
         salary: exclusivePayload.salary ?? null,
         hourlyRate: exclusivePayload.hourlyRate ?? null,
-      } as any;
+      };
 
       const snakeCasePayload = sanitizeEmployeeDbPayload(
         convertEmployeeKeysToSnakeCase(payloadWithCustomId)

@@ -10,6 +10,7 @@ import React, {
   ReactNode,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isStaffPortalPath, STAFF_LOGIN_PATH, staffPortalPath } from "@/lib/staff-portal";
 import { recordAuthEvent } from "@/lib/audit-trail";
@@ -53,11 +54,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const lastRefreshTsRef = useRef<number>(0);
   const userRef = useRef<AuthUser | null>(null);
 
-  const buildAuthUserFromSession = useCallback((sessionUser: any): AuthUser => {
-    const email = (sessionUser?.email as string) || "";
-    const meta = (sessionUser?.user_metadata || {}) as any;
+  const buildAuthUserFromSession = useCallback((sessionUser: User): AuthUser => {
+    const email = sessionUser.email || "";
+    const meta = sessionUser.user_metadata;
     // Never trust user_metadata.role for authorization — it is user-editable.
-    const name = (meta?.name || meta?.full_name || email) as string;
+    const name =
+      typeof meta.name === "string"
+        ? meta.name
+        : typeof meta.full_name === "string"
+          ? meta.full_name
+          : email;
 
     return {
       id: sessionUser.id,
@@ -135,8 +141,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         setUser(dbProfile);
         setIsAuthenticated(true);
-      } catch (err: any) {
-        console.error("AuthContext: refreshSession failed", { message: err?.message, err });
+      } catch (err: unknown) {
+        console.error("AuthContext: refreshSession failed", {
+          message: err instanceof Error ? err.message : "Unknown error",
+          err,
+        });
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -189,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      * Supabase auth holds an internal lock while this callback runs.
      * Never await other supabase calls here — defer them or sign-in stalls forever.
      */
-    const handleAuthStateChange = (event: string, session: any | null) => {
+    const handleAuthStateChange = (event: AuthChangeEvent, session: Session | null) => {
       console.groupCollapsed(`AuthContext: onAuthStateChange event: ${event}`);
       try {
         if (!session) {
@@ -249,9 +258,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         setIsLoadingAuth(false);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         console.warn("AuthContext: Initial session check failed; continuing unauthenticated.", {
-          message: err?.message,
+          message: err instanceof Error ? err.message : "Unknown error",
         });
         setIsLoadingAuth(false);
         setIsAuthenticated(false);

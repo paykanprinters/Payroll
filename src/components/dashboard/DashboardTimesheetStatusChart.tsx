@@ -6,6 +6,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recha
 import { useDataVisualsFontSize } from "@/hooks/use-data-visuals-font-size";
 
 type Row = { name: string; value: number };
+type LegendEntry = { value?: string; color?: string; payload?: { value?: number } };
 
 const COLORS = ["#00AEEF", "#EC008C", "#FFDE00", "#E62229", "#141414", "#6b6b6b"];
 
@@ -17,10 +18,10 @@ export default function DashboardTimesheetStatusChart({
   const dataVisualsFontSize = useDataVisualsFontSize();
   const total = statusCounts.reduce((sum, x) => sum + (x.value || 0), 0);
 
-  const WrappedLegend = ({ payload }: any) => (
+  const WrappedLegend = ({ payload }: { payload?: LegendEntry[] }) => (
     <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
-      {(payload || []).map((entry: any) => {
-        const pct = total > 0 ? Math.round((entry.payload?.value / total) * 100) : 0;
+      {(payload || []).map((entry) => {
+        const pct = total > 0 ? Math.round(((entry.payload?.value ?? 0) / total) * 100) : 0;
         return (
           <div
             key={entry.value}

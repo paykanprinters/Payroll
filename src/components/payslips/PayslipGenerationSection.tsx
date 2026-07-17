@@ -239,8 +239,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         await openPdf(payslipsDoc, payslipsFilename);
         showSuccess(`Reports and payslips opened in new tabs.`);
       }
-    } catch (e: any) {
-      showError(`Bulk ${action} failed: ${e?.message || 'Unknown error'}`);
+    } catch (e: unknown) {
+      showError(`Bulk ${action} failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
   }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, loadReportDesignSettings, payCycleSettings, downloadZip, openPdf]);
 
@@ -360,8 +360,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
         await openPdf(payslipsDoc, payslipsFilename);
         showSuccess(`Reports and payslips opened in new tabs for current period.`);
       }
-    } catch (e: any) {
-      showError(`Bulk ${action} failed: ${e?.message || 'Unknown error'}`);
+    } catch (e: unknown) {
+      showError(`Bulk ${action} failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
   }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, auditLevel, loadReportDesignSettings, payCycleSettings, downloadZip, openPdf]);
 
@@ -472,8 +472,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       } else {
         showError(res.error || "Failed to email payslip.");
       }
-    } catch (e: any) {
-      showError(`Failed to email payslip: ${e?.message || "Unknown error"}`);
+    } catch (e: unknown) {
+      showError(`Failed to email payslip: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
       dismissToast(toastId);
     }
@@ -554,8 +554,8 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       } else {
         showError(res.error || "Failed to send SMS alert.");
       }
-    } catch (e: any) {
-      showError(`Failed to send SMS: ${e?.message || "Unknown error"}`);
+    } catch (e: unknown) {
+      showError(`Failed to send SMS: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
       dismissToast(toastId);
     }

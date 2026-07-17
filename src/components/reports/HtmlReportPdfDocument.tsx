@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, StyleSheet, type TextProps } from "@react-pdf/renderer";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
@@ -134,7 +134,7 @@ const parseHtmlToBlocks = (html: string): Block[] => {
   return blocks;
 };
 
-const RunsText: React.FC<{ runs: TextRun[]; style?: any }> = ({ runs, style }) => {
+const RunsText: React.FC<{ runs: TextRun[]; style?: TextProps["style"] }> = ({ runs, style }) => {
   return (
     <Text style={style}>
       {runs.map((r, idx) => (
@@ -249,7 +249,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
                               runs={cell.runs}
                               style={[
                                 cell.align === "right" ? styles.textRight : styles.textLeft,
-                                r.isHeader ? styles.bold : undefined,
+                                ...(r.isHeader ? [styles.bold] : []),
                               ]}
                             />
                           ) : (

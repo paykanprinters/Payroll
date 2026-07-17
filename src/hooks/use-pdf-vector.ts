@@ -12,11 +12,11 @@ export const usePdfVector = () => {
       const blob = await pdf(documentNode).toBlob();
       const method = await downloadBlob(blob, filename, "application/pdf");
       showSuccess(downloadSuccessMessage(filename, method));
-    } catch (err: any) {
-      if (err?.name === "AbortError") {
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
         return;
       }
-      showError(`Vector PDF generation failed: ${err?.message || "Unknown error"}`);
+      showError(`Vector PDF generation failed: ${err instanceof Error ? err.message : "Unknown error"}`);
       throw err;
     } finally {
       dismissToast(toastId);
@@ -51,8 +51,8 @@ export const usePdfVector = () => {
       // Keep it longer to support slower devices; revoke eventually.
       setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
       showSuccess(`${title} opened in a new tab.`);
-    } catch (err: any) {
-      showError(`Vector PDF open failed: ${err?.message || "Unknown error"}`);
+    } catch (err: unknown) {
+      showError(`Vector PDF open failed: ${err instanceof Error ? err.message : "Unknown error"}`);
       throw err;
     } finally {
       dismissToast(toastId);

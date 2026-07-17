@@ -12,25 +12,21 @@ import {
 } from "@/integrations/supabase/loan-queries"; // Import new Supabase query functions
 
 // Helper to convert snake_case to camelCase for Supabase data
-const convertLoanKeysToCamelCase = (obj: any): Loan => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
+const convertLoanKeysToCamelCase = (obj: object): Loan => {
+  const newObj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+    newObj[camelKey] = value;
   }
-  return newObj as Loan;
+  return newObj as unknown as Loan;
 };
 
 // Helper to convert camelCase to snake_case for Supabase inserts/updates
-const convertLoanKeysToSnakeCase = (obj: Partial<Loan>): any => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      newObj[snakeKey] = (obj as any)[key];
-    }
+const convertLoanKeysToSnakeCase = (obj: Partial<Loan>): Record<string, unknown> => {
+  const newObj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    newObj[snakeKey] = value;
   }
   return newObj;
 };

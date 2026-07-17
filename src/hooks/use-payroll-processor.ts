@@ -60,8 +60,8 @@ export const usePayrollProcessorState = () => {
         refetchToDosFnRef.current?.();
         showSuccess("To-Dos refreshed successfully!");
       }
-    } catch (error: any) {
-      showError(`An unexpected error occurred while generating To-Dos: ${error.message}`);
+    } catch (error: unknown) {
+      showError(`An unexpected error occurred while generating To-Dos: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }, [isAuthenticated, user?.role]);
 
@@ -261,14 +261,14 @@ export const usePayrollProcessorState = () => {
 
       if (!isAuthenticated || isLoadingAuth) return;
 
-      const w = window as any;
+      const w = window as Window & { __appRefreshInProgress?: boolean };
       if (w.__appRefreshInProgress) return;
       w.__appRefreshInProgress = true;
 
       try {
         // Run sequentially to avoid saturating the browser / Supabase connection pool
         // when users return to the tab (especially after opening PDFs).
-        const tasks: Array<() => any> = [
+        const tasks: Array<() => unknown> = [
           () => refetchCompanyDetails?.(),
           () => refetchTaxTables?.(activeTaxYearForCalculations),
           () => refetchWorkHoursSettings?.(),
@@ -295,9 +295,9 @@ export const usePayrollProcessorState = () => {
       }
     };
 
-    window.addEventListener("appFocusRefresh", handler as any);
+    window.addEventListener("appFocusRefresh", handler);
     return () => {
-      window.removeEventListener("appFocusRefresh", handler as any);
+      window.removeEventListener("appFocusRefresh", handler);
     };
   }, [
     isAuthenticated,

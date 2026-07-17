@@ -14,6 +14,14 @@ type BrandingData = {
   logoUrl?: string;
 };
 
+type EdgeBrandingResponse = {
+  name?: string;
+  logoUrl?: string;
+};
+
+const isEdgeBrandingResponse = (value: unknown): value is EdgeBrandingResponse =>
+  typeof value === "object" && value !== null;
+
 const StaffBranding: React.FC = () => {
   const { user } = useAuth();
   const { payslips, companyDetails, employees } = usePayrollProcessor();
@@ -59,10 +67,10 @@ const StaffBranding: React.FC = () => {
       if (triedEdge) return;
       setTriedEdge(true);
       const { data, error } = await supabase.functions.invoke("get-branding");
-      if (!cancelled && data && !error) {
+      if (!cancelled && !error && isEdgeBrandingResponse(data)) {
         setEdgeBranding({
-          name: (data as any)?.name,
-          logoUrl: (data as any)?.logoUrl,
+          name: typeof data.name === "string" ? data.name : undefined,
+          logoUrl: typeof data.logoUrl === "string" ? data.logoUrl : undefined,
         });
       }
     };
@@ -80,7 +88,7 @@ const StaffBranding: React.FC = () => {
 
   const logoWidth = (settings.payslipLogoWidth as number) || (companyDetails?.logoWidth as number) || 100;
   const logoHeight = (settings.payslipLogoHeight as number) || (companyDetails?.logoHeight as number) || 50;
-  const logoFit = settings.payslipLogoFit || (companyDetails?.logoFit as any) || "contain";
+  const logoFit = settings.payslipLogoFit || companyDetails?.logoFit || "contain";
 
   return (
     <Card className="relative overflow-hidden rounded-2xl border bg-white p-5 shadow-sm">

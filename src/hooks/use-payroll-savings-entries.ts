@@ -34,8 +34,7 @@ export function usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, i
       console.error("usePayrollSavingsEntries: fetch error:", error);
       showError("Failed to load payroll savings entries.");
     } else {
-      const rows = (data || []) as any[];
-      const mapped: PayrollSavingsEntry[] = rows.map((row) => ({
+      const mapped: PayrollSavingsEntry[] = (data || []).map((row) => ({
         id: row.id,
         employeeId: row.employee_id,
         planId: row.plan_id,

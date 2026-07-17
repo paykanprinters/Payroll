@@ -17,6 +17,7 @@ import {
   EmployeeComponentAssignment,
   EarningComponent,
   DeductionComponent,
+  ComponentType,
 } from "@/integrations/supabase/compensation-queries";
 import PayrollAdminHeader from "@/components/payroll/PayrollAdminHeader";
 import SummaryAccent from "@/components/dashboard/SummaryAccent";
@@ -109,7 +110,7 @@ const EmployeeAssignmentsPage: React.FC = () => {
               <Label>Component type</Label>
               <Select
                 value={form.componentType as string}
-                onValueChange={(v) => setForm({ ...form, componentType: v as any, componentId: undefined })}
+                onValueChange={(v) => setForm({ ...form, componentType: v as ComponentType, componentId: undefined })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Component type" />

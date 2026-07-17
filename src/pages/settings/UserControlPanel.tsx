@@ -37,6 +37,14 @@ interface UserData {
   status: "Active" | "Inactive";
 }
 
+const getFunctionErrorMessage = (value: unknown): string | undefined =>
+  typeof value === "object" &&
+  value !== null &&
+  "error" in value &&
+  typeof value.error === "string"
+    ? value.error
+    : undefined;
+
 const initialMockUsersForSeeding = [
   { id: "1", name: "Admin User", email: "admin@example.com", role: "Admin", status: "Active", password: "password" },
   { id: "2", name: "Manager Smith", email: "manager@example.com", role: "Manager", status: "Active", password: "password" },
@@ -94,7 +102,7 @@ const UserControlPanel: React.FC = () => {
       } else {
         const map: Record<string, { id: string; name: string; customId: string } | null> = {};
         fetched.forEach(u => { map[u.id] = null; });
-        (empRows || []).forEach((row: any) => {
+        (empRows || []).forEach((row) => {
           if (row.user_id) {
             map[row.user_id] = {
               id: row.id,
@@ -250,7 +258,7 @@ const UserControlPanel: React.FC = () => {
 
       if (resMeta.error) {
         logger.error("Error updating user metadata via Edge Function:", toLogError(resMeta.error));
-        const serverMsgMeta = typeof resMeta.error?.message === 'string' ? resMeta.error.message : (resMeta.data as any)?.error;
+        const serverMsgMeta = typeof resMeta.error?.message === 'string' ? resMeta.error.message : getFunctionErrorMessage(resMeta.data);
         showError(serverMsgMeta || "Failed to update user display name in Auth system.");
       }
 
@@ -260,7 +268,7 @@ const UserControlPanel: React.FC = () => {
         });
         if (res.error) {
           logger.error("Error updating user password via Edge Function:", toLogError(res.error));
-          const serverMsg = typeof res.error?.message === 'string' ? res.error.message : (res.data as any)?.error;
+          const serverMsg = typeof res.error?.message === 'string' ? res.error.message : getFunctionErrorMessage(res.data);
           showError(serverMsg || "Failed to update user password.");
         } else {
           showSuccess("User password updated successfully!");

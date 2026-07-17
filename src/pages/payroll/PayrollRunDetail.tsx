@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { insertAuditLog, fetchAuditLogsForEntity } from "@/integrations/supabase/audit-queries";
+import { insertAuditLog, fetchAuditLogsForEntity, type AuditLogEntry } from "@/integrations/supabase/audit-queries";
 import { createRunSnapshot } from "@/integrations/supabase/run-snapshot-queries";
 import { useOvertimeRules } from "@/hooks/use-overtime-rules";
 import { useReadinessGates, ReadinessBlocker } from "@/hooks/use-readiness-gates";
@@ -71,6 +71,8 @@ const statusToStep: Record<PayrollRunStatus, PayrollRunStepId> = {
 // A run can be voided up to (but not including) Paid. Once money has been
 // disbursed it must be corrected via a reversal/adjustment run, not a void.
 const VOIDABLE_STATUSES: PayrollRunStatus[] = ["Draft", "Reviewed", "Approved", "Locked"];
+const isPayrollRunTab = (value: string): value is "workflow" | "items" | "audit" =>
+  value === "workflow" || value === "items" || value === "audit";
 
 const blockerBadgeClass = (severity: "error" | "warning") => {
   return severity === "error"
@@ -99,7 +101,7 @@ const PayrollRunDetailPage: React.FC = () => {
   const [run, setRun] = useState<PayrollRun | null>(null);
   const [items, setItems] = useState<PayrollRunItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [audits, setAudits] = useState<any[]>([]);
+  const [audits, setAudits] = useState<AuditLogEntry[]>([]);
   const [blockers, setBlockers] = useState<ReadinessBlocker[]>([]);
   const [activeTab, setActiveTab] = useState<"workflow" | "items" | "audit">("workflow");
   const [paymentBatch, setPaymentBatch] = useState<PaymentBatch | null>(null);
@@ -156,9 +158,9 @@ const PayrollRunDetailPage: React.FC = () => {
     // Maker-checker: prevent approval by same user who reviewed
     if (
       next === "Approved" &&
-      (run as any).reviewedBy &&
+      run.reviewedBy &&
       user?.id &&
-      (run as any).reviewedBy === user.id
+      run.reviewedBy === user.id
     ) {
       showError("Maker-checker: Approval must be done by a different user than the reviewer.");
       return;
@@ -174,7 +176,7 @@ const PayrollRunDetailPage: React.FC = () => {
     try {
       const ok = await updatePayrollRunStatus(id, next, user?.id ?? null);
       if (ok) {
-        const updated: any = { ...run, status: next };
+        const updated: PayrollRun = { ...run, status: next };
         if (next === "Reviewed") {
           updated.reviewedBy = user?.id ?? null;
           updated.reviewedAt = new Date().toISOString();
@@ -507,7 +509,7 @@ const PayrollRunDetailPage: React.FC = () => {
         itemsCount={items.length}
       />
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => isPayrollRunTab(v) && setActiveTab(v)}>
         <TabsList className="rounded-xl">
           <TabsTrigger value="workflow" className="rounded-lg">Workflow</TabsTrigger>
           <TabsTrigger value="items" className="rounded-lg">Run Items</TabsTrigger>
@@ -559,9 +561,9 @@ const PayrollRunDetailPage: React.FC = () => {
                 <div className="rounded-2xl border bg-background p-4">
                   <div className="text-xs text-muted-foreground">Review / Approval</div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Reviewer: <span className="font-mono">{(run as any).reviewedBy || "-"}</span>
+                    Reviewer: <span className="font-mono">{run.reviewedBy || "-"}</span>
                     <br />
-                    Approver: <span className="font-mono">{(run as any).approvedBy || "-"}</span>
+                    Approver: <span className="font-mono">{run.approvedBy || "-"}</span>
                   </div>
                 </div>
               </div>
@@ -766,15 +768,14 @@ const PayrollRunDetailPage: React.FC = () => {
                       disabled={
                         (ns === "Approved" && blockers.length > 0) ||
                         (ns === "Approved" &&
-                          (run as any).reviewedBy &&
-                          user?.id === (run as any).reviewedBy)
+                          Boolean(run.reviewedBy && user?.id === run.reviewedBy))
                       }
                       title={
                         ns === "Approved" && blockers.length > 0
                           ? "Resolve blockers before approval."
                           : ns === "Approved" &&
-                            (run as any).reviewedBy &&
-                            user?.id === (run as any).reviewedBy
+                            run.reviewedBy &&
+                            user?.id === run.reviewedBy
                           ? "Approval must be by a different user"
                           : ""
                       }
@@ -870,7 +871,7 @@ const PayrollRunDetailPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {audits.map((a: any) => (
+                    {audits.map((a) => (
                       <TableRow key={a.id}>
                         <TableCell className="font-mono text-xs">
                           {a.createdAt ? new Date(a.createdAt).toLocaleString() : "-"}

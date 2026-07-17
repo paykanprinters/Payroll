@@ -66,9 +66,9 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
 
       return publicUrlData.publicUrl;
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Unexpected error during Supabase logo upload:", err);
-      showError(`An unexpected error occurred during logo upload: ${err.message}`);
+      showError(`An unexpected error occurred during logo upload: ${err instanceof Error ? err.message : "Unknown error"}`);
       return null;
     }
   };
@@ -87,9 +87,9 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({ canEdit, isMockDa
       } else {
         showSuccess("Logo removed from storage.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Unexpected error during Supabase logo deletion:", err);
-      showError(`An unexpected error occurred during logo deletion: ${err.message}`);
+      showError(`An unexpected error occurred during logo deletion: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   };
 

@@ -203,11 +203,14 @@ export const useDashboardSettings = ({ isMockDataEnabled }: UseDashboardSettings
       const userSettings: Partial<DashboardWidgetVisibility> = {};
       const incomingLayout: DashboardWidgetLayoutItem[] = [];
 
-      data.forEach((setting: any) => {
-        (userSettings as any)[setting.widget_key] = setting.is_visible;
+      data.forEach((setting) => {
+        const key = setting.widget_key as DashboardWidgetKey;
+        if (key in defaults) {
+          userSettings[key] = setting.is_visible;
+        }
         if (typeof setting.section === "string" && typeof setting.position === "number") {
           incomingLayout.push({
-            key: setting.widget_key as DashboardWidgetKey,
+            key,
             section: setting.section as DashboardWidgetSection,
             position: setting.position as number,
           });

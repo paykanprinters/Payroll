@@ -38,8 +38,7 @@ export const calculateTimesheetMetrics = (
   _employee?: MockEmployee,
   opts?: MetricOpts
 ) => {
-  const entryDate: Date | null =
-    (data as any).date ? new Date((data as any).date) : null;
+  const entryDate: Date | null = data.date ? new Date(data.date) : null;
 
   const defaultStart = opts?.dailyStartTime || "09:00";
   const defaultEnd = opts?.dailyEndTime || "17:00";
@@ -54,8 +53,7 @@ export const calculateTimesheetMetrics = (
   let earlyDeparture = false;
   let absent = false;
 
-  const timeIn = (data as any).timeIn;
-  const timeOut = (data as any).timeOut;
+  const { timeIn, timeOut } = data;
 
   if (!timeIn || !timeOut) {
     absent = true;
@@ -67,8 +65,8 @@ export const calculateTimesheetMetrics = (
     const timeInEffective = isBefore(actualTimeInDateForClamp, earliestStartDate) ? earliestStartStr : timeIn;
 
     const totalShiftDuration = calculateTimeDifferenceInHours(timeInEffective, timeOut);
-    const teaDuration = calculateTimeDifferenceInHours((data as any).teaStart || "", (data as any).teaEnd || "");
-    const lunchDuration = calculateTimeDifferenceInHours((data as any).lunchStart || "", (data as any).lunchEnd || "");
+    const teaDuration = calculateTimeDifferenceInHours(data.teaStart || "", data.teaEnd || "");
+    const lunchDuration = calculateTimeDifferenceInHours(data.lunchStart || "", data.lunchEnd || "");
 
     const configuredBreakHours = (opts?.breakDurationMinutes ?? 45) / 60;
   

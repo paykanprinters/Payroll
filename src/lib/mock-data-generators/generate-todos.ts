@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Define fields to check for incompleteness and generate To-Dos
 // IMPORTANT: These keys must match the camelCase property names in the MockEmployee interface
-const fieldsToFlag = [
+const fieldsToFlag: { key: keyof MockEmployee; label: string; level: ToDoEntry["level"] }[] = [
   { key: "personalId", label: "Personal ID (Clock-in)", level: "critical" },
   { key: "idNumber", label: "National ID Number", level: "critical" },
   { key: "phoneNumber", label: "Mobile Number", level: "warning" },
@@ -28,7 +28,7 @@ export const generateMockToDos = (
   // --- Employee Profile Incompleteness To-Dos ---
   employees.forEach(employee => {
     fieldsToFlag.forEach(field => {
-      const fieldValue = (employee as any)[field.key]; // Access dynamically
+      const fieldValue = employee[field.key];
       const ignoredFields = employee.ignoredIncompleteFields || [];
       const isIgnored = ignoredFields.includes(field.key);
 
@@ -36,7 +36,7 @@ export const generateMockToDos = (
         mockToDos.push({
           id: uuidv4(),
           message: `Employee ${employee.firstName} ${employee.lastName} is missing ${field.label}.`,
-          level: field.level as ToDoEntry["level"],
+          level: field.level,
           module: "Employees",
           actionUrl: "/employees",
           status: "pending",

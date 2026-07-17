@@ -40,6 +40,14 @@ const userSchema = z.object({
 
 export type UserFormValues = z.infer<typeof userSchema>;
 
+type AuthUserStatusResponse = {
+  email_confirmed_at?: string | null;
+  error?: string;
+};
+
+const getAuthUserStatusResponse = (value: unknown): AuthUserStatusResponse =>
+  typeof value === "object" && value !== null ? value as AuthUserStatusResponse : {};
+
 interface UserFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -132,12 +140,12 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     setCheckingStatus(false);
     if (res.error) {
       console.error("Check auth status error:", res.error);
-      const serverMsg = typeof res.error?.message === "string" ? res.error.message : (res.data as any)?.error;
+      const serverMsg = typeof res.error?.message === "string" ? res.error.message : getAuthUserStatusResponse(res.data).error;
       showError(serverMsg || "Failed to check auth status.");
       setEmailConfirmedAt(null);
       return;
     }
-    const payload = res.data as any;
+    const payload = getAuthUserStatusResponse(res.data);
     setEmailConfirmedAt(payload?.email_confirmed_at ?? null);
     if (payload?.email_confirmed_at) {
       showSuccess("Email is confirmed in Auth.");
@@ -160,7 +168,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     });
     if (res.error) {
       console.error("Force confirm email error:", res.error);
-      const serverMsg = typeof res.error?.message === "string" ? res.error.message : (res.data as any)?.error;
+      const serverMsg = typeof res.error?.message === "string" ? res.error.message : getAuthUserStatusResponse(res.data).error;
       showError(serverMsg || "Failed to confirm user email.");
       return;
     }

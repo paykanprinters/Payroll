@@ -8,15 +8,13 @@ import { supabase } from "@/integrations/supabase/client"; // Import supabase cl
 import { logger, toLogError } from "@/lib/logger";
 
 // Helper to convert snake_case to camelCase for Supabase ToDo data
-const convertToDoKeysToCamelCase = (obj: any): ToDoEntry => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-      newObj[camelKey] = obj[key];
-    }
+const convertToDoKeysToCamelCase = (obj: object): ToDoEntry => {
+  const newObj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+    newObj[camelKey] = value;
   }
-  return newObj as ToDoEntry;
+  return newObj as unknown as ToDoEntry;
 };
 
 interface UseToDosDataProps {

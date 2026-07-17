@@ -19,10 +19,12 @@ interface JobTitleDistributionChartProps {
   fontSize: number;
 }
 
+type LegendEntry = { payload?: { value?: number } };
+
 const JobTitleDistributionChart: React.FC<JobTitleDistributionChartProps> = ({ data, fontSize }) => {
   const total = data.reduce((sum, entry) => sum + entry.value, 0);
-  const renderLegendText = (value: string, entry: any) => {
-    const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : "0";
+  const renderLegendText = (value: string, entry: LegendEntry) => {
+    const percentage = total > 0 ? (((entry.payload?.value ?? 0) / total) * 100).toFixed(0) : "0";
     return `${value} (${percentage}%)`;
   };
 

@@ -141,7 +141,7 @@ const TaxLiabilities: React.FC = () => {
         await refetchTaxTables(parseInt(selectedTaxYear, 10));
         window.dispatchEvent(new Event('taxTablesUpdated'));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error calling fetch-sars-tax-tables Edge Function:', toLogError(error));
       showError(`An unexpected error occurred: ${toLogError(error)}`);
     } finally {

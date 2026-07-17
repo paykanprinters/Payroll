@@ -46,8 +46,8 @@ export default function AccountProfileSection() {
 
       await refreshAuth({ silent: true, force: true });
       showSuccess("Account details updated.");
-    } catch (e: any) {
-      showError(e?.message || "Failed to save your account details.");
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : "Failed to save your account details.");
     } finally {
       setSavingAccount(false);
     }

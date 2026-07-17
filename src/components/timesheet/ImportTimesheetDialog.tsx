@@ -469,7 +469,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
 
               {/* Aggregation Errors with auto-dismiss */}
               <AggregationErrorsPanel
-                errors={activeAggregationErrors as any}
+                errors={activeAggregationErrors}
                 show={activeAggregationErrors.length > 0 && showAggErrors}
                 onDismiss={() => setShowAggErrors(false)}
                 autoDismissMs={10000}

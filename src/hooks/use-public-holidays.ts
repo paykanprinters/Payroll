@@ -93,7 +93,7 @@ export const usePublicHolidays = ({ isMockDataEnabled, isAuthenticated, isLoadin
       showError("Failed to load public holidays.");
       setPublicHolidays([]);
     } else {
-      const mapped = (data || []).map((row: any) => ({
+      const mapped = (data || []).map((row) => ({
         id: row.id,
         userId: row.user_id,
         name: row.name,

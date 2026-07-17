@@ -17,6 +17,7 @@ import {
   deleteDeductionComponent,
   EarningComponent,
   DeductionComponent,
+  AmountType,
 } from "@/integrations/supabase/compensation-queries";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -111,7 +112,7 @@ const CompensationComponentsPage: React.FC = () => {
 
               <div className="space-y-1">
                 <Label>Amount type</Label>
-                <Select value={eForm.amountType as string} onValueChange={(v) => setEForm({ ...eForm, amountType: v as any })}>
+                <Select value={eForm.amountType as string} onValueChange={(v) => setEForm({ ...eForm, amountType: v as AmountType })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Amount Type" />
                   </SelectTrigger>
@@ -190,7 +191,7 @@ const CompensationComponentsPage: React.FC = () => {
 
               <div className="space-y-1">
                 <Label>Amount type</Label>
-                <Select value={dForm.amountType as string} onValueChange={(v) => setDForm({ ...dForm, amountType: v as any })}>
+                <Select value={dForm.amountType as string} onValueChange={(v) => setDForm({ ...dForm, amountType: v as AmountType })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Amount Type" />
                   </SelectTrigger>

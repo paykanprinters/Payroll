@@ -34,7 +34,7 @@ export interface MockCompanyDetails {
   payeThreshold?: number;
   sdlRate?: number;
   uifRate?: number;
-  payeRates?: any[]; // Assuming an array of any for simplicity, could be more specific if needed
+  payeRates?: unknown[];
   companyBankName?: string;
   companyBankAccountNumber?: string;
   companyBankBranchCode?: string;
