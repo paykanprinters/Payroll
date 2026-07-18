@@ -1,13 +1,61 @@
 import { defineConfig, devices } from "@playwright/test";
+import fs from "node:fs";
 
 /**
- * End-to-end tests for the critical payroll workflows.
+ * End-to-end tests for critical payroll workflows and role smokes.
  *
- * Auth: `e2e/auth.setup.ts` signs in once with the E2E_EMAIL / E2E_PASSWORD
- * credentials and stores the session in `e2e/.auth/user.json`, which the
- * `chromium` project reuses. Provide those env vars (see `.env.e2e.example`).
+ * Auth setup writes storage state under e2e/.auth/:
+ * - admin.json (from E2E_EMAIL / E2E_PASSWORD)
+ * - manager.json (optional E2E_MANAGER_*)
+ * - staff.json (optional E2E_STAFF_*)
+ *
+ * See `.env.e2e.example`.
  */
 const BASE_URL = process.env.E2E_BASE_URL || "http://127.0.0.1:8080";
+const hasManagerCreds = Boolean(process.env.E2E_MANAGER_EMAIL && process.env.E2E_MANAGER_PASSWORD);
+const hasStaffCreds = Boolean(process.env.E2E_STAFF_EMAIL && process.env.E2E_STAFF_PASSWORD);
+
+const projects: import("@playwright/test").Project[] = [
+  {
+    name: "setup",
+    testMatch: /auth\.setup\.ts/,
+  },
+  {
+    name: "admin",
+    testMatch: /critical-paths\.spec\.ts/,
+    use: {
+      ...devices["Desktop Chrome"],
+      storageState: fs.existsSync("e2e/.auth/admin.json")
+        ? "e2e/.auth/admin.json"
+        : "e2e/.auth/user.json",
+    },
+    dependencies: ["setup"],
+  },
+];
+
+if (hasManagerCreds) {
+  projects.push({
+    name: "manager",
+    testMatch: /manager-smoke\.spec\.ts/,
+    use: {
+      ...devices["Desktop Chrome"],
+      storageState: "e2e/.auth/manager.json",
+    },
+    dependencies: ["setup"],
+  });
+}
+
+if (hasStaffCreds) {
+  projects.push({
+    name: "staff",
+    testMatch: /staff-smoke\.spec\.ts/,
+    use: {
+      ...devices["Desktop Chrome"],
+      storageState: "e2e/.auth/staff.json",
+    },
+    dependencies: ["setup"],
+  });
+}
 
 export default defineConfig({
   testDir: "./e2e",
@@ -23,21 +71,7 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  projects: [
-    {
-      name: "setup",
-      testMatch: /auth\.setup\.ts/,
-    },
-    {
-      name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        storageState: "e2e/.auth/user.json",
-      },
-      dependencies: ["setup"],
-    },
-  ],
-  // Reuse an already-running dev server if present; otherwise start one.
+  projects,
   webServer: {
     command: "pnpm dev --host 127.0.0.1 --port 8080",
     url: BASE_URL,
