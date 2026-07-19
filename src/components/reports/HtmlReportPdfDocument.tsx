@@ -151,6 +151,8 @@ type Props = {
   reportContentHtml: string;
   companyDetails: MockCompanyDetails | null;
   reportDesignSettings: ReportDesignSettings;
+  /** Page orientation for print / PDF output. */
+  orientation?: "portrait" | "landscape";
 };
 
 const HtmlReportPdfDocument: React.FC<Props> = ({
@@ -158,6 +160,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
   reportContentHtml,
   companyDetails,
   reportDesignSettings,
+  orientation = "portrait",
 }) => {
   const blocks = useMemo(() => parseHtmlToBlocks(reportContentHtml), [reportContentHtml]);
 
@@ -182,7 +185,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
 
   return (
     <Document>
-      <Page size={pageSize} style={[styles.page, { fontSize: baseFontSize }]}>
+      <Page size={pageSize} orientation={orientation} style={[styles.page, { fontSize: baseFontSize }]}>
         {(reportDesignSettings.includeCompanyDetails || logoSrc) && (
           <View style={styles.headerRow}>
             <View>
@@ -227,6 +230,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
 
           if (b.type === "table") {
             const colCount = Math.max(...b.rows.map((r) => r.cells.length));
+            const wideLastColumn = colCount >= 5 && orientation === "landscape";
             return (
               <View key={i} style={styles.table}>
                 {b.rows.map((r, rIdx) => (
@@ -240,7 +244,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
                           style={[
                             styles.cell,
                             ...(isLast ? [styles.cellLast] : []),
-                            { flex: 1 },
+                            { flex: wideLastColumn && isLast ? 2.4 : 1 },
                             ...(rIdx === b.rows.length - 1 ? [{ borderBottomWidth: 0 }] : []),
                           ]}
                         >

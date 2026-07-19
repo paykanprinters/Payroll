@@ -17,11 +17,14 @@ function statusLabel(status: EmployeeReadinessRow["status"]): string {
   return "Needs attention";
 }
 
-function formatIssues(row: EmployeeReadinessRow): string {
+function formatIssuesHtml(row: EmployeeReadinessRow): string {
   if (row.issues.length === 0) return "—";
   return row.issues
-    .map((issue) => `${issue.severity === "critical" ? "Critical" : "Warning"}: ${issue.label}`)
-    .join("; ");
+    .map(
+      (issue) =>
+        `${issue.severity === "critical" ? "Critical" : "Warning"}: ${escapeHtml(issue.label)}`
+    )
+    .join("<br/>");
 }
 
 export function generatePayrollReadinessReportContent(
@@ -130,7 +133,7 @@ export function generatePayrollReadinessReportContent(
           <td class="py-2 px-4">${escapeHtml(row.employeeCode)}</td>
           <td class="py-2 px-4">${escapeHtml(row.department)}</td>
           <td class="py-2 px-4">${statusLabel(row.status)}</td>
-          <td class="py-2 px-4">${escapeHtml(formatIssues(row))}</td>
+          <td class="py-2 px-4">${formatIssuesHtml(row)}</td>
         </tr>
       `;
     }
