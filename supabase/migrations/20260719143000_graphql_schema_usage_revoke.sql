@@ -1,0 +1,11 @@
+-- Note: grants of USAGE on graphql_public / graphql to anon & authenticated are
+-- owned by supabase_admin. The migration role (postgres) cannot revoke those
+-- ACL entries. Client GraphQL is still mitigated by:
+--   1) REVOKE ALL table privileges from anon on public (done earlier)
+--   2) @graphql({"ignore": true}) comments on public tables (done earlier)
+--   3) Function EXECUTE revokes where grantor allows
+-- To fully remove schema USAGE, revoke from the Supabase Dashboard SQL editor
+-- while connected as supabase_admin, or disable the GraphQL API in project settings.
+--
+-- This migration is intentionally a no-op marker for that follow-up.
+select 1;
