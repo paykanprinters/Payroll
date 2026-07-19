@@ -21,6 +21,7 @@ export { generateDepartmentalCostReportContent } from "./departmental-cost";
 export { generateBankTransferReportContent } from "./bank-transfer";
 export { generateNewHiresTerminationsReportContent } from "./new-hires-terminations";
 export { generateEmployeeDemographicsReportContent } from "./employee-demographics";
+export { generatePayrollReadinessReportContent } from "./payroll-readiness";
 export { generateBenefitDeductionsReportContent } from "./benefit-deductions";
 export { generateAuditTrailReportContent } from "./audit-trail";
 export { generateEmployeeProfileReportContent } from "./employee-profile";

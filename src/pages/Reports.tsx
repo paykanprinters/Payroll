@@ -26,10 +26,12 @@ const Reports: React.FC = () => {
     employees,
     payslips,
     leaveRecords,
+    timesheets,
     companyDetails,
     isLoadingEmployees,
     isLoadingPayslips,
     isLoadingLeaveRecords,
+    isLoadingTimesheets,
     isMockDataEnabled,
     activeTaxYearForCalculations,
   } = usePayrollProcessor();
@@ -42,7 +44,8 @@ const Reports: React.FC = () => {
   const [refreshTick, setRefreshTick] = useState(0);
   const [auditLogs, setAuditLogs] = useState<Awaited<ReturnType<typeof fetchAuditLogs>>>([]);
 
-  const isLoading = isLoadingEmployees || isLoadingPayslips || isLoadingLeaveRecords;
+  const isLoading =
+    isLoadingEmployees || isLoadingPayslips || isLoadingLeaveRecords || isLoadingTimesheets;
 
   useEffect(() => {
     if (isMockDataEnabled) {
@@ -127,6 +130,7 @@ const Reports: React.FC = () => {
               payslips={periodPayslips}
               allPayslips={payslips}
               leaveRecords={periodLeave}
+              timesheets={timesheets}
               companyDetails={companyDetails}
               reportDesignSettings={reportDesignSettings}
               selectedReportDate={selectedReportDate}
@@ -143,8 +147,10 @@ const Reports: React.FC = () => {
         <CardContent className="py-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Report workflow</p>
           <p className="mt-2">
-            Select the correct <strong>reporting period</strong> first, then generate registers from
-            posted payslips. Use <strong>detailed payroll summary</strong> for reconciliations; use{" "}
+            Select the correct <strong>reporting period</strong> first. Use{" "}
+            <strong>payroll readiness</strong> for a stakeholder checklist of missing employee,
+            company, and timesheet items before cut-off. Then generate registers from posted
+            payslips. Use <strong>detailed payroll summary</strong> for reconciliations; use{" "}
             <strong>bank transfer schedule</strong> only for authorised payroll staff. Statutory
             reports should be checked against source payslips before SARS submission (tax year{" "}
             {activeTaxYearForCalculations}).

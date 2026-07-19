@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  ClipboardCheck,
   FileText,
   DollarSign,
   Scale,
@@ -33,11 +34,12 @@ import {
 import { getReportPeriodLabel, type ReportAuditLevel, type ReportPeriodType } from "@/lib/reports-admin-summary";
 import { wrapReportHtml } from "@/lib/report-html-styles";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import type { LeaveEntry, MockCompanyDetails, MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
+import type { LeaveEntry, MockCompanyDetails, MockEmployee, MockPayslip, TimesheetEntry } from "@/lib/mock-data-interfaces";
 
 const ReportPreviewDialog = lazy(() => import("@/components/reports/ReportPreviewDialog"));
 
 const ICON_MAP: Record<string, React.ElementType> = {
+  "payroll-readiness": ClipboardCheck,
   "payroll-summary": DollarSign,
   "employee-payslip-register": FileText,
   "tax-statutory": Scale,
@@ -57,6 +59,7 @@ interface ReportsCatalogProps {
   payslips: MockPayslip[];
   allPayslips: MockPayslip[];
   leaveRecords: LeaveEntry[];
+  timesheets?: TimesheetEntry[];
   companyDetails: MockCompanyDetails | null;
   reportDesignSettings: ReportDesignSettings;
   selectedReportDate: Date | undefined;
@@ -71,6 +74,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   payslips,
   allPayslips,
   leaveRecords,
+  timesheets,
   companyDetails,
   reportDesignSettings,
   selectedReportDate,
@@ -103,6 +107,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
     payslips,
     allPayslips,
     leaveRecords,
+    timesheets,
     selectedDate: selectedReportDate,
     periodType: reportPeriodType,
     auditLevel,

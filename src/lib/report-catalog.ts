@@ -1,4 +1,4 @@
-import type { LeaveEntry, MockCompanyDetails, MockEmployee, MockPayslip } from "@/lib/mock-data-interfaces";
+import type { LeaveEntry, MockCompanyDetails, MockEmployee, MockPayslip, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import type { ReportAuditLevel, ReportPeriodType } from "@/lib/reports-admin-summary";
 import {
@@ -11,6 +11,7 @@ import {
   generateLeaveAbsenceReportContent,
   generateNewHiresTerminationsReportContent,
   generateOvertimeBonusReportContent,
+  generatePayrollReadinessReportContent,
   generatePayrollSummaryReportContent,
   generateTaxStatutoryReportContent,
   generateEmp201ReportContent,
@@ -35,6 +36,8 @@ export interface ReportGenerateContext {
   /** Full payslip set before period pre-filter (needed for SA fiscal-year statutory reports). */
   allPayslips?: MockPayslip[];
   leaveRecords: LeaveEntry[];
+  /** Timesheets for period readiness (payroll readiness report). */
+  timesheets?: TimesheetEntry[];
   selectedDate: Date | undefined;
   periodType: ReportPeriodType;
   auditLevel: ReportAuditLevel;
@@ -59,6 +62,23 @@ export interface ReportCatalogItem {
 }
 
 export const REPORT_CATALOG: ReportCatalogItem[] = [
+  {
+    id: "payroll-readiness",
+    category: "payroll",
+    title: "Payroll readiness",
+    description:
+      "Stakeholder checklist of missing employee and company data, plus period timesheet gaps that can block a clean payroll run.",
+    confidentiality: "sensitive",
+    periodTypes: ["monthly", "yearly"],
+    generate: (ctx) =>
+      generatePayrollReadinessReportContent(
+        ctx.employees,
+        ctx.companyDetails,
+        ctx.timesheets,
+        ctx.selectedDate,
+        ctx.periodType
+      ),
+  },
   {
     id: "payroll-summary",
     category: "payroll",
