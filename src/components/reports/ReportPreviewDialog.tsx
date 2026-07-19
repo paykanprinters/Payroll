@@ -25,20 +25,15 @@ import { saveReportToSupabase } from "@/integrations/supabase/report-queries";
 import { useAuth } from "@/hooks/use-auth";
 import { sanitizeHtml } from "@/utils/sanitize-html";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
+import { REPORT_PAPER_MM } from "@/lib/report-paper";
 
 export type ReportPageOrientation = "portrait" | "landscape";
-
-const PAPER_MM: Record<"Letter" | "A4" | "A5", { width: number; height: number }> = {
-  A4: { width: 210, height: 297 },
-  A5: { width: 148, height: 210 },
-  Letter: { width: 215.9, height: 279.4 },
-};
 
 function previewPageStyle(
   paperSize: "Letter" | "A4" | "A5" | undefined,
   orientation: ReportPageOrientation
 ): React.CSSProperties {
-  const paper = PAPER_MM[paperSize || "A4"];
+  const paper = REPORT_PAPER_MM[paperSize || "A4"];
   const widthMm = orientation === "landscape" ? paper.height : paper.width;
   const heightMm = orientation === "landscape" ? paper.width : paper.height;
   return {

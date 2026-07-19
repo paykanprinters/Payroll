@@ -1,16 +1,12 @@
 "use client";
 
-import React from "react";
-import { cn, getPrintStyles } from "@/lib/utils";
-import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import type { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
-
-const PAPER_MM: Record<"Letter" | "A4" | "A5", { width: number; height: number }> = {
-  A4: { width: 210, height: 297 },
-  A5: { width: 148, height: 210 },
-  Letter: { width: 215.9, height: 279.4 },
-};
+import { buildReportDesignSampleHtml } from "@/lib/report-design-sample";
+import { fitPaperScaleToA4Reference, getReportPaper } from "@/lib/report-paper";
+import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 
 type Props = {
   settings: ReportDesignSettings;
@@ -19,100 +15,75 @@ type Props = {
 };
 
 /**
- * Live preview chrome matching ReportPreviewDialog / HtmlReportPdfDocument
- * so Report Design settings are visible before export.
+ * Live design preview: real report chrome on a physical paper sheet,
+ * scaled to fit so A4 / Letter / A5 proportions are obvious.
  */
 const ReportDesignPreview: React.FC<Props> = ({ settings, companyDetails, className }) => {
-  const companyName =
-    companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name";
-  const logoUrl = settings.includeCompanyLogo
-    ? resolveCompanyLogoSource(companyDetails?.logoUrl)
-    : undefined;
-  const logoDims = resolveDocumentLogoDimensions(
-    companyDetails?.logoWidth,
-    companyDetails?.logoHeight,
-    companyDetails?.logoFit
-  );
-  const paper = PAPER_MM[settings.defaultReportPaperSize || "A4"];
-  const printStyles = getPrintStyles(settings.defaultReportPaperSize);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState({ width: 420, height: 560 });
+  const paper = getReportPaper(settings.defaultReportPaperSize);
+  const sampleHtml = useMemo(() => buildReportDesignSampleHtml(), []);
+
+  useLayoutEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const measure = () => {
+      setViewport({
+        width: el.clientWidth || 420,
+        height: el.clientHeight || 560,
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const scale = fitPaperScaleToA4Reference(viewport.width, viewport.height, 40);
+  const scaledWidthMm = paper.width * scale;
+  const scaledHeightMm = paper.height * scale;
 
   return (
-    <div
-      className={cn(
-        "mx-auto overflow-hidden rounded-md border bg-white shadow-sm print-preview-page",
-        className
-      )}
-      style={{
-        ...printStyles,
-        width: `${paper.width}mm`,
-        minHeight: `${Math.min(paper.height, 220)}mm`,
-        maxWidth: "100%",
-      }}
-    >
-      {(settings.includeCompanyLogo && logoUrl) || settings.includeCompanyDetails ? (
-        <div className="mb-4 flex items-start justify-between gap-4 border-b pb-3">
-          {settings.includeCompanyLogo && logoUrl ? (
-            <img
-              src={logoUrl}
-              alt="Company logo"
-              style={{
-                width: logoDims.width,
-                height: logoDims.height,
-                objectFit: logoDims.objectFit,
-              }}
-            />
-          ) : (
-            <div />
-          )}
-          {settings.includeCompanyDetails && (
-            <div className="text-right text-xs leading-relaxed text-muted-foreground">
-              <div className="font-semibold text-foreground">{companyName}</div>
-              {companyDetails?.physicalAddress && <div>{companyDetails.physicalAddress}</div>}
-              {companyDetails?.companyRegistrationNumber && (
-                <div>Reg. No: {companyDetails.companyRegistrationNumber}</div>
-              )}
-              {companyDetails?.vatRegistrationNumber && (
-                <div>VAT No: {companyDetails.vatRegistrationNumber}</div>
-              )}
-              {companyDetails?.mainContactNumber && <div>Tel: {companyDetails.mainContactNumber}</div>}
-              {companyDetails?.companyEmail && <div>Email: {companyDetails.companyEmail}</div>}
+    <div className={cn("flex h-full min-h-[520px] flex-col", className)}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>
+          Live page · <span className="font-semibold text-foreground">{paper.label}</span>{" "}
+          ({paper.subtitle}) · {Math.round(scale * 100)}% scale
+        </span>
+        <span>Font {settings.reportContentFontSize}px</span>
+      </div>
+
+      <div
+        ref={viewportRef}
+        className="relative flex flex-1 items-start justify-center overflow-auto rounded-md border bg-[linear-gradient(135deg,#e8ecf1_0%,#f4f6f8_50%,#e5e9ef_100%)] p-4"
+      >
+        {/* Layout box = scaled footprint so A5 occupies less space than A4 */}
+        <div
+          className="relative shrink-0 transition-[width,height] duration-300 ease-out"
+          style={{
+            width: `${scaledWidthMm}mm`,
+            height: `${scaledHeightMm}mm`,
+          }}
+        >
+          <div
+            className="origin-top-left transition-transform duration-300 ease-out"
+            style={{
+              width: `${paper.width}mm`,
+              minHeight: `${paper.height}mm`,
+              transform: `scale(${scale})`,
+            }}
+          >
+            <div className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/10">
+              <ReportContentWrapper
+                reportTitle="Payroll Summary Report"
+                reportContent={sampleHtml}
+                companyDetails={companyDetails}
+                reportDesignSettings={settings}
+                constrainToParent={false}
+              />
             </div>
-          )}
+          </div>
         </div>
-      ) : null}
-
-      <h2 className="mb-2 text-center text-base font-semibold">Sample payroll readiness</h2>
-      <p className="mb-3 text-center text-xs text-muted-foreground">
-        Paper: {settings.defaultReportPaperSize} · Content font: {settings.reportContentFontSize}px
-      </p>
-
-      <div style={{ fontSize: `${settings.reportContentFontSize}px` }} className="space-y-3">
-        <p>
-          This preview uses your Report Design settings. Reports opened from the Reports library
-          use the same header, paper size, and font for preview, PDF download, and print.
-        </p>
-        <table className="w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b">
-              <th className="py-1 pr-2">Check</th>
-              <th className="py-1 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b">
-              <td className="py-1 pr-2">Company logo</td>
-              <td className="py-1 text-right">{settings.includeCompanyLogo ? "On" : "Off"}</td>
-            </tr>
-            <tr className="border-b">
-              <td className="py-1 pr-2">Company details</td>
-              <td className="py-1 text-right">{settings.includeCompanyDetails ? "On" : "Off"}</td>
-            </tr>
-            <tr>
-              <td className="py-1 pr-2">Sample employee row</td>
-              <td className="py-1 text-right">Ready</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
   );

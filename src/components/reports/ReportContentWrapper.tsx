@@ -7,6 +7,7 @@ import { sanitizeHtml } from "@/utils/sanitize-html";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
+import { getReportPreviewPageClasses } from "@/lib/report-paper";
 
 interface ReportContentWrapperProps {
   reportTitle: string;
@@ -15,6 +16,8 @@ interface ReportContentWrapperProps {
   reportDesignSettings: ReportDesignSettings;
   onReadyForPdf?: () => void;
   isPdfGeneration?: boolean; // New prop to indicate PDF generation context
+  /** When false, keep physical paper width (for scaled design preview). Default true. */
+  constrainToParent?: boolean;
 }
 
 const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
@@ -24,6 +27,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   reportDesignSettings,
   onReadyForPdf,
   isPdfGeneration = false, // Default to false
+  constrainToParent = true,
 }) => {
   const {
     companyLegalName,
@@ -104,24 +108,17 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   }, [imagesLoaded, onReadyForPdf]);
 
   // Helper to get Tailwind classes for width/min-height for UI preview
-  const getPreviewPageClasses = (layoutSize: "Letter" | "A4" | "A5" | undefined) => {
-    switch (layoutSize) {
-      case "Letter":
-        return "w-letter min-h-letter";
-      case "A5":
-        return "w-a5 min-h-a5";
-      case "A4":
-      default:
-        return "w-a4 min-h-a4";
-    }
-  };
+  const previewPageClasses = getReportPreviewPageClasses(
+    reportDesignSettings.defaultReportPaperSize
+  );
 
   return (
     <div
       className={cn(
         "bg-white text-gray-900",
-        !isPdfGeneration && "mx-auto rounded-lg shadow-lg max-w-full", // Apply full styling for UI preview, added max-w-full
-        !isPdfGeneration && getPreviewPageClasses(reportDesignSettings.defaultReportPaperSize) // width/min-height for UI preview
+        !isPdfGeneration && "mx-auto rounded-lg shadow-lg",
+        !isPdfGeneration && constrainToParent && "max-w-full",
+        !isPdfGeneration && previewPageClasses
       )}
       style={isPdfGeneration ? {
         ...printStyles, // fontSize from utils
