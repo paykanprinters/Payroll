@@ -45,6 +45,11 @@ function baseCtx(overrides: Partial<ReportGenerateContext> = {}): ReportGenerate
       includeCompanyDetails: true,
       reportContentFontSize: 12,
       irp5ContentFontSize: 10,
+      showPageBorder: true,
+      pageBorderRadiusPx: 12,
+      pageSheetInsetMm: 8,
+      pageContentPaddingMm: 8,
+      pageBorderWidthPx: 1.5,
     },
     ...overrides,
   };

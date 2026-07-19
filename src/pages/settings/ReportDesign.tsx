@@ -11,6 +11,7 @@ import ReportDesignPreview from "@/components/settings/report-design/ReportDesig
 import ReportLayoutOptions from "@/components/settings/report-design/ReportLayoutOptions";
 import ReportHeaderOptions from "@/components/settings/report-design/ReportHeaderOptions";
 import ReportTypographyOptions from "@/components/settings/report-design/ReportTypographyOptions";
+import ReportPageChromeOptions from "@/components/settings/report-design/ReportPageChromeOptions";
 import { Loader2 } from "lucide-react";
 
 const ReportDesign: React.FC = () => {
@@ -71,6 +72,13 @@ const ReportDesign: React.FC = () => {
               }
             />
 
+            <Separator />
+
+            <ReportPageChromeOptions
+              settings={settings}
+              onChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
+            />
+
             <Button type="button" onClick={() => void handleSave()} disabled={isSaving || isLoading} className="w-full">
               {isSaving ? (
                 <>
@@ -90,9 +98,10 @@ const ReportDesign: React.FC = () => {
       <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
         <p className="font-medium text-foreground">What this controls</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>Paper size for report preview dialogs, HTML print, and vector PDF pages</li>
+          <li>Paper size for report preview dialogs, HTML print, and PDF pages</li>
           <li>Whether company logo and company details appear in the report header</li>
           <li>Body font size for tables and narrative content in the Reports library</li>
+          <li>Page frame: border, corner radius, border-to-edge inset, and content padding</li>
         </ul>
       </div>
     </div>

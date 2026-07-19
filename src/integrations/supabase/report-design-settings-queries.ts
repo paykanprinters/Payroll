@@ -16,6 +16,11 @@ type DbRow = {
   include_company_details: boolean | null;
   report_content_font_size: number | null;
   irp5_content_font_size: number | null;
+  show_page_border?: boolean | null;
+  page_border_radius_px?: number | null;
+  page_sheet_inset_mm?: number | null;
+  page_content_padding_mm?: number | null;
+  page_border_width_px?: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -34,6 +39,15 @@ function toDomain(row?: DbRow | null): ReportDesignSettings {
       row.report_content_font_size != null ? Number(row.report_content_font_size) : undefined,
     irp5ContentFontSize:
       row.irp5_content_font_size != null ? Number(row.irp5_content_font_size) : undefined,
+    showPageBorder: row.show_page_border ?? undefined,
+    pageBorderRadiusPx:
+      row.page_border_radius_px != null ? Number(row.page_border_radius_px) : undefined,
+    pageSheetInsetMm:
+      row.page_sheet_inset_mm != null ? Number(row.page_sheet_inset_mm) : undefined,
+    pageContentPaddingMm:
+      row.page_content_padding_mm != null ? Number(row.page_content_padding_mm) : undefined,
+    pageBorderWidthPx:
+      row.page_border_width_px != null ? Number(row.page_border_width_px) : undefined,
   });
 }
 
@@ -45,6 +59,11 @@ function fromDomain(settings: ReportDesignSettings, userId: string) {
     include_company_details: settings.includeCompanyDetails,
     report_content_font_size: settings.reportContentFontSize,
     irp5_content_font_size: settings.irp5ContentFontSize,
+    show_page_border: settings.showPageBorder,
+    page_border_radius_px: settings.pageBorderRadiusPx,
+    page_sheet_inset_mm: settings.pageSheetInsetMm,
+    page_content_padding_mm: settings.pageContentPaddingMm,
+    page_border_width_px: settings.pageBorderWidthPx,
     updated_at: new Date().toISOString(),
   };
 }

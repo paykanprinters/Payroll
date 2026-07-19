@@ -4,13 +4,11 @@ import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 import { getOrientedPaperMm, getReportPaper, type ReportPageOrientation } from "@/lib/report-paper";
 import {
+  getReportSheetBorderCss,
+  getReportSheetChrome,
   getReportSheetInnerHeightMm,
   getReportSheetOuterHeightMm,
   getReportSheetOuterWidthMm,
-  REPORT_PAGE_MARGIN_MM,
-  REPORT_SHEET_BORDER,
-  REPORT_SHEET_BORDER_RADIUS_PX,
-  REPORT_SHEET_PADDING_MM,
 } from "@/lib/report-sheet-layout";
 import { REPORT_SHEET_PAGINATION_SCRIPT } from "@/lib/report-sheet-pagination-script";
 import { getPrintStyles } from "@/lib/utils";
@@ -26,11 +24,12 @@ export type BuildReportPrintDocumentInput = {
 
 /**
  * Self-contained HTML for Chromium print/PDF.
- * Content is paginated into fixed rounded sheets (one border frame per page).
+ * Content is paginated into fixed sheets driven by Report Design chrome settings.
  */
 export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInput): string {
   const orientation = input.orientation ?? "portrait";
   const settings = input.reportDesignSettings;
+  const chrome = getReportSheetChrome(settings);
   const company = input.companyDetails;
   const oriented = getOrientedPaperMm(settings.defaultReportPaperSize, orientation);
   const paper = getReportPaper(settings.defaultReportPaperSize);
@@ -38,11 +37,13 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
   const baseFontSizePx = parseFloat(String(printStyles.fontSize || "14").replace("px", "")) || 14;
   const bodyFont = settings.reportContentFontSize || 14;
 
-  const sheetOuterW = getReportSheetOuterWidthMm(oriented.width);
-  const sheetOuterH = getReportSheetOuterHeightMm(oriented.height);
-  const sheetInnerH = getReportSheetInnerHeightMm(oriented.height);
+  const sheetOuterW = getReportSheetOuterWidthMm(oriented.width, chrome);
+  const sheetOuterH = getReportSheetOuterHeightMm(oriented.height, chrome);
+  const sheetInnerH = getReportSheetInnerHeightMm(oriented.height, chrome);
   // ~3.78 px/mm at 96dpi — used by the pagination script
   const sheetInnerMaxPx = Math.round(sheetInnerH * (96 / 25.4));
+  const sheetBorderCss = getReportSheetBorderCss(chrome);
+  const flowWidthMm = sheetOuterW - chrome.pageContentPaddingMm * 2;
 
   const displayName =
     company?.companyLegalName || company?.companyTradingName || "Your Company Name";
@@ -99,7 +100,7 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
     }
     @page {
       size: ${pageSizeCss} ${orientation};
-      margin: ${REPORT_PAGE_MARGIN_MM}mm;
+      margin: ${chrome.pageSheetInsetMm}mm;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -123,9 +124,9 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
       width: ${sheetOuterW}mm;
       height: ${sheetOuterH}mm;
       background: #fff;
-      border: ${REPORT_SHEET_BORDER};
-      border-radius: ${REPORT_SHEET_BORDER_RADIUS_PX}px;
-      padding: ${REPORT_SHEET_PADDING_MM}mm;
+      border: ${sheetBorderCss};
+      border-radius: ${chrome.pageBorderRadiusPx}px;
+      padding: ${chrome.pageContentPaddingMm}mm;
       overflow: hidden;
       break-after: page;
       page-break-after: always;
@@ -142,7 +143,7 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
       position: absolute;
       left: -10000px;
       top: 0;
-      width: ${sheetOuterW - REPORT_SHEET_PADDING_MM * 2}mm;
+      width: ${flowWidthMm}mm;
       visibility: hidden;
       pointer-events: none;
     }

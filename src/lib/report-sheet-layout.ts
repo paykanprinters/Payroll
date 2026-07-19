@@ -1,21 +1,56 @@
-/** Visual page frame for paginated reports (preview + print/PDF). */
-export const REPORT_SHEET_BORDER_RADIUS_PX = 12;
-export const REPORT_SHEET_PADDING_MM = 8;
-export const REPORT_PAGE_MARGIN_MM = 8;
-export const REPORT_SHEET_BORDER = "1.5px solid #94a3b8";
+import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { DEFAULT_REPORT_DESIGN_SETTINGS } from "@/lib/report-design-interfaces";
 
-/** Usable content height inside one sheet (paper height − page margins − padding×2). */
-export function getReportSheetInnerHeightMm(paperHeightMm: number): number {
+export type ReportSheetChrome = {
+  showPageBorder: boolean;
+  pageBorderRadiusPx: number;
+  pageSheetInsetMm: number;
+  pageContentPaddingMm: number;
+  pageBorderWidthPx: number;
+};
+
+export function getReportSheetChrome(
+  settings?: Partial<ReportDesignSettings> | ReportSheetChrome | null
+): ReportSheetChrome {
+  const s = { ...DEFAULT_REPORT_DESIGN_SETTINGS, ...(settings || {}) };
+  return {
+    showPageBorder: s.showPageBorder,
+    pageBorderRadiusPx: s.pageBorderRadiusPx,
+    pageSheetInsetMm: s.pageSheetInsetMm,
+    pageContentPaddingMm: s.pageContentPaddingMm,
+    pageBorderWidthPx: s.pageBorderWidthPx,
+  };
+}
+
+export function getReportSheetBorderCss(chrome: ReportSheetChrome): string {
+  if (!chrome.showPageBorder) return "none";
+  return `${chrome.pageBorderWidthPx}px solid #94a3b8`;
+}
+
+/** Usable content height inside one sheet (paper − inset×2 − padding×2). */
+export function getReportSheetInnerHeightMm(
+  paperHeightMm: number,
+  settings?: Partial<ReportDesignSettings> | ReportSheetChrome | null
+): number {
+  const chrome = getReportSheetChrome(settings);
   return Math.max(
     80,
-    paperHeightMm - REPORT_PAGE_MARGIN_MM * 2 - REPORT_SHEET_PADDING_MM * 2
+    paperHeightMm - chrome.pageSheetInsetMm * 2 - chrome.pageContentPaddingMm * 2
   );
 }
 
-export function getReportSheetOuterHeightMm(paperHeightMm: number): number {
-  return Math.max(100, paperHeightMm - REPORT_PAGE_MARGIN_MM * 2);
+export function getReportSheetOuterHeightMm(
+  paperHeightMm: number,
+  settings?: Partial<ReportDesignSettings> | ReportSheetChrome | null
+): number {
+  const chrome = getReportSheetChrome(settings);
+  return Math.max(100, paperHeightMm - chrome.pageSheetInsetMm * 2);
 }
 
-export function getReportSheetOuterWidthMm(paperWidthMm: number): number {
-  return Math.max(80, paperWidthMm - REPORT_PAGE_MARGIN_MM * 2);
+export function getReportSheetOuterWidthMm(
+  paperWidthMm: number,
+  settings?: Partial<ReportDesignSettings> | ReportSheetChrome | null
+): number {
+  const chrome = getReportSheetChrome(settings);
+  return Math.max(80, paperWidthMm - chrome.pageSheetInsetMm * 2);
 }

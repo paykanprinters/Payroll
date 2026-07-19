@@ -42,7 +42,7 @@ const ReportPagedPreview: React.FC<Props> = ({
 
   const paperMeta = getReportPaper(reportDesignSettings.defaultReportPaperSize);
   const oriented = getOrientedPaperMm(reportDesignSettings.defaultReportPaperSize, orientation);
-  const sheetOuterH = getReportSheetOuterHeightMm(oriented.height);
+  const sheetOuterH = getReportSheetOuterHeightMm(oriented.height, reportDesignSettings);
 
   const srcDoc = useMemo(
     () =>
@@ -130,7 +130,7 @@ const ReportPagedPreview: React.FC<Props> = ({
           {Math.round(scale * 100)}% scale
           {!ready ? " · paginating…" : ""}
         </span>
-        <span>Each sheet is a rounded page; overflow continues on the next</span>
+        <span>Each sheet is a page frame; overflow continues on the next</span>
       </div>
       <div
         ref={viewportRef}
