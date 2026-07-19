@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ReportDesignSettings } from "@/lib/report-design-interfaces";
+import { ReportDesignSettings, DEFAULT_REPORT_DESIGN_SETTINGS } from "@/lib/report-design-interfaces";
+import useReportDesignSettings from "@/hooks/use-report-design-settings";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
@@ -32,58 +33,23 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CalendarIcon, Download, FileText, Printer, Users } from "lucide-react";
 
-const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
-  defaultReportPaperSize: "A4",
-  includeCompanyLogo: true,
-  includeCompanyDetails: true,
-  reportContentFontSize: 14,
-  irp5ContentFontSize: 12,
-};
-
 const Irp5ExportPage: React.FC = () => {
   const { employees, payslips, companyDetails, isAuthenticated, isLoadingAuth } = usePayrollProcessor();
   const { userTaxSettings } = useUserTaxSettings({ isMockDataEnabled: false, isAuthenticated, isLoadingAuth });
+  const { settings: baseReportDesignSettings } = useReportDesignSettings();
 
-  const [reportDesignSettings, setReportDesignSettings] = useState<ReportDesignSettings>(DEFAULT_REPORT_DESIGN_SETTINGS);
+  const reportDesignSettings: ReportDesignSettings = {
+    ...baseReportDesignSettings,
+    irp5ContentFontSize:
+      userTaxSettings?.irp5ContentFontSize ??
+      baseReportDesignSettings.irp5ContentFontSize ??
+      DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize,
+  };
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedIrpYear, setSelectedIrpYear] = useState<Date | undefined>(undefined);
 
   const { downloadPdf, openPdf } = usePdfVector();
-
-  const loadData = useCallback(() => {
-    const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
-    if (savedReportDesignSettings) {
-      const parsedSettings = JSON.parse(savedReportDesignSettings);
-      setReportDesignSettings({
-        ...parsedSettings,
-        irp5ContentFontSize: userTaxSettings?.irp5ContentFontSize ?? DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize,
-      });
-    } else {
-      const initialSettings = {
-        ...DEFAULT_REPORT_DESIGN_SETTINGS,
-        irp5ContentFontSize: userTaxSettings?.irp5ContentFontSize ?? DEFAULT_REPORT_DESIGN_SETTINGS.irp5ContentFontSize,
-      };
-      localStorage.setItem("reportDesignSettings", JSON.stringify(initialSettings));
-      setReportDesignSettings(initialSettings);
-    }
-  }, [userTaxSettings]);
-
-  useEffect(() => {
-    loadData();
-    window.addEventListener("employeesUpdated", loadData);
-    window.addEventListener("payslipsUpdated", loadData);
-    window.addEventListener("companyDetailsUpdated", loadData);
-    window.addEventListener("reportDesignUpdated", loadData);
-    window.addEventListener("userTaxSettingsUpdated", loadData);
-    return () => {
-      window.removeEventListener("employeesUpdated", loadData);
-      window.removeEventListener("payslipsUpdated", loadData);
-      window.removeEventListener("companyDetailsUpdated", loadData);
-      window.removeEventListener("reportDesignUpdated", loadData);
-      window.removeEventListener("userTaxSettingsUpdated", loadData);
-    };
-  }, [loadData]);
 
   const selectedEmployee = employees.find((emp) => emp.id === selectedEmployeeId);
 

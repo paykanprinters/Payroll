@@ -11,10 +11,10 @@ import { sendPayslipEmail, sendPayslipSms } from "@/integrations/supabase/notifi
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import EmployeePayslipSelector from "./EmployeePayslipSelector";
 import BulkPayslipActions from "./BulkPayslipActions";
-import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { saveGeneratedReport, computeChecksum } from "@/integrations/supabase/generated-reports";
 import { generatePayrollSummaryReportContent, generateEmployeePayslipReportContent } from "@/lib/report-generators";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import useReportDesignSettings from "@/hooks/use-report-design-settings";
 
 // Vector PDF helpers
 import { usePdfVector } from "@/hooks/use-pdf-vector";
@@ -56,22 +56,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const { payCycleSettings, runPayrollProcess, refetchPayslips } = usePayrollProcessor();
   const { downloadPdf, openPdf } = usePdfVector();
   const { downloadZip } = useZipDownload();
-
-  const loadReportDesignSettings = React.useCallback((): ReportDesignSettings => {
-    const defaults: ReportDesignSettings = {
-      defaultReportPaperSize: "A4",
-      includeCompanyLogo: true,
-      includeCompanyDetails: true,
-      reportContentFontSize: 14,
-      irp5ContentFontSize: 12,
-    };
-    const savedReportDesignSettings = localStorage.getItem("reportDesignSettings");
-    if (savedReportDesignSettings) {
-      return JSON.parse(savedReportDesignSettings) as ReportDesignSettings;
-    }
-    localStorage.setItem("reportDesignSettings", JSON.stringify(defaults));
-    return defaults;
-  }, []);
+  const { settings: reportDesignSettings } = useReportDesignSettings();
 
   const filteredPayslipsForEmployee = payslips.filter(p => p.employeeId === selectedEmployeeId);
   const selectedPayslip = payslips.find(p => p.id === selectedPayslipId);
@@ -168,8 +153,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       return;
     }
 
-    const reportDesignSettings = loadReportDesignSettings();
-
     if (level === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
@@ -249,7 +232,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     } catch (e: unknown) {
       showError(`Bulk ${action} failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
-  }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, loadReportDesignSettings, payCycleSettings, downloadZip, openPdf]);
+  }, [selectedPayPeriodDate, payslips, payslipDesignSettings, companyDetails, allEmployees, getEmployeeName, reportDesignSettings, payCycleSettings, downloadZip, openPdf]);
 
   const handleGenerateAllCurrentPeriodPayslips = React.useCallback(async (action: 'print' | 'download') => {
 
@@ -296,8 +279,6 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       showError("No payslips found for the current period. Generate payslips first, then export.");
       return;
     }
-
-    const reportDesignSettings = loadReportDesignSettings();
 
     if (auditLevel === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
@@ -379,7 +360,7 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     } catch (e: unknown) {
       showError(`Bulk ${action} failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
-  }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, auditLevel, loadReportDesignSettings, payCycleSettings, downloadZip, openPdf]);
+  }, [allEmployees, payslips, payslipDesignSettings, companyDetails, getEmployeeName, auditLevel, reportDesignSettings, payCycleSettings, downloadZip, openPdf]);
 
   const handleSelectCurrentPeriodPayslip = useCallback(() => {
     if (!selectedEmployeeId) {

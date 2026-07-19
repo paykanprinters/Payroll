@@ -72,6 +72,12 @@ const ReportPdfDocument: React.FC<Props> = ({
     companyDetails?.logoFit
   );
 
+  const pageSize =
+    reportDesignSettings.defaultReportPaperSize === "Letter"
+      ? ("LETTER" as const)
+      : reportDesignSettings.defaultReportPaperSize;
+  const baseFontSize = reportDesignSettings.reportContentFontSize || 12;
+
   // Exclude cash employees for reports (match existing behavior)
   const nonCashEmployees = employees.filter((e) => e.paymentMode !== "Cash");
   const nonCashIds = new Set(nonCashEmployees.map((e) => e.id));
@@ -150,24 +156,37 @@ const ReportPdfDocument: React.FC<Props> = ({
   return (
     <Document>
       {/* Payroll Summary Report */}
-      <Page size="A4" style={styles.page}>
+      <Page size={pageSize} style={[styles.page, { fontSize: baseFontSize }]}>
         <View style={styles.header}>
-          <View style={styles.companyRow}>
-            <View>
-              {logoSrc && (
-                <Image src={logoSrc as string} style={[styles.logo, { width: logoDims.width, height: logoDims.height }]} />
+          {(reportDesignSettings.includeCompanyDetails || logoSrc) && (
+            <View style={styles.companyRow}>
+              <View>
+                {logoSrc && (
+                  <Image
+                    src={logoSrc as string}
+                    style={[styles.logo, { width: logoDims.width, height: logoDims.height }]}
+                  />
+                )}
+              </View>
+              {reportDesignSettings.includeCompanyDetails && (
+                <View style={styles.companyInfo}>
+                  <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>
+                  {!!companyDetails?.physicalAddress && <Text>{companyDetails.physicalAddress}</Text>}
+                  {!!companyDetails?.companyRegistrationNumber && (
+                    <Text>{`Reg. No: ${companyDetails.companyRegistrationNumber}`}</Text>
+                  )}
+                  {!!companyDetails?.vatRegistrationNumber && (
+                    <Text>{`VAT No: ${companyDetails.vatRegistrationNumber}`}</Text>
+                  )}
+                  {!!companyDetails?.mainContactNumber && (
+                    <Text>{`Tel: ${companyDetails.mainContactNumber}`}</Text>
+                  )}
+                  {!!companyDetails?.companyEmail && <Text>{`Email: ${companyDetails.companyEmail}`}</Text>}
+                  {!!companyDetails?.companyWebsite && <Text>{`Web: ${companyDetails.companyWebsite}`}</Text>}
+                </View>
               )}
             </View>
-            <View style={styles.companyInfo}>
-              <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>
-              {!!companyDetails?.physicalAddress && <Text>{companyDetails.physicalAddress}</Text>}
-              {!!companyDetails?.companyRegistrationNumber && <Text>{`Reg. No: ${companyDetails.companyRegistrationNumber}`}</Text>}
-              {!!companyDetails?.vatRegistrationNumber && <Text>{`VAT No: ${companyDetails.vatRegistrationNumber}`}</Text>}
-              {!!companyDetails?.mainContactNumber && <Text>{`Tel: ${companyDetails.mainContactNumber}`}</Text>}
-              {!!companyDetails?.companyEmail && <Text>{`Email: ${companyDetails.companyEmail}`}</Text>}
-              {!!companyDetails?.companyWebsite && <Text>{`Web: ${companyDetails.companyWebsite}`}</Text>}
-            </View>
-          </View>
+          )}
         </View>
 
         <View>
@@ -229,24 +248,37 @@ const ReportPdfDocument: React.FC<Props> = ({
       </Page>
 
       {/* Employee Payslip Report */}
-      <Page size="A4" style={styles.page}>
+      <Page size={pageSize} style={[styles.page, { fontSize: baseFontSize }]}>
         <View style={styles.header}>
-          <View style={styles.companyRow}>
-            <View>
-              {logoSrc && (
-                <Image src={logoSrc as string} style={[styles.logo, { width: logoDims.width, height: logoDims.height }]} />
+          {(reportDesignSettings.includeCompanyDetails || logoSrc) && (
+            <View style={styles.companyRow}>
+              <View>
+                {logoSrc && (
+                  <Image
+                    src={logoSrc as string}
+                    style={[styles.logo, { width: logoDims.width, height: logoDims.height }]}
+                  />
+                )}
+              </View>
+              {reportDesignSettings.includeCompanyDetails && (
+                <View style={styles.companyInfo}>
+                  <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>
+                  {!!companyDetails?.physicalAddress && <Text>{companyDetails.physicalAddress}</Text>}
+                  {!!companyDetails?.companyRegistrationNumber && (
+                    <Text>{`Reg. No: ${companyDetails.companyRegistrationNumber}`}</Text>
+                  )}
+                  {!!companyDetails?.vatRegistrationNumber && (
+                    <Text>{`VAT No: ${companyDetails.vatRegistrationNumber}`}</Text>
+                  )}
+                  {!!companyDetails?.mainContactNumber && (
+                    <Text>{`Tel: ${companyDetails.mainContactNumber}`}</Text>
+                  )}
+                  {!!companyDetails?.companyEmail && <Text>{`Email: ${companyDetails.companyEmail}`}</Text>}
+                  {!!companyDetails?.companyWebsite && <Text>{`Web: ${companyDetails.companyWebsite}`}</Text>}
+                </View>
               )}
             </View>
-            <View style={styles.companyInfo}>
-              <Text style={{ fontSize: 12, fontWeight: 700 }}>{companyName}</Text>
-              {!!companyDetails?.physicalAddress && <Text>{companyDetails.physicalAddress}</Text>}
-              {!!companyDetails?.companyRegistrationNumber && <Text>{`Reg. No: ${companyDetails.companyRegistrationNumber}`}</Text>}
-              {!!companyDetails?.vatRegistrationNumber && <Text>{`VAT No: ${companyDetails.vatRegistrationNumber}`}</Text>}
-              {!!companyDetails?.mainContactNumber && <Text>{`Tel: ${companyDetails.mainContactNumber}`}</Text>}
-              {!!companyDetails?.companyEmail && <Text>{`Email: ${companyDetails.companyEmail}`}</Text>}
-              {!!companyDetails?.companyWebsite && <Text>{`Web: ${companyDetails.companyWebsite}`}</Text>}
-            </View>
-          </View>
+          )}
         </View>
 
         <Text style={styles.title}>{`Employee Payslip Report (${titleSuffix})`}</Text>
