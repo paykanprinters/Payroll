@@ -59,5 +59,7 @@ export function fitPaperScale(
   const pxPerMm = 96 / 25.4;
   const paperWpx = paperWidthMm * pxPerMm;
   const paperHpx = paperHeightMm * pxPerMm;
-  return Math.min(1, availW / paperWpx, availH / paperHpx);
+  const raw = Math.min(1, availW / paperWpx, availH / paperHpx);
+  // Quantize to avoid sub-pixel thrash between near-identical scales.
+  return Math.round(raw * 1000) / 1000;
 }

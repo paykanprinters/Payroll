@@ -14,37 +14,61 @@ type Props = {
   className?: string;
 };
 
+const SIZE_EPSILON_PX = 2;
+const SCALE_EPSILON = 0.005;
+
 /**
  * Live design preview: real report chrome on a physical paper sheet,
  * scaled to fit so A4 / Letter / A5 proportions are obvious.
+ *
+ * Scale is derived from a fixed viewport box (overflow hidden) so ResizeObserver
+ * cannot fight scrollbars / animated layout and vibrate the page.
  */
 const ReportDesignPreview: React.FC<Props> = ({ settings, companyDetails, className }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState({ width: 420, height: 560 });
+  const lastMeasureRef = useRef({ width: 0, height: 0 });
+  const [scale, setScale] = useState(0.45);
   const paper = getReportPaper(settings.defaultReportPaperSize);
   const sampleHtml = useMemo(() => buildReportDesignSampleHtml(), []);
 
   useLayoutEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
-    const measure = () => {
-      setViewport({
-        width: el.clientWidth || 420,
-        height: el.clientHeight || 560,
-      });
+
+    const applySize = (width: number, height: number) => {
+      const w = Math.round(width);
+      const h = Math.round(height);
+      if (w < 1 || h < 1) return;
+
+      const prev = lastMeasureRef.current;
+      if (
+        Math.abs(w - prev.width) < SIZE_EPSILON_PX &&
+        Math.abs(h - prev.height) < SIZE_EPSILON_PX
+      ) {
+        return;
+      }
+      lastMeasureRef.current = { width: w, height: h };
+
+      const next = Math.round(fitPaperScaleToA4Reference(w, h, 32) * 1000) / 1000;
+      setScale((current) => (Math.abs(current - next) < SCALE_EPSILON ? current : next));
     };
-    measure();
-    const ro = new ResizeObserver(measure);
+
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      applySize(entry.contentRect.width, entry.contentRect.height);
+    });
+
     ro.observe(el);
+    applySize(el.clientWidth, el.clientHeight);
     return () => ro.disconnect();
   }, []);
 
-  const scale = fitPaperScaleToA4Reference(viewport.width, viewport.height, 40);
   const scaledWidthMm = paper.width * scale;
   const scaledHeightMm = paper.height * scale;
 
   return (
-    <div className={cn("flex h-full min-h-[520px] flex-col", className)}>
+    <div className={cn("flex flex-col", className)}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>
           Live page · <span className="font-semibold text-foreground">{paper.label}</span>{" "}
@@ -53,20 +77,21 @@ const ReportDesignPreview: React.FC<Props> = ({ settings, companyDetails, classN
         <span>Font {settings.reportContentFontSize}px</span>
       </div>
 
+      {/* Fixed-height, overflow-hidden viewport — never toggles scrollbars when scale changes */}
       <div
         ref={viewportRef}
-        className="relative flex flex-1 items-start justify-center overflow-auto rounded-md border bg-[linear-gradient(135deg,#e8ecf1_0%,#f4f6f8_50%,#e5e9ef_100%)] p-4"
+        className="relative flex h-[min(70vh,640px)] min-h-[480px] items-start justify-center overflow-hidden rounded-md border bg-[linear-gradient(135deg,#e8ecf1_0%,#f4f6f8_50%,#e5e9ef_100%)] p-4"
       >
-        {/* Layout box = scaled footprint so A5 occupies less space than A4 */}
         <div
-          className="relative shrink-0 transition-[width,height] duration-300 ease-out"
+          key={settings.defaultReportPaperSize}
+          className="relative shrink-0"
           style={{
             width: `${scaledWidthMm}mm`,
             height: `${scaledHeightMm}mm`,
           }}
         >
           <div
-            className="origin-top-left transition-transform duration-300 ease-out"
+            className="origin-top-left"
             style={{
               width: `${paper.width}mm`,
               minHeight: `${paper.height}mm`,
