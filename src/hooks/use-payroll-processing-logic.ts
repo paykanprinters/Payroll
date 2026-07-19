@@ -40,6 +40,7 @@ export const usePayrollProcessingLogic = (
   timesheets: TimesheetEntry[],
   taxTables: TaxTables | null,
   taxTableValidation: TaxTableValidationResult | null,
+  isLoadingTaxTables: boolean,
   userTaxSettings: UserTaxSettings | null,
   payrollSavingsEntries: PayrollSavingsEntry[] | null,
   workHoursSettings: WorkHoursSettings | null,
@@ -63,6 +64,10 @@ export const usePayrollProcessingLogic = (
     async (periodStart: Date, periodEnd: Date) => {
       if (!employees.length) {
         showError("No employees found to run payroll.");
+        return;
+      }
+      if (isLoadingTaxTables || taxTableValidation?.status === "loading") {
+        showError("Tax tables are still loading. Try again in a moment.");
         return;
       }
       if (!taxTables) {
@@ -190,6 +195,7 @@ export const usePayrollProcessingLogic = (
       timesheets,
       taxTables,
       taxTableValidation,
+      isLoadingTaxTables,
       userTaxSettings,
       payrollSavingsEntries,
       workHoursSettings,
@@ -216,15 +222,19 @@ export const usePayrollProcessingLogic = (
         showError("Employee not found for payslip preview.");
         return null;
       }
+      // Dashboard and other auto-previews race tax-table fetch — stay quiet while loading.
+      if (isLoadingTaxTables || taxTableValidation?.status === "loading") {
+        return null;
+      }
       if (!taxTables) {
         showError("Tax tables not loaded. Cannot generate payslip preview.");
         return null;
       }
       if (taxTableValidation && !taxTableValidation.isReady) {
-        showError(
-          getTaxTableBlockingMessage(taxTableValidation) ??
-            "Tax tables are not ready. Apply or refresh them in Settings > Tax Liabilities."
-        );
+        const blocking = getTaxTableBlockingMessage(taxTableValidation);
+        if (blocking) {
+          showError(blocking);
+        }
         return null;
       }
       if (!userTaxSettings) {
@@ -288,6 +298,7 @@ export const usePayrollProcessingLogic = (
       timesheets,
       taxTables,
       taxTableValidation,
+      isLoadingTaxTables,
       userTaxSettings,
       payrollSavingsEntries,
       workHoursSettings,

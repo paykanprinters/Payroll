@@ -222,6 +222,7 @@ export const usePayrollProcessorState = () => {
     timesheets,
     taxTables,
     taxTableValidation,
+    isLoadingTaxTables,
     userTaxSettings,
     payrollSavingsEntries,
     workHoursSettings || null,

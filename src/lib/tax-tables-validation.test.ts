@@ -67,5 +67,6 @@ describe("tax-tables validation (COMP-16)", () => {
     const result = validateLoadedTaxTables(null, 2027, { isLoading: true });
     expect(result.status).toBe("loading");
     expect(result.isReady).toBe(false);
+    expect(getTaxTableBlockingMessage(result)).toBeNull();
   });
 });

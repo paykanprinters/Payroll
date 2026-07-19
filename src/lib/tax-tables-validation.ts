@@ -264,6 +264,8 @@ export function getTaxTableStatusLabel(result: TaxTableValidationResult): string
 /** Returns the primary blocking message for payroll, if any. */
 export function getTaxTableBlockingMessage(result: TaxTableValidationResult): string | null {
   if (result.isReady) return null;
+  // Loading is transient — callers should wait, not toast as a failure.
+  if (result.status === "loading") return null;
   const error = result.issues.find((i) => i.severity === "error");
   if (error) return error.message;
   const stale = result.issues.find((i) => i.code.startsWith("stale_"));

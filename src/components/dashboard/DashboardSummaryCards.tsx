@@ -24,54 +24,85 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
   summary,
   showUpcomingPayrollCard = true,
 }) => {
-  const { isMockDataEnabled, payCycleSettings, calculateSinglePayslipPreview, employees } =
-    usePayrollProcessor();
+  const {
+    isMockDataEnabled,
+    payCycleSettings,
+    calculateSinglePayslipPreview,
+    employees,
+    isLoadingTaxTables,
+    isTaxTablesReady,
+    userTaxSettings,
+    isLoadingUserTaxSettings,
+  } = usePayrollProcessor();
   const [totalUpcomingPayrollAmount, setTotalUpcomingPayrollAmount] = React.useState(0);
   const [upcomingPayrollDueText, setUpcomingPayrollDueText] = React.useState("Calculating…");
 
   React.useEffect(() => {
-    if (payCycleSettings && employees.length > 0) {
-      const today = new Date();
-      const { checkDate: currentCheckDate } = calculatePayPeriodDetails(
+    if (!payCycleSettings || employees.length === 0) {
+      setTotalUpcomingPayrollAmount(0);
+      setUpcomingPayrollDueText("Configure pay cycle");
+      return;
+    }
+
+    // Wait for tax tables / settings — auto-preview must not toast during the normal load race.
+    if (isLoadingTaxTables || isLoadingUserTaxSettings) {
+      setUpcomingPayrollDueText("Calculating…");
+      return;
+    }
+
+    if (!isTaxTablesReady || !userTaxSettings) {
+      setTotalUpcomingPayrollAmount(0);
+      setUpcomingPayrollDueText(
+        !isTaxTablesReady ? "Tax tables required" : "Tax settings required"
+      );
+      return;
+    }
+
+    const today = new Date();
+    const { checkDate: currentCheckDate } = calculatePayPeriodDetails(
+      today,
+      payCycleSettings.payCycleType,
+      payCycleSettings.cutOffDay,
+      payCycleSettings.payDayOffset
+    );
+
+    let totalGross = 0;
+    employees.forEach((employee) => {
+      const employeePayCycleType = employee.payFrequency || payCycleSettings.payCycleType;
+      const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
         today,
-        payCycleSettings.payCycleType,
+        employeePayCycleType,
         payCycleSettings.cutOffDay,
         payCycleSettings.payDayOffset
       );
-
-      let totalGross = 0;
-      employees.forEach((employee) => {
-        const employeePayCycleType = employee.payFrequency || payCycleSettings.payCycleType;
-        const { payPeriodStart, payPeriodEnd } = calculatePayPeriodDetails(
-          today,
-          employeePayCycleType,
-          payCycleSettings.cutOffDay,
-          payCycleSettings.payDayOffset
-        );
-        const previewPayslip = calculateSinglePayslipPreview(
-          employee.id,
-          payPeriodStart,
-          payPeriodEnd
-        );
-        if (previewPayslip) {
-          totalGross += previewPayslip.grossEarnings;
-        }
-      });
-      setTotalUpcomingPayrollAmount(totalGross);
-
-      const daysUntilDue = differenceInCalendarDays(currentCheckDate, today);
-      setUpcomingPayrollDueText(
-        daysUntilDue > 0
-          ? `Pay date in ${daysUntilDue} day${daysUntilDue === 1 ? "" : "s"}`
-          : daysUntilDue === 0
-            ? "Pay date today"
-            : "Pay date passed"
+      const previewPayslip = calculateSinglePayslipPreview(
+        employee.id,
+        payPeriodStart,
+        payPeriodEnd
       );
-    } else {
-      setTotalUpcomingPayrollAmount(0);
-      setUpcomingPayrollDueText("Configure pay cycle");
-    }
-  }, [payCycleSettings, employees, calculateSinglePayslipPreview]);
+      if (previewPayslip) {
+        totalGross += previewPayslip.grossEarnings;
+      }
+    });
+    setTotalUpcomingPayrollAmount(totalGross);
+
+    const daysUntilDue = differenceInCalendarDays(currentCheckDate, today);
+    setUpcomingPayrollDueText(
+      daysUntilDue > 0
+        ? `Pay date in ${daysUntilDue} day${daysUntilDue === 1 ? "" : "s"}`
+        : daysUntilDue === 0
+          ? "Pay date today"
+          : "Pay date passed"
+    );
+  }, [
+    payCycleSettings,
+    employees,
+    calculateSinglePayslipPreview,
+    isLoadingTaxTables,
+    isTaxTablesReady,
+    isLoadingUserTaxSettings,
+    userTaxSettings,
+  ]);
 
   const setupComplete = summary.setupReadyCount === summary.setupTotal;
 
