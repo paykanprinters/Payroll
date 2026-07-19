@@ -30,7 +30,17 @@ function extractLogTextFromJson(body: unknown): string {
   }
   if (body && typeof body === "object") {
     const record = body as Record<string, unknown>;
-    for (const key of ["logs", "data", "entries", "items", "lines", "content", "text"]) {
+    for (const key of [
+      "attendance_logs",
+      "attendanceLogs",
+      "logs",
+      "data",
+      "entries",
+      "items",
+      "lines",
+      "content",
+      "text",
+    ]) {
       const value = record[key];
       if (typeof value === "string") return value;
       if (Array.isArray(value)) return extractLogTextFromJson(value);

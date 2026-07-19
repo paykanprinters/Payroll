@@ -73,6 +73,23 @@ describe("parseBiometricLogText", () => {
     expect(normalizeBiometricLogText(json)).toContain("<Attendance>: 3");
     expect(parseBiometricLogText(json)).toHaveLength(2);
   });
+
+  it("parses attendance_logs object responses from the clock server", () => {
+    const json = JSON.stringify({
+      attendance_logs: [
+        "<Attendance>: 3 : 2026-06-18 07:39:23 (1, 0)",
+        "<Attendance>: 3 : 2026-06-18 17:04:12 (1, 0)",
+      ],
+    });
+
+    expect(normalizeBiometricLogText(json)).toBe(
+      [
+        "<Attendance>: 3 : 2026-06-18 07:39:23 (1, 0)",
+        "<Attendance>: 3 : 2026-06-18 17:04:12 (1, 0)",
+      ].join("\n")
+    );
+    expect(parseBiometricLogText(json)).toHaveLength(2);
+  });
 });
 
 describe("findEmployeeByClockId", () => {
