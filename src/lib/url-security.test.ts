@@ -3,6 +3,14 @@ import { validateOutboundHttpUrl } from "@/lib/url-security";
 
 describe("validateOutboundHttpUrl", () => {
   it("allows public biometric server URLs", () => {
+    const result = validateOutboundHttpUrl("http://pbx.compu-e.co.za:8000/logs");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.url.hostname).toBe("pbx.compu-e.co.za");
+    }
+  });
+
+  it("accepts public IPv4 biometric hosts", () => {
     const result = validateOutboundHttpUrl("http://102.69.157.253:8000/logs");
     expect(result.ok).toBe(true);
   });
