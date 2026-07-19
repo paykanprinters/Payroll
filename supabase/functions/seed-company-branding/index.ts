@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { assertSafeOutboundUrl } from "../_shared/url-security.ts";
+import { assertSafeOutboundUrlAsync } from "../_shared/url-security.ts";
 
 const BUCKET = "company-logos";
 const OBJECT_PATH = "company_logo.png";
@@ -71,7 +71,7 @@ serve(async (req) => {
       body.sourceUrl ||
       Deno.env.get("SEED_LOGO_SOURCE_URL") ||
       "https://payroll-beta-orcin.vercel.app/brand/kanprinters_horizontal_color.png";
-    const urlCheck = assertSafeOutboundUrl(sourceUrl);
+    const urlCheck = await assertSafeOutboundUrlAsync(sourceUrl, { allowlist: "off" });
     if (!urlCheck.ok) {
       return new Response(JSON.stringify({ error: urlCheck.error }), {
         status: 400,

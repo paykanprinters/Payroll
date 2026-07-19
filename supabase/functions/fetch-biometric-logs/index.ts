@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { assertSafeOutboundUrl, normalizeUrlForCompare } from "../_shared/url-security.ts";
+import { assertSafeOutboundUrlAsync, normalizeUrlForCompare } from "../_shared/url-security.ts";
 
 /** Upstream biometric API can be slow when returning full attendance logs. */
 const FETCH_TIMEOUT_MS = 90_000;
@@ -189,7 +189,7 @@ serve(async (req) => {
     return jsonResponse(corsHeaders, { error: "Requested URL does not match saved biometric settings." }, 403);
   }
 
-  const safeUrl = assertSafeOutboundUrl(apiUrl);
+  const safeUrl = await assertSafeOutboundUrlAsync(apiUrl, { allowlist: "required" });
   if (!safeUrl.ok) {
     return jsonResponse(corsHeaders, { error: safeUrl.error }, 400);
   }
