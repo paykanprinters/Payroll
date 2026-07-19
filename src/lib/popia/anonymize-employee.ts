@@ -77,6 +77,7 @@ export const ANONYMIZE_PRESERVED_FIELDS: (keyof MockEmployee)[] = [
   "department",
   "workLocation",
   "startDate",
+  "terminationDate",
   "dateOfConfirmation",
   "employmentType",
   "payFrequency",

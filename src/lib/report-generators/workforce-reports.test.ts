@@ -50,13 +50,14 @@ describe("generateNewHiresTerminationsReportContent", () => {
     expect(html).not.toContain("mock data");
   });
 
-  it("explains when no termination dates exist", () => {
+  it("shows empty terminations when no exit dates exist", () => {
     const html = generateNewHiresTerminationsReportContent(
       employees.map(({ terminationDate: _t, ...rest }) => rest),
       new Date("2026-07-15"),
       "monthly"
     );
-    expect(html).toContain("Termination dates are not stored");
+    expect(html).toContain("No terminations recorded");
+    expect(html).not.toContain("Termination dates are not stored");
   });
 });
 

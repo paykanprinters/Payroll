@@ -1,7 +1,6 @@
-import { format, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import type { MockEmployee } from "../mock-data-interfaces";
-
-type EmployeeWithOptionalTermination = MockEmployee & { terminationDate?: string };
+import { isEmployeeActiveInPeriod } from "@/lib/employee-active-period";
 
 function escapeHtml(value: string): string {
   return value
@@ -12,30 +11,12 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** Active workforce as of the period end (hired on/before end; not terminated before start). */
-function isActiveInPeriod(
-  emp: EmployeeWithOptionalTermination,
-  periodStart: Date | undefined,
-  periodEnd: Date | undefined
-): boolean {
-  if (!emp.startDate) return false;
-  const hireDate = parseISO(emp.startDate);
-  if (periodEnd && hireDate > periodEnd) return false;
-
-  if (emp.terminationDate) {
-    const terminationDate = parseISO(emp.terminationDate);
-    if (periodStart && terminationDate < periodStart) return false;
-  }
-
-  return true;
-}
-
 export const generateEmployeeDemographicsReportContent = (
   employees: MockEmployee[],
   selectedDate: Date | undefined,
   periodType: "monthly" | "yearly"
 ): string => {
-  let filteredEmployees = employees as EmployeeWithOptionalTermination[];
+  let filteredEmployees = employees;
   let reportPeriodDescription = "All Periods";
   let periodStart: Date | undefined;
   let periodEnd: Date | undefined;
@@ -51,8 +32,8 @@ export const generateEmployeeDemographicsReportContent = (
       reportPeriodDescription = format(selectedDate, "yyyy");
     }
 
-    filteredEmployees = (employees as EmployeeWithOptionalTermination[]).filter((emp) =>
-      isActiveInPeriod(emp, periodStart, periodEnd)
+    filteredEmployees = employees.filter((emp) =>
+      isEmployeeActiveInPeriod(emp, periodStart, periodEnd)
     );
   }
 

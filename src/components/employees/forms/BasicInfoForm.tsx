@@ -71,6 +71,13 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ linkedUserId }) => {
               )}
             </div>
             <div className="space-y-1">
+              <Label htmlFor="terminationDate">Termination Date</Label>
+              <Input id="terminationDate" type="date" {...register("terminationDate")} />
+              {errors.terminationDate && (
+                <p className="text-sm text-red-500">{errors.terminationDate.message as string}</p>
+              )}
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="gender">Gender</Label>
               <Select onValueChange={(value) => setValue("gender", value)} value={watch("gender")}>
                 <SelectTrigger id="gender">

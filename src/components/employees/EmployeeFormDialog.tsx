@@ -57,6 +57,10 @@ const employeeSchema = z.object({
     (val) => (val === "" ? undefined : val),
     z.string().min(1, "Start Date is required")
   ),
+  terminationDate: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().optional()
+  ),
 
   idNumber: z.string().optional(),
   phoneNumber: z.string().optional(),
@@ -220,6 +224,7 @@ const emptyDefaults: EmployeeFormValues = {
   salary: undefined,
   hourlyRate: undefined,
   startDate: new Date().toISOString().split("T")[0],
+  terminationDate: "",
   personalId: "",
   idNumber: "",
   phoneNumber: "",
@@ -331,6 +336,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         retirementFundContributionPercent: initialEmployee.retirementFundContributionPercent ?? 0,
         retirementFundContributionFixed: initialEmployee.retirementFundContributionFixed ?? 0,
         leaveCycleStartDate: initialEmployee.leaveCycleStartDate || "",
+        terminationDate: initialEmployee.terminationDate || "",
         leaveOpeningAnnualBalance: initialEmployee.leaveOpeningAnnualBalance,
         leaveOpeningSickBalance: initialEmployee.leaveOpeningSickBalance,
         leaveOpeningFamilyBalance: initialEmployee.leaveOpeningFamilyBalance,

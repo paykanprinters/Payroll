@@ -1,8 +1,6 @@
 import { format, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import type { MockEmployee } from "../mock-data-interfaces";
 
-type EmployeeWithOptionalTermination = MockEmployee & { terminationDate?: string };
-
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -40,16 +38,12 @@ export const generateNewHiresTerminationsReportContent = (
     return hireDate >= periodStart && hireDate <= periodEnd;
   });
 
-  const terminations = (employees as EmployeeWithOptionalTermination[]).filter((emp) => {
+  const terminations = employees.filter((emp) => {
     if (!emp.terminationDate) return false;
     const terminationDate = parseISO(emp.terminationDate);
     if (!periodStart || !periodEnd) return true;
     return terminationDate >= periodStart && terminationDate <= periodEnd;
   });
-
-  const hasTerminationField = (employees as EmployeeWithOptionalTermination[]).some(
-    (emp) => typeof emp.terminationDate === "string" && emp.terminationDate.trim().length > 0
-  );
 
   let html = `
     <p>This report summarizes new hires and terminations within ${escapeHtml(reportPeriodDescription)}.</p>
@@ -85,18 +79,6 @@ export const generateNewHiresTerminationsReportContent = (
     </table>
 
     <h4 class="text-md font-semibold mb-2">Terminations (${escapeHtml(reportPeriodDescription)})</h4>
-  `;
-
-  if (!hasTerminationField) {
-    html += `
-      <p class="text-sm text-muted-foreground mb-4">
-        Termination dates are not stored on employee records yet, so this section cannot list separations.
-        New-hire figures above still use each employee&apos;s start date.
-      </p>
-    `;
-  }
-
-  html += `
     <table class="w-full text-left border-collapse">
       <thead>
         <tr class="border-b">

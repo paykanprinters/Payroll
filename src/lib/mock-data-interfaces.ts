@@ -57,6 +57,8 @@ export interface MockEmployee {
   salary?: number; // Made optional as hourlyRate can also be a payment basis
   hourlyRate?: number; // New field
   startDate: string;
+  /** Last day of employment; omit/undefined while currently employed. */
+  terminationDate?: string;
   idNumber?: string;
   phoneNumber?: string;
   emergencyContactName?: string;

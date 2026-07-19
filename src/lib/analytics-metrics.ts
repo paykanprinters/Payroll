@@ -196,7 +196,7 @@ export function computeAnalyticsCharts(
       if (turnoverMap.has(hireMonth)) {
         turnoverMap.get(hireMonth)!.newHires++;
       }
-      const terminationDate = (emp as MockEmployee & { terminationDate?: string }).terminationDate;
+      const terminationDate = emp.terminationDate;
       if (terminationDate) {
         const termMonth = format(parseISO(terminationDate), "MMM yyyy");
         if (turnoverMap.has(termMonth)) {

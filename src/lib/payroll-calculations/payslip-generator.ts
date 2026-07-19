@@ -22,6 +22,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import type { OvertimePremiumRules } from "./helpers/earnings-helpers";
+import { filterEmployeesActiveInPeriod } from "@/lib/employee-active-period";
 
 import {
   getWeeklyThreshold,
@@ -151,7 +152,9 @@ export const generatePayslipsForPeriod = (
   const processingSavingPlans: SavingPlan[] = JSON.parse(JSON.stringify(initialSavingPlans));
   const savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] = [];
 
-  employees.forEach((emp) => {
+  const activeEmployees = filterEmployeesActiveInPeriod(employees, payPeriodStart, payPeriodEnd);
+
+  activeEmployees.forEach((emp) => {
     const approvedTimesheetsForPeriod = timesheets.filter((ts) => {
       const isEmployeeMatch = ts.employeeId === emp.id;
       const eligibleStatus = ts.status === "Approved" || ts.status === "Locked";

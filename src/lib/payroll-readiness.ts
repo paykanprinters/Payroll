@@ -6,6 +6,7 @@ import {
   getTaxTableBlockingMessage,
   validateLoadedTaxTables,
 } from "@/lib/tax-tables-validation";
+import { filterEmployeesActiveInPeriod } from "@/lib/employee-active-period";
 
 export type ReadinessSeverity = "critical" | "warning";
 
@@ -253,6 +254,7 @@ export function assessPayrollReadiness(options: {
   const periodType = options.periodType ?? "monthly";
   const { start, end, label } = resolvePeriod(options.selectedDate, periodType);
   const timesheets = options.timesheets ?? [];
+  const activeEmployees = filterEmployeesActiveInPeriod(options.employees, start, end);
 
   const companyIssues: CompanyReadinessIssue[] = [];
   if (isBlank(options.companyDetails?.companyTaxNumber)) {
@@ -263,7 +265,7 @@ export function assessPayrollReadiness(options: {
     });
   }
 
-  const employees = [...options.employees]
+  const employees = [...activeEmployees]
     .map((employee) => {
       const issues = [
         ...assessEmployeeProfile(employee),
@@ -352,6 +354,7 @@ export function computePayrollRunBlockers(options: {
     periodStart: periodStart.toISOString().slice(0, 10),
     periodEnd: periodEnd.toISOString().slice(0, 10),
   };
+  const activeEmployees = filterEmployeesActiveInPeriod(employees, periodStart, periodEnd);
 
   if (applyPAYE && isBlank(companyDetails?.companyTaxNumber)) {
     blockers.push({
@@ -374,7 +377,7 @@ export function computePayrollRunBlockers(options: {
     }
   }
 
-  for (const employee of employees) {
+  for (const employee of activeEmployees) {
     const missingBank = missingBankFields(employee);
     if (missingBank.length > 0) {
       blockers.push({
