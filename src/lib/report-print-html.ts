@@ -3,6 +3,16 @@ import type { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 import { getOrientedPaperMm, getReportPaper, type ReportPageOrientation } from "@/lib/report-paper";
+import {
+  getReportSheetInnerHeightMm,
+  getReportSheetOuterHeightMm,
+  getReportSheetOuterWidthMm,
+  REPORT_PAGE_MARGIN_MM,
+  REPORT_SHEET_BORDER,
+  REPORT_SHEET_BORDER_RADIUS_PX,
+  REPORT_SHEET_PADDING_MM,
+} from "@/lib/report-sheet-layout";
+import { REPORT_SHEET_PAGINATION_SCRIPT } from "@/lib/report-sheet-pagination-script";
 import { getPrintStyles } from "@/lib/utils";
 import { sanitizeHtml } from "@/utils/sanitize-html";
 
@@ -15,8 +25,8 @@ export type BuildReportPrintDocumentInput = {
 };
 
 /**
- * Self-contained HTML document used for Chromium print/PDF.
- * Mirrors ReportContentWrapper `chrome="sheet"` so preview ≈ export.
+ * Self-contained HTML for Chromium print/PDF.
+ * Content is paginated into fixed rounded sheets (one border frame per page).
  */
 export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInput): string {
   const orientation = input.orientation ?? "portrait";
@@ -27,6 +37,12 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
   const printStyles = getPrintStyles(settings.defaultReportPaperSize);
   const baseFontSizePx = parseFloat(String(printStyles.fontSize || "14").replace("px", "")) || 14;
   const bodyFont = settings.reportContentFontSize || 14;
+
+  const sheetOuterW = getReportSheetOuterWidthMm(oriented.width);
+  const sheetOuterH = getReportSheetOuterHeightMm(oriented.height);
+  const sheetInnerH = getReportSheetInnerHeightMm(oriented.height);
+  // ~3.78 px/mm at 96dpi — used by the pagination script
+  const sheetInnerMaxPx = Math.round(sheetInnerH * (96 / 25.4));
 
   const displayName =
     company?.companyLegalName || company?.companyTradingName || "Your Company Name";
@@ -65,9 +81,12 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
         </div>`
       : "";
     headerParts.push(
-      `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;">${logoHtml}${detailsHtml}</div>`
+      `<div class="report-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;">${logoHtml}${detailsHtml}</div>`
     );
   }
+
+  const pageSizeCss =
+    paper.label === "US Letter" ? "letter" : settings.defaultReportPaperSize.toLowerCase();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -75,27 +94,57 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
   <meta charset="utf-8" />
   <title>${escapeHtml(input.reportTitle)}</title>
   <style>
+    :root {
+      --sheet-inner-max-px: ${sheetInnerMaxPx};
+    }
     @page {
-      size: ${paper.label === "US Letter" ? "letter" : settings.defaultReportPaperSize.toLowerCase()} ${orientation};
-      margin: 12mm;
+      size: ${pageSizeCss} ${orientation};
+      margin: ${REPORT_PAGE_MARGIN_MM}mm;
     }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
-      background: #fff;
+      background: #e8ecf1;
       color: #111;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       font-size: ${baseFontSizePx}px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .page {
-      width: ${oriented.width}mm;
-      min-height: ${oriented.height}mm;
-      margin: 0 auto;
-      padding: 8mm;
+    #sheets {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+    }
+    .sheet {
+      width: ${sheetOuterW}mm;
+      height: ${sheetOuterH}mm;
       background: #fff;
+      border: ${REPORT_SHEET_BORDER};
+      border-radius: ${REPORT_SHEET_BORDER_RADIUS_PX}px;
+      padding: ${REPORT_SHEET_PADDING_MM}mm;
+      overflow: hidden;
+      break-after: page;
+      page-break-after: always;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+    .sheet:last-child {
+      break-after: auto;
+      page-break-after: auto;
+    }
+    .sheet-inner {
+      overflow: hidden;
+    }
+    #report-flow {
+      position: absolute;
+      left: -10000px;
+      top: 0;
+      width: ${sheetOuterW - REPORT_SHEET_PADDING_MM * 2}mm;
+      visibility: hidden;
+      pointer-events: none;
     }
     .title {
       text-align: center;
@@ -108,41 +157,50 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
       border-top: 1px solid #e5e7eb;
       margin: ${baseFontSizePx}px 0;
     }
-    .body {
+    .body, .sheet-inner {
       font-size: ${bodyFont}px;
       line-height: 1.4;
     }
-    .body table {
+    .sheet-inner table, #report-flow table {
       width: 100%;
       border-collapse: collapse;
     }
-    .body th, .body td {
+    .sheet-inner th, .sheet-inner td,
+    #report-flow th, #report-flow td {
       padding: 6px 8px;
       border-bottom: 1px solid #e5e7eb;
       vertical-align: top;
     }
-    .body th {
+    .sheet-inner th, #report-flow th {
       background: #f8fafc;
       text-align: left;
       font-weight: 700;
     }
+    .report-header, .title, .rule, tr, h3, h4, p {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
     @media print {
-      .page {
-        width: auto;
-        min-height: auto;
+      html, body { background: #fff; }
+      #sheets { padding: 0; gap: 0; }
+      .sheet {
+        width: 100%;
+        height: ${sheetOuterH}mm;
+        box-shadow: none;
         margin: 0;
-        padding: 0;
       }
     }
   </style>
 </head>
 <body>
-  <div class="page">
+  <div id="report-flow">
     ${headerParts.join("")}
     <hr class="rule" />
     <h1 class="title">${escapeHtml(input.reportTitle)}</h1>
     <div class="body">${sanitizedBody}</div>
   </div>
+  <div id="sheets" aria-live="polite"></div>
+  <script>${REPORT_SHEET_PAGINATION_SCRIPT}</script>
 </body>
 </html>`;
 }

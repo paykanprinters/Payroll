@@ -141,8 +141,8 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
           minHeight: `${oriented.height}mm`,
           padding: "24px",
           fontSize: printStyles.fontSize,
-          border: "1px solid #d1d5db",
-          borderRadius: 0,
+          border: "1.5px solid #94a3b8",
+          borderRadius: 12,
           boxShadow: "none",
         }
       : {

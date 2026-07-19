@@ -18,12 +18,14 @@ export async function renderHtmlToPdfBuffer(input: RenderHtmlPdfInput): Promise<
   try {
     const page = await browser.newPage();
     await page.setContent(input.html, { waitUntil: "networkidle" });
+    await page.waitForFunction("window.__REPORT_PAGINATED__ === true", null, { timeout: 30_000 });
     const pdf = await page.pdf({
       format: paperSize === "Letter" ? "Letter" : paperSize,
       landscape: orientation === "landscape",
       printBackground: true,
-      margin: { top: "12mm", right: "12mm", bottom: "12mm", left: "12mm" },
       preferCSSPageSize: true,
+      // Margins come from @page in the HTML so each rounded sheet sits inside the page.
+      margin: { top: "0", right: "0", bottom: "0", left: "0" },
     });
     return Buffer.from(pdf);
   } finally {

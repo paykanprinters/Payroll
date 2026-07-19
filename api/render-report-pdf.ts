@@ -13,7 +13,7 @@ type PdfRequestBody = {
 
 /**
  * Production Chromium HTML→PDF for catalog reports.
- * Deployed as a Vercel Serverless Function; uses @sparticuz/chromium + puppeteer-core.
+ * Waits for in-page sheet pagination so each PDF page is one rounded sheet.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") {
@@ -58,12 +58,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 45_000 });
+      await page.waitForFunction("window.__REPORT_PAGINATED__ === true", { timeout: 30_000 });
       const pdf = await page.pdf({
         format: paperSize === "Letter" ? "Letter" : paperSize,
         landscape: orientation === "landscape",
         printBackground: true,
-        margin: { top: "12mm", right: "12mm", bottom: "12mm", left: "12mm" },
         preferCSSPageSize: true,
+        margin: { top: "0", right: "0", bottom: "0", left: "0" },
       });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Cache-Control", "no-store");

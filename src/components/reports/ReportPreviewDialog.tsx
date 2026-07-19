@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,18 +22,10 @@ import { saveReportToSupabase } from "@/integrations/supabase/report-queries";
 import { useAuth } from "@/hooks/use-auth";
 import { sanitizeHtml } from "@/utils/sanitize-html";
 import { useReportHtmlPdf } from "@/hooks/use-report-html-pdf";
-import {
-  fitPaperScaleToWidth,
-  getOrientedPaperMm,
-  getReportPaper,
-  type ReportPageOrientation,
-} from "@/lib/report-paper";
-import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
+import type { ReportPageOrientation } from "@/lib/report-paper";
+import ReportPagedPreview from "@/components/reports/ReportPagedPreview";
 
 export type { ReportPageOrientation };
-
-const SIZE_EPSILON_PX = 2;
-const SCALE_EPSILON = 0.005;
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
@@ -61,59 +53,11 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   const { downloadReportPdf, openReportPdf } = useReportHtmlPdf();
 
   const [orientation, setOrientation] = useState<ReportPageOrientation>("portrait");
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
-  const lastWidthRef = useRef(0);
-  const [scale, setScale] = useState(0.5);
-  const [footprintHeightPx, setFootprintHeightPx] = useState(400);
-
-  const paperMeta = getReportPaper(reportDesignSettings.defaultReportPaperSize);
-  const oriented = getOrientedPaperMm(reportDesignSettings.defaultReportPaperSize, orientation);
 
   React.useEffect(() => {
     if (!isOpen) return;
     setOrientation(/readiness/i.test(reportTitle) ? "landscape" : "portrait");
   }, [isOpen, reportTitle]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    const el = viewportRef.current;
-    if (!el) return;
-
-    const applyWidth = (width: number) => {
-      const w = Math.round(width);
-      if (w < 1) return;
-      if (Math.abs(w - lastWidthRef.current) < SIZE_EPSILON_PX) return;
-      lastWidthRef.current = w;
-      const next = fitPaperScaleToWidth(oriented.width, w, 24);
-      setScale((current) => (Math.abs(current - next) < SCALE_EPSILON ? current : next));
-    };
-
-    const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      applyWidth(entry.contentRect.width);
-    });
-    ro.observe(el);
-    applyWidth(el.clientWidth);
-    return () => ro.disconnect();
-  }, [isOpen, oriented.width]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    const page = pageRef.current;
-    if (!page) return;
-
-    const measure = () => {
-      const layoutH = page.offsetHeight;
-      setFootprintHeightPx(Math.max(120, Math.round(layoutH * scale)));
-    };
-
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(page);
-    return () => ro.disconnect();
-  }, [isOpen, scale, orientation, reportContent, reportDesignSettings, companyDetails, reportTitle]);
 
   const sanitizedReportContent = React.useMemo(() => sanitizeHtml(reportContent), [reportContent]);
 
@@ -152,8 +96,6 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     });
   };
 
-  const scaledWidthMm = oriented.width * scale;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
@@ -166,8 +108,8 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <DialogTitle>{reportTitle}</DialogTitle>
           <DialogDescription>
             {periodLabel ? `Period: ${periodLabel}. ` : ""}
-            Scaled print-page preview. Print / Download use Chromium HTML→PDF so the file matches
-            this layout (square page edges — not the dialog frame).
+            Content is split into rounded sheets — overflow continues on the next page, matching
+            print and PDF.
           </DialogDescription>
         </DialogHeader>
 
@@ -177,7 +119,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
               Page orientation
             </Label>
             <p className="text-xs text-muted-foreground">
-              Applies to this preview and to print / PDF. Landscape suits wide tables.
+              Applies to preview, print, and PDF. Landscape suits wide tables.
             </p>
           </div>
           <ToggleGroup
@@ -199,45 +141,15 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           </ToggleGroup>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>
-            {paperMeta.label} · {orientation} · {oriented.width.toFixed(0)}×
-            {oriented.height.toFixed(0)} mm · {Math.round(scale * 100)}% scale
-          </span>
-          <span>Scroll for multi-page length</span>
-        </div>
-
-        <div
-          ref={viewportRef}
-          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto border bg-[linear-gradient(135deg,#e8ecf1_0%,#f4f6f8_50%,#e5e9ef_100%)] p-3 [scrollbar-gutter:stable]"
-        >
-          <div
-            className="relative mx-auto"
-            style={{
-              width: `${scaledWidthMm}mm`,
-              height: `${footprintHeightPx}px`,
-            }}
-          >
-            <div
-              ref={pageRef}
-              className="origin-top-left"
-              style={{
-                width: `${oriented.width}mm`,
-                transform: `scale(${scale})`,
-              }}
-            >
-              <ReportContentWrapper
-                reportTitle={reportTitle}
-                reportContent={sanitizedReportContent}
-                companyDetails={companyDetails}
-                reportDesignSettings={reportDesignSettings}
-                constrainToParent={false}
-                pageOrientation={orientation}
-                chrome="sheet"
-              />
-            </div>
-          </div>
-        </div>
+        {isOpen ? (
+          <ReportPagedPreview
+            reportTitle={reportTitle}
+            reportContentHtml={sanitizedReportContent}
+            companyDetails={companyDetails}
+            reportDesignSettings={reportDesignSettings}
+            orientation={orientation}
+          />
+        ) : null}
 
         <DialogFooter className="shrink-0 flex-col gap-2 pt-1 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => void handlePrintOrDownload("print")}>

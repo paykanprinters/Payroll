@@ -24,8 +24,10 @@ describe("buildReportPrintDocumentHtml", () => {
     expect(html).toContain("Payroll readiness");
     expect(html).toContain("Kan Screenprinters cc");
     expect(html).toContain("Hello");
-    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<script>alert");
     expect(html).toContain("size: a4 landscape");
-    expect(html).toContain("297mm");
+    expect(html).toContain('id="sheets"');
+    expect(html).toContain("border-radius:");
+    expect(html).toContain("__REPORT_PAGINATED__");
   });
 });
