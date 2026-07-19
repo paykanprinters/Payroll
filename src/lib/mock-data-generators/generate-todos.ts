@@ -1,16 +1,7 @@
 import { ToDoEntry, MockEmployee, MockPayslip, Loan, SavingPlan, LeaveEntry, TimesheetEntry } from "../mock-data-interfaces";
 import { format, isPast, subMonths, isWithinInterval, parseISO } from "date-fns";
 import { v4 as uuidv4 } from 'uuid';
-
-// Define fields to check for incompleteness and generate To-Dos
-// IMPORTANT: These keys must match the camelCase property names in the MockEmployee interface
-const fieldsToFlag: { key: keyof MockEmployee; label: string; level: ToDoEntry["level"] }[] = [
-  { key: "personalId", label: "Personal ID (Clock-in)", level: "critical" },
-  { key: "idNumber", label: "National ID Number", level: "critical" },
-  { key: "phoneNumber", label: "Mobile Number", level: "warning" },
-  { key: "taxReferenceNumber", label: "Tax Reference Number", level: "critical" },
-  { key: "accountNumber", label: "Bank Account Number", level: "critical" },
-];
+import { PROFILE_FIELD_CHECKS } from "@/lib/payroll-readiness";
 
 export const generateMockToDos = (
   employees: MockEmployee[],
@@ -25,9 +16,9 @@ export const generateMockToDos = (
   const currentMonth = format(today, 'yyyy-MM');
   const lastMonth = format(subMonths(today, 1), 'yyyy-MM');
 
-  // --- Employee Profile Incompleteness To-Dos ---
+  // --- Employee Profile Incompleteness To-Dos (shared checklist with readiness report) ---
   employees.forEach(employee => {
-    fieldsToFlag.forEach(field => {
+    PROFILE_FIELD_CHECKS.forEach(field => {
       const fieldValue = employee[field.key];
       const ignoredFields = employee.ignoredIncompleteFields || [];
       const isIgnored = ignoredFields.includes(field.key);
@@ -36,7 +27,7 @@ export const generateMockToDos = (
         mockToDos.push({
           id: uuidv4(),
           message: `Employee ${employee.firstName} ${employee.lastName} is missing ${field.label}.`,
-          level: field.level,
+          level: field.severity === "critical" ? "critical" : "warning",
           module: "Employees",
           actionUrl: "/employees",
           status: "pending",

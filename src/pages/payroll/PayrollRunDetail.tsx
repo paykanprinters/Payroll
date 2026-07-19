@@ -96,7 +96,8 @@ const PayrollRunDetailPage: React.FC = () => {
     updateTimesheetStatus,
   } = usePayrollProcessor();
   const { rules: overtimeRules } = useOvertimeRules();
-  const { computeBlockers, isPastCutOff, buildReminderPayload } = useReadinessGates();
+  const { computeBlockers, isPastCutOff, buildReminderPayload, canGeneratePayrollItems, canApprovePayrollRun } =
+    useReadinessGates();
 
   const [run, setRun] = useState<PayrollRun | null>(null);
   const [items, setItems] = useState<PayrollRunItem[]>([]);
@@ -166,9 +167,9 @@ const PayrollRunDetailPage: React.FC = () => {
       return;
     }
 
-    // Readiness gate: prevent approval when blockers exist
-    if (next === "Approved" && blockers.length > 0) {
-      showError("Readiness gates: Resolve blockers before approval.");
+    // Readiness gate: errors or unresolved timesheet warnings block approval
+    if (next === "Approved" && !canApprovePayrollRun(blockers)) {
+      showError("Readiness gates: Resolve error blockers and timesheet issues before approval.");
       return;
     }
 
@@ -493,8 +494,8 @@ const PayrollRunDetailPage: React.FC = () => {
   const nextStatuses = statusFlow[run.status];
   const cutOffReached = targetPeriod ? isPastCutOff(targetPeriod.end) : false;
   const isCancelled = run.status === "Cancelled";
-  const canGenerateItems =
-    blockers.filter((b) => b.severity === "error").length === 0 && !isCancelled;
+  const canGenerateItems = canGeneratePayrollItems(blockers) && !isCancelled;
+  const canApproveRun = canApprovePayrollRun(blockers);
   const canVoid = VOIDABLE_STATUSES.includes(run.status) && !isMockDataEnabled;
 
   const paymentBadgeClass = (status: string) => {
@@ -773,13 +774,13 @@ const PayrollRunDetailPage: React.FC = () => {
                       key={ns}
                       onClick={() => handleTransition(ns)}
                       disabled={
-                        (ns === "Approved" && blockers.length > 0) ||
+                        (ns === "Approved" && !canApproveRun) ||
                         (ns === "Approved" &&
                           Boolean(run.reviewedBy && user?.id === run.reviewedBy))
                       }
                       title={
-                        ns === "Approved" && blockers.length > 0
-                          ? "Resolve blockers before approval."
+                        ns === "Approved" && !canApproveRun
+                          ? "Resolve error blockers and timesheet issues before approval."
                           : ns === "Approved" &&
                             run.reviewedBy &&
                             user?.id === run.reviewedBy
