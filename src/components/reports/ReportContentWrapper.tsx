@@ -7,7 +7,11 @@ import { sanitizeHtml } from "@/utils/sanitize-html";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
-import { getReportPreviewPageClasses } from "@/lib/report-paper";
+import {
+  getOrientedPaperMm,
+  getReportPreviewPageClasses,
+  type ReportPageOrientation,
+} from "@/lib/report-paper";
 
 interface ReportContentWrapperProps {
   reportTitle: string;
@@ -18,6 +22,13 @@ interface ReportContentWrapperProps {
   isPdfGeneration?: boolean; // New prop to indicate PDF generation context
   /** When false, keep physical paper width (for scaled design preview). Default true. */
   constrainToParent?: boolean;
+  /** Matches PDF page orientation. */
+  pageOrientation?: ReportPageOrientation;
+  /**
+   * `sheet` = print-like rectangle (no rounded card chrome) — use in preview dialogs.
+   * `card` = legacy soft UI card (rounded + shadow).
+   */
+  chrome?: "sheet" | "card";
 }
 
 const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
@@ -26,8 +37,10 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
   companyDetails,
   reportDesignSettings,
   onReadyForPdf,
-  isPdfGeneration = false, // Default to false
+  isPdfGeneration = false,
   constrainToParent = true,
+  pageOrientation = "portrait",
+  chrome = "card",
 }) => {
   const {
     companyLegalName,
@@ -39,10 +52,10 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     companyEmail,
     companyWebsite,
     logoUrl: companyLogoUrl,
-    logoWidth: companyLogoWidth, // Use new width
-    logoHeight: companyLogoHeight, // Use new height
-    logoFit: companyLogoFit, // Use new fit
-  } = companyDetails || {}; // Destructure with fallback to empty object
+    logoWidth: companyLogoWidth,
+    logoHeight: companyLogoHeight,
+    logoFit: companyLogoFit,
+  } = companyDetails || {};
 
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
   const resolvedLogoUrl = reportDesignSettings.includeCompanyLogo
@@ -50,9 +63,8 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     : undefined;
   const logoDims = resolveDocumentLogoDimensions(companyLogoWidth, companyLogoHeight, companyLogoFit);
 
-  // Get explicit print styles based on layout size
   const printStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
-  const baseFontSizePx = parseFloat(printStyles.fontSize?.toString().replace('px', '') || '14'); // Ensure it's a number
+  const baseFontSizePx = parseFloat(printStyles.fontSize?.toString().replace("px", "") || "14");
 
   const sanitizedReportContent = React.useMemo(
     () => sanitizeHtml(reportContent),
@@ -64,7 +76,7 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
 
   React.useEffect(() => {
     if (!isPdfGeneration) {
-      setImagesLoaded(true); // Not generating PDF, so no need to wait for images
+      setImagesLoaded(true);
       return;
     }
 
@@ -84,22 +96,22 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     };
 
     const images = Array.from(imageRefs.current);
-    images.forEach(img => {
+    images.forEach((img) => {
       if (img.complete) {
         handleImageLoad();
       } else {
-        img.addEventListener('load', handleImageLoad);
-        img.addEventListener('error', handleImageLoad); // Treat error as loaded to not block PDF
+        img.addEventListener("load", handleImageLoad);
+        img.addEventListener("error", handleImageLoad);
       }
     });
 
     return () => {
-      images.forEach(img => {
-        img.removeEventListener('load', handleImageLoad);
-        img.removeEventListener('error', handleImageLoad);
+      images.forEach((img) => {
+        img.removeEventListener("load", handleImageLoad);
+        img.removeEventListener("error", handleImageLoad);
       });
     };
-  }, [resolvedLogoUrl, isPdfGeneration]); // Re-run if logo URL changes or PDF generation context changes
+  }, [resolvedLogoUrl, isPdfGeneration]);
 
   React.useEffect(() => {
     if (imagesLoaded && onReadyForPdf) {
@@ -107,49 +119,82 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     }
   }, [imagesLoaded, onReadyForPdf]);
 
-  // Helper to get Tailwind classes for width/min-height for UI preview
-  const previewPageClasses = getReportPreviewPageClasses(
-    reportDesignSettings.defaultReportPaperSize
+  const oriented = getOrientedPaperMm(
+    reportDesignSettings.defaultReportPaperSize,
+    pageOrientation
   );
+  const useInlinePaperBox = chrome === "sheet" || pageOrientation === "landscape";
+  const previewPageClasses = useInlinePaperBox
+    ? undefined
+    : getReportPreviewPageClasses(reportDesignSettings.defaultReportPaperSize);
+
+  const sheetStyle: React.CSSProperties = isPdfGeneration
+    ? {
+        ...printStyles,
+        padding: "10mm",
+        border: "none",
+        boxShadow: "none",
+      }
+    : chrome === "sheet"
+      ? {
+          width: `${oriented.width}mm`,
+          minHeight: `${oriented.height}mm`,
+          padding: "24px",
+          fontSize: printStyles.fontSize,
+          border: "1px solid #d1d5db",
+          borderRadius: 0,
+          boxShadow: "none",
+        }
+      : {
+          padding: "24px",
+          fontSize: printStyles.fontSize,
+          border: "1px solid #ccc",
+          boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+        };
 
   return (
     <div
       className={cn(
         "bg-white text-gray-900",
-        !isPdfGeneration && "mx-auto rounded-lg shadow-lg",
+        !isPdfGeneration && chrome === "card" && "mx-auto rounded-lg shadow-lg",
+        !isPdfGeneration && chrome === "sheet" && "mx-auto",
         !isPdfGeneration && constrainToParent && "max-w-full",
         !isPdfGeneration && previewPageClasses
       )}
-      style={isPdfGeneration ? {
-        ...printStyles, // fontSize from utils
-        padding: '10mm', // Explicit internal padding for PDF
-        border: 'none', // No border for PDF generation, will be drawn programmatically
-        boxShadow: 'none', // Ensure no shadow in print/PDF
-      } : {
-        // UI preview styles
-        padding: '24px', // Consistent padding for UI preview
-        fontSize: printStyles.fontSize,
-        border: '1px solid #ccc',
-        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-      }}
+      style={sheetStyle}
     >
-      {/* Report Header with Company Details */}
-      {(reportDesignSettings.includeCompanyLogo && resolvedLogoUrl) || reportDesignSettings.includeCompanyDetails ? (
-        <div className="flex justify-between items-start mb-6 print:mb-8">
+      {(reportDesignSettings.includeCompanyLogo && resolvedLogoUrl) ||
+      reportDesignSettings.includeCompanyDetails ? (
+        <div className="mb-6 flex items-start justify-between print:mb-8">
           {reportDesignSettings.includeCompanyLogo && resolvedLogoUrl && (
             <img
-              ref={el => { if (el) imageRefs.current.push(el); }}
+              ref={(el) => {
+                if (el) imageRefs.current.push(el);
+              }}
               src={resolvedLogoUrl}
               alt="Company Logo"
               style={{ width: logoDims.width, height: logoDims.height, objectFit: logoDims.fit }}
-              className="rounded-md flex-shrink-0 print:w-[60px] print:h-[60px]"
+              className="flex-shrink-0 print:h-[60px] print:w-[60px]"
             />
           )}
           {reportDesignSettings.includeCompanyDetails && (
-            <div className="text-right text-[13px] print:text-[13px] w-full" style={{ fontSize: `${baseFontSizePx * 0.9}px` }}>
-              <h2 className="text-md font-bold print:text-lg" style={{ fontSize: `${baseFontSizePx * 1.2}px` }}>{displayCompanyName}</h2>
+            <div
+              className="w-full text-right text-[13px] print:text-[13px]"
+              style={{ fontSize: `${baseFontSizePx * 0.9}px` }}
+            >
+              <h2
+                className="text-md font-bold print:text-lg"
+                style={{ fontSize: `${baseFontSizePx * 1.2}px` }}
+              >
+                {displayCompanyName}
+              </h2>
               {companyTradingName && companyTradingName !== companyLegalName && (
-                <p className="text-[13px] print:text-[13px]" style={{ fontSize: `${baseFontSizePx * 1}px` }}>{companyTradingName}</p>
+                <p
+                  className="text-[13px] print:text-[13px]"
+                  style={{ fontSize: `${baseFontSizePx * 1}px` }}
+                >
+                  {companyTradingName}
+                </p>
               )}
               <p>{physicalAddress}</p>
               <p>Reg. No: {companyRegistrationNumber}</p>
@@ -164,9 +209,16 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
 
       <Separator className="my-4 print:my-4" style={{ margin: `${baseFontSizePx * 1}px 0` }} />
 
-      <h3 className="text-lg font-bold text-center mb-4 print:text-xl print:mb-6" style={{ fontSize: `${baseFontSizePx * 1.3}px`, marginBottom: `${baseFontSizePx * 1}px` }}>{reportTitle}</h3>
+      <h3
+        className="mb-4 text-center text-lg font-bold print:mb-6 print:text-xl"
+        style={{
+          fontSize: `${baseFontSizePx * 1.3}px`,
+          marginBottom: `${baseFontSizePx * 1}px`,
+        }}
+      >
+        {reportTitle}
+      </h3>
 
-      {/* Report Content */}
       <div
         dangerouslySetInnerHTML={{ __html: sanitizedReportContent }}
         style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }}

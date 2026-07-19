@@ -3,6 +3,7 @@ import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
+import { reportPdfApiPlugin } from "./vite/plugins/report-pdf-api";
 
 const STAFF_PWA_ICONS = [
   {
@@ -31,6 +32,7 @@ export default defineConfig(() => ({
     port: 8080,
   },
   plugins: [
+    reportPdfApiPlugin(),
     dyadComponentTagger(),
     react(),
     VitePWA({

@@ -156,6 +156,9 @@ type Props = {
 };
 
 const HtmlReportPdfDocument: React.FC<Props> = ({
+  // LEGACY: Catalog reports / payroll pack now use Chromium HTML→PDF
+  // (`buildReportPrintDocumentHtml` + /api/render-report-pdf or browser print).
+  // Kept for any remaining react-pdf call sites that still import this module.
   reportTitle,
   reportContentHtml,
   companyDetails,

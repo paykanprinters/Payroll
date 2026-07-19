@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,43 +13,36 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Printer, Download, Save } from "lucide-react";
 import { showError } from "@/utils/toast";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { cn, getPrintStyles } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { saveReportToSupabase } from "@/integrations/supabase/report-queries";
 import { useAuth } from "@/hooks/use-auth";
 import { sanitizeHtml } from "@/utils/sanitize-html";
-import { usePdfVector } from "@/hooks/use-pdf-vector";
-import { REPORT_PAPER_MM } from "@/lib/report-paper";
+import { useReportHtmlPdf } from "@/hooks/use-report-html-pdf";
+import {
+  fitPaperScaleToWidth,
+  getOrientedPaperMm,
+  getReportPaper,
+  type ReportPageOrientation,
+} from "@/lib/report-paper";
+import ReportContentWrapper from "@/components/reports/ReportContentWrapper";
 
-export type ReportPageOrientation = "portrait" | "landscape";
+export type { ReportPageOrientation };
 
-function previewPageStyle(
-  paperSize: "Letter" | "A4" | "A5" | undefined,
-  orientation: ReportPageOrientation
-): React.CSSProperties {
-  const paper = REPORT_PAPER_MM[paperSize || "A4"];
-  const widthMm = orientation === "landscape" ? paper.height : paper.width;
-  const heightMm = orientation === "landscape" ? paper.width : paper.height;
-  return {
-    width: `${widthMm}mm`,
-    minHeight: `${heightMm}mm`,
-  };
-}
+const SIZE_EPSILON_PX = 2;
+const SCALE_EPSILON = 0.005;
 
 interface ReportPreviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
   reportTitle: string;
-  reportContent: string; // HTML string for the report body
-  companyDetails: MockCompanyDetails | null; // Receive companyDetails as prop
+  reportContent: string;
+  companyDetails: MockCompanyDetails | null;
   reportDesignSettings: ReportDesignSettings;
-  documentType: "payslip" | "report"; // New prop for document type
+  documentType: "payslip" | "report";
   periodLabel?: string;
 }
 
@@ -58,71 +51,86 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   onClose,
   reportTitle,
   reportContent,
-  companyDetails, // Destructure companyDetails
+  companyDetails,
   reportDesignSettings,
   documentType,
   periodLabel,
 }) => {
-  // Define displayCompanyName within this component's scope
-  const displayCompanyName =
-    companyDetails?.companyLegalName || companyDetails?.companyTradingName || "Your Company Name";
-  const companyLogoUrl = reportDesignSettings.includeCompanyLogo
-    ? resolveCompanyLogoSource(companyDetails?.logoUrl)
-    : undefined;
-  const logoDims = resolveDocumentLogoDimensions(
-    companyDetails?.logoWidth,
-    companyDetails?.logoHeight,
-    companyDetails?.logoFit
-  );
-  const physicalAddress = companyDetails?.physicalAddress;
-  const companyRegistrationNumber = companyDetails?.companyRegistrationNumber;
-  const vatRegistrationNumber = companyDetails?.vatRegistrationNumber;
-  const mainContactNumber = companyDetails?.mainContactNumber;
-  const companyEmail = companyDetails?.companyEmail;
-  const companyWebsite = companyDetails?.companyWebsite;
+  const { isMockDataEnabled } = usePayrollProcessor();
+  const { user } = useAuth();
+  const { downloadReportPdf, openReportPdf } = useReportHtmlPdf();
 
-  const { isMockDataEnabled } = usePayrollProcessor(); // Get isMockDataEnabled from usePayrollProcessor
-  const { user } = useAuth(); // Get user from useAuth
+  const [orientation, setOrientation] = useState<ReportPageOrientation>("portrait");
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const lastWidthRef = useRef(0);
+  const [scale, setScale] = useState(0.5);
+  const [footprintHeightPx, setFootprintHeightPx] = useState(400);
 
-  const [orientation, setOrientation] = React.useState<ReportPageOrientation>("portrait");
+  const paperMeta = getReportPaper(reportDesignSettings.defaultReportPaperSize);
+  const oriented = getOrientedPaperMm(reportDesignSettings.defaultReportPaperSize, orientation);
 
   React.useEffect(() => {
     if (!isOpen) return;
-    // Wide checklist tables read better in landscape by default.
     setOrientation(/readiness/i.test(reportTitle) ? "landscape" : "portrait");
   }, [isOpen, reportTitle]);
 
-  // Get explicit print styles for the preview display
-  const previewStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
-  const baseFontSizePx = parseFloat(previewStyles.fontSize?.toString() || "14px");
-  const pageBoxStyle = previewPageStyle(reportDesignSettings.defaultReportPaperSize, orientation);
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const el = viewportRef.current;
+    if (!el) return;
 
-  const { downloadPdf, openPdf } = usePdfVector();
+    const applyWidth = (width: number) => {
+      const w = Math.round(width);
+      if (w < 1) return;
+      if (Math.abs(w - lastWidthRef.current) < SIZE_EPSILON_PX) return;
+      lastWidthRef.current = w;
+      const next = fitPaperScaleToWidth(oriented.width, w, 24);
+      setScale((current) => (Math.abs(current - next) < SCALE_EPSILON ? current : next));
+    };
 
-  // Sanitize report content before rendering
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      applyWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    applyWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, [isOpen, oriented.width]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const page = pageRef.current;
+    if (!page) return;
+
+    const measure = () => {
+      const layoutH = page.offsetHeight;
+      setFootprintHeightPx(Math.max(120, Math.round(layoutH * scale)));
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(page);
+    return () => ro.disconnect();
+  }, [isOpen, scale, orientation, reportContent, reportDesignSettings, companyDetails, reportTitle]);
+
   const sanitizedReportContent = React.useMemo(() => sanitizeHtml(reportContent), [reportContent]);
 
   const handlePrintOrDownload = async (action: "print" | "download") => {
-    const { default: HtmlReportPdfDocument } = await import(
-      "@/components/reports/HtmlReportPdfDocument"
-    );
-    const doc = (
-      <HtmlReportPdfDocument
-        reportTitle={reportTitle}
-        reportContentHtml={sanitizedReportContent}
-        companyDetails={companyDetails}
-        reportDesignSettings={reportDesignSettings}
-        orientation={orientation}
-      />
-    );
-
+    const payload = {
+      reportTitle,
+      reportContentHtml: sanitizedReportContent,
+      companyDetails,
+      reportDesignSettings,
+      orientation,
+    };
     const filename = `${reportTitle.replace(/\s/g, "-")}.pdf`;
 
     if (action === "download") {
-      await downloadPdf(doc, filename);
+      await downloadReportPdf({ ...payload, filename });
     } else {
-      // Open vector PDF in a new tab; user prints from the browser PDF viewer
-      await openPdf(doc, reportTitle);
+      await openReportPdf({ ...payload, title: reportTitle });
     }
   };
 
@@ -144,29 +152,32 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
     });
   };
 
+  const scaledWidthMm = oriented.width * scale;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          "flex max-h-[90vh] w-full flex-col",
-          orientation === "landscape" ? "sm:max-w-[1100px]" : "sm:max-w-[800px]"
+          "flex max-h-[92vh] w-full flex-col gap-3 overflow-hidden",
+          orientation === "landscape" ? "sm:max-w-[min(96vw,1200px)]" : "sm:max-w-[min(92vw,860px)]"
         )}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0 space-y-1">
           <DialogTitle>{reportTitle}</DialogTitle>
           <DialogDescription>
             {periodLabel ? `Period: ${periodLabel}. ` : ""}
-            Choose page orientation, then preview, print, download PDF, or save to Supabase.
+            Scaled print-page preview. Print / Download use Chromium HTML→PDF so the file matches
+            this layout (square page edges — not the dialog frame).
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex shrink-0 flex-col gap-2 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <Label htmlFor="report-orientation" className="text-sm font-medium">
               Page orientation
             </Label>
             <p className="text-xs text-muted-foreground">
-              Applies to print and PDF download. Landscape suits wide tables.
+              Applies to this preview and to print / PDF. Landscape suits wide tables.
             </p>
           </div>
           <ToggleGroup
@@ -188,87 +199,56 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           </ToggleGroup>
         </div>
 
-        <ScrollArea className="flex-grow pr-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>
+            {paperMeta.label} · {orientation} · {oriented.width.toFixed(0)}×
+            {oriented.height.toFixed(0)} mm · {Math.round(scale * 100)}% scale
+          </span>
+          <span>Scroll for multi-page length</span>
+        </div>
+
+        <div
+          ref={viewportRef}
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto border bg-[linear-gradient(135deg,#e8ecf1_0%,#f4f6f8_50%,#e5e9ef_100%)] p-3 [scrollbar-gutter:stable]"
+        >
           <div
-            className="mx-auto max-w-full rounded-lg bg-white text-gray-900 shadow-lg"
+            className="relative mx-auto"
             style={{
-              ...pageBoxStyle,
-              padding: "24px",
-              fontSize: previewStyles.fontSize,
-              border: "1px solid #ccc",
-              boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+              width: `${scaledWidthMm}mm`,
+              height: `${footprintHeightPx}px`,
             }}
           >
-            {(reportDesignSettings.includeCompanyLogo && companyLogoUrl) ||
-            reportDesignSettings.includeCompanyDetails ? (
-              <div className="mb-6 flex items-start justify-between print:mb-8">
-                {reportDesignSettings.includeCompanyLogo && companyLogoUrl && (
-                  <img
-                    src={companyLogoUrl}
-                    alt="Company Logo"
-                    style={{ width: logoDims.width, height: logoDims.height, objectFit: logoDims.fit }}
-                    className="flex-shrink-0 rounded-md print:h-[60px] print:w-[60px]"
-                  />
-                )}
-                {reportDesignSettings.includeCompanyDetails && (
-                  <div
-                    className="w-full text-right text-[13px] print:text-[13px]"
-                    style={{ fontSize: `${baseFontSizePx * 0.9}px` }}
-                  >
-                    <h2
-                      className="text-md font-bold print:text-lg"
-                      style={{ fontSize: `${baseFontSizePx * 1.2}px` }}
-                    >
-                      {displayCompanyName}
-                    </h2>
-                    {companyDetails?.companyTradingName &&
-                      companyDetails?.companyTradingName !== companyDetails?.companyLegalName && (
-                        <p
-                          className="text-[13px] print:text-[13px]"
-                          style={{ fontSize: `${baseFontSizePx * 1}px` }}
-                        >
-                          {companyDetails?.companyTradingName}
-                        </p>
-                      )}
-                    <p>{physicalAddress}</p>
-                    <p>Reg. No: {companyRegistrationNumber}</p>
-                    <p>VAT No: {vatRegistrationNumber}</p>
-                    <p>Tel: {mainContactNumber}</p>
-                    <p>Email: {companyEmail}</p>
-                    <p>Web: {companyWebsite}</p>
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            <Separator
-              className="my-4 print:my-4"
-              style={{ margin: `${baseFontSizePx * 1}px 0` }}
-            />
-
-            <h3
-              className="mb-4 text-center text-lg font-bold print:mb-6 print:text-xl"
-              style={{ fontSize: `${baseFontSizePx * 1.3}px`, marginBottom: `${baseFontSizePx * 1}px` }}
-            >
-              {reportTitle}
-            </h3>
-
             <div
-              dangerouslySetInnerHTML={{ __html: sanitizedReportContent }}
-              style={{ fontSize: `${reportDesignSettings.reportContentFontSize}px` }}
-            />
+              ref={pageRef}
+              className="origin-top-left"
+              style={{
+                width: `${oriented.width}mm`,
+                transform: `scale(${scale})`,
+              }}
+            >
+              <ReportContentWrapper
+                reportTitle={reportTitle}
+                reportContent={sanitizedReportContent}
+                companyDetails={companyDetails}
+                reportDesignSettings={reportDesignSettings}
+                constrainToParent={false}
+                pageOrientation={orientation}
+                chrome="sheet"
+              />
+            </div>
           </div>
-        </ScrollArea>
-        <DialogFooter className="flex flex-col gap-2 pt-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => handlePrintOrDownload("print")}>
+        </div>
+
+        <DialogFooter className="shrink-0 flex-col gap-2 pt-1 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => void handlePrintOrDownload("print")}>
             <Printer className="mr-2 h-4 w-4" /> Print Report
           </Button>
-          <Button onClick={() => handlePrintOrDownload("download")}>
+          <Button onClick={() => void handlePrintOrDownload("download")}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
           </Button>
           <Button
             variant="outline"
-            onClick={handleSaveToSupabase}
+            onClick={() => void handleSaveToSupabase()}
             disabled={isMockDataEnabled || !user?.id}
           >
             <Save className="mr-2 h-4 w-4" /> Save to Supabase

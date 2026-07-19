@@ -1,20 +1,20 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { createElement } from "react";
 import { buildPayrollPackItems } from "@/lib/payroll-pack";
 import type { ReportGenerateContext } from "@/lib/report-catalog";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import type { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { usePdfVector } from "@/hooks/use-pdf-vector";
+import { useReportHtmlPdf } from "@/hooks/use-report-html-pdf";
 import { showError, showSuccess } from "@/utils/toast";
 import { sanitizeHtml } from "@/utils/sanitize-html";
 
 /**
- * Sequentially download stakeholder payroll pack PDFs (readiness, bank transfer, EMP201).
+ * Sequentially download stakeholder payroll pack PDFs (readiness, bank transfer, EMP201)
+ * via Chromium HTML→PDF so layout matches report preview.
  */
 export function usePayrollPackDownload() {
-  const { downloadPdf } = usePdfVector();
+  const { downloadReportPdf } = useReportHtmlPdf();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const downloadPayrollPack = useCallback(
@@ -36,19 +36,15 @@ export function usePayrollPackDownload() {
 
       setIsDownloading(true);
       try {
-        const { default: HtmlReportPdfDocument } = await import(
-          "@/components/reports/HtmlReportPdfDocument"
-        );
-
         for (const item of items) {
-          const doc = createElement(HtmlReportPdfDocument, {
+          await downloadReportPdf({
             reportTitle: item.title,
             reportContentHtml: sanitizeHtml(item.html),
             companyDetails: options.companyDetails,
             reportDesignSettings: options.reportDesignSettings,
             orientation: item.orientation,
+            filename: item.filename,
           });
-          await downloadPdf(doc, item.filename);
         }
 
         showSuccess(`Downloaded ${items.length} payroll pack PDF(s) for ${options.periodLabel}.`);
@@ -60,7 +56,7 @@ export function usePayrollPackDownload() {
         setIsDownloading(false);
       }
     },
-    [downloadPdf]
+    [downloadReportPdf]
   );
 
   return { downloadPayrollPack, isDownloading };

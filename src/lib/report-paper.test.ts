@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   fitPaperScaleToA4Reference,
+  fitPaperScaleToWidth,
+  getOrientedPaperMm,
   getReportPaper,
   getReportPreviewPageClasses,
 } from "@/lib/report-paper";
@@ -28,5 +30,14 @@ describe("report-paper", () => {
     // Letter is slightly wider, slightly shorter than A4
     expect(letter.width * scale).toBeGreaterThan(a4.width * scale);
     expect(letter.height * scale).toBeLessThan(a4.height * scale);
+  });
+
+  it("swaps dimensions for landscape and fits width without clipping", () => {
+    const landscape = getOrientedPaperMm("A4", "landscape");
+    expect(landscape.width).toBe(297);
+    expect(landscape.height).toBe(210);
+    const scale = fitPaperScaleToWidth(landscape.width, 800, 24);
+    expect(scale).toBeLessThanOrEqual(1);
+    expect(landscape.width * scale * (96 / 25.4)).toBeLessThanOrEqual(800);
   });
 });

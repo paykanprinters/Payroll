@@ -98,13 +98,14 @@ const ReportDesignPreview: React.FC<Props> = ({ settings, companyDetails, classN
               transform: `scale(${scale})`,
             }}
           >
-            <div className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/10">
+            <div className="overflow-hidden ring-1 ring-black/15">
               <ReportContentWrapper
                 reportTitle="Payroll Summary Report"
                 reportContent={sampleHtml}
                 companyDetails={companyDetails}
                 reportDesignSettings={settings}
                 constrainToParent={false}
+                chrome="sheet"
               />
             </div>
           </div>

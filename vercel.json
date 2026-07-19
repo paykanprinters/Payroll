@@ -4,9 +4,15 @@
   "installCommand": "pnpm install",
   "outputDirectory": "dist",
   "framework": "vite",
+  "functions": {
+    "api/render-report-pdf.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

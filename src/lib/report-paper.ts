@@ -6,12 +6,25 @@ export const REPORT_PAPER_MM = {
 } as const;
 
 export type ReportPaperSize = keyof typeof REPORT_PAPER_MM;
+export type ReportPageOrientation = "portrait" | "landscape";
 
 export function getReportPaper(size: ReportPaperSize | undefined) {
   return REPORT_PAPER_MM[size || "A4"];
 }
 
-/** Tailwind preview page classes matching physical paper. */
+/** Portrait/landscape page box in mm for the selected paper stock. */
+export function getOrientedPaperMm(
+  size: ReportPaperSize | undefined,
+  orientation: ReportPageOrientation = "portrait"
+): { width: number; height: number } {
+  const paper = getReportPaper(size);
+  if (orientation === "landscape") {
+    return { width: paper.height, height: paper.width };
+  }
+  return { width: paper.width, height: paper.height };
+}
+
+/** Tailwind preview page classes matching physical paper (portrait only). */
 export function getReportPreviewPageClasses(size: ReportPaperSize | undefined): string {
   switch (size) {
     case "Letter":
@@ -41,6 +54,22 @@ export function fitPaperScaleToA4Reference(
     viewportHeightPx,
     paddingPx
   );
+}
+
+/**
+ * Fit paper WIDTH into the viewport (height may scroll).
+ * Prevents the landscape clipping that made report previews look cut off.
+ */
+export function fitPaperScaleToWidth(
+  paperWidthMm: number,
+  viewportWidthPx: number,
+  paddingPx = 32
+): number {
+  const availW = Math.max(120, viewportWidthPx - paddingPx);
+  const pxPerMm = 96 / 25.4;
+  const paperWpx = paperWidthMm * pxPerMm;
+  const raw = Math.min(1, availW / paperWpx);
+  return Math.round(raw * 1000) / 1000;
 }
 
 /**

@@ -382,7 +382,7 @@ export const DEVELOPER_GUIDE: DocsGuide = {
     { step: "Data", detail: "PayrollDataContext + usePayrollProcessor aggregate hooks." },
     { step: "Calc", detail: "payslip-generator.ts uses Approved/Locked timesheets only." },
     { step: "DB", detail: "supabase/migrations + integrations/supabase queries." },
-    { step: "PDF", detail: "@react-pdf/renderer for payslips and HtmlReportPdfDocument." },
+    { step: "PDF", detail: "Payslips use @react-pdf/renderer; catalog reports use Chromium HTML→PDF (Playwright in local, @sparticuz/chromium on Vercel)." },
   ],
   sidebarCards: [
     {
@@ -445,7 +445,7 @@ export const DEVELOPER_GUIDE: DocsGuide = {
       title: "Maintenance tips",
       bullets: [
         "Radix menus — prefer onSelect over onClick for menu items.",
-        "PDF tables — HtmlReportPdfDocument parses HTML tables to react-pdf blocks.",
+        "Report PDFs — Chromium renders the same HTML as the report preview (not the legacy HtmlReportPdfDocument parser).",
         "Month keys — use yyyy-MM (7 chars) when slicing pay period strings.",
       ],
     },
