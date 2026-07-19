@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { buildPayrollPackItems } from "@/lib/payroll-pack";
 import type { ReportGenerateContext } from "@/lib/report-catalog";
 import type { MockCompanyDetails, MockEmployee } from "@/lib/mock-data-interfaces";
-import type { ReportGenerateContext } from "@/lib/report-catalog";
-import { buildPayrollPackItems } from "@/lib/payroll-pack";
 
 const employee: MockEmployee = {
   id: "emp-1",
