@@ -36,7 +36,7 @@ export const generateBenefitDeductionsReportContent = (
   const benefitDeductionsMap = new Map<string, number>();
   filteredPayslips.forEach(p => {
     p.deductionsBreakdown.forEach(d => {
-      if (!["PAYE", "UIF", "SDL"].includes(d.name)) { // Consider non-statutory as 'benefits' for mock
+      if (!["PAYE", "UIF", "SDL"].includes(d.name)) {
         benefitDeductionsMap.set(d.name, (benefitDeductionsMap.get(d.name) || 0) + d.amount);
       }
     });
@@ -47,7 +47,7 @@ export const generateBenefitDeductionsReportContent = (
   }
 
   let html = `
-    <p>This report summarizes non-statutory benefit deductions from employee payslips for ${reportPeriodDescription} (mock data).</p>
+    <p>This report summarizes non-statutory benefit deductions from employee payslips for ${reportPeriodDescription}.</p>
     <br/>
     <h4 class="text-md font-semibold mb-2">Total Benefit Deductions</h4>
     <table class="w-full text-left border-collapse">

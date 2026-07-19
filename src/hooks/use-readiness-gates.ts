@@ -14,6 +14,7 @@ export type ReadinessBlockerType =
   | "EMPLOYEE_TAX_INFO"
   | "COMPANY_TAX_INFO"
   | "TIMESHEET_DRAFT"
+  | "TIMESHEET_SUBMITTED"
   | "MISSING_TIMESHEET"
   | "TAX_TABLES";
 
@@ -124,12 +125,25 @@ export const useReadinessGates = () => {
         });
       } else {
         const hasDraft = tsForEmployeeInPeriod.some((ts) => ts.status === "Draft");
+        const hasSubmitted = tsForEmployeeInPeriod.some((ts) => ts.status === "Submitted");
         if (hasDraft) {
           blockers.push({
             type: "TIMESHEET_DRAFT",
             employeeId: e.id,
             severity: "warning",
             message: `Draft timesheets present for ${e.firstName} ${e.lastName}`,
+            meta: {
+              periodStart: periodStart.toISOString().slice(0, 10),
+              periodEnd: periodEnd.toISOString().slice(0, 10),
+            },
+          });
+        }
+        if (hasSubmitted) {
+          blockers.push({
+            type: "TIMESHEET_SUBMITTED",
+            employeeId: e.id,
+            severity: "warning",
+            message: `Submitted timesheets awaiting approval for ${e.firstName} ${e.lastName}`,
             meta: {
               periodStart: periodStart.toISOString().slice(0, 10),
               periodEnd: periodEnd.toISOString().slice(0, 10),

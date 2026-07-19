@@ -146,7 +146,7 @@ export async function sendTestEmail(to: string, companyName: string): Promise<Se
   const { data, error } = await supabase.functions.invoke("send-payslip-email", {
     body: { test: true, to, companyName },
   });
-  if (error) return { ok: false, error: parseFunctionError(error, data) };
+  if (error) return { ok: false, error: await parseFunctionError(error, data, { service: "email" }) };
   const result = data as SendResult;
   return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
 }
@@ -161,7 +161,7 @@ export async function sendTestSms(to: string): Promise<SendResult> {
   const { data, error } = await supabase.functions.invoke("send-sms", {
     body: { test: true, to },
   });
-  if (error) return { ok: false, error: parseFunctionError(error, data) };
+  if (error) return { ok: false, error: await parseFunctionError(error, data, { service: "sms" }) };
   const result = data as SendResult;
   return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
 }
@@ -170,7 +170,7 @@ export async function sendPayslipSms(payload: PayslipSmsPayload): Promise<SendRe
   const { data, error } = await supabase.functions.invoke("send-sms", {
     body: { category: "payslip", employee: payload.employee, payslip: payload.payslip },
   });
-  if (error) return { ok: false, error: parseFunctionError(error, data) };
+  if (error) return { ok: false, error: await parseFunctionError(error, data, { service: "sms" }) };
   const result = data as SendResult;
   return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
 }
@@ -193,7 +193,11 @@ export async function sendSmsReminders(
   });
   if (error) {
     const parsed = data as { reason?: string } | null;
-    return { ok: false, error: parseFunctionError(error, data), disabled: parsed?.reason === "disabled" };
+    return {
+      ok: false,
+      error: await parseFunctionError(error, data, { service: "sms" }),
+      disabled: parsed?.reason === "disabled",
+    };
   }
   const result = data as SmsBatchResult & { reason?: string };
   if (result?.ok) return { ok: true, sent: result.sent, skipped: result.skipped };
@@ -213,7 +217,7 @@ export async function sendPayslipEmail(
       pdfFilename: payload.pdfFilename,
     },
   });
-  if (error) return { ok: false, error: parseFunctionError(error, data) };
+  if (error) return { ok: false, error: await parseFunctionError(error, data, { service: "email" }) };
   const result = data as SendResult;
   return result?.ok ? { ok: true } : { ok: false, error: result?.error ?? "Unknown error" };
 }

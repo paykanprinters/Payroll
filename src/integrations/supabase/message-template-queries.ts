@@ -67,7 +67,7 @@ export async function sendEmployeeWelcome(employeeId: string): Promise<{
   const { data, error } = await supabase.functions.invoke("send-employee-welcome", {
     body: { employeeId },
   });
-  if (error) return { ok: false, error: parseFunctionError(error, data) };
+  if (error) return { ok: false, error: await parseFunctionError(error, data, { service: "welcome" }) };
   const result = data as { ok?: boolean; error?: string; results?: Record<string, string> };
   return {
     ok: !!result?.ok,

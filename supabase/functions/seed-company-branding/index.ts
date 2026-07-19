@@ -78,7 +78,13 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const fetched = await fetch(urlCheck.url.toString());
+    const fetched = await fetch(urlCheck.url.toString(), { redirect: "manual" });
+    if (fetched.status >= 300 && fetched.status < 400) {
+      return new Response(JSON.stringify({ error: "Logo source redirects are not allowed." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (!fetched.ok) {
       return new Response(
         JSON.stringify({ error: `Failed to fetch logo from ${urlCheck.url.toString()}`, status: fetched.status }),

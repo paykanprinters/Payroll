@@ -463,10 +463,17 @@ const PayrollRunDetailPage: React.FC = () => {
       return `/settings/company-details?focus=tax`;
     }
 
-    if ((b.type === "TIMESHEET_DRAFT" || b.type === "MISSING_TIMESHEET") && b.employeeId && run) {
+    if (
+      (b.type === "TIMESHEET_DRAFT" ||
+        b.type === "TIMESHEET_SUBMITTED" ||
+        b.type === "MISSING_TIMESHEET") &&
+      b.employeeId &&
+      run
+    ) {
       const start = run.periodStart;
       const end = run.periodEnd;
-      const status = b.type === "TIMESHEET_DRAFT" ? "Draft" : "all";
+      const status =
+        b.type === "TIMESHEET_DRAFT" ? "Draft" : b.type === "TIMESHEET_SUBMITTED" ? "Submitted" : "all";
       return `/timesheet?employeeId=${encodeURIComponent(b.employeeId)}&dateStart=${encodeURIComponent(
         start
       )}&dateEnd=${encodeURIComponent(end)}&status=${encodeURIComponent(status)}`;
