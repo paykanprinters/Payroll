@@ -22,7 +22,7 @@ const projects: import("@playwright/test").Project[] = [
   },
   {
     name: "admin",
-    testMatch: /critical-paths\.spec\.ts/,
+    testMatch: /critical-paths\.spec\.ts|payroll-hardening\.spec\.ts/,
     use: {
       ...devices["Desktop Chrome"],
       storageState: fs.existsSync("e2e/.auth/admin.json")

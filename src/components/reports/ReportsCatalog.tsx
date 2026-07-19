@@ -22,6 +22,8 @@ import {
   ArrowRight,
   Search,
   ExternalLink,
+  Package,
+  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -35,6 +37,8 @@ import { getReportPeriodLabel, type ReportAuditLevel, type ReportPeriodType } fr
 import { wrapReportHtml } from "@/lib/report-html-styles";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import type { LeaveEntry, MockCompanyDetails, MockEmployee, MockPayslip, TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { buildPayrollPackItems } from "@/lib/payroll-pack";
+import { usePayrollPackDownload } from "@/hooks/use-payroll-pack-download";
 
 const ReportPreviewDialog = lazy(() => import("@/components/reports/ReportPreviewDialog"));
 
@@ -88,6 +92,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewTitle, setPreviewTitle] = useState("");
   const [previewContent, setPreviewContent] = useState("");
+  const { downloadPayrollPack, isDownloading } = usePayrollPackDownload();
 
   const periodLabel = getReportPeriodLabel(selectedReportDate, reportPeriodType);
 
@@ -128,14 +133,47 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
     setIsPreviewOpen(true);
   };
 
+  const packPreviewCount = buildPayrollPackItems({
+    ctx: generateContext,
+    periodLabel,
+  }).length;
+
+  const handleDownloadPack = () => {
+    void downloadPayrollPack({
+      ctx: generateContext,
+      periodLabel,
+      companyDetails,
+      reportDesignSettings,
+    });
+  };
+
   return (
     <>
       <Card className="rounded-xl border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Report library</CardTitle>
-          <CardDescription>
-            Choose a report for <strong>{periodLabel}</strong>. Preview, print, or download PDF.
-          </CardDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Report library</CardTitle>
+              <CardDescription>
+                Choose a report for <strong>{periodLabel}</strong>. Preview, print, or download PDF.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="default"
+              className="rounded-full shrink-0"
+              onClick={handleDownloadPack}
+              disabled={isDownloading || packPreviewCount === 0}
+              title="Download readiness, bank transfer, and EMP201 (monthly) PDFs"
+            >
+              {isDownloading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Package className="mr-2 h-4 w-4" />
+              )}
+              Download payroll pack
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
