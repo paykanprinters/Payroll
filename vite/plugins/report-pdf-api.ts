@@ -24,9 +24,20 @@ function sendJson(res: ServerResponse, status: number, payload: unknown) {
   res.end(JSON.stringify(payload));
 }
 
+function isLocalDevRequest(req: IncomingMessage): boolean {
+  const host = req.headers.host || "";
+  const hostname = host.split(":")[0]?.toLowerCase() || "";
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname === "::1"
+  );
+}
+
 /**
  * Dev Chromium HTML→PDF at POST /api/render-report-pdf (Playwright).
- * Production falls back to the browser print engine with the same HTML document.
+ * Localhost only — production uses the Vercel serverless function with JWT validation.
  */
 export function reportPdfApiPlugin(): Plugin {
   return {
@@ -36,6 +47,11 @@ export function reportPdfApiPlugin(): Plugin {
         const url = req.url?.split("?")[0];
         if (url !== "/api/render-report-pdf") {
           next();
+          return;
+        }
+
+        if (!isLocalDevRequest(req)) {
+          sendJson(res, 403, { error: "PDF render API is only available on localhost in dev" });
           return;
         }
 

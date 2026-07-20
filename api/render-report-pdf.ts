@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { blockExternalNetworkRequests } from "./block-external-requests";
+import { verifySupabaseAccessToken } from "./verify-supabase-jwt";
 
 export const config = {
   maxDuration: 60,
@@ -11,13 +13,28 @@ type PdfRequestBody = {
   orientation?: "portrait" | "landscape";
 };
 
+function resolveCorsOrigin(req: VercelRequest): string {
+  const configured =
+    process.env.VITE_PUBLIC_APP_URL?.trim() ||
+    process.env.VITE_ADMIN_PORTAL_URL?.trim() ||
+    process.env.VITE_STAFF_PORTAL_URL?.trim();
+  if (configured) return configured.replace(/\/$/, "");
+
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && origin.startsWith("http")) return origin;
+  return "";
+}
+
 /**
  * Production Chromium HTML→PDF for catalog reports.
  * Waits for in-page sheet pagination so each PDF page is one rounded sheet.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const corsOrigin = resolveCorsOrigin(req);
+
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    if (corsOrigin) res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+    res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     return res.status(204).end();
@@ -27,9 +44,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Authorization required" });
+  const userId = await verifySupabaseAccessToken(req.headers.authorization);
+  if (!userId) {
+    return res.status(401).json({ error: "Invalid or expired session" });
+  }
+
+  if (corsOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+    res.setHeader("Vary", "Origin");
   }
 
   try {
@@ -57,7 +79,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
       const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 45_000 });
+      await blockExternalNetworkRequests(page);
+      await page.setContent(html, { waitUntil: "load", timeout: 45_000 });
       await page.waitForFunction("window.__REPORT_PAGINATED__ === true", { timeout: 30_000 });
       const pdf = await page.pdf({
         format: paperSize === "Letter" ? "Letter" : paperSize,

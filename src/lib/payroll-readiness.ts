@@ -254,7 +254,11 @@ export function assessPayrollReadiness(options: {
   const periodType = options.periodType ?? "monthly";
   const { start, end, label } = resolvePeriod(options.selectedDate, periodType);
   const timesheets = options.timesheets ?? [];
-  const activeEmployees = filterEmployeesActiveInPeriod(options.employees, start, end);
+  const activeEmployees = filterEmployeesActiveInPeriod(
+    options.employees,
+    start ?? undefined,
+    end ?? undefined
+  );
 
   const companyIssues: CompanyReadinessIssue[] = [];
   if (isBlank(options.companyDetails?.companyTaxNumber)) {
