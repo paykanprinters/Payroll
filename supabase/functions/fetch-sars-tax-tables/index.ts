@@ -1,7 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { getSarsTaxTablesForYear, buildSarsTaxYearDetails } from "../_shared/sars-tax-tables.ts";
+import {
+  getSarsTaxTablesForYear,
+  buildSarsTaxYearDetails,
+  SUPPORTED_SARS_TAX_YEARS,
+} from "../_shared/sars-tax-tables.ts";
 
 serve(async (req) => {
   const corsHeaders = {
@@ -79,7 +83,9 @@ serve(async (req) => {
     if (!selected) {
       return new Response(
         JSON.stringify({
-          error: `No SARS tax tables are configured for tax year ${taxYear}. Supported years: 2026, 2027.`,
+          error: `No SARS tax tables are configured for tax year ${taxYear}. Supported years: ${SUPPORTED_SARS_TAX_YEARS.slice()
+            .sort((a, b) => a - b)
+            .join(", ")}.`,
         }),
         {
           status: 400,

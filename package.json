@@ -26,7 +26,8 @@
     "e2e:report": "playwright show-report",
     "gen:acb-sample": "node scripts/gen-acb-sample.mjs",
     "gen:baseline-schema": "node scripts/generate-baseline-schema.mjs scripts/data/columns.json",
-    "check:tax-tables": "vitest run src/lib/sars-tax-tables-coverage.test.ts src/lib/sars-tax-tables.test.ts",
+    "sync:sars-tax-tables": "node scripts/sync-sars-tax-tables.mjs",
+    "check:tax-tables": "node scripts/sync-sars-tax-tables.mjs --check && vitest run src/lib/sars-tax-tables-coverage.test.ts src/lib/sars-tax-tables.test.ts",
     "check:sars-compliance": "vitest run src/lib/payroll-calculations/sars-regression.test.ts src/lib/payroll-calculations/golden-master.test.ts src/lib/tax-tables-validation.test.ts"
   },
   "pnpm": {

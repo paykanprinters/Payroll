@@ -5,7 +5,7 @@ import { getSarsTaxTablesForYear, SUPPORTED_SARS_TAX_YEARS } from "@/lib/sars-ta
  * Tax-table readiness checks (COMP-16).
  *
  * Validates that loaded DB tables are present, structurally complete, and aligned
- * with the curated SARS source in `sars-tax-tables.ts`. Payroll must not run when
+ * with the curated SARS source in `shared/sars-tax-tables.json`. Payroll must not run when
  * `isReady` is false.
  */
 

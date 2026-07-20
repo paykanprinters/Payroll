@@ -2,7 +2,7 @@
  * Annual Budget freshness gate (COMP-17).
  *
  * This suite is the CI guard that forces the curated SARS tax tables in
- * `sars-tax-tables.ts` to be updated every year after the Budget. It does two
+ * `shared/sars-tax-tables.json` to be updated every year after the Budget. It does two
  * things:
  *
  *  1. Asserts that curated tables exist for the tax year the app would be
@@ -36,7 +36,7 @@ describe("SARS tax-table coverage (annual Budget gate)", () => {
         `No curated SARS tax tables for the current tax year ${liveTaxYear}.`,
         "The SA Budget tables must be added after the annual Budget speech.",
         "See docs/ANNUAL_TAX_TABLE_UPDATE.md, then add the year to",
-        "src/lib/sars-tax-tables.ts (SARS_TAX_TABLES_BY_YEAR).",
+        "shared/sars-tax-tables.json and run pnpm sync:sars-tax-tables.",
       ].join(" ")
     ).not.toBeNull();
   });

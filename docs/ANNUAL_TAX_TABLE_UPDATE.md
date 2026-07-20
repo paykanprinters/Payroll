@@ -26,8 +26,12 @@ Tax*. This document is the runbook for that annual update.
 
 ## What changes each year
 
-All of the following live in [`src/lib/sars-tax-tables.ts`](../src/lib/sars-tax-tables.ts)
-as the single source of truth:
+Numeric data lives in [`shared/sars-tax-tables.json`](../shared/sars-tax-tables.json)
+as the **single source of truth**. The app loads it via
+[`src/lib/sars-tax-tables.ts`](../src/lib/sars-tax-tables.ts) (helpers + types). The
+edge function uses a generated Deno copy at
+`supabase/functions/_shared/sars-tax-tables.ts` — regenerate with
+`pnpm sync:sars-tax-tables` (CI also runs `--check`).
 
 | Field | Description |
 | --- | --- |
@@ -49,25 +53,29 @@ UIF and SDL parameters do not always change, but re-confirm them every year.
      https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/
    - Guide for Employers in respect of Employees' Tax (PAYE/UIF/SDL + medical credits).
 
-2. **Add the new tax year** to `src/lib/sars-tax-tables.ts`:
-   - Create a `const TAX_YEAR_<N>: SarsTaxYearTables = { ... }` block, copying the
-     shape of the most recent year.
-   - Register it in `SARS_TAX_TABLES_BY_YEAR` (e.g. `2028: TAX_YEAR_2028`).
-   - `SUPPORTED_SARS_TAX_YEARS` is derived automatically — no edit needed.
+2. **Add the new tax year** to `shared/sars-tax-tables.json`:
+   - Add a `"<N>"` key (string year) with the same shape as the most recent year.
+   - `SUPPORTED_SARS_TAX_YEARS` is derived automatically — no edit needed in TS.
    - Set `sourceUrl` to the specific SARS page/guide used and update `periodLabel`.
 
-3. **Run the freshness gate locally:**
+3. **Sync the Deno edge copy:**
+
+```bash
+pnpm sync:sars-tax-tables
+```
+
+4. **Run the freshness gate locally:**
 
 ```bash
 pnpm check:tax-tables
 ```
 
-   This runs the coverage/structural-integrity suite in
-   `src/lib/sars-tax-tables-coverage.test.ts`. It verifies the live tax year is
+   This verifies the Deno copy is in sync, then runs the coverage/structural-integrity
+   suite in `src/lib/sars-tax-tables-coverage.test.ts`. It verifies the live tax year is
    covered and that brackets, rebates, UIF/SDL, medical credits, and fiscal dates
    are internally consistent.
 
-4. **Run the full test suite** to catch downstream effects (golden master, EMP201,
+5. **Run the full test suite** to catch downstream effects (golden master, EMP201,
    EMP501, IRP5):
 
 ```bash
@@ -78,14 +86,16 @@ pnpm test
    review the diff carefully against a manual SARS calculation, then update the
    snapshots.
 
-5. **Apply the tables to the database.** The curated values are the source of
+6. **Apply the tables to the database.** The curated values are the source of
    truth, but live payroll reads from Supabase (`tax_brackets_paye`,
    `tax_rates_uif_sdl`, `tax_years`). After deploying, an Admin applies the new
    year from **Settings → Tax Liabilities** (which invokes the
    `fetch-sars-tax-tables` edge function). The in-app validation (COMP-16) will
    flag the year as *stale* until the DB matches the curated tables.
 
-6. **Open a PR.** CI runs `pnpm check:tax-tables` and `pnpm test`; both must pass.
+7. **Open a PR.** CI runs `pnpm check:tax-tables` and `pnpm test`; both must pass.
+   Commit both `shared/sars-tax-tables.json` and the regenerated
+   `supabase/functions/_shared/sars-tax-tables.ts`.
 
 ---
 
@@ -95,7 +105,9 @@ The CI workflow ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) runs
 
 ### 1. Tax table freshness (`pnpm check:tax-tables`)
 
-Fails when curated tables for the live tax year are missing or structurally invalid. See [CI gate](#ci-gate) below.
+Fails when curated tables for the live tax year are missing or structurally invalid,
+or when the Deno edge copy is out of sync with `shared/sars-tax-tables.json`.
+See [CI gate](#ci-gate) below.
 
 ### 2. SARS parallel regression (`pnpm check:sars-compliance`)
 
@@ -134,7 +146,9 @@ The backing test, `src/lib/sars-tax-tables-coverage.test.ts`:
 
 ## Quick reference
 
-- Curated tables: `src/lib/sars-tax-tables.ts`
+- Curated tables (SSOT): `shared/sars-tax-tables.json`
+- App helpers/types: `src/lib/sars-tax-tables.ts`
+- Edge sync: `pnpm sync:sars-tax-tables` → `supabase/functions/_shared/sars-tax-tables.ts`
 - Freshness/integrity gate: `src/lib/sars-tax-tables-coverage.test.ts`
 - Live-table validation (DB vs curated): `src/lib/tax-tables-validation.ts`
 - Apply to DB: **Settings → Tax Liabilities** → `fetch-sars-tax-tables` edge function
