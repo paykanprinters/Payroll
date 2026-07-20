@@ -50,6 +50,9 @@ function baseCtx(overrides: Partial<ReportGenerateContext> = {}): ReportGenerate
       pageSheetInsetMm: 8,
       pageContentPaddingMm: 8,
       pageBorderWidthPx: 1.5,
+      reportLogoWidth: 180,
+      reportLogoHeight: 60,
+      reportLogoFit: "contain",
     },
     ...overrides,
   };

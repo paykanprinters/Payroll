@@ -5,6 +5,7 @@ import {
   DEFAULT_REPORT_DESIGN_SETTINGS,
   mergeReportDesignSettings,
   type ReportDesignSettings,
+  type ReportLogoFit,
 } from "@/lib/report-design-interfaces";
 import { showError } from "@/utils/toast";
 
@@ -21,6 +22,9 @@ type DbRow = {
   page_sheet_inset_mm?: number | null;
   page_content_padding_mm?: number | null;
   page_border_width_px?: number | null;
+  report_logo_width?: number | null;
+  report_logo_height?: number | null;
+  report_logo_fit?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -48,6 +52,9 @@ function toDomain(row?: DbRow | null): ReportDesignSettings {
       row.page_content_padding_mm != null ? Number(row.page_content_padding_mm) : undefined,
     pageBorderWidthPx:
       row.page_border_width_px != null ? Number(row.page_border_width_px) : undefined,
+    reportLogoWidth: row.report_logo_width != null ? Number(row.report_logo_width) : undefined,
+    reportLogoHeight: row.report_logo_height != null ? Number(row.report_logo_height) : undefined,
+    reportLogoFit: (row.report_logo_fit as ReportLogoFit | null) ?? undefined,
   });
 }
 
@@ -64,6 +71,9 @@ function fromDomain(settings: ReportDesignSettings, userId: string) {
     page_sheet_inset_mm: settings.pageSheetInsetMm,
     page_content_padding_mm: settings.pageContentPaddingMm,
     page_border_width_px: settings.pageBorderWidthPx,
+    report_logo_width: settings.reportLogoWidth,
+    report_logo_height: settings.reportLogoHeight,
+    report_logo_fit: settings.reportLogoFit,
     updated_at: new Date().toISOString(),
   };
 }

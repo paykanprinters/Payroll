@@ -65,4 +65,29 @@ describe("buildReportPrintDocumentHtml", () => {
 
     expect(html).toContain("border: none");
   });
+
+  it("applies Report Design logo size settings", () => {
+    const html = buildReportPrintDocumentHtml({
+      reportTitle: "Logo size",
+      reportContentHtml: "<p>Body</p>",
+      companyDetails: {
+        companyLegalName: "Kan",
+        logoUrl: "https://example.com/logo.png",
+        logoWidth: 100,
+        logoHeight: 40,
+        logoFit: "contain",
+      },
+      reportDesignSettings: {
+        ...DEFAULT_REPORT_DESIGN_SETTINGS,
+        includeCompanyLogo: true,
+        reportLogoWidth: 220,
+        reportLogoHeight: 70,
+        reportLogoFit: "cover",
+      },
+    });
+
+    expect(html).toContain("width:220px");
+    expect(html).toContain("height:70px");
+    expect(html).toContain("object-fit:cover");
+  });
 });

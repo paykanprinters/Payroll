@@ -42,6 +42,7 @@ android/keystore.properties
 android/*.keystore
 android/*.jks
 android/staff-release.keystore
+android/app/release/
 android/app/src/main/assets/public/
 *.apk
 !public/downloads/kan-printers-staff.apk

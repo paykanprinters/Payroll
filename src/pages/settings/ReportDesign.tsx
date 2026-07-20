@@ -60,7 +60,9 @@ const ReportDesign: React.FC = () => {
 
             <ReportHeaderOptions
               settings={settings}
+              companyLogoUrl={companyDetails?.logoUrl}
               onToggle={(key, checked) => setSettings((prev) => ({ ...prev, [key]: checked }))}
+              onChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
             />
 
             <Separator />
@@ -100,6 +102,7 @@ const ReportDesign: React.FC = () => {
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>Paper size for report preview dialogs, HTML print, and PDF pages</li>
           <li>Whether company logo and company details appear in the report header</li>
+          <li>Report logo width, height, and fit (separate from payslip logo sizing)</li>
           <li>Body font size for tables and narrative content in the Reports library</li>
           <li>Page frame: border, corner radius, border-to-edge inset, and content padding</li>
         </ul>

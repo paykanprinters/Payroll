@@ -1,7 +1,7 @@
 import { escapeHtml } from "@/lib/escape-html";
 import type { MockCompanyDetails } from "@/lib/mock-data-interfaces";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
-import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
+import { resolveCompanyLogoSource, resolveReportLogoDimensions } from "@/lib/document-logo";
 import { getOrientedPaperMm, getReportPaper, type ReportPageOrientation } from "@/lib/report-paper";
 import {
   getReportSheetBorderCss,
@@ -50,11 +50,7 @@ export function buildReportPrintDocumentHtml(input: BuildReportPrintDocumentInpu
   const logoUrl = settings.includeCompanyLogo
     ? resolveCompanyLogoSource(company?.logoUrl)
     : undefined;
-  const logoDims = resolveDocumentLogoDimensions(
-    company?.logoWidth,
-    company?.logoHeight,
-    company?.logoFit
-  );
+  const logoDims = resolveReportLogoDimensions(settings, company);
 
   const sanitizedBody = sanitizeHtml(input.reportContentHtml);
 

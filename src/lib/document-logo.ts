@@ -57,3 +57,25 @@ export function resolvePayslipLogoSource(
 export function resolveCompanyLogoSource(companyLogoUrl?: string | null): string | undefined {
   return resolveDocumentLogoUrl(companyLogoUrl);
 }
+
+/**
+ * Report header logo size: Report Design settings override Company Details when set.
+ */
+export function resolveReportLogoDimensions(
+  report?: {
+    reportLogoWidth?: number | null;
+    reportLogoHeight?: number | null;
+    reportLogoFit?: string | null;
+  } | null,
+  company?: {
+    logoWidth?: number | null;
+    logoHeight?: number | null;
+    logoFit?: string | null;
+  } | null
+): { width: number; height: number; fit: typeof DOCUMENT_LOGO_FIT } {
+  return resolveDocumentLogoDimensions(
+    report?.reportLogoWidth ?? company?.logoWidth,
+    report?.reportLogoHeight ?? company?.logoHeight,
+    report?.reportLogoFit ?? company?.logoFit
+  );
+}

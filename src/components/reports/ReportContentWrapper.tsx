@@ -6,7 +6,7 @@ import { cn, getPrintStyles } from "@/lib/utils";
 import { sanitizeHtml } from "@/utils/sanitize-html";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
+import { resolveCompanyLogoSource, resolveReportLogoDimensions } from "@/lib/document-logo";
 import {
   getOrientedPaperMm,
   getReportPreviewPageClasses,
@@ -52,16 +52,13 @@ const ReportContentWrapper: React.FC<ReportContentWrapperProps> = ({
     companyEmail,
     companyWebsite,
     logoUrl: companyLogoUrl,
-    logoWidth: companyLogoWidth,
-    logoHeight: companyLogoHeight,
-    logoFit: companyLogoFit,
   } = companyDetails || {};
 
   const displayCompanyName = companyLegalName || companyTradingName || "Your Company Name";
   const resolvedLogoUrl = reportDesignSettings.includeCompanyLogo
     ? resolveCompanyLogoSource(companyLogoUrl)
     : undefined;
-  const logoDims = resolveDocumentLogoDimensions(companyLogoWidth, companyLogoHeight, companyLogoFit);
+  const logoDims = resolveReportLogoDimensions(reportDesignSettings, companyDetails);
 
   const printStyles = getPrintStyles(reportDesignSettings.defaultReportPaperSize);
   const baseFontSizePx = parseFloat(printStyles.fontSize?.toString().replace("px", "") || "14");

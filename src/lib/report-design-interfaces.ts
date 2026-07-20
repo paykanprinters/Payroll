@@ -1,3 +1,5 @@
+export type ReportLogoFit = "contain" | "cover" | "fill" | "none" | "scale-down";
+
 export interface ReportDesignSettings {
   defaultReportPaperSize: "Letter" | "A4" | "A5";
   includeCompanyLogo: boolean;
@@ -15,6 +17,12 @@ export interface ReportDesignSettings {
   pageContentPaddingMm: number;
   /** Sheet border stroke width (px). */
   pageBorderWidthPx: number;
+  /** Report header logo width (px). Overrides Company Details when set. */
+  reportLogoWidth: number;
+  /** Report header logo height (px). Overrides Company Details when set. */
+  reportLogoHeight: number;
+  /** Report header logo object-fit. */
+  reportLogoFit: ReportLogoFit;
 }
 
 export const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
@@ -28,6 +36,9 @@ export const DEFAULT_REPORT_DESIGN_SETTINGS: ReportDesignSettings = {
   pageSheetInsetMm: 8,
   pageContentPaddingMm: 8,
   pageBorderWidthPx: 1.5,
+  reportLogoWidth: 180,
+  reportLogoHeight: 60,
+  reportLogoFit: "contain",
 };
 
 export const REPORT_DESIGN_STORAGE_KEY = "reportDesignSettings";
@@ -40,9 +51,16 @@ export const LEGACY_REPORT_DESIGN_KEYS = [
   "reportDesignFontSize",
 ] as const;
 
+const LOGO_FITS: ReportLogoFit[] = ["contain", "cover", "fill", "none", "scale-down"];
+
 function clamp(n: number, min: number, max: number): number {
   if (Number.isNaN(n)) return min;
   return Math.min(max, Math.max(min, n));
+}
+
+function normalizeLogoFit(fit: string | undefined | null): ReportLogoFit {
+  if (fit && (LOGO_FITS as string[]).includes(fit)) return fit as ReportLogoFit;
+  return DEFAULT_REPORT_DESIGN_SETTINGS.reportLogoFit;
 }
 
 /** Normalize and clamp chrome fields after merge. */
@@ -56,6 +74,9 @@ export function normalizeReportDesignSettings(settings: ReportDesignSettings): R
     pageContentPaddingMm: clamp(Number(settings.pageContentPaddingMm), 4, 20),
     pageBorderWidthPx: clamp(Number(settings.pageBorderWidthPx), 0.5, 4),
     showPageBorder: Boolean(settings.showPageBorder),
+    reportLogoWidth: clamp(Math.round(settings.reportLogoWidth), 40, 320),
+    reportLogoHeight: clamp(Math.round(settings.reportLogoHeight), 24, 120),
+    reportLogoFit: normalizeLogoFit(settings.reportLogoFit),
   };
 }
 

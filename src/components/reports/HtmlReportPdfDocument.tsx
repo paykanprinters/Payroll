@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { Document, Page, View, Text, Image, StyleSheet, type TextProps } from "@react-pdf/renderer";
 import { MockCompanyDetails } from "@/lib/mock-data-interfaces";
-import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
+import { resolveCompanyLogoSource, resolveReportLogoDimensions } from "@/lib/document-logo";
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 
 type TextRun = { text: string; bold?: boolean };
@@ -173,11 +173,7 @@ const HtmlReportPdfDocument: React.FC<Props> = ({
   const logoSrc = reportDesignSettings.includeCompanyLogo
     ? resolveCompanyLogoSource(companyDetails?.logoUrl)
     : undefined;
-  const logoDims = resolveDocumentLogoDimensions(
-    companyDetails?.logoWidth,
-    companyDetails?.logoHeight,
-    companyDetails?.logoFit
-  );
+  const logoDims = resolveReportLogoDimensions(reportDesignSettings, companyDetails);
 
   const baseFontSize = reportDesignSettings.reportContentFontSize || 12;
 
