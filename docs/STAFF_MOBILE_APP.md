@@ -52,22 +52,27 @@ pnpm run cap:build:android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-Copy to the public downloads folder:
+Do **not** distribute debug APKs to employees.
+
+### Signed release APK (production)
+
+See **`docs/ANDROID_RELEASE_APK.md`** for keystore setup, CI, and publishing.
 
 ```bash
-cp android/app/build/outputs/apk/debug/app-debug.apk public/downloads/kan-printers-staff.apk
+pnpm run cap:build:android:release
 ```
 
-Then deploy to Vercel. Employees download from:
+Copies signed APK to `public/downloads/kan-printers-staff.apk`. Commit and deploy to Vercel.
+
+Employees download from:
 
 **https://payroll.kanprinters.co.za/downloads/kan-printers-staff.apk**
 
-### Release APK (production signing)
+### Release APK (Android Studio — alternative)
 
 1. Open the Android project: `pnpm run cap:open:android`
 2. **Build → Generate Signed Bundle / APK**
-3. Create or use your company keystore
-4. Copy the signed APK to `public/downloads/kan-printers-staff.apk`
+3. Copy the signed APK to `public/downloads/kan-printers-staff.apk`
 
 ### Local device testing against dev server
 
@@ -103,7 +108,8 @@ Capacitor uses the same HTTPS origin when loading the remote URL, so no extra re
 | `pnpm run build:web` | Vite build (includes PWA manifest + service worker) |
 | `pnpm run cap:sync` | Sync web assets + config to Android project |
 | `pnpm run cap:open:android` | Open Android Studio |
-| `pnpm run cap:build:android` | Full debug APK build pipeline |
+| `pnpm run cap:build:android` | Debug APK build (testing) |
+| `pnpm run cap:build:android:release` | Signed release APK → `public/downloads/` |
 
 ---
 

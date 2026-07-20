@@ -38,6 +38,10 @@ android/.gradle/
 android/app/build/
 android/build/
 android/local.properties
+android/keystore.properties
+android/*.keystore
+android/*.jks
+android/staff-release.keystore
 android/app/src/main/assets/public/
 *.apk
 !public/downloads/kan-printers-staff.apk

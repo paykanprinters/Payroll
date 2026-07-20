@@ -31,6 +31,7 @@ Manual steps for production hardening. Code changes alone cannot cover all of th
 - [ ] Smoke-test admin login, staff login, report PDF download, payslip PDF.
 - [ ] Confirm staff portal branding still loads (authenticated `get-branding` edge function).
 - [ ] Add GitHub Actions secrets for Playwright E2E (`docs/E2E_CI.md`).
+- [ ] Add Android signing secrets for release APK workflow (`docs/ANDROID_RELEASE_APK.md`).
 
 ## Regenerate baseline schema (new environments only)
 

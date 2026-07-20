@@ -15,6 +15,7 @@
     "cap:sync": "cap sync android",
     "cap:open:android": "cap open android",
     "cap:build:android": "node scripts/build-staff-apk.mjs",
+    "cap:build:android:release": "node scripts/build-staff-apk.mjs --release",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "preview": "vite preview",

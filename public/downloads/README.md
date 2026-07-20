@@ -1,17 +1,24 @@
 # APK downloads
 
-Place the signed staff Android APK here as:
+Production staff APK (signed release):
 
 `kan-printers-staff.apk`
 
-Employees download it from:
+Employees download from:
 
 `https://payroll.kanprinters.co.za/downloads/kan-printers-staff.apk`
 
-Build the APK with:
+## Build (signed release)
+
+```bash
+# One-time: android/keystore.properties — see android/keystore.properties.example
+pnpm run cap:build:android:release
+```
+
+Full guide: **`docs/ANDROID_RELEASE_APK.md`**
+
+Debug builds (testing only — do not distribute):
 
 ```bash
 pnpm run cap:build:android
 ```
-
-See `docs/STAFF_MOBILE_APP.md` for full instructions.

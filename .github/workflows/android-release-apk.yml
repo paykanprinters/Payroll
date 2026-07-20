@@ -1,0 +1,80 @@
+name: Android release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      staff_version_code:
+        description: "Android versionCode (integer — bump when republishing APK)"
+        required: false
+        default: "1"
+      staff_version_name:
+        description: "Android versionName (e.g. 1.0.1)"
+        required: false
+        default: "1.0"
+
+jobs:
+  build-release-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      STAFF_APP_SERVER_URL: https://payroll.kanprinters.co.za/staff/login
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Check Android signing secrets
+        id: signing
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Android signing secrets missing — see docs/ANDROID_RELEASE_APK.md"
+          fi
+
+      - name: Install dependencies
+        if: steps.signing.outputs.configured == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Set APK version
+        if: steps.signing.outputs.configured == 'true'
+        run: |
+          {
+            echo "staffVersionCode=${{ github.event.inputs.staff_version_code }}"
+            echo "staffVersionName=${{ github.event.inputs.staff_version_name }}"
+          } >> android/gradle.properties
+
+      - name: Prepare signing keystore
+        if: steps.signing.outputs.configured == 'true'
+        run: node scripts/prepare-android-signing.mjs
+
+      - name: Setup Android SDK
+        if: steps.signing.outputs.configured == 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Build signed release APK
+        if: steps.signing.outputs.configured == 'true'
+        run: node scripts/build-staff-apk.mjs --release --no-copy
+
+      - name: Upload release APK artifact
+        if: steps.signing.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kan-printers-staff-release
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
