@@ -8,7 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isStaffPortalPath, STAFF_LOGIN_PATH, staffPortalPath } from "@/lib/staff-portal";
 import { recordAuthEvent } from "@/lib/audit-trail";
@@ -27,25 +27,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isRefreshingRef = useRef<boolean>(false);
   const lastRefreshTsRef = useRef<number>(0);
   const userRef = useRef<AuthUser | null>(null);
-
-  const buildAuthUserFromSession = useCallback((sessionUser: User): AuthUser => {
-    const email = sessionUser.email || "";
-    const meta = sessionUser.user_metadata;
-    // Never trust user_metadata.role for authorization — it is user-editable.
-    const name =
-      typeof meta.name === "string"
-        ? meta.name
-        : typeof meta.full_name === "string"
-          ? meta.full_name
-          : email;
-
-    return {
-      id: sessionUser.id,
-      email,
-      role: "Staff",
-      name,
-    };
-  }, []);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
@@ -217,15 +198,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    // Initial session check (best-effort)
+    // Initial session check (best-effort) — must match applySession: no profile → sign out.
     supabase.auth
       .getSession()
       .then(async ({ data: { session } }) => {
         if (session) {
           const dbProfile = await fetchProfile(session.user.id);
-          setUser(dbProfile ?? buildAuthUserFromSession(session.user));
-          setIsAuthenticated(true);
-          redirectAfterLogin();
+          if (!dbProfile) {
+            console.warn("AuthContext: no users profile for initial session — signing out.");
+            await supabase.auth.signOut();
+            setUser(null);
+            setIsAuthenticated(false);
+          } else {
+            setUser(dbProfile);
+            setIsAuthenticated(true);
+            redirectAfterLogin();
+          }
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -244,7 +232,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [buildAuthUserFromSession, fetchProfile, location.pathname, navigate, redirectAfterLogin]);
+  }, [fetchProfile, location.pathname, navigate, redirectAfterLogin]);
 
   useEffect(() => {
     userRef.current = user;

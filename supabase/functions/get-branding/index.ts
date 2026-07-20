@@ -10,9 +10,9 @@ serve(async (req) => {
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.error("get-branding: Missing Supabase environment variables.");
     return new Response(JSON.stringify({ error: "Server misconfiguration" }), {
       status: 500,
@@ -20,9 +20,27 @@ serve(async (req) => {
     });
   }
 
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
-  const { data, error } = await admin
+  const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: userResult, error: userErr } = await supabaseAuth.auth.getUser();
+  if (userErr || !userResult?.user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const { data, error } = await supabaseAuth
     .from("company_details")
     .select("companylegalname, companytradingname, logourl, logowidth, logoheight, logofit")
     .limit(1)
@@ -43,10 +61,16 @@ serve(async (req) => {
 
   const payload = {
     companyName,
+    name: companyName,
     logoUrl: (data?.logourl as string | null) ?? null,
     logoWidth: typeof data?.logowidth === "number" ? (data!.logowidth as number) : null,
     logoHeight: typeof data?.logoheight === "number" ? (data!.logoheight as number) : null,
-    logoFit: ((data?.logofit as string | null) ?? "contain") as "contain" | "cover" | "fill" | "none" | "scale-down",
+    logoFit: ((data?.logofit as string | null) ?? "contain") as
+      | "contain"
+      | "cover"
+      | "fill"
+      | "none"
+      | "scale-down",
   };
 
   return new Response(JSON.stringify(payload), {
