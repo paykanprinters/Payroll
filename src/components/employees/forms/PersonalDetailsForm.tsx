@@ -12,6 +12,10 @@ import {
   normalizeSaIdNumber,
   parseSaIdNumberDateOfBirth,
 } from "@/lib/sa-id-number";
+import {
+  formatResidentialAddress,
+  shouldSyncPermanentAddress,
+} from "@/lib/format-residential-address";
 
 const provinces = [
   "Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo",
@@ -22,7 +26,15 @@ const PersonalDetailsForm: React.FC = () => {
   const { register, setValue, watch, formState: { errors } } = useFormContext();
   const idNumber = watch("idNumber") ?? "";
   const dateOfBirth = watch("dateOfBirth") ?? "";
+  const addressLine1 = watch("addressLine1") ?? "";
+  const addressLine2 = watch("addressLine2") ?? "";
+  const city = watch("city") ?? "";
+  const province = watch("province") ?? "";
+  const postalCode = watch("postalCode") ?? "";
+  const permanentAddress = watch("permanentAddress") ?? "";
   const [idHint, setIdHint] = React.useState<string | null>(null);
+  const lastSyncedPermanentRef = React.useRef<string | null>(null);
+  const hasMountedRef = React.useRef(false);
 
   const applyIdNumber = React.useCallback(
     (raw: string) => {
@@ -51,6 +63,47 @@ const PersonalDetailsForm: React.FC = () => {
     },
     [setValue],
   );
+
+  React.useEffect(() => {
+    const residential = formatResidentialAddress({
+      addressLine1,
+      addressLine2,
+      city,
+      province,
+      postalCode,
+    });
+
+    if (
+      !shouldSyncPermanentAddress(
+        permanentAddress,
+        residential,
+        lastSyncedPermanentRef.current,
+      )
+    ) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    if (residential && permanentAddress.trim() !== residential) {
+      setValue("permanentAddress", residential, {
+        shouldDirty: hasMountedRef.current,
+        shouldValidate: true,
+      });
+    }
+
+    if (residential) {
+      lastSyncedPermanentRef.current = residential;
+    }
+    hasMountedRef.current = true;
+  }, [
+    addressLine1,
+    addressLine2,
+    city,
+    province,
+    postalCode,
+    permanentAddress,
+    setValue,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -149,13 +202,15 @@ const PersonalDetailsForm: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Permanent Address</CardTitle>
-          <CardDescription>Use when the permanent address differs from the residential address.</CardDescription>
+          <CardDescription>
+            Defaults to the residential address above. Edit only when the permanent address differs.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Textarea
             id="permanentAddress"
             {...register("permanentAddress")}
-            placeholder="Enter permanent address"
+            placeholder="Filled from residential address — edit if different"
             rows={4}
           />
           {errors.permanentAddress && (
