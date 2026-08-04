@@ -9,6 +9,7 @@ describe("notification-delivery", () => {
   it("describes known welcome result codes", () => {
     expect(describeWelcomeDeliveryResult("sent")).toContain("success");
     expect(describeWelcomeDeliveryResult("skipped_no_email")).toContain("email");
+    expect(describeWelcomeDeliveryResult("disabled_settings")).toContain("Welcome Package");
   });
 
   it("formats a combined summary", () => {

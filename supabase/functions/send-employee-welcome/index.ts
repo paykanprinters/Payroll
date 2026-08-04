@@ -88,6 +88,9 @@ function resultToLog(
   if (code === "disabled") {
     return { status: "skipped", error: "Template is turned off in Message templates." };
   }
+  if (code === "disabled_settings") {
+    return { status: "skipped", error: "Welcome Package is turned off in Settings → Notifications." };
+  }
   if (code === "skipped_no_email") {
     return { status: "skipped", error: "Employee has no valid email address on file." };
   }
@@ -112,7 +115,7 @@ function resultToLog(
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -170,7 +173,9 @@ serve(async (req) => {
   const [{ data: settingsRow }, { data: companyRow }, { data: templates }] = await Promise.all([
     supabaseAdmin
       .from("notification_settings")
-      .select("from_name, from_email, reply_to, portal_url, sms_enabled, sms_sender_id")
+      .select(
+        "from_name, from_email, reply_to, portal_url, sms_enabled, sms_sender_id, send_welcome_email, send_welcome_sms",
+      )
       .limit(1)
       .maybeSingle(),
     supabaseAdmin
@@ -205,7 +210,10 @@ serve(async (req) => {
     vars,
   );
 
-  if (emailTemplate?.enabled) {
+  const welcomeEmailActivated = settingsRow?.send_welcome_email !== false;
+  const welcomeSmsActivated = settingsRow?.send_welcome_sms !== false;
+
+  if (emailTemplate?.enabled && welcomeEmailActivated) {
     const to = employee.email?.trim();
     if (!to || !EMAIL_RE.test(to)) {
       results.email = "skipped_no_email";
@@ -283,7 +291,7 @@ serve(async (req) => {
       }
     }
   } else {
-    results.email = "disabled";
+    results.email = emailTemplate?.enabled ? "disabled_settings" : "disabled";
     const log = resultToLog(results.email);
     await logDelivery(supabaseAdmin, {
       channel: "email",
@@ -297,7 +305,7 @@ serve(async (req) => {
     });
   }
 
-  if (smsTemplate?.enabled) {
+  if (smsTemplate?.enabled && welcomeSmsActivated) {
     const msisdn = normalizeSaMsisdn(employee.phone_number ?? "");
     if (!msisdn) {
       results.sms = "skipped_no_phone";
@@ -356,7 +364,7 @@ serve(async (req) => {
       });
     }
   } else {
-    results.sms = "disabled";
+    results.sms = smsTemplate?.enabled ? "disabled_settings" : "disabled";
     const log = resultToLog(results.sms);
     await logDelivery(supabaseAdmin, {
       channel: "sms",
@@ -371,8 +379,12 @@ serve(async (req) => {
 
   const anySent = results.email === "sent" || results.sms === "sent";
   const allSkipped =
-    (results.email?.startsWith("skipped") || results.email === "disabled") &&
-    (results.sms?.startsWith("skipped") || results.sms === "disabled");
+    (results.email?.startsWith("skipped") ||
+      results.email === "disabled" ||
+      results.email === "disabled_settings") &&
+    (results.sms?.startsWith("skipped") ||
+      results.sms === "disabled" ||
+      results.sms === "disabled_settings");
 
   return jsonResponse(
     {

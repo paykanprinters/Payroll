@@ -15,6 +15,8 @@ export interface NotificationSettings {
   ccAdmins: boolean;
   sendPayslipEmails: boolean;
   sendReminders: boolean;
+  sendWelcomeEmail: boolean;
+  sendWelcomeSms: boolean;
   portalUrl: string;
   smsEnabled: boolean;
   smsSenderId: string;
@@ -31,6 +33,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   ccAdmins: false,
   sendPayslipEmails: true,
   sendReminders: true,
+  sendWelcomeEmail: true,
+  sendWelcomeSms: true,
   portalUrl: "",
   smsEnabled: false,
   smsSenderId: "",
@@ -48,6 +52,8 @@ function rowToSettings(row: Record<string, unknown>): NotificationSettings {
     ccAdmins: !!row.cc_admins,
     sendPayslipEmails: row.send_payslip_emails !== false,
     sendReminders: row.send_reminders !== false,
+    sendWelcomeEmail: row.send_welcome_email !== false,
+    sendWelcomeSms: row.send_welcome_sms !== false,
     portalUrl: (row.portal_url as string) ?? "",
     smsEnabled: !!row.sms_enabled,
     smsSenderId: (row.sms_sender_id as string) ?? "",
@@ -83,6 +89,8 @@ export async function upsertNotificationSettings(
     cc_admins: settings.ccAdmins,
     send_payslip_emails: settings.sendPayslipEmails,
     send_reminders: settings.sendReminders,
+    send_welcome_email: settings.sendWelcomeEmail,
+    send_welcome_sms: settings.sendWelcomeSms,
     portal_url: settings.portalUrl.trim() || null,
     sms_enabled: settings.smsEnabled,
     sms_sender_id: settings.smsSenderId.trim() || null,

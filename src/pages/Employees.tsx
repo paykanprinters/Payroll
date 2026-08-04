@@ -18,6 +18,9 @@ import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useSearchParams } from "react-router-dom";
 import { buildEmployeesAdminSummary } from "@/lib/employees-admin-summary";
+import { sendEmployeeWelcome } from "@/integrations/supabase/message-template-queries";
+import { formatWelcomeDeliverySummary } from "@/lib/notification-delivery";
+import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 
 type SortField = "name" | "jobTitle" | "startDate" | "customEmployeeId";
 type SortDir = "asc" | "desc";
@@ -242,6 +245,39 @@ const Employees: React.FC = () => {
     await downloadPdf(doc, filename);
   };
 
+  const handleSendWelcome = async (employee: MockEmployee) => {
+    const toastId = showLoading(
+      `Sending Welcome Package to ${employee.firstName} ${employee.lastName}…`,
+    ) as string;
+    try {
+      const welcome = await sendEmployeeWelcome(employee.id);
+      dismissToast(toastId);
+      if (!welcome.ok) {
+        showError(
+          welcome.error ??
+            "Welcome Package could not be sent. Check Settings → Notifications → Delivery log.",
+        );
+        return;
+      }
+      const summary = formatWelcomeDeliverySummary(welcome.results);
+      const anySent =
+        welcome.results?.email === "sent" || welcome.results?.sms === "sent";
+      const anyFailed =
+        welcome.results?.email?.startsWith("failed") ||
+        welcome.results?.sms?.startsWith("failed");
+      if (anySent && !anyFailed) {
+        showSuccess("Welcome Package sent.");
+      } else if (anySent) {
+        showSuccess(`Partially sent. ${summary}`);
+      } else {
+        showError(`${summary} View Settings → Notifications → Delivery log.`);
+      }
+    } catch (err) {
+      dismissToast(toastId);
+      showError(err instanceof Error ? err.message : "Failed to send Welcome Package.");
+    }
+  };
+
   const clearFilters = () => {
     setJobTitleFilter("all");
     setDepartmentFilter("all");
@@ -307,6 +343,7 @@ const Employees: React.FC = () => {
               isMutatingEmployee={isMutatingEmployee}
               onEdit={handleEditEmployeeClick}
               onDownloadProfile={handleDownloadProfile}
+              onSendWelcome={handleSendWelcome}
               onDelete={handleDeleteEmployeeClick}
             />
           </ErrorBoundary>

@@ -18,6 +18,7 @@ const FUNCTIONS = {
   "get-branding": false,
   "seed-company-branding": true,
   "seed-users": true,
+  "send-employee-welcome": true,
   "send-payroll-reminders": true,
   "send-payslip-email": true,
   "send-sms": true,
@@ -52,6 +53,7 @@ function collectFiles(functionName) {
     "_shared/email-templates.ts",
     "_shared/smsportal.ts",
     "_shared/sms-templates.ts",
+    "_shared/template-engine.ts",
   ]) {
     const content = readIfExists(shared);
     if (content) files.push({ name: shared, content });

@@ -310,6 +310,19 @@ const NotificationSettings: React.FC = () => {
           <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm font-medium">Welcome Package email</p>
+                <p className="text-sm text-muted-foreground">
+                  Send the welcome email automatically when a new employee is saved. Wording is edited under
+                  Message templates.
+                </p>
+              </div>
+              <Switch
+                checked={settings.sendWelcomeEmail}
+                onCheckedChange={(v) => setSettings({ ...settings, sendWelcomeEmail: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium">Email payslips to employees</p>
                 <p className="text-sm text-muted-foreground">Allow sending payslip PDFs to employees by email.</p>
               </div>
@@ -406,6 +419,19 @@ const NotificationSettings: React.FC = () => {
               <Switch
                 checked={settings.smsEnabled}
                 onCheckedChange={(v) => setSettings({ ...settings, smsEnabled: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Welcome Package SMS</p>
+                <p className="text-sm text-muted-foreground">
+                  Text the welcome SMS when a new employee is saved (requires a valid SA mobile number).
+                </p>
+              </div>
+              <Switch
+                checked={settings.sendWelcomeSms}
+                disabled={!settings.smsEnabled}
+                onCheckedChange={(v) => setSettings({ ...settings, sendWelcomeSms: v })}
               />
             </div>
             <div className="flex items-center justify-between">

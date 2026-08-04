@@ -4,6 +4,7 @@ export function describeWelcomeDeliveryResult(code?: string): string {
   const map: Record<string, string> = {
     sent: "Sent successfully",
     disabled: "Template is turned off in Message templates",
+    disabled_settings: "Welcome Package is turned off in Settings → Notifications",
     skipped_no_email: "Skipped — employee has no valid email address",
     skipped_no_phone: "Skipped — employee has no valid SA mobile number",
     disabled_channel: "Skipped — SMS is disabled in notification settings",

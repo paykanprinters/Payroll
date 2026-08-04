@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Edit, Trash2, UserPlus } from "lucide-react";
+import { Download, Edit, Mail, Trash2, UserPlus } from "lucide-react";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -20,6 +20,7 @@ interface EmployeesTableProps {
   isMutatingEmployee: boolean;
   onEdit: (employee: MockEmployee) => void;
   onDownloadProfile: (employee: MockEmployee) => void;
+  onSendWelcome: (employee: MockEmployee) => void;
   onDelete: (employee: MockEmployee) => void;
 }
 
@@ -28,6 +29,7 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
   isMutatingEmployee,
   onEdit,
   onDownloadProfile,
+  onSendWelcome,
   onDelete,
 }) => {
   if (employees.length === 0) {
@@ -159,6 +161,16 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
                           title="Download profile"
                         >
                           <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => onSendWelcome(employee)}
+                          disabled={isMutatingEmployee}
+                          className="h-8 w-8 bg-white sm:h-9 sm:w-9"
+                          title="Send Welcome Package (email/SMS)"
+                        >
+                          <Mail className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="destructive"
