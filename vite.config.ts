@@ -71,6 +71,20 @@ export default defineConfig(() => ({
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
+            // Prefer network for document navigations so CSP/security headers
+            // from Vercel apply immediately (stale precached HTML blocked WASM).
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pages",
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 8,
+                maxAgeSeconds: 60 * 60 * 24,
+              },
+            },
+          },
+          {
             urlPattern:
               /\/assets\/(?:react-pdf\.browser|jszip\.min|papaparse\.min|[^/]*PdfDocument)-[^/]+\.js$/i,
             handler: "CacheFirst",

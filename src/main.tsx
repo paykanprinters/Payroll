@@ -8,6 +8,17 @@ import React from "react";
 
 registerSW({ immediate: true });
 
+// When a new service worker takes control after deploy, reload once so the
+// document picks up fresh CSP headers (stale SW-cached HTML blocked Yoga WASM).
+if ("serviceWorker" in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+}
+
 async function initNativeStaffShell() {
   if (!Capacitor.isNativePlatform()) return;
 
