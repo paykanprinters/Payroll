@@ -57,10 +57,22 @@ export interface EmployeeProfileFields {
   routing_swift_code?: string | null;
   address_line1?: string | null;
   permanent_address?: string | null;
+  payment_mode?: string | null;
 }
 
+const CASH_SKIP_KEYS = new Set([
+  "taxReferenceNumber",
+  "bankName",
+  "accountNumber",
+  "branchCode",
+]);
+
 export function listOutstandingProfileItems(employee: EmployeeProfileFields): string[] {
-  return OUTSTANDING_PROFILE_FIELDS.filter((field) => isBlank(field.get(employee))).map((field) => field.label);
+  const isCash = employee.payment_mode === "Cash";
+  return OUTSTANDING_PROFILE_FIELDS.filter((field) => {
+    if (isCash && CASH_SKIP_KEYS.has(field.key)) return false;
+    return isBlank(field.get(employee));
+  }).map((field) => field.label);
 }
 
 export function buildOutstandingSectionHtml(items: string[], contactName: string): string {

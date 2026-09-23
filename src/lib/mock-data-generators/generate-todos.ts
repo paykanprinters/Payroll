@@ -2,6 +2,7 @@ import { ToDoEntry, MockEmployee, MockPayslip, Loan, SavingPlan, LeaveEntry, Tim
 import { format, isPast, subMonths, isWithinInterval, parseISO } from "date-fns";
 import { v4 as uuidv4 } from 'uuid';
 import { PROFILE_FIELD_CHECKS } from "@/lib/payroll-readiness";
+import { isProfileFieldApplicable } from "@/lib/employee-tax-tracking";
 
 export const generateMockToDos = (
   employees: MockEmployee[],
@@ -19,6 +20,7 @@ export const generateMockToDos = (
   // --- Employee Profile Incompleteness To-Dos (shared checklist with readiness report) ---
   employees.forEach(employee => {
     PROFILE_FIELD_CHECKS.forEach(field => {
+      if (!isProfileFieldApplicable(employee, field.key)) return;
       const fieldValue = employee[field.key];
       const ignoredFields = employee.ignoredIncompleteFields || [];
       const isIgnored = ignoredFields.includes(field.key);

@@ -60,6 +60,7 @@ export function buildAnonymizedEmployeePayload(
     medical_aid_dependants: null,
     retirement_fund_contribution_percent: null,
     retirement_fund_contribution_fixed: null,
+    track_tax: true,
     // Sever portal access / auth linkage.
     portal_access: false,
     user_id: null,

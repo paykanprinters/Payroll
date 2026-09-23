@@ -1,11 +1,14 @@
 import { MockEmployee, MockPayslip } from "../mock-data-interfaces";
-import { getEmployeeName } from "../utils";
 import { format, isSameMonth, isSameYear, parseISO } from "date-fns";
 import {
   DEFAULT_PAY_CYCLE_FILTER_SETTINGS,
   filterPayslipsForBulkPeriod,
   type PayCycleFilterSettings,
 } from "../payslip-period-filter";
+import {
+  aggregateDeductionTotalsForReport,
+  partitionPayslipsForReports,
+} from "@/lib/employee-tax-tracking";
 
 export interface ReportContentOptions {
   skipDateFilter?: boolean;
@@ -57,22 +60,31 @@ export const generatePayrollSummaryReportContent = (
     return `<p>No payslip data available for ${reportPeriodDescription} to generate this report.</p>`;
   }
 
-  const totalGross = filteredPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
-  const totalDeductions = filteredPayslips.reduce((sum, p) => sum + p.totalDeductions, 0);
-  const totalNet = filteredPayslips.reduce((sum, p) => sum + p.netPay, 0);
-  const employeeCount = new Set(filteredPayslips.map(p => p.employeeId)).size;
+  // Cash employees are excluded from paid lists / detail rows, but PAYE/UIF
+  // from cash employees with tax tracking still feed the statutory totals.
+  const { displayPayslips, taxPayslips } = partitionPayslipsForReports(
+    filteredPayslips,
+    employees
+  );
 
-  const deductionTotals: Record<string, number> = {};
-  filteredPayslips.forEach((p) => {
-    (p.deductionsBreakdown || []).forEach((d) => {
-      const key = (d?.name || "Unknown").trim();
-      const amount = Number(d?.amount || 0);
-      deductionTotals[key] = (deductionTotals[key] || 0) + amount;
-    });
-  });
+  if (displayPayslips.length === 0 && taxPayslips.length === 0) {
+    return `<p>No payslip data available for ${reportPeriodDescription} to generate this report.</p>`;
+  }
+
+  const totalGross = displayPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
+  const totalDeductions = displayPayslips.reduce((sum, p) => sum + p.totalDeductions, 0);
+  const totalNet = displayPayslips.reduce((sum, p) => sum + p.netPay, 0);
+  const employeeCount = new Set(displayPayslips.map(p => p.employeeId)).size;
+
+  const deductionTotals = aggregateDeductionTotalsForReport(displayPayslips, taxPayslips);
   const deductionRows = Object.entries(deductionTotals)
     .filter(([, amt]) => amt > 0)
     .sort((a, b) => b[1] - a[1]);
+
+  const cashTaxNote =
+    taxPayslips.length > displayPayslips.length
+      ? `<p class="text-sm text-muted-foreground">PAYE and UIF totals include cash-paid employees with tax tracking enabled (those employees are not listed below).</p>`
+      : "";
 
   if (auditLevel === "minimal") {
     return `
@@ -101,10 +113,11 @@ export const generatePayrollSummaryReportContent = (
           </tr>
         </tbody>
       </table>
+      ${cashTaxNote}
     `;
   }
 
-  const uniquePayPeriods = Array.from(new Set(filteredPayslips.map(p => p.payPeriod))).sort();
+  const uniquePayPeriods = Array.from(new Set(displayPayslips.map(p => p.payPeriod))).sort();
 
   let html = `
     <p><strong>Report Period:</strong> ${reportPeriodDescription}</p>
@@ -155,6 +168,7 @@ export const generatePayrollSummaryReportContent = (
           `).join("")}
         </tbody>
       </table>
+      ${cashTaxNote}
     `;
   }
 
@@ -174,7 +188,7 @@ export const generatePayrollSummaryReportContent = (
   `;
 
   uniquePayPeriods.forEach(period => {
-    const periodPayslips = filteredPayslips.filter(p => p.payPeriod === period);
+    const periodPayslips = displayPayslips.filter(p => p.payPeriod === period);
     const periodGross = periodPayslips.reduce((sum, p) => sum + p.grossEarnings, 0);
     const periodDeductions = periodPayslips.reduce((sum, p) => sum + p.totalDeductions, 0);
     const periodNet = periodPayslips.reduce((sum, p) => sum + p.netPay, 0);
@@ -213,7 +227,7 @@ export const generatePayrollSummaryReportContent = (
         </thead>
         <tbody>
     `;
-    filteredPayslips.forEach(p => {
+    displayPayslips.forEach(p => {
       const emp = employees.find(e => e.id === p.employeeId);
       const name = emp ? `${emp.firstName} ${emp.lastName}` : "Unknown Employee";
       const uif = (p.deductionsBreakdown || []).filter(d => (d?.name || "").trim() === "UIF").reduce((s, d) => s + (d.amount || 0), 0);
@@ -244,7 +258,7 @@ export const generatePayrollSummaryReportContent = (
       </table>
       <br/>
       <p class="text-sm text-muted-foreground">
-        Notes: Gross includes regular/overtime/weekend premiums; salaried employees are pro-rated for unpaid leave. UIF is capped and excluded from PAYE taxable income. PAYE is annualized per frequency with rebates, then de-annualized.
+        Notes: Gross includes regular/overtime/weekend premiums; salaried employees are pro-rated for unpaid leave. UIF is capped and excluded from PAYE taxable income. PAYE is annualized per frequency with rebates, then de-annualized. Cash-paid employees are omitted from this detail but their PAYE/UIF (when tax tracking is on) are included in the deduction totals above.
       </p>
     `;
   }

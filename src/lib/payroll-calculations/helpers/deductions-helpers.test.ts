@@ -141,4 +141,27 @@ describe("buildDeductions — statutory", () => {
     expect(employerSdl).toBe(300);
     expect(totalDeductions).toBeCloseTo(uif + paye, 2);
   });
+
+  it("skips PAYE/UIF/SDL when cash employee has trackTax off", () => {
+    const cashNoTax = {
+      ...employee,
+      paymentMode: "Cash",
+      trackTax: false,
+    } as MockEmployee;
+    const { deductionsBreakdown, employerSdl } = buildDeductions(
+      cashNoTax,
+      30000,
+      [],
+      [],
+      taxTables,
+      taxSettings(true, true),
+      periodStart,
+      periodEnd,
+      "2026-03",
+      [],
+    );
+    expect(find(deductionsBreakdown, "PAYE")).toBeUndefined();
+    expect(find(deductionsBreakdown, "UIF")).toBeUndefined();
+    expect(employerSdl).toBe(0);
+  });
 });

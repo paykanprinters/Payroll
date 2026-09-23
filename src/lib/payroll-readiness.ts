@@ -7,6 +7,11 @@ import {
   validateLoadedTaxTables,
 } from "@/lib/tax-tables-validation";
 import { filterEmployeesActiveInPeriod } from "@/lib/employee-active-period";
+import {
+  isProfileFieldApplicable,
+  requiresEmployeeBankDetails,
+  requiresEmployeeTaxReference,
+} from "@/lib/employee-tax-tracking";
 
 export type ReadinessSeverity = "critical" | "warning";
 
@@ -190,6 +195,7 @@ function assessEmployeeProfile(employee: MockEmployee): ReadinessIssue[] {
 
   for (const check of PROFILE_FIELD_CHECKS) {
     if (ignored.has(check.key)) continue;
+    if (!isProfileFieldApplicable(employee, check.key)) continue;
     if (isBlank(employee[check.key])) {
       issues.push({ code: check.code, label: check.label, severity: check.severity });
     }
@@ -322,6 +328,7 @@ export function assessPayrollReadiness(options: {
 }
 
 function missingBankFields(employee: MockEmployee): string[] {
+  if (!requiresEmployeeBankDetails(employee)) return [];
   const missing: string[] = [];
   if (isBlank(employee.bankName)) missing.push("bankName");
   if (isBlank(employee.bankAccountHolder)) missing.push("bankAccountHolder");
@@ -393,7 +400,11 @@ export function computePayrollRunBlockers(options: {
       });
     }
 
-    if (applyPAYE && isBlank(employee.taxReferenceNumber)) {
+    if (
+      applyPAYE &&
+      requiresEmployeeTaxReference(employee) &&
+      isBlank(employee.taxReferenceNumber)
+    ) {
       blockers.push({
         type: "EMPLOYEE_TAX_INFO",
         employeeId: employee.id,

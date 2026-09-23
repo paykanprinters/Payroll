@@ -127,6 +127,32 @@ describe("computePayrollRunBlockers", () => {
     expect(canGeneratePayrollItems(blockers)).toBe(false);
   });
 
+  it("skips bank and tax-reference blockers for cash-paid employees", () => {
+    const blockers = computePayrollRunBlockers({
+      employees: [
+        baseEmployee({
+          paymentMode: "Cash",
+          taxReferenceNumber: "",
+          bankName: "",
+          bankAccountHolder: "",
+          accountNumber: "",
+          branchCode: "",
+          trackTax: true,
+        }),
+      ],
+      timesheets: [approvedTimesheet()],
+      companyDetails: company,
+      userTaxSettings: { userId: "u1", applyPaye: true, applySdl: true, enableIrp5Export: false, irp5ContentFontSize: 12 },
+      periodStart,
+      periodEnd,
+      taxTables: { brackets: [{ min: 0, max: null, rate: 0.18, base: 0 }] } as never,
+      activeTaxYear: 2026,
+    });
+
+    expect(blockers.some((b) => b.type === "BANK_INFO")).toBe(false);
+    expect(blockers.some((b) => b.type === "EMPLOYEE_TAX_INFO")).toBe(false);
+  });
+
   it("returns TIMESHEET_SUBMITTED warning for submitted sheets", () => {
     const blockers = computePayrollRunBlockers({
       employees: [baseEmployee()],

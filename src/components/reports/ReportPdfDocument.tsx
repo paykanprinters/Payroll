@@ -6,6 +6,10 @@ import { MockPayslip, MockEmployee, MockCompanyDetails } from "@/lib/mock-data-i
 import { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import { resolveCompanyLogoSource, resolveReportLogoDimensions } from "@/lib/document-logo";
 import { parseISO, isSameMonth, isSameYear, isSameWeek } from "date-fns";
+import {
+  aggregateDeductionTotalsForReport,
+  partitionPayslipsForReports,
+} from "@/lib/employee-tax-tracking";
 
 type AuditLevel = "minimal" | "standard" | "detailed";
 type Mode = "monthly" | "weekly";
@@ -74,20 +78,17 @@ const ReportPdfDocument: React.FC<Props> = ({
       : reportDesignSettings.defaultReportPaperSize;
   const baseFontSize = reportDesignSettings.reportContentFontSize || 12;
 
-  // Exclude cash employees for reports (match existing behavior)
-  const nonCashEmployees = employees.filter((e) => e.paymentMode !== "Cash");
-  const nonCashIds = new Set(nonCashEmployees.map((e) => e.id));
-  // Use pre-filtered period payslips when provided (pay-cycle aligned); otherwise fall back to calendar filters.
-  let filteredPayslips = (periodPayslips ?? payslips).filter((p) => nonCashIds.has(p.employeeId));
+  // Exclude cash employees from lists; keep their PAYE/UIF in tax deduction totals.
+  let periodFiltered = periodPayslips ?? payslips;
   if (!periodPayslips) {
     if (mode === "monthly") {
-      filteredPayslips = filteredPayslips.filter((p) => {
+      periodFiltered = payslips.filter((p) => {
         const [startStr] = p.payPeriod.split(" - ");
         const d = parseISO(startStr);
         return isSameMonth(d, selectedDate) && isSameYear(d, selectedDate);
       });
     } else {
-      filteredPayslips = filteredPayslips.filter((p) => {
+      periodFiltered = payslips.filter((p) => {
         const [startStr] = p.payPeriod.split(" - ");
         const d = parseISO(startStr);
         return isSameWeek(d, selectedDate, { weekStartsOn: 1 }) && isSameYear(d, selectedDate);
@@ -95,7 +96,13 @@ const ReportPdfDocument: React.FC<Props> = ({
     }
   }
 
-  // Totals
+  const { displayPayslips: filteredPayslips, taxPayslips } = partitionPayslipsForReports(
+    periodFiltered,
+    employees
+  );
+  const nonCashEmployees = employees.filter((e) => e.paymentMode !== "Cash");
+
+  // Totals (display = non-cash audit view)
   const totalGross = filteredPayslips.reduce((s, p) => s + (p.grossEarnings || 0), 0);
   const totalDeductions = filteredPayslips.reduce((s, p) => s + (p.totalDeductions || 0), 0);
   const totalNet = filteredPayslips.reduce((s, p) => s + (p.netPay || 0), 0);
@@ -136,18 +143,12 @@ const ReportPdfDocument: React.FC<Props> = ({
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Aggregate deduction totals by type/name
-  const deductionTotals: Record<string, number> = {};
-  filteredPayslips.forEach((p) => {
-    (p.deductionsBreakdown || []).forEach((d) => {
-      const key = (d?.name || "Unknown").trim();
-      const amount = Number(d?.amount || 0);
-      deductionTotals[key] = (deductionTotals[key] || 0) + amount;
-    });
-  });
+  // Aggregate deduction totals: PAYE/UIF include cash track-tax; other types are non-cash only
+  const deductionTotals = aggregateDeductionTotalsForReport(filteredPayslips, taxPayslips);
   const deductionRows = Object.entries(deductionTotals)
     .filter(([, amt]) => amt > 0)
     .sort((a, b) => b[1] - a[1]);
+  const includesCashTax = taxPayslips.length > filteredPayslips.length;
 
   return (
     <Document>
@@ -239,6 +240,11 @@ const ReportPdfDocument: React.FC<Props> = ({
                 </View>
               ))}
             </View>
+            {includesCashTax && (
+              <Text style={{ fontSize: 9, color: "#666", marginTop: 6 }}>
+                PAYE and UIF totals include cash-paid employees with tax tracking enabled.
+              </Text>
+            )}
           </View>
         )}
       </Page>

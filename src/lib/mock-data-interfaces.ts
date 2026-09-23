@@ -71,6 +71,11 @@ export interface MockEmployee {
   postalCode?: string;
   taxReferenceNumber?: string;
   uifNumber?: string; // New field
+  /**
+   * When true, PAYE/UIF are calculated and included in tax report totals.
+   * Cash-paid employees may omit tax reference / UIF numbers; defaults to true.
+   */
+  trackTax?: boolean;
   bankName?: string;
   bankAccountHolder?: string;
   accountNumber?: string; // Renamed from ibanNumber

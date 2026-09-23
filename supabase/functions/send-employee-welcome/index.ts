@@ -161,7 +161,7 @@ serve(async (req) => {
   const { data: employee, error: employeeErr } = await supabaseAdmin
     .from("employees")
     .select(
-      "id, first_name, last_name, email, phone_number, job_title, start_date, id_number, tax_reference_number, bank_name, iban_number, routing_swift_code, address_line1, permanent_address",
+      "id, first_name, last_name, email, phone_number, job_title, start_date, id_number, tax_reference_number, bank_name, iban_number, routing_swift_code, address_line1, permanent_address, payment_mode",
     )
     .eq("id", employeeId)
     .maybeSingle();

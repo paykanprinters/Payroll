@@ -6,6 +6,7 @@ import {
   taxYearFromSelectedDate,
 } from "@/lib/tax-year-period";
 import { format, isSameMonth, isSameYear, parseISO } from "date-fns";
+import { shouldTrackEmployeeTax } from "@/lib/employee-tax-tracking";
 
 export const generateTaxStatutoryReportContent = (
   payslips: MockPayslip[],
@@ -31,6 +32,12 @@ export const generateTaxStatutoryReportContent = (
     }
   }
 
+  const byId = new Map(employees.map((e) => [e.id, e]));
+  // Include cash-paid track-tax employees in totals; omit those who opted out.
+  filteredPayslips = filteredPayslips.filter((p) =>
+    shouldTrackEmployeeTax(byId.get(p.employeeId))
+  );
+
   if (filteredPayslips.length === 0) {
     return `<p>No payslip data available for ${reportPeriodDescription} to generate this report.</p>`;
   }
@@ -50,8 +57,17 @@ export const generateTaxStatutoryReportContent = (
     taxDeductionsMap.set("SDL (Employer Contribution)", totalEmployerSdl);
   }
 
+  const cashTrackedCount = filteredPayslips.filter((p) => {
+    const emp = byId.get(p.employeeId);
+    return emp?.paymentMode === "Cash";
+  }).length;
+
   let html = `
     <p>This report summarizes statutory deductions for compliance with SARS for ${reportPeriodDescription}.</p>
+    <p class="text-sm text-muted-foreground">
+      Totals include all employees with tax tracking enabled. Cash-paid employees are not listed individually
+      on cash-excluded payroll reports, but their PAYE/UIF still count here${cashTrackedCount > 0 ? ` (${cashTrackedCount} cash payslip(s) in this period)` : ""}.
+    </p>
     <br/>
     <h4 class="text-md font-semibold mb-2">Total Statutory Deductions</h4>
     <table class="w-full text-left border-collapse">

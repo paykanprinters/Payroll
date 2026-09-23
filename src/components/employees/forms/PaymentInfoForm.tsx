@@ -157,14 +157,45 @@ const PaymentInfoForm: React.FC<PaymentInfoFormProps> = ({ initialFocus }) => {
           <CardTitle className="text-lg font-semibold">Tax details</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex items-start gap-2">
+            <Checkbox
+              id="trackTax"
+              checked={watch("trackTax") !== false}
+              onCheckedChange={(checked) =>
+                setValue("trackTax", checked === true, { shouldDirty: true })
+              }
+              className="mt-1"
+            />
+            <div className="grid gap-0.5">
+              <Label htmlFor="trackTax">Track tax for this employee</Label>
+              <p className="text-xs text-muted-foreground">
+                {watch("paymentMode") === "Cash"
+                  ? "Cash-paid employees do not need a tax reference or UIF number. When enabled, PAYE/UIF are still calculated and included in company tax totals (employee rows stay hidden on cash-excluded reports)."
+                  : "When enabled, PAYE/UIF are calculated on payslips and included in tax reports."}
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1">
-              <Label htmlFor="taxReferenceNumber">Tax Reference Number</Label>
+              <Label htmlFor="taxReferenceNumber">
+                Tax Reference Number
+                {watch("paymentMode") === "Cash" ? (
+                  <span className="ml-1 font-normal text-muted-foreground">(optional for cash)</span>
+                ) : null}
+              </Label>
               <Input id="taxReferenceNumber" {...register("taxReferenceNumber")} />
               {errors.taxReferenceNumber && (<p className="text-red-500 text-sm">{errors.taxReferenceNumber.message as string}</p>)}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="uifNumber">UIF Number (If applicable)</Label>
+              <Label htmlFor="uifNumber">
+                UIF Number
+                {watch("paymentMode") === "Cash" ? (
+                  <span className="ml-1 font-normal text-muted-foreground">(optional for cash)</span>
+                ) : (
+                  <span className="ml-1 font-normal text-muted-foreground">(If applicable)</span>
+                )}
+              </Label>
               <Input id="uifNumber" {...register("uifNumber")} />
               {errors.uifNumber && (<p className="text-red-500 text-sm">{errors.uifNumber.message as string}</p>)}
             </div>

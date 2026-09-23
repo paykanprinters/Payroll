@@ -8,6 +8,7 @@ import { sumMoney } from "@/lib/money";
 import { calculatePAYE } from "@/lib/payroll-calculations";
 import { computeMonthlyMedicalTaxCredit, getSarsMedicalTaxCredits } from "@/lib/sars-tax-tables";
 import { computeRetirementContribution } from "@/lib/retirement-fund";
+import { shouldTrackEmployeeTax } from "@/lib/employee-tax-tracking";
 
 const computeUIF = (
   grossEarnings: number,
@@ -130,7 +131,13 @@ export const buildDeductions = (
   const deductionsBreakdown: { name: string; amount: number }[] = [];
   const savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[] = [];
 
-  const uif = computeUIF(grossEarnings, taxTables.uifSdlRates, emp, userTaxSettings);
+  // Cash-paid employees may opt out of tax tracking (trackTax=false) without a
+  // tax reference / UIF number. When tracking is off, skip PAYE, UIF, and SDL.
+  const trackTax = shouldTrackEmployeeTax(emp);
+
+  const uif = trackTax
+    ? computeUIF(grossEarnings, taxTables.uifSdlRates, emp, userTaxSettings)
+    : 0;
 
   // COMP-08: pre-tax retirement-fund contribution (Section 11F). The full
   // employee contribution is withheld from net pay, but only the deductible
@@ -151,15 +158,19 @@ export const buildDeductions = (
   // deductible for income tax, so it must not reduce the PAYE taxable base.
   // Pre-tax retirement-fund contributions DO reduce it (capped per Section 11F).
   const taxableForPAYE = Math.max(0, grossEarnings - retirement.taxDeductible);
-  const paye = computePAYE(taxableForPAYE, taxTables, emp, userTaxSettings);
+  const paye = trackTax
+    ? computePAYE(taxableForPAYE, taxTables, emp, userTaxSettings)
+    : 0;
 
   if (retirement.total > 0) {
     deductionsBreakdown.push({ name: "Retirement Fund", amount: retirement.total });
     totalDeductions += retirement.total;
   }
 
-  deductionsBreakdown.push({ name: "UIF", amount: uif });
-  totalDeductions += uif;
+  if (trackTax) {
+    deductionsBreakdown.push({ name: "UIF", amount: uif });
+    totalDeductions += uif;
+  }
 
   if (paye > 0) {
     deductionsBreakdown.push({ name: "PAYE", amount: paye });
@@ -174,7 +185,8 @@ export const buildDeductions = (
   // SDL-liable (employers with total annual payroll <= R500,000 are exempt).
   const applySDLFlag = userTaxSettings?.applySdl ?? true;
   const sdlRate = taxTables.uifSdlRates?.sdl_rate ?? 0.01;
-  const employerSdl = applySDLFlag ? bankersRound(grossEarnings * sdlRate, 2) : 0;
+  const employerSdl =
+    trackTax && applySDLFlag ? bankersRound(grossEarnings * sdlRate, 2) : 0;
 
   loans.forEach((loan) => {
     if (loan.employeeId !== emp.id || loan.status === "completed" || new Date(loan.startDate) > periodEnd) return;

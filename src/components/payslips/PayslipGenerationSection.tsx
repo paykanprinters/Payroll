@@ -156,20 +156,21 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     if (level === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
-      const payslipsForReports = payslipsForPeriod.filter(p => nonCashIds.has(p.employeeId));
+      const payslipsForEmployeeRegister = payslipsForPeriod.filter(p => nonCashIds.has(p.employeeId));
 
       const reportPeriodLabel = format(selectedPayPeriodDate, mode === "monthly" ? "MMMM yyyy" : "PPP");
       const reportOptions = { skipDateFilter: true, reportPeriodDescription: reportPeriodLabel };
 
-      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForReports, nonCashEmployees, selectedPayPeriodDate, mode, level, reportOptions);
-      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, selectedPayPeriodDate, mode, level, reportOptions);
+      // Pass all period payslips so PAYE/UIF totals can include cash track-tax employees.
+      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForPeriod, allEmployees, selectedPayPeriodDate, mode, level, reportOptions);
+      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForEmployeeRegister, nonCashEmployees, selectedPayPeriodDate, mode, level, reportOptions);
       const combinedHtml = `
         <h3>Payroll Summary Report</h3>
         ${payrollSummaryHtml}
         <hr/>
         <h3>Employee Payslip Report</h3>
         ${employeePayslipHtml}
-        <p style="margin-top:8px;font-size:12px;color:#666;">Audit Level: ${level} • Cash employees excluded • Generated: ${new Date().toLocaleString()}</p>
+        <p style="margin-top:8px;font-size:12px;color:#666;">Audit Level: ${level} • Cash employees excluded from lists • PAYE/UIF totals include cash tax tracking • Generated: ${new Date().toLocaleString()}</p>
         <p style="font-size:12px;color:#666;">Checksum: ${computeChecksum(payrollSummaryHtml + employeePayslipHtml)}</p>
       `;
       await saveGeneratedReport(`Bulk Payslips Reports — ${mode} — ${format(selectedPayPeriodDate, mode === "monthly" ? 'MMM yyyy' : 'PPP')}`, combinedHtml);
@@ -283,21 +284,21 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     if (auditLevel === "detailed") {
       const nonCashEmployees = allEmployees.filter(e => e.paymentMode !== "Cash");
       const nonCashIds = new Set(nonCashEmployees.map(e => e.id));
-      const payslipsForReports = payslipsForCurrentPeriod.filter(p => nonCashIds.has(p.employeeId));
+      const payslipsForEmployeeRegister = payslipsForCurrentPeriod.filter(p => nonCashIds.has(p.employeeId));
 
       const reportPeriodLabel = format(today, "PPP");
       const reportOptions = { skipDateFilter: true, reportPeriodDescription: reportPeriodLabel };
 
       const mode: "monthly" | "weekly" = "monthly";
-      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel, reportOptions);
-      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForReports, nonCashEmployees, today, mode, auditLevel, reportOptions);
+      const payrollSummaryHtml = generatePayrollSummaryReportContent(payslipsForCurrentPeriod, allEmployees, today, mode, auditLevel, reportOptions);
+      const employeePayslipHtml = generateEmployeePayslipReportContent(payslipsForEmployeeRegister, nonCashEmployees, today, mode, auditLevel, reportOptions);
       const combinedHtml = `
         <h3>Payroll Summary Report</h3>
         ${payrollSummaryHtml}
         <hr/>
         <h3>Employee Payslip Report</h3>
         ${employeePayslipHtml}
-        <p style="margin-top:8px;font-size:12px;color:#666;">Audit Level: ${auditLevel} • Cash employees excluded • Generated: ${new Date().toLocaleString()}</p>
+        <p style="margin-top:8px;font-size:12px;color:#666;">Audit Level: ${auditLevel} • Cash employees excluded from lists • PAYE/UIF totals include cash tax tracking • Generated: ${new Date().toLocaleString()}</p>
         <p style="font-size:12px;color:#666;">Checksum: ${computeChecksum(payrollSummaryHtml + employeePayslipHtml)}</p>
       `;
       await saveGeneratedReport(`Bulk Payslips Reports — Current Period — ${format(today, 'yyyy-MM-dd')}`, combinedHtml);
