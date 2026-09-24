@@ -54,7 +54,7 @@ serve(async (req) => {
     // Fetch all necessary data from Supabase
     const { data: employees, error: employeesError } = await supabaseAdmin
       .from('employees')
-      .select('id, first_name, last_name, personal_id, phone_number, ignored_incomplete_fields');
+      .select('id, first_name, last_name, personal_id, phone_number, payment_mode, ignored_incomplete_fields');
     if (employeesError) throw employeesError;
     console.log(`generate-todos: Fetched ${employees.length} employees.`);
 
@@ -143,6 +143,47 @@ serve(async (req) => {
       }
     }
     console.log('generate-todos: Finished checking employee profile incompleteness.');
+
+    // --- Retire cash-paid tax / UIF / bank profile to-dos ---
+    // Cash employees do not need tax reference, UIF number, or bank details.
+    // Older generators left stale pending items; clear them on every run.
+    console.log('generate-todos: Retiring obsolete cash tax/UIF/bank to-dos...');
+    const cashOptionalFields = new Set([
+      "taxReferenceNumber",
+      "tax_reference_number",
+      "uifNumber",
+      "uif_number",
+      "bankName",
+      "bank_name",
+      "bankAccountHolder",
+      "bank_account_holder",
+      "accountNumber",
+      "iban_number",
+      "branchCode",
+      "routing_swift_code",
+    ]);
+    const cashEmployeeIds = new Set(
+      employees.filter((e) => e.payment_mode === "Cash").map((e) => e.id)
+    );
+    for (const todo of existingToDos) {
+      if (todo.status !== "pending" || !todo.employee_id) continue;
+      if (!cashEmployeeIds.has(todo.employee_id)) continue;
+      const related = typeof todo.related_field === "string" ? todo.related_field.trim() : "";
+      const message = typeof todo.message === "string" ? todo.message.toLowerCase() : "";
+      const byField = related && cashOptionalFields.has(related);
+      const byMessage =
+        message.includes("tax reference") ||
+        message.includes("uif number") ||
+        message.includes("missing uif") ||
+        message.includes("bank name") ||
+        message.includes("bank account") ||
+        message.includes("branch code") ||
+        message.includes("account number");
+      if (byField || byMessage) {
+        toDosToUpdateToDone.push(todo.id);
+      }
+    }
+    console.log('generate-todos: Finished retiring obsolete cash tax/UIF/bank to-dos.');
 
     // --- Timesheet To-Dos ---
     console.log('generate-todos: Checking timesheet To-Dos...');

@@ -6,6 +6,7 @@ import { EmployeeFormValues } from "@/components/employees/EmployeeFormDialog"; 
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { logger, toLogError } from "@/lib/logger";
+import { isObsoleteCashProfileTodo } from "@/lib/employee-tax-tracking";
 
 // Helper to convert snake_case to camelCase for Supabase ToDo data
 const convertToDoKeysToCamelCase = (obj: object): ToDoEntry => {
@@ -33,6 +34,54 @@ export const useToDosData = (
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [isLoadingToDos, setIsLoadingToDos] = useState<boolean>(true);
 
+  const applyToDos = useCallback((list: ToDoEntry[]) => {
+    setToDos(list);
+    setPendingCount(list.filter((todo) => todo.status === "pending").length);
+  }, []);
+
+  /** Hide + mark done cash-employee tax/UIF/bank to-dos (optional for Cash payment mode). */
+  const retireObsoleteCashProfileTodos = useCallback(
+    async (list: ToDoEntry[]): Promise<ToDoEntry[]> => {
+      const byId = new Map(employees.map((e) => [e.id, e]));
+      const obsoletePending = list.filter(
+        (todo) =>
+          todo.status === "pending" &&
+          isObsoleteCashProfileTodo(todo, todo.employeeId ? byId.get(todo.employeeId) : undefined)
+      );
+
+      if (obsoletePending.length === 0) return list;
+
+      const obsoleteIds = new Set(obsoletePending.map((t) => t.id));
+      const cleaned = list.map((todo) =>
+        obsoleteIds.has(todo.id) ? { ...todo, status: "done" as const } : todo
+      );
+
+      if (!isMockDataEnabled) {
+        const { error } = await supabase
+          .from("todos")
+          .update({ status: "done" })
+          .in(
+            "id",
+            obsoletePending.map((t) => t.id)
+          );
+        if (error) {
+          logger.warn(
+            "useToDosData: failed to retire obsolete cash profile to-dos:",
+            toLogError(error)
+          );
+          // Still hide them in the UI even if the write fails.
+          return cleaned;
+        }
+        logger.info(
+          `useToDosData: retired ${obsoletePending.length} obsolete cash tax/UIF/bank to-do(s).`
+        );
+      }
+
+      return cleaned;
+    },
+    [employees, isMockDataEnabled]
+  );
+
   const fetchLiveToDos = useCallback(async () => {
     setIsLoadingToDos(true);
     try {
@@ -45,21 +94,21 @@ export const useToDosData = (
       if (error) {
         logger.error("useToDosData: error fetching live To-Dos:", toLogError(error));
         showError("Failed to load live To-Dos.");
-        setToDos([]);
+        applyToDos([]);
       } else {
         const camelCaseData = data.map(convertToDoKeysToCamelCase);
-        setToDos(camelCaseData);
-        setPendingCount(camelCaseData.filter(todo => todo.status === "pending").length);
+        const cleaned = await retireObsoleteCashProfileTodos(camelCaseData);
+        applyToDos(cleaned);
       }
     } catch (err) {
       logger.error("useToDosData: unhandled error fetching live To-Dos:", toLogError(err));
       showError("An unexpected error occurred while loading live To-Dos.");
-      setToDos([]);
+      applyToDos([]);
     } finally {
       dismissToast("loading-todos"); // Dismiss any loading toast
       setIsLoadingToDos(false);
     }
-  }, []);
+  }, [applyToDos, retireObsoleteCashProfileTodos]);
 
   useEffect(() => {
     if (isLoadingAuth) {
@@ -68,18 +117,27 @@ export const useToDosData = (
     }
 
     if (isMockDataEnabled) {
-      setToDos(initialToDos);
-      setPendingCount(initialToDos.filter(todo => todo.status === "pending").length);
-      setIsLoadingToDos(false);
+      void (async () => {
+        const cleaned = await retireObsoleteCashProfileTodos(initialToDos);
+        applyToDos(cleaned);
+        setIsLoadingToDos(false);
+      })();
     } else if (isAuthenticated) {
       fetchLiveToDos();
     } else {
       // Not mock data, not authenticated, and auth is done loading
-      setToDos([]);
-      setPendingCount(0);
+      applyToDos([]);
       setIsLoadingToDos(false);
     }
-  }, [initialToDos, isMockDataEnabled, isAuthenticated, isLoadingAuth, fetchLiveToDos]);
+  }, [
+    initialToDos,
+    isMockDataEnabled,
+    isAuthenticated,
+    isLoadingAuth,
+    fetchLiveToDos,
+    retireObsoleteCashProfileTodos,
+    applyToDos,
+  ]);
 
   const getEmployeeCustomId = useCallback((employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);

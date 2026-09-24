@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aggregateDeductionTotalsForReport,
   isCashPaid,
+  isObsoleteCashProfileTodo,
   isProfileFieldApplicable,
   partitionPayslipsForReports,
   requiresEmployeeBankDetails,
@@ -98,5 +99,33 @@ describe("employee-tax-tracking", () => {
     expect(totals.PAYE).toBe(1500);
     expect(totals.UIF).toBe(277);
     expect(totals["Loan Repayment"]).toBeUndefined();
+  });
+
+  it("flags stale tax/UIF to-dos for cash employees as obsolete", () => {
+    const cash = emp();
+    expect(
+      isObsoleteCashProfileTodo(
+        { employeeId: "e1", relatedField: "taxReferenceNumber", message: "missing Tax reference" },
+        cash
+      )
+    ).toBe(true);
+    expect(
+      isObsoleteCashProfileTodo(
+        { employeeId: "e1", relatedField: "uif_number", message: "missing UIF Number" },
+        cash
+      )
+    ).toBe(true);
+    expect(
+      isObsoleteCashProfileTodo(
+        { employeeId: "e1", relatedField: "idNumber", message: "missing National ID" },
+        cash
+      )
+    ).toBe(false);
+    expect(
+      isObsoleteCashProfileTodo(
+        { employeeId: "e1", relatedField: "taxReferenceNumber", message: "missing tax" },
+        emp({ paymentMode: "Bank Transfer" })
+      )
+    ).toBe(false);
   });
 });
