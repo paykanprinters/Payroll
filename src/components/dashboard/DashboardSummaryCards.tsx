@@ -120,7 +120,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         <CardContent>
           <div className="text-2xl font-bold">{summary.employeeCount}</div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {summary.payslipCount} payslip{summary.payslipCount === 1 ? "" : "s"} on file
+            Still employed today. Resigned and terminated staff are excluded once their last day has passed.
           </p>
         </CardContent>
       </Card>

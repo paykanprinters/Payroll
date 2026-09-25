@@ -6,6 +6,7 @@ import {
   type DashboardChartPeriod,
 } from "@/lib/dashboard-admin-summary";
 import { monthLabelFromKey } from "@/lib/dashboard-metrics";
+import { filterEmployedAt } from "@/lib/employee-active-period";
 
 export interface AnalyticsScope {
   employees: MockEmployee[];
@@ -99,9 +100,10 @@ export function buildAnalyticsAdminSummary(
   });
 
   const leaveDaysInPeriod = leaveRecords.reduce((sum, r) => sum + (r.workingDays || 0), 0);
+  const activeEmployees = filterEmployedAt(employees);
 
   return {
-    employeeCount: employees.length,
+    employeeCount: activeEmployees.length,
     payslipCount: payslips.length,
     totalGross,
     totalNet,
@@ -222,13 +224,14 @@ export function computeAnalyticsCharts(
     value,
   }));
 
+  const employedNow = filterEmployedAt(employees);
   const salaryRanges = [
     { range: "R0 - R20k", min: 0, max: 20000, count: 0 },
     { range: "R20k - R40k", min: 20001, max: 40000, count: 0 },
     { range: "R40k - R60k", min: 40001, max: 60000, count: 0 },
     { range: "R60k+", min: 60001, max: Infinity, count: 0 },
   ];
-  employees.forEach((emp) => {
+  employedNow.forEach((emp) => {
     const effectiveSalary = emp.salary || (emp.hourlyRate ? emp.hourlyRate * 160 : 0);
     for (const range of salaryRanges) {
       if (effectiveSalary >= range.min && effectiveSalary <= range.max) {
@@ -268,7 +271,7 @@ export function computeAnalyticsCharts(
     { name: "5+ Years", minMonths: 60, maxMonths: Infinity, count: 0 },
   ];
   const today = new Date();
-  employees.forEach((emp) => {
+  employedNow.forEach((emp) => {
     const monthsSinceHire = differenceInMonths(today, parseISO(emp.startDate));
     for (const range of tenureRanges) {
       if (monthsSinceHire >= range.minMonths && monthsSinceHire <= range.maxMonths) {

@@ -18,6 +18,12 @@ export function isCurrentlyEmployed(
   return getEmploymentStatus(employee) === "Active";
 }
 
+export function filterCurrentlyEmployed<
+  T extends Pick<MockEmployee, "terminationDate" | "employmentExitType">,
+>(employees: T[]): T[] {
+  return employees.filter((employee) => isCurrentlyEmployed(employee));
+}
+
 export function formatEmploymentStatusDetail(
   employee: Pick<MockEmployee, "terminationDate" | "employmentExitType" | "employmentExitReason">
 ): string {

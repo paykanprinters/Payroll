@@ -64,7 +64,7 @@ describe("generateNewHiresTerminationsReportContent", () => {
 describe("generateEmployeeDemographicsReportContent", () => {
   it("counts active workforce for the period, not only new hires", () => {
     const html = generateEmployeeDemographicsReportContent(employees, new Date("2026-07-15"), "monthly");
-    expect(html).toContain("3 employees");
+    expect(html).toContain("2 employees");
     expect(html).toContain("Design");
     expect(html).toContain("Print");
     expect(html).not.toContain("mock data");

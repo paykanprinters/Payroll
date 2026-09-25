@@ -26,6 +26,7 @@ import DashboardSavingsStatusChart from "@/components/dashboard/DashboardSavings
 import DashboardLoansOverviewCard from "@/components/dashboard/DashboardLoansOverviewCard";
 
 import { useDashboardSettings, type DashboardWidgetKey } from "@/hooks/use-dashboard-settings";
+import { filterEmployedAt } from "@/lib/employee-active-period";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 
 import {
@@ -109,7 +110,7 @@ const Dashboard: React.FC = () => {
   const summary = useMemo(
     () =>
       buildDashboardAdminSummary({
-        employeeCount: employees.length,
+        employeeCount: filterEmployedAt(employees).length,
         payslips,
         pendingTodoCount,
         timesheets: timesheets || [],
@@ -121,7 +122,7 @@ const Dashboard: React.FC = () => {
         taxTableValidation,
       }),
     [
-      employees.length,
+      employees,
       payslips,
       pendingTodoCount,
       timesheets,
@@ -153,8 +154,9 @@ const Dashboard: React.FC = () => {
     () => computeDeductionsBreakdown(filteredPayslipsForCharts, { top: 7 }),
     [filteredPayslipsForCharts]
   );
-  const jobTitleDist = useMemo(() => computeJobTitleDistribution(employees, { top: 7 }), [employees]);
-  const salaryDist = useMemo(() => computeSalaryDistribution(employees), [employees]);
+  const employedNow = useMemo(() => filterEmployedAt(employees), [employees]);
+  const jobTitleDist = useMemo(() => computeJobTitleDistribution(employedNow, { top: 7 }), [employedNow]);
+  const salaryDist = useMemo(() => computeSalaryDistribution(employedNow), [employedNow]);
   const leaveDaysTrend = useMemo(
     () => computeLeaveDaysTakenTrend(leaveRecords || [], { limit: chartLimit }),
     [leaveRecords, chartLimit]

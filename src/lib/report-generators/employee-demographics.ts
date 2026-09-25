@@ -1,6 +1,6 @@
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { format, endOfMonth, endOfYear } from "date-fns";
 import type { MockEmployee } from "../mock-data-interfaces";
-import { isEmployeeActiveInPeriod } from "@/lib/employee-active-period";
+import { isEmployedAt } from "@/lib/employee-active-period";
 
 function escapeHtml(value: string): string {
   return value
@@ -18,23 +18,22 @@ export const generateEmployeeDemographicsReportContent = (
 ): string => {
   let filteredEmployees = employees;
   let reportPeriodDescription = "All Periods";
-  let periodStart: Date | undefined;
   let periodEnd: Date | undefined;
 
   if (selectedDate) {
     if (periodType === "monthly") {
-      periodStart = startOfMonth(selectedDate);
       periodEnd = endOfMonth(selectedDate);
       reportPeriodDescription = format(selectedDate, "MMMM yyyy");
     } else {
-      periodStart = startOfYear(selectedDate);
       periodEnd = endOfYear(selectedDate);
       reportPeriodDescription = format(selectedDate, "yyyy");
     }
 
     filteredEmployees = employees.filter((emp) =>
-      isEmployeeActiveInPeriod(emp, periodStart, periodEnd)
+      isEmployedAt(emp, periodEnd ?? new Date())
     );
+  } else {
+    filteredEmployees = employees.filter((emp) => isEmployedAt(emp, new Date()));
   }
 
   if (filteredEmployees.length === 0) {
@@ -66,7 +65,8 @@ export const generateEmployeeDemographicsReportContent = (
   let html = `
     <p>
       Demographic overview of the active workforce for ${escapeHtml(reportPeriodDescription)}
-      (${filteredEmployees.length} employee${filteredEmployees.length === 1 ? "" : "s"}).
+      (${filteredEmployees.length} employee${filteredEmployees.length === 1 ? "" : "s"} still employed
+      at the end of the period). Resigned and terminated employees are excluded once their last day has passed.
     </p>
     <br/>
     <h4 class="text-md font-semibold mb-2">Employees by Department</h4>

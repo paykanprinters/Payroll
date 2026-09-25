@@ -58,12 +58,12 @@ const AnalyticsStats: React.FC<AnalyticsStatsProps> = ({ summary, periodLabel })
             <Users className="h-4 w-4 text-amber-600" />
             Employees
           </CardTitle>
-          <CardDescription className="text-xs">In scope</CardDescription>
+          <CardDescription className="text-xs">Active workforce</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{summary.employeeCount}</div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Deductions {formatZar(summary.totalDeductions)}
+            Resigned and terminated staff drop off after their last day.
           </p>
         </CardContent>
       </Card>

@@ -29,3 +29,24 @@ export function filterEmployeesActiveInPeriod<T extends Pick<MockEmployee, "star
 ): T[] {
   return employees.filter((employee) => isEmployeeActiveInPeriod(employee, periodStart, periodEnd));
 }
+
+/**
+ * Headcount still employed at a point in time.
+ * A last day on or before `asOf` removes the person from the active workforce.
+ * Payroll period filters still include them for the month they left.
+ */
+export function isEmployedAt(
+  employee: Pick<MockEmployee, "startDate" | "terminationDate">,
+  asOf: Date
+): boolean {
+  if (employee.startDate && parseISO(employee.startDate) > asOf) return false;
+  if (!employee.terminationDate) return true;
+  return parseISO(employee.terminationDate) > asOf;
+}
+
+export function filterEmployedAt<T extends Pick<MockEmployee, "startDate" | "terminationDate">>(
+  employees: T[],
+  asOf: Date = new Date()
+): T[] {
+  return employees.filter((employee) => isEmployedAt(employee, asOf));
+}
