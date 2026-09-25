@@ -1,6 +1,6 @@
 import { MockEmployee, MockCompanyDetails } from "../mock-data-interfaces";
 import { ReportDesignSettings } from "../report-design-interfaces"; // Import ReportDesignSettings
-import { format } from "date-fns";
+import { formatEmploymentStatusDetail } from "@/lib/employment-status";
 
 export const generateEmployeeProfileReportContent = (
   employee: MockEmployee,
@@ -42,6 +42,7 @@ export const generateEmployeeProfileReportContent = (
           ${renderField("Email", employee.email)}
           ${renderField("Mobile Number", employee.phoneNumber)}
           ${renderField("Date of Joining", employee.startDate)}
+          ${renderField("Employment status", formatEmploymentStatusDetail(employee))}
           ${renderField("Designation", employee.jobTitle)}
           ${renderField("Department", employee.department)}
           ${renderField("Work Location", employee.workLocation)}

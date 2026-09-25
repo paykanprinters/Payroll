@@ -14,6 +14,7 @@ import { format, parse, isBefore, isAfter, parseISO, isValid } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { formatEmployeePickerLabel } from "@/lib/employment-status";
 import { isLeaveDay as checkIsLeaveDayUtil } from "@/lib/timesheet-utils";
 import { TimesheetFormValues } from "@/lib/timesheet-types"; // Import from new types file
 
@@ -174,7 +175,7 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
             {employees.length > 0 ? (
               employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
+                  {formatEmployeePickerLabel(emp, { includeCode: true })}
                 </SelectItem>
               ))
             ) : (

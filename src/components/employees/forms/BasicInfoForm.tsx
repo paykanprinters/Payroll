@@ -4,6 +4,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,13 +69,6 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ linkedUserId }) => {
               <Input id="startDate" type="date" {...register("startDate")} />
               {errors.startDate && (
                 <p className="text-sm text-red-500">{errors.startDate.message as string}</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="terminationDate">Termination Date</Label>
-              <Input id="terminationDate" type="date" {...register("terminationDate")} />
-              {errors.terminationDate && (
-                <p className="text-sm text-red-500">{errors.terminationDate.message as string}</p>
               )}
             </div>
             <div className="space-y-1">
@@ -171,6 +165,82 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ linkedUserId }) => {
             Open User Control
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Employment status</CardTitle>
+          <CardDescription>
+            Active employees stay on payroll. Resignation or termination keeps the person in the
+            directory with a status badge, and excludes them from payroll periods after their last day.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="employmentExitType">Status</Label>
+              <Select
+                value={watch("employmentExitType") || "Active"}
+                onValueChange={(value) => {
+                  if (value === "Active") {
+                    setValue("employmentExitType", undefined, { shouldDirty: true, shouldValidate: true });
+                    setValue("terminationDate", "", { shouldDirty: true, shouldValidate: true });
+                    setValue("employmentExitReason", "", { shouldDirty: true, shouldValidate: true });
+                    return;
+                  }
+                  setValue("employmentExitType", value, { shouldDirty: true, shouldValidate: true });
+                  setValue("portalAccess", false, { shouldDirty: true });
+                }}
+              >
+                <SelectTrigger id="employmentExitType">
+                  <SelectValue placeholder="Active" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Resignation">Resigned</SelectItem>
+                  <SelectItem value="Termination">Terminated</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.employmentExitType && (
+                <p className="text-sm text-red-500">{errors.employmentExitType.message as string}</p>
+              )}
+            </div>
+
+            {(watch("employmentExitType") === "Resignation" ||
+              watch("employmentExitType") === "Termination") && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="terminationDate">Last day of employment</Label>
+                  <Input id="terminationDate" type="date" {...register("terminationDate")} />
+                  {errors.terminationDate && (
+                    <p className="text-sm text-red-500">{errors.terminationDate.message as string}</p>
+                  )}
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <Label htmlFor="employmentExitReason">Reason</Label>
+                  <Textarea
+                    id="employmentExitReason"
+                    rows={3}
+                    placeholder={
+                      watch("employmentExitType") === "Resignation"
+                        ? "Why the employee resigned"
+                        : "Why employment was terminated"
+                    }
+                    {...register("employmentExitReason")}
+                  />
+                  {errors.employmentExitReason && (
+                    <p className="text-sm text-red-500">{errors.employmentExitReason.message as string}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Portal access is turned off. The employee remains in the directory as{" "}
+                    {watch("employmentExitType") === "Resignation" ? "Resigned" : "Terminated"} and
+                    is left out of payroll after the last day. Historical payslips stay available.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

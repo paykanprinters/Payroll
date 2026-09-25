@@ -165,9 +165,9 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         .select();
 
       // Graceful fallback if newer employee columns are missing on the remote DB.
-      if (error && /(medical_aid_(member|dependants)|retirement_fund_contribution_(percent|fixed)|track_tax)/.test(error.message || "")) {
+      if (error && /(medical_aid_(member|dependants)|retirement_fund_contribution_(percent|fixed)|track_tax|employment_exit_(type|reason))/.test(error.message || "")) {
         logger.warn(
-          "useEmployeesData: medical_aid_* / retirement_fund_contribution_* / track_tax columns missing — apply pending migrations. Saving without those fields for now."
+          "useEmployeesData: newer employee columns missing — apply pending migrations. Saving without those fields for now."
         );
         const fallbackPayload = { ...snakeCasePayload };
         delete fallbackPayload.medical_aid_member;
@@ -175,6 +175,8 @@ export const useEmployeesData = ({ isMockDataEnabled, companyName, isAuthenticat
         delete fallbackPayload.retirement_fund_contribution_percent;
         delete fallbackPayload.retirement_fund_contribution_fixed;
         delete fallbackPayload.track_tax;
+        delete fallbackPayload.employment_exit_type;
+        delete fallbackPayload.employment_exit_reason;
         ({ data, error } = await supabase
           .from('employees')
           .upsert(fallbackPayload, { onConflict: 'id' })

@@ -15,6 +15,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { MockEmployee, Loan } from "@/lib/mock-data-interfaces";
+import { formatEmployeePickerLabel } from "@/lib/employment-status";
 
 interface LoanFormProps {
   employees: MockEmployee[];
@@ -87,7 +88,7 @@ const LoanForm: React.FC<LoanFormProps> = ({ employees, onAddLoan }) => {
             {employees.length > 0 ? (
               employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.firstName} {emp.lastName} ({emp.id})
+                  {formatEmployeePickerLabel(emp, { includeCode: true })}
                 </SelectItem>
               ))
             ) : (

@@ -59,6 +59,10 @@ export interface MockEmployee {
   startDate: string;
   /** Last day of employment; omit/undefined while currently employed. */
   terminationDate?: string;
+  /** How employment ended. Omit while currently employed. */
+  employmentExitType?: "Resignation" | "Termination";
+  /** Reason recorded with a resignation or termination. */
+  employmentExitReason?: string;
   idNumber?: string;
   phoneNumber?: string;
   emergencyContactName?: string;

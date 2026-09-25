@@ -1,5 +1,6 @@
 import { format, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import type { MockEmployee } from "../mock-data-interfaces";
+import { getEmploymentStatus } from "@/lib/employment-status";
 
 function escapeHtml(value: string): string {
   return value
@@ -78,27 +79,31 @@ export const generateNewHiresTerminationsReportContent = (
       </tbody>
     </table>
 
-    <h4 class="text-md font-semibold mb-2">Terminations (${escapeHtml(reportPeriodDescription)})</h4>
+    <h4 class="text-md font-semibold mb-2">Leavers (${escapeHtml(reportPeriodDescription)})</h4>
     <table class="w-full text-left border-collapse">
       <thead>
         <tr class="border-b">
           <th class="py-2 px-4">Employee Name</th>
           <th class="py-2 px-4">Job Title</th>
-          <th class="py-2 px-4">Termination Date</th>
+          <th class="py-2 px-4">Status</th>
+          <th class="py-2 px-4">Last day</th>
+          <th class="py-2 px-4">Reason</th>
         </tr>
       </thead>
       <tbody>
   `;
 
   if (terminations.length === 0) {
-    html += `<tr><td colspan="3" class="py-2 px-4 text-center text-muted-foreground">No terminations recorded for ${escapeHtml(reportPeriodDescription)}.</td></tr>`;
+    html += `<tr><td colspan="5" class="py-2 px-4 text-center text-muted-foreground">No terminations recorded for ${escapeHtml(reportPeriodDescription)}.</td></tr>`;
   } else {
     terminations.forEach((emp) => {
       html += `
         <tr class="border-b">
           <td class="py-2 px-4">${escapeHtml(`${emp.firstName} ${emp.lastName}`)}</td>
           <td class="py-2 px-4">${escapeHtml(emp.jobTitle || "—")}</td>
+          <td class="py-2 px-4">${escapeHtml(getEmploymentStatus(emp))}</td>
           <td class="py-2 px-4">${escapeHtml(emp.terminationDate || "—")}</td>
+          <td class="py-2 px-4">${escapeHtml(emp.employmentExitReason?.trim() || "—")}</td>
         </tr>
       `;
     });

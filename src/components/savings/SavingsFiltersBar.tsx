@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { formatEmployeePickerLabel } from "@/lib/employment-status";
 import { Plus, Search } from "lucide-react";
 
 interface SavingsFiltersBarProps {
@@ -45,7 +46,7 @@ const SavingsFiltersBar: React.FC<SavingsFiltersBarProps> = ({
             <SelectItem value="all">All Employees</SelectItem>
             {employees.map(emp => (
               <SelectItem key={emp.id} value={emp.id}>
-                {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
+                {formatEmployeePickerLabel(emp, { includeCode: true })}
               </SelectItem>
             ))}
           </SelectContent>

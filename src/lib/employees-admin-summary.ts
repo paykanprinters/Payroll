@@ -1,4 +1,5 @@
 import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { getEmploymentStatus } from "@/lib/employment-status";
 
 export interface EmployeesAdminSummary {
   total: number;
@@ -6,6 +7,9 @@ export interface EmployeesAdminSummary {
   hourlyCount: number;
   portalEnabledCount: number;
   portalLinkedCount: number;
+  activeCount: number;
+  resignedCount: number;
+  terminatedCount: number;
   jobTitleDistribution: { name: string; value: number }[];
   averageSalaryByJobTitle: { name: string; salary: number }[];
 }
@@ -18,6 +22,9 @@ export function buildEmployeesAdminSummary(employees: MockEmployee[]): Employees
   let hourlyCount = 0;
   let portalEnabledCount = 0;
   let portalLinkedCount = 0;
+  let activeCount = 0;
+  let resignedCount = 0;
+  let terminatedCount = 0;
 
   employees.forEach((emp) => {
     const title = emp.jobTitle?.trim() || "Unassigned";
@@ -30,6 +37,11 @@ export function buildEmployeesAdminSummary(employees: MockEmployee[]): Employees
 
     if (emp.portalAccess === true) portalEnabledCount += 1;
     if (emp.userId) portalLinkedCount += 1;
+
+    const status = getEmploymentStatus(emp);
+    if (status === "Resigned") resignedCount += 1;
+    else if (status === "Terminated") terminatedCount += 1;
+    else activeCount += 1;
 
     const current = salarySumByJobTitle.get(title) || { sum: 0, count: 0 };
     salarySumByJobTitle.set(title, {
@@ -44,6 +56,9 @@ export function buildEmployeesAdminSummary(employees: MockEmployee[]): Employees
     hourlyCount,
     portalEnabledCount,
     portalLinkedCount,
+    activeCount,
+    resignedCount,
+    terminatedCount,
     jobTitleDistribution: Array.from(jobTitleMap.entries()).map(([name, value]) => ({ name, value })),
     averageSalaryByJobTitle: Array.from(salarySumByJobTitle.entries()).map(([name, data]) => ({
       name,

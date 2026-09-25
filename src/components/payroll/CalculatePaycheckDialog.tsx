@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { MockEmployee, MockPayslip, MockCompanyDetails, PayslipDesignSettings } from "@/lib/mock-data-interfaces";
+import { formatEmployeePickerLabel } from "@/lib/employment-status";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import HoursBreakdown from "@/components/payslips/HoursBreakdown";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
@@ -167,7 +168,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
                 {employees.length > 0 ? (
                   employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName}{emp.customEmployeeId ? ` • ${emp.customEmployeeId}` : ""}
+                      {formatEmployeePickerLabel(emp, { includeCode: true })}
                     </SelectItem>
                   ))
                 ) : (

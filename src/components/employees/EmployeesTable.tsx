@@ -14,6 +14,7 @@ import {
 import { Download, Edit, Mail, Trash2, UserPlus } from "lucide-react";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getEmploymentStatus } from "@/lib/employment-status";
 
 interface EmployeesTableProps {
   employees: MockEmployee[];
@@ -66,6 +67,7 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
                 <TableHead className="hidden lg:table-cell">Department</TableHead>
                 <TableHead className="hidden xl:table-cell">Contact</TableHead>
                 <TableHead className="hidden sm:table-cell">Start</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Portal</TableHead>
                 <TableHead className="text-right">Pay</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -78,8 +80,11 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
                 const portalEnabled = employee.portalAccess === true;
                 const portalLinked = !!employee.userId;
 
+                const status = getEmploymentStatus(employee);
+                const left = status !== "Active";
+
                 return (
-                  <TableRow key={employee.id}>
+                  <TableRow key={employee.id} className={left ? "bg-muted/40" : undefined}>
                     <TableCell className="font-medium">
                       <div className="flex min-w-[160px] flex-col">
                         <span>
@@ -89,6 +94,11 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
                           {employee.customEmployeeId}
                           {employee.personalId ? ` · Clock ${employee.personalId}` : ""}
                         </span>
+                        {left && employee.employmentExitReason?.trim() && (
+                          <span className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {employee.employmentExitReason.trim()}
+                          </span>
+                        )}
                         <span className="mt-1 text-xs text-muted-foreground md:hidden">
                           {employee.jobTitle || "—"}
                           {employee.department ? ` · ${employee.department}` : ""}
@@ -110,6 +120,22 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
                     </TableCell>
 
                     <TableCell className="hidden sm:table-cell">{employee.startDate || "—"}</TableCell>
+
+                    <TableCell>
+                      <div className="flex min-w-[120px] flex-col gap-1">
+                        <Badge
+                          variant={status === "Terminated" ? "destructive" : status === "Resigned" ? "secondary" : "outline"}
+                          className="w-fit"
+                        >
+                          {status}
+                        </Badge>
+                        {left && employee.terminationDate && (
+                          <span className="text-[11px] text-muted-foreground">
+                            Last day {employee.terminationDate}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
 
                     <TableCell>
                       <div className="flex min-w-[88px] flex-col gap-1">

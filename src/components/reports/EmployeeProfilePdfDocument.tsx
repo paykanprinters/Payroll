@@ -4,6 +4,7 @@ import React from "react";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { MockCompanyDetails, MockEmployee } from "@/lib/mock-data-interfaces";
 import { resolveCompanyLogoSource, resolveDocumentLogoDimensions } from "@/lib/document-logo";
+import { formatEmploymentStatusDetail } from "@/lib/employment-status";
 
 type Props = {
   employee: MockEmployee;
@@ -90,6 +91,7 @@ const EmployeeProfilePdfDocument: React.FC<Props> = ({ employee, companyDetails 
               {renderField("Department", employee.department)}
               {renderField("Work location", employee.workLocation)}
               {renderField("Start date", employee.startDate)}
+              {renderField("Employment status", formatEmploymentStatusDetail(employee))}
               {renderField("Employment type", employee.employmentType)}
             </View>
           </View>

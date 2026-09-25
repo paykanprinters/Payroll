@@ -6,6 +6,7 @@ import { ReportDesignSettings, DEFAULT_REPORT_DESIGN_SETTINGS } from "@/lib/repo
 import useReportDesignSettings from "@/hooks/use-report-design-settings";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useUserTaxSettings } from "@/hooks/use-user-tax-settings";
+import { formatEmployeePickerLabel } from "@/lib/employment-status";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import { showError, showSuccess } from "@/utils/toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -226,7 +227,7 @@ const Irp5ExportPage: React.FC = () => {
                 <SelectContent>
                   {employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName}
+                      {formatEmployeePickerLabel(emp)}
                     </SelectItem>
                   ))}
                 </SelectContent>

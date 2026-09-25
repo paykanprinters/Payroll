@@ -24,6 +24,7 @@ import SummaryAccent from "@/components/dashboard/SummaryAccent";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
+import { formatEmployeePickerLabel } from "@/lib/employment-status";
 
 const EmployeeAssignmentsPage: React.FC = () => {
   const { employees } = usePayrollProcessor();
@@ -99,7 +100,7 @@ const EmployeeAssignmentsPage: React.FC = () => {
                 <SelectContent>
                   {employees.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
-                      {e.firstName} {e.lastName}
+                      {formatEmployeePickerLabel(e)}
                     </SelectItem>
                   ))}
                 </SelectContent>

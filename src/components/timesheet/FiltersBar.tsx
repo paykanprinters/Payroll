@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { formatEmployeePickerLabel } from "@/lib/employment-status";
 import { Filter, ArrowDownAZ, ArrowUpAZ, CalendarDays, Users, LayoutGrid, Rows3, Table2 } from "lucide-react";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 
@@ -132,7 +133,7 @@ const FiltersBar: React.FC<Props> = ({
               <SelectItem value="all">All employees</SelectItem>
               {employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.firstName} {emp.lastName} ({emp.customEmployeeId})
+                  {formatEmployeePickerLabel(emp, { includeCode: true })}
                 </SelectItem>
               ))}
             </SelectContent>

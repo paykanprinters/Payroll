@@ -18,6 +18,7 @@ import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useSearchParams } from "react-router-dom";
 import { buildEmployeesAdminSummary } from "@/lib/employees-admin-summary";
+import { getEmploymentStatus } from "@/lib/employment-status";
 import { sendEmployeeWelcome } from "@/integrations/supabase/message-template-queries";
 import { formatWelcomeDeliverySummary } from "@/lib/notification-delivery";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
@@ -48,6 +49,9 @@ const Employees: React.FC = () => {
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [payBasisFilter, setPayBasisFilter] = useState<"all" | "salary" | "hourly">("all");
   const [portalAccessFilter, setPortalAccessFilter] = useState<"all" | "true" | "false">("all");
+  const [employmentStatusFilter, setEmploymentStatusFilter] = useState<
+    "all" | "Active" | "Resigned" | "Terminated"
+  >("all");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -119,6 +123,10 @@ const Employees: React.FC = () => {
         if (access !== portalAccessFilter) return false;
       }
 
+      if (employmentStatusFilter !== "all" && getEmploymentStatus(emp) !== employmentStatusFilter) {
+        return false;
+      }
+
       return true;
     };
 
@@ -155,6 +163,7 @@ const Employees: React.FC = () => {
     departmentFilter,
     payBasisFilter,
     portalAccessFilter,
+    employmentStatusFilter,
     sortField,
     sortDir,
   ]);
@@ -283,6 +292,7 @@ const Employees: React.FC = () => {
     setDepartmentFilter("all");
     setPayBasisFilter("all");
     setPortalAccessFilter("all");
+    setEmploymentStatusFilter("all");
     setSearchTerm("");
   };
 
@@ -294,7 +304,7 @@ const Employees: React.FC = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Filters</CardTitle>
           <CardDescription>
-            Narrow the directory by role, department, pay type, portal access, or search.
+            Narrow the directory by role, department, pay type, employment status, portal access, or search.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -310,6 +320,8 @@ const Employees: React.FC = () => {
             setPayBasisFilter={setPayBasisFilter}
             portalAccessFilter={portalAccessFilter}
             setPortalAccessFilter={setPortalAccessFilter}
+            employmentStatusFilter={employmentStatusFilter}
+            setEmploymentStatusFilter={setEmploymentStatusFilter}
             sortField={sortField}
             setSortField={setSortField}
             sortDir={sortDir}

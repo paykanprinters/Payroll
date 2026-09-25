@@ -23,6 +23,8 @@ interface EmployeesToolbarProps {
   setPayBasisFilter: (v: "all" | "salary" | "hourly") => void;
   portalAccessFilter: "all" | "true" | "false";
   setPortalAccessFilter: (v: "all" | "true" | "false") => void;
+  employmentStatusFilter: "all" | "Active" | "Resigned" | "Terminated";
+  setEmploymentStatusFilter: (v: "all" | "Active" | "Resigned" | "Terminated") => void;
   sortField: SortField;
   setSortField: (v: SortField) => void;
   sortDir: SortDir;
@@ -47,6 +49,8 @@ const EmployeesToolbar: React.FC<EmployeesToolbarProps> = ({
   setPayBasisFilter,
   portalAccessFilter,
   setPortalAccessFilter,
+  employmentStatusFilter,
+  setEmploymentStatusFilter,
   sortField,
   setSortField,
   sortDir,
@@ -63,11 +67,12 @@ const EmployeesToolbar: React.FC<EmployeesToolbarProps> = ({
     departmentFilter !== "all" ||
     payBasisFilter !== "all" ||
     portalAccessFilter !== "all" ||
+    employmentStatusFilter !== "all" ||
     searchTerm.trim().length > 0;
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="flex items-center gap-2">
           <ListFilter className="h-4 w-4 shrink-0 text-muted-foreground" />
           <Select value={jobTitleFilter} onValueChange={setJobTitleFilter}>
@@ -128,6 +133,26 @@ const EmployeesToolbar: React.FC<EmployeesToolbarProps> = ({
               <SelectItem value="all">All portal states</SelectItem>
               <SelectItem value="true">Portal enabled</SelectItem>
               <SelectItem value="false">Portal disabled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <ListFilter className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Select
+            value={employmentStatusFilter}
+            onValueChange={(v: "all" | "Active" | "Resigned" | "Terminated") =>
+              setEmploymentStatusFilter(v)
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Employment status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Resigned">Resigned</SelectItem>
+              <SelectItem value="Terminated">Terminated</SelectItem>
             </SelectContent>
           </Select>
         </div>

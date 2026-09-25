@@ -61,6 +61,8 @@ const employeeSchema = z.object({
     (val) => (val === "" ? undefined : val),
     z.string().optional()
   ),
+  employmentExitType: z.enum(["Resignation", "Termination"]).optional(),
+  employmentExitReason: z.string().optional(),
 
   idNumber: z.string().optional(),
   phoneNumber: z.string().optional(),
@@ -174,6 +176,29 @@ const employeeSchema = z.object({
       path: ["hourlyRate"],
     });
   }
+
+  const left = data.employmentExitType === "Resignation" || data.employmentExitType === "Termination";
+  if (left && !data.terminationDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Last day of employment is required.",
+      path: ["terminationDate"],
+    });
+  }
+  if (left && !data.employmentExitReason?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A reason is required.",
+      path: ["employmentExitReason"],
+    });
+  }
+  if (!left && data.terminationDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Choose Resignation or Termination, or clear the last day.",
+      path: ["employmentExitType"],
+    });
+  }
 });
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -226,6 +251,8 @@ const emptyDefaults: EmployeeFormValues = {
   hourlyRate: undefined,
   startDate: new Date().toISOString().split("T")[0],
   terminationDate: "",
+  employmentExitType: undefined,
+  employmentExitReason: "",
   personalId: "",
   idNumber: "",
   phoneNumber: "",
@@ -340,6 +367,10 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         retirementFundContributionFixed: initialEmployee.retirementFundContributionFixed ?? 0,
         leaveCycleStartDate: initialEmployee.leaveCycleStartDate || "",
         terminationDate: initialEmployee.terminationDate || "",
+        employmentExitType:
+          initialEmployee.employmentExitType ||
+          (initialEmployee.terminationDate ? "Termination" : undefined),
+        employmentExitReason: initialEmployee.employmentExitReason || "",
         leaveOpeningAnnualBalance: initialEmployee.leaveOpeningAnnualBalance,
         leaveOpeningSickBalance: initialEmployee.leaveOpeningSickBalance,
         leaveOpeningFamilyBalance: initialEmployee.leaveOpeningFamilyBalance,

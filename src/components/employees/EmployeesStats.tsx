@@ -20,7 +20,9 @@ const EmployeesStats: React.FC<EmployeesStatsProps> = ({ summary }) => {
             <Users className="h-4 w-4 text-sky-600" />
             In view
           </CardTitle>
-          <CardDescription className="text-xs">Filtered employees</CardDescription>
+          <CardDescription className="text-xs">
+            {summary.activeCount} active · {summary.resignedCount} resigned · {summary.terminatedCount} terminated
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="text-2xl font-bold">{summary.total}</div>
