@@ -52,6 +52,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Ban, CheckCircle2, FileText, Landmark, Lock, Mail, Play, ShieldCheck } from "lucide-react";
 import PeriodPayslipConflictDialog from "@/components/payslips/PeriodPayslipConflictDialog";
+import RunBulkPayslipMenu from "@/components/payroll/RunBulkPayslipMenu";
 import { calendarDateFromIso, payslipsForPayrollPeriod } from "@/lib/payroll-period-guard";
 
 const statusFlow: Record<PayrollRunStatus, PayrollRunStatus[]> = {
@@ -852,8 +853,20 @@ const PayrollRunDetailPage: React.FC = () => {
 
         <TabsContent value="items" className="mt-4 space-y-4">
           <Card className="rounded-2xl border bg-white shadow-sm">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-xl">Run items</CardTitle>
+              {run && (
+                <RunBulkPayslipMenu
+                  disabled={items.length === 0}
+                  periodStart={run.periodStart}
+                  periodEnd={run.periodEnd}
+                  payCycleType={run.payCycleType}
+                  items={items}
+                  payslips={payslips}
+                  employees={employees}
+                  companyDetails={companyDetails}
+                />
+              )}
             </CardHeader>
             <CardContent>
               <div className="rounded-2xl border bg-white">
