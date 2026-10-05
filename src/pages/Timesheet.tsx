@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { showError, showSuccess } from "@/utils/toast";
+import { createPayrollRun, fetchPayrollRuns } from "@/integrations/supabase/payroll-run-queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Clock, CheckCircle2, FileClock, Lock } from "lucide-react";
 import { useTimesheetData } from "@/hooks/use-timesheet-data";
@@ -24,6 +26,7 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
   staffEmployeeId,
   staffView = false,
 }) => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const {
@@ -36,6 +39,7 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
     workHoursSettings,
     isLoadingEmployees,
     companyDetails,
+    payCycleSettings,
   } = usePayrollProcessor();
 
   const {
@@ -185,8 +189,41 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
     setIsEntryDialogOpen(true);
   };
 
-  const handleImportTimesheets = (importedEntries: ImportableTimesheetEntry[]) => {
-    addTimesheetBatch(importedEntries);
+  const handleImportTimesheets = async (
+    importedEntries: ImportableTimesheetEntry[],
+    payrollPeriod?: { periodStart: string; periodEnd: string }
+  ) => {
+    const imported = await addTimesheetBatch(importedEntries);
+    if (!imported || !payrollPeriod) return;
+    if (isMockDataEnabled) {
+      showError("Disable mock data to create live payroll runs.");
+      return;
+    }
+
+    const sameDay = (left: string, right: string) => left.slice(0, 10) === right.slice(0, 10);
+    const runs = await fetchPayrollRuns();
+    const existing = runs.find(
+      (run) =>
+        run.status !== "Cancelled" &&
+        sameDay(run.periodStart, payrollPeriod.periodStart) &&
+        sameDay(run.periodEnd, payrollPeriod.periodEnd)
+    );
+    if (existing) {
+      showSuccess("Opened the payroll run for this period.");
+      navigate(`/payroll/runs/${existing.id}`);
+      return;
+    }
+
+    const run = await createPayrollRun({
+      periodStart: payrollPeriod.periodStart,
+      periodEnd: payrollPeriod.periodEnd,
+      payCycleType: payCycleSettings?.payCycleType ?? "Weekly",
+      notes: null,
+    });
+    if (run) {
+      showSuccess("Payroll run created for the imported period.");
+      navigate(`/payroll/runs/${run.id}`);
+    }
   };
 
   const isLoading = isLoadingTimesheets || isLoadingEmployees;
@@ -320,8 +357,10 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
         <CardContent className="py-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Workflow</p>
           <p className="mt-2">
-            Manual entries save as <strong>Draft</strong>. Imported clock data saves as{" "}
-            <strong>Submitted</strong>. Approve entries before payroll. Use the import preview{" "}
+            Manual entries save as <strong>Draft</strong>. Imported clock times are checked in the
+            import window and save as <strong>Approved</strong>. Use{" "}
+            <strong>Import and start payroll run</strong> to open that period, then lock the timesheets
+            on the run. Use the import preview{" "}
             <strong>Week grid</strong> layout to review days vertically by employee, or{" "}
             <strong>Day cards</strong> on smaller screens when correcting punch times.
           </p>
@@ -334,6 +373,7 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
             isOpen
             onClose={() => setIsImportDialogOpen(false)}
             onImport={handleImportTimesheets}
+            canStartPayrollRun={!staffView}
             employees={employees || []}
             workHoursSettings={workHoursSettings}
             biometricApiUrl={companyDetails?.biometricApiUrl}

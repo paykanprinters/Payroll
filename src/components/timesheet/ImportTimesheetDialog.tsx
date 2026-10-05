@@ -13,8 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, Eye, FileUp } from "lucide-react";
-import { showSuccess, showError } from "@/utils/toast";
+import { format } from "date-fns";
+import { UploadCloud, Eye, FileUp, Play } from "lucide-react";
+import { showError } from "@/utils/toast";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { useTimesheetImport, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
@@ -36,7 +37,11 @@ type SortKey = "dateAsc" | "dateDesc" | "nameAsc" | "nameDesc" | "personalAsc" |
 interface ImportTimesheetDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (timesheets: ImportableTimesheetEntry[]) => void;
+  onImport: (
+    timesheets: ImportableTimesheetEntry[],
+    payrollPeriod?: { periodStart: string; periodEnd: string }
+  ) => void | Promise<void>;
+  canStartPayrollRun?: boolean;
   employees: MockEmployee[];
   workHoursSettings?: WorkHoursSettings | null;
   biometricApiUrl?: string;
@@ -46,6 +51,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   isOpen,
   onClose,
   onImport,
+  canStartPayrollRun = false,
   employees,
   workHoursSettings,
   biometricApiUrl,
@@ -98,6 +104,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   const [filterDateEnd, setFilterDateEnd] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("dateAsc");
   const [importFilteredOnly, setImportFilteredOnly] = useState<boolean>(false);
+  const [checkedPeriod, setCheckedPeriod] = useState<{ start: string; end: string } | null>(null);
 
   const employeesById = useMemo(() => {
     const map = new Map<string, { name: string }>();
@@ -277,6 +284,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
     setEditableRows([]);
     setImportSource("api");
     setApiAggregationErrors([]);
+    setCheckedPeriod(null);
     setViewMode("table");
     onClose();
   };
@@ -285,9 +293,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
     setImportSource(value);
     setEditableRows([]);
     setApiAggregationErrors([]);
+    setCheckedPeriod(null);
   };
 
-  const handleImportData = () => {
+  const handleImportData = async (startPayrollRun: boolean) => {
     const sourceRows = importFilteredOnly ? filteredRows : editableRows;
 
     const rowsToImport = sourceRows.filter((r) => r._isValid);
@@ -307,8 +316,16 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
       lunchEnd: r.lunchEnd || "",
     }));
 
-    onImport(timesheetsToImport);
-    showSuccess(`Imported ${timesheetsToImport.length} row(s).`);
+    let payrollPeriod: { periodStart: string; periodEnd: string } | undefined;
+    if (startPayrollRun) {
+      const importedDates = timesheetsToImport.map((entry) => format(entry.date, "yyyy-MM-dd")).sort();
+      payrollPeriod = {
+        periodStart: checkedPeriod?.start || importedDates[0],
+        periodEnd: checkedPeriod?.end || importedDates[importedDates.length - 1],
+      };
+    }
+
+    await onImport(timesheetsToImport, payrollPeriod);
     handleCancel();
   };
 
@@ -382,9 +399,10 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                   <BiometricImportSection
                     employees={safeEmployees}
                     apiUrl={biometricApiUrl}
-                    onLoaded={(rows) => {
+                    onLoaded={(rows, _punchCount, period) => {
                       setEditableRows(rows);
                       setImportSource("api");
+                      setCheckedPeriod(period);
                     }}
                     onErrors={(errors) =>
                       setApiAggregationErrors(
@@ -508,10 +526,16 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleImportData} disabled={!canImportFromCurrentView}>
+          <Button type="button" variant="outline" onClick={() => void handleImportData(false)} disabled={!canImportFromCurrentView}>
             <UploadCloud className="h-4 w-4" />
             Import {importFilteredOnly ? "filtered" : "valid"} entries
           </Button>
+          {canStartPayrollRun && (
+            <Button type="button" onClick={() => void handleImportData(true)} disabled={!canImportFromCurrentView}>
+              <Play className="h-4 w-4" />
+              Import and start payroll run
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -19,7 +19,11 @@ import { getStoredBiometricApiUrl } from "@/hooks/use-biometric-api-settings";
 interface BiometricImportSectionProps {
   employees: MockEmployee[];
   apiUrl?: string;
-  onLoaded: (rows: ParsedTimesheetRow[], punchCount: number) => void;
+  onLoaded: (
+    rows: ParsedTimesheetRow[],
+    punchCount: number,
+    period: { start: string; end: string }
+  ) => void;
   onErrors: (errors: Array<{ personalIdAttempted: string; dateAttempted: string; error: string }>) => void;
 }
 
@@ -76,7 +80,7 @@ const BiometricImportSection: React.FC<BiometricImportSectionProps> = ({
       );
 
       const validatedRows = aggregatedRows.map((row) => validateBiometricTimesheetRow(row, employees));
-      onLoaded(validatedRows, punchCount);
+      onLoaded(validatedRows, punchCount, { start: startDate, end: endDate });
 
       dismissToast(toastId);
 

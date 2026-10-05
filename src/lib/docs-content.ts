@@ -173,7 +173,8 @@ export const ADMIN_GUIDE: DocsGuide = {
           title: "Status workflow",
           items: [
             "Draft — manual entry; editable; not used in pay.",
-            "Submitted — typical after CSV/biometric import; needs approval.",
+            "Submitted — still waiting for approval; not used in pay.",
+            "Imported clock times are checked in the import window and save as Approved.",
             "Approved — included in payslip calculations.",
             "Locked — set when payroll runs; frozen for audit.",
           ],

@@ -101,7 +101,7 @@ const PayrollRunDetailPage: React.FC = () => {
     updateTimesheetStatus,
   } = usePayrollProcessor();
   const { rules: overtimeRules } = useOvertimeRules();
-  const { computeBlockers, isPastCutOff, buildReminderPayload, canGeneratePayrollItems, canApprovePayrollRun } =
+  const { computeBlockers, buildReminderPayload, canGeneratePayrollItems, canApprovePayrollRun } =
     useReadinessGates();
 
   const [run, setRun] = useState<PayrollRun | null>(null);
@@ -524,7 +524,6 @@ const PayrollRunDetailPage: React.FC = () => {
   }
 
   const nextStatuses = statusFlow[run.status];
-  const cutOffReached = targetPeriod ? isPastCutOff(targetPeriod.end) : false;
   const isCancelled = run.status === "Cancelled";
   const canGenerateItems = canGeneratePayrollItems(blockers) && !isCancelled;
   const canApproveRun = canApprovePayrollRun(blockers);
@@ -691,17 +690,25 @@ const PayrollRunDetailPage: React.FC = () => {
                     <AlertTriangle className="h-4 w-4" />
                     Readiness gates
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "bg-white",
-                      blockers.length === 0
-                        ? "border-emerald-200 text-emerald-800"
-                        : "border-amber-200 text-amber-900"
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!isCancelled && run.status !== "Paid" && (
+                      <Button variant="outline" className="bg-white" onClick={autoLockPendingTimesheets}>
+                        <Lock className="h-4 w-4" />
+                        Lock all timesheets
+                      </Button>
                     )}
-                  >
-                    {blockers.length === 0 ? "No blockers" : `${blockers.length} blocker(s)`}
-                  </Badge>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "bg-white",
+                        blockers.length === 0
+                          ? "border-emerald-200 text-emerald-800"
+                          : "border-amber-200 text-amber-900"
+                      )}
+                    >
+                      {blockers.length === 0 ? "No blockers" : `${blockers.length} blocker(s)`}
+                    </Badge>
+                  </div>
                 </div>
 
                 {blockers.length > 0 ? (
@@ -754,12 +761,6 @@ const PayrollRunDetailPage: React.FC = () => {
                         <Mail className="h-4 w-4" />
                         Send reminders
                       </Button>
-                      {cutOffReached && (
-                        <Button variant="outline" onClick={autoLockPendingTimesheets}>
-                          <Lock className="h-4 w-4" />
-                          Auto-lock timesheets
-                        </Button>
-                      )}
                     </div>
                   </div>
                 ) : (

@@ -252,8 +252,19 @@ export const useTimesheetData = ({
     setEditingTimesheet(null);
   }, [employees, isEditing, editingTimesheet, isMockDataEnabled, timesheets, upsertLiveTimesheet, weeklyThreshold, currentMetricOpts, cutOffDay, workDays]);
 
-  const addTimesheetBatch = useCallback(async (newEntries: ImportableTimesheetEntry[]) => {
-    if (newEntries.length === 0) return;
+  const addTimesheetBatch = useCallback(async (newEntries: ImportableTimesheetEntry[]): Promise<boolean> => {
+    if (newEntries.length === 0) return false;
+
+    const reviewedStatus = (existing?: TimesheetEntry): Pick<TimesheetEntry, "status" | "approvedBy" | "approvedAt"> => {
+      if (existing?.status === "Locked") {
+        return { status: "Locked", approvedBy: existing.approvedBy, approvedAt: existing.approvedAt };
+      }
+      return {
+        status: "Approved",
+        approvedBy: existing?.approvedBy || "Import review",
+        approvedAt: existing?.approvedAt || new Date().toISOString(),
+      };
+    };
 
     const groups = new Map<string, ImportableTimesheetEntry[]>();
     for (const e of newEntries) {
@@ -279,7 +290,9 @@ export const useTimesheetData = ({
       lateArrival: false,
       earlyDeparture: false,
       absent: false,
-      status: "Submitted",
+      status: "Approved",
+      approvedBy: "Import review",
+      approvedAt: new Date().toISOString(),
       auditLog: [],
     });
 
@@ -334,7 +347,7 @@ export const useTimesheetData = ({
             const existing = map.get(key2);
             if (existing) {
               const updatedAuditLog = [...(existing.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
-              map.set(key2, { ...existing, ...buildBase(e, employee, totalWorkHours, entryOvertime), id: existing.id, auditLog: updatedAuditLog });
+              map.set(key2, { ...existing, ...buildBase(e, employee, totalWorkHours, entryOvertime), ...reviewedStatus(existing), id: existing.id, auditLog: updatedAuditLog });
             } else {
               const newId = `TS-${e.employeeId}-${format(e.date, "yyyy-MM-dd")}-${Date.now()}`;
               const newAuditLog = [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
@@ -348,6 +361,8 @@ export const useTimesheetData = ({
         window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: finalTs }));
         return finalTs;
       });
+      showSuccess(`${newEntries.length} timesheet entries imported as Approved.`);
+      return true;
     } else {
       const existingTimesheetsMap = new Map<string, TimesheetEntry>();
       const employeeIdsInBatch = Array.from(new Set(newEntries.map(e => e.employeeId)));
@@ -425,14 +440,16 @@ export const useTimesheetData = ({
             lateArrival: false,
             earlyDeparture: false,
             absent: false,
-            status: "Submitted",
+            status: "Approved",
+            approvedBy: "Import review",
+            approvedAt: new Date().toISOString(),
             auditLog: [],
           } as Omit<TimesheetEntry, 'id'>;
 
           const key2 = `${e.employeeId}-${format(e.date, "yyyy-MM-dd")}`;
           const existing = existingTimesheetsMap.get(key2);
           if (existing) {
-            toUpsert.push({ ...existing, ...base, auditLog: [...(existing.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
+            toUpsert.push({ ...existing, ...base, ...reviewedStatus(existing), auditLog: [...(existing.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
           } else {
             toUpsert.push({ ...base, id: uuidv4(), auditLog: [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
           }
@@ -444,13 +461,16 @@ export const useTimesheetData = ({
         try {
           const success = await batchUpsertTimesheetsToSupabase(toUpsert);
           if (success) {
-            showSuccess(`${toUpsert.length} timesheet entries imported successfully!`);
+            showSuccess(`${toUpsert.length} timesheet entries imported as Approved.`);
             fetchLiveTimesheets();
+            return true;
           }
+          return false;
         } finally {
           dismissToast(toastId);
         }
       }
+      return false;
     }
   }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, weeklyThreshold, currentMetricOpts, cutOffDay, workDays]);
 
