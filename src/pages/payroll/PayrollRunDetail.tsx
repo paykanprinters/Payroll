@@ -54,6 +54,8 @@ import { AlertTriangle, Ban, CheckCircle2, FileText, Landmark, Lock, Mail, Play,
 import PeriodPayslipConflictDialog from "@/components/payslips/PeriodPayslipConflictDialog";
 import RunBulkPayslipMenu from "@/components/payroll/RunBulkPayslipMenu";
 import { calendarDateFromIso, payslipsForPayrollPeriod } from "@/lib/payroll-period-guard";
+import { userDisplayName, type UserLabel } from "@/lib/user-display";
+import { fetchUserLabels } from "@/integrations/supabase/user-queries";
 
 const statusFlow: Record<PayrollRunStatus, PayrollRunStatus[]> = {
   Draft: ["Reviewed"],
@@ -116,6 +118,7 @@ const PayrollRunDetailPage: React.FC = () => {
   const [periodConflictCount, setPeriodConflictCount] = useState(0);
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
+  const [actorLabels, setActorLabels] = useState<Map<string, UserLabel>>(new Map());
 
   const targetPeriod = useMemo(() => {
     if (!run) return null;
@@ -136,6 +139,17 @@ const PayrollRunDetailPage: React.FC = () => {
     };
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (!run) return;
+    let cancelled = false;
+    void fetchUserLabels([run.reviewedBy, run.approvedBy, run.cancelledBy]).then((labels) => {
+      if (!cancelled) setActorLabels(labels);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [run]);
 
   useEffect(() => {
     if (run && targetPeriod) {
@@ -573,7 +587,7 @@ const PayrollRunDetailPage: React.FC = () => {
                 </div>
               )}
               <div className="mt-1 text-xs text-rose-700">
-                Voided by <span className="font-mono">{run.cancelledBy || "-"}</span>
+                Voided by {userDisplayName(run.cancelledBy, actorLabels)}
                 {run.cancelledAt ? ` on ${new Date(run.cancelledAt).toLocaleString()}` : ""}
               </div>
             </div>
@@ -600,10 +614,13 @@ const PayrollRunDetailPage: React.FC = () => {
                 </div>
                 <div className="rounded-2xl border bg-background p-4">
                   <div className="text-xs text-muted-foreground">Review / Approval</div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Reviewer: <span className="font-mono">{run.reviewedBy || "-"}</span>
-                    <br />
-                    Approver: <span className="font-mono">{run.approvedBy || "-"}</span>
+                  <div className="mt-1 space-y-1 text-sm">
+                    <div>
+                      Reviewer: <span className="font-medium">{userDisplayName(run.reviewedBy, actorLabels)}</span>
+                    </div>
+                    <div>
+                      Approver: <span className="font-medium">{userDisplayName(run.approvedBy, actorLabels)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -930,7 +947,7 @@ const PayrollRunDetailPage: React.FC = () => {
                         <TableCell className="font-mono text-xs">
                           {a.createdAt ? new Date(a.createdAt).toLocaleString() : "-"}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{a.userId || "-"}</TableCell>
+                        <TableCell className="text-sm">{a.userName || "—"}</TableCell>
                         <TableCell>{a.action}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {a.metadata ? JSON.stringify(a.metadata) : "-"}

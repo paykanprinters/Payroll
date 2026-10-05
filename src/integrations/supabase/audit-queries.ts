@@ -79,8 +79,25 @@ export const fetchAuditLogsForEntity = async (
     console.error("audit-queries: fetchAuditLogsForEntity error", error);
     return [];
   }
-  return (data || []).map((row) => mapRow(row as Record<string, unknown>));
+  const rows = (data || []).map((row) => mapRow(row as Record<string, unknown>));
+  return withUserNames(rows);
 };
+
+async function withUserNames(rows: AuditLogEntry[]): Promise<AuditLogEntry[]> {
+  const userIds = [...new Set(rows.map((row) => row.userId).filter(Boolean))] as string[];
+  if (userIds.length === 0) return rows;
+
+  const { data: users } = await supabase.from("users").select("id, name, email").in("id", userIds);
+  const userMap = new Map((users || []).map((user) => [user.id, user]));
+  return rows.map((row) => {
+    const user = row.userId ? userMap.get(row.userId) : null;
+    return {
+      ...row,
+      userName: user?.name ?? row.userName,
+      userEmail: user?.email ?? row.userEmail,
+    };
+  });
+}
 
 export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<AuditLogEntry[]> => {
   const limit = filters.limit ?? 200;
@@ -132,23 +149,5 @@ export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<Aud
     });
   }
 
-  const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))] as string[];
-  if (userIds.length > 0) {
-    const { data: users } = await supabase
-      .from("users")
-      .select("id, name, email")
-      .in("id", userIds);
-
-    const userMap = new Map((users || []).map((u) => [u.id, u]));
-    rows = rows.map((row) => {
-      const u = row.userId ? userMap.get(row.userId) : null;
-      return {
-        ...row,
-        userName: u?.name ?? row.userName,
-        userEmail: u?.email ?? row.userEmail,
-      };
-    });
-  }
-
-  return rows;
+  return withUserNames(rows);
 };
