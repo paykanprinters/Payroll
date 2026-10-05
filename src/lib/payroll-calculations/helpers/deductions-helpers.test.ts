@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildDeductions } from "@/lib/payroll-calculations/helpers/deductions-helpers";
 import type { TaxTables } from "@/hooks/use-tax-tables";
-import type { MockEmployee } from "@/lib/mock-data-interfaces";
+import type { Loan, MockEmployee } from "@/lib/mock-data-interfaces";
 import type { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 
 const taxTables: TaxTables = {
@@ -163,5 +163,45 @@ describe("buildDeductions — statutory", () => {
     expect(find(deductionsBreakdown, "PAYE")).toBeUndefined();
     expect(find(deductionsBreakdown, "UIF")).toBeUndefined();
     expect(employerSdl).toBe(0);
+  });
+
+  it("does not deduct a loan again when that pay period was already posted", () => {
+    const loan = {
+      id: "loan-1",
+      employeeId: "E1",
+      loanType: "Personal",
+      loanAmount: 1000,
+      repaymentAmount: 200,
+      frequency: "monthly",
+      startDate: "2026-01-01",
+      remainingBalance: 800,
+      status: "active",
+      paused: false,
+      deductionHistory: [
+        {
+          date: "2026-03-31",
+          amount: 200,
+          type: "deduction",
+          notes: "Payroll deduction for pay period 2026-03-01 - 2026-03-31",
+        },
+      ],
+    } as Loan;
+
+    const { deductionsBreakdown } = buildDeductions(
+      employee,
+      30000,
+      [loan],
+      [],
+      taxTables,
+      taxSettings(false, false),
+      periodStart,
+      periodEnd,
+      "2026-03-01 - 2026-03-31",
+      [],
+    );
+
+    expect(find(deductionsBreakdown, "Loan Repayment")).toBe(200);
+    expect(loan.remainingBalance).toBe(800);
+    expect(loan.deductionHistory).toHaveLength(1);
   });
 });

@@ -176,6 +176,32 @@ export const fetchRunItems = async (runId: string): Promise<PayrollRunItem[]> =>
   return (data || []).map(toCamel) as PayrollRunItem[];
 };
 
+export const replaceRunItems = async (
+  runId: string,
+  items: Omit<PayrollRunItem, "id" | "createdAt" | "updatedAt" | "runId">[]
+): Promise<boolean> => {
+  const { error } = await supabase.from("payroll_run_items").delete().eq("run_id", runId);
+  if (error) {
+    logger.error("payroll-run-queries: replaceRunItems delete error", toLogError(error));
+    showError(`Failed to replace run items: ${toLogError(error)}`);
+    return false;
+  }
+  if (items.length === 0) return true;
+  return addRunItems(runId, items);
+};
+
+export const deleteRunItemsForPayslips = async (payslipIds: string[]): Promise<boolean> => {
+  const cleanIds = Array.from(new Set(payslipIds.filter(Boolean)));
+  if (cleanIds.length === 0) return true;
+  const { error } = await supabase.from("payroll_run_items").delete().in("payslip_id", cleanIds);
+  if (error) {
+    logger.error("payroll-run-queries: deleteRunItemsForPayslips error", toLogError(error));
+    showError(`Failed to remove duplicate run items: ${toLogError(error)}`);
+    return false;
+  }
+  return true;
+};
+
 export const addRunItems = async (runId: string, items: Omit<PayrollRunItem, "id"|"createdAt"|"updatedAt"|"runId">[]): Promise<boolean> => {
   const payloads = items.map((it) => toSnake({ ...it, runId }));
   const { error } = await supabase

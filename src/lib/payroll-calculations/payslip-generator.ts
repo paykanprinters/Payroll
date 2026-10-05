@@ -23,6 +23,7 @@ import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import type { OvertimePremiumRules } from "./helpers/earnings-helpers";
 import { filterEmployeesActiveInPeriod } from "@/lib/employee-active-period";
+import { formatPayrollPeriod } from "@/lib/payroll-period-guard";
 
 import {
   getWeeklyThreshold,
@@ -145,7 +146,7 @@ export const generatePayslipsForPeriod = (
   savingPaymentsToRecord: { planId: string; employeeId: string; amount: number }[];
 } => {
   const payslipsForPeriod: MockPayslip[] = [];
-  const payPeriodString = `${format(payPeriodStart, "yyyy-MM-dd")} - ${format(payPeriodEnd, "yyyy-MM-dd")}`;
+  const payPeriodString = formatPayrollPeriod(payPeriodStart, payPeriodEnd);
   const payDateString = format(payPeriodEnd, "dd/MM/yyyy");
 
   const processingLoans: Loan[] = JSON.parse(JSON.stringify(initialLoans));

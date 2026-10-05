@@ -2,9 +2,10 @@
 
 import { useCallback } from "react";
 import {
-  format,
+  endOfDay,
   isWithinInterval,
   parseISO,
+  startOfDay,
 } from "date-fns";
 import {
   MockEmployee,
@@ -16,6 +17,9 @@ import {
   MockCompanyDetails,
 } from "@/lib/mock-data-interfaces";
 import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator";
+import { formatPayrollPeriod, payslipsForPayrollPeriod } from "@/lib/payroll-period-guard";
+import { deletePayslipsByIds } from "@/integrations/supabase/payslip-queries";
+import { deleteRunItemsForPayslips } from "@/integrations/supabase/payroll-run-queries";
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
 import type { TaxTableValidationResult } from "@/lib/tax-tables-validation";
@@ -49,7 +53,11 @@ export const usePayrollProcessingLogic = (
   setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>,
   updateLoan: (loan: Loan) => Promise<void>,
   updateSavingPlan: (plan: SavingPlan) => Promise<void>,
-  updateTimesheetStatus: (id: string, newStatus: TimesheetEntry["status"]) => Promise<void>,
+  updateTimesheetStatus: (
+    id: string,
+    newStatus: TimesheetEntry["status"],
+    options?: { silent?: boolean }
+  ) => Promise<boolean>,
   batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>,
   recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
   isMockDataEnabled: boolean,
@@ -61,7 +69,7 @@ export const usePayrollProcessingLogic = (
 ) => {
 
   const runPayrollProcess = useCallback(
-    async (periodStart: Date, periodEnd: Date) => {
+    async (periodStart: Date, periodEnd: Date, options?: { replaceExisting?: boolean }) => {
       if (!employees.length) {
         showError("No employees found to run payroll.");
         return;
@@ -116,6 +124,13 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
+      const periodKey = formatPayrollPeriod(periodStart, periodEnd);
+      const existingForPeriod = payslipsForPayrollPeriod(payslips, periodStart, periodEnd);
+      if (existingForPeriod.length > 0 && !options?.replaceExisting) {
+        showError("Payslips already exist for this pay period. Stop, or replace the existing set.");
+        return;
+      }
+
       const parsePeriodStart = (period: string) => {
         const [startStr] = period.split(' - ');
         return parseISO(startStr);
@@ -137,24 +152,35 @@ export const usePayrollProcessingLogic = (
         };
       });
 
+      const reusedIds = new Set<string>();
+      const payslipsToSave = updatedPayslipsWithYTD.map((newPayslip) => {
+        const match = existingForPeriod.find(
+          (existing) => existing.employeeId === newPayslip.employeeId && !reusedIds.has(existing.id)
+        );
+        if (!match) return newPayslip;
+        reusedIds.add(match.id);
+        return { ...newPayslip, id: match.id };
+      });
+      const leftoverIds = existingForPeriod.map((existing) => existing.id).filter((id) => !reusedIds.has(id));
+
       if (isMockDataEnabled) {
-        const updatedAllPayslips = [...payslips];
-        updatedPayslipsWithYTD.forEach(newPayslip => {
-          const existingPayslipIndex = updatedAllPayslips.findIndex(p =>
-            p.employeeId === newPayslip.employeeId &&
-            p.payPeriod === newPayslip.payPeriod
-          );
-          if (existingPayslipIndex !== -1) {
-            updatedAllPayslips[existingPayslipIndex] = newPayslip;
-          } else {
-            updatedAllPayslips.push(newPayslip);
-          }
-        });
+        const updatedAllPayslips = [
+          ...payslips.filter((payslip) => payslip.payPeriod !== periodKey),
+          ...payslipsToSave,
+        ];
         localStorage.setItem("mockPayslips", JSON.stringify(updatedAllPayslips));
         setPayslips(updatedAllPayslips);
         window.dispatchEvent(new CustomEvent('payslipsUpdated', { detail: updatedAllPayslips }));
       } else {
-        const success = await batchUpsertPayslips(updatedPayslipsWithYTD);
+        if (leftoverIds.length > 0) {
+          const itemsCleared = await deleteRunItemsForPayslips(leftoverIds);
+          const duplicatesCleared = itemsCleared && (await deletePayslipsByIds(leftoverIds));
+          if (!duplicatesCleared) {
+            showError("Could not remove the extra payslips for this period.");
+            return;
+          }
+        }
+        const success = await batchUpsertPayslips(payslipsToSave);
         if (!success) {
           showError("Failed to save payslips to database.");
           return;
@@ -166,25 +192,34 @@ export const usePayrollProcessingLogic = (
         ...updatedSavingPlans.map((plan) => updateSavingPlan(plan)),
       ]);
 
-      if (!isMockDataEnabled) {
+      if (!isMockDataEnabled && !options?.replaceExisting) {
         for (const payment of savingPaymentsToRecord) {
           await recordSavingsPayment(payment.planId, payment.amount);
         }
       }
 
-      const timesheetUpdatePromises = timesheets.map(async (ts) => {
-        const tsDate = parseISO(ts.date);
-        if (
-          ts.employeeId &&
-          ts.status !== "Locked" &&
-          isWithinInterval(tsDate, { start: periodStart, end: periodEnd })
-        ) {
-          await updateTimesheetStatus(ts.id, "Locked");
-        }
+      const periodWindow = { start: startOfDay(periodStart), end: endOfDay(periodEnd) };
+      const timesheetsToLock = timesheets.filter((ts) => {
+        if (!ts.employeeId || ts.status === "Locked") return false;
+        return isWithinInterval(parseISO(ts.date), periodWindow);
       });
-      await Promise.all(timesheetUpdatePromises);
+      const lockResults = await Promise.all(
+        timesheetsToLock.map((ts) => updateTimesheetStatus(ts.id, "Locked", { silent: true }))
+      );
+      const lockFailures = lockResults.filter((ok) => !ok).length;
 
-      showSuccess(`Payroll for ${format(periodStart, "MMM yyyy")} processed successfully!`);
+      if (lockFailures > 0) {
+        showError(
+          `Payslips for ${periodKey} were saved, but ${lockFailures} timesheet${lockFailures === 1 ? "" : "s"} could not be locked.`
+        );
+        return;
+      }
+
+      showSuccess(
+        options?.replaceExisting
+          ? `Replaced payslips for ${periodKey} and locked the timesheets.`
+          : `Payroll for ${periodKey} processed successfully.`
+      );
     },
     [
       employees,

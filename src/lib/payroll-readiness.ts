@@ -204,8 +204,13 @@ function assessEmployeeProfile(employee: MockEmployee): ReadinessIssue[] {
   return issues;
 }
 
+/** Fixed salary is not calculated from hours. Only an hourly rate needs timesheets. */
+function isSalaryPaidEmployee(employee: Pick<MockEmployee, "salary" | "hourlyRate">): boolean {
+  return (employee.salary ?? 0) > 0 && (employee.hourlyRate ?? 0) <= 0;
+}
+
 function assessEmployeeTimesheets(
-  employeeId: string,
+  employee: Pick<MockEmployee, "id" | "salary" | "hourlyRate">,
   timesheets: TimesheetEntry[],
   periodStart: Date | null,
   periodEnd: Date | null
@@ -213,10 +218,11 @@ function assessEmployeeTimesheets(
   if (!periodStart || !periodEnd) return [];
 
   const inPeriod = timesheets.filter(
-    (entry) => entry.employeeId === employeeId && isWithinPeriod(entry.date, periodStart, periodEnd)
+    (entry) => entry.employeeId === employee.id && isWithinPeriod(entry.date, periodStart, periodEnd)
   );
 
   if (inPeriod.length === 0) {
+    if (isSalaryPaidEmployee(employee)) return [];
     return [
       {
         code: "missing_timesheet",
@@ -279,7 +285,7 @@ export function assessPayrollReadiness(options: {
     .map((employee) => {
       const issues = [
         ...assessEmployeeProfile(employee),
-        ...assessEmployeeTimesheets(employee.id, timesheets, start, end),
+        ...assessEmployeeTimesheets(employee, timesheets, start, end),
       ];
       return {
         employeeId: employee.id,
@@ -414,7 +420,7 @@ export function computePayrollRunBlockers(options: {
       });
     }
 
-    const timesheetIssues = assessEmployeeTimesheets(employee.id, timesheets, periodStart, periodEnd);
+    const timesheetIssues = assessEmployeeTimesheets(employee, timesheets, periodStart, periodEnd);
     for (const issue of timesheetIssues) {
       if (issue.code === "missing_timesheet") {
         blockers.push({

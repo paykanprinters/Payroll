@@ -468,7 +468,11 @@ export const useTimesheetData = ({
     }
   }, [isMockDataEnabled, deleteLiveTimesheet]);
 
-  const updateTimesheetStatus = useCallback(async (id: string, newStatus: TimesheetEntry["status"]) => {
+  const updateTimesheetStatus = useCallback(async (
+    id: string,
+    newStatus: TimesheetEntry["status"],
+    options?: { silent?: boolean }
+  ): Promise<boolean> => {
     if (isMockDataEnabled) {
       setTimesheets(prevTimesheets => {
         const updatedTimesheets = prevTimesheets.map(ts => {
@@ -488,12 +492,19 @@ export const useTimesheetData = ({
         });
         localStorage.setItem("mockTimesheets", JSON.stringify(updatedTimesheets));
         window.dispatchEvent(new CustomEvent('timesheetsUpdated', { detail: updatedTimesheets }));
-        showSuccess(`Timesheet status updated to ${newStatus}!`);
+        if (!options?.silent) showSuccess(`Timesheet status updated to ${newStatus}!`);
         return updatedTimesheets;
       });
-    } else {
-      await updateLiveTimesheetStatus(id, newStatus);
+      return true;
     }
+
+    const result = await updateLiveTimesheetStatus(id, newStatus);
+    if (!result) return false;
+    setTimesheets((prevTimesheets) =>
+      prevTimesheets.map((ts) => (ts.id === id ? result : ts))
+    );
+    if (!options?.silent) showSuccess(`Timesheet status updated to ${newStatus}!`);
+    return true;
   }, [isMockDataEnabled, updateLiveTimesheetStatus]);
 
   const startEditing = useCallback((timesheet: TimesheetEntry) => {

@@ -15,6 +15,8 @@ import {
   fetchPayrollRunById,
   fetchRunItems,
   addRunItems,
+  replaceRunItems,
+  deleteRunItemsForPayslips,
   updatePayrollRunStatus,
   voidPayrollRun,
   PayrollRun,
@@ -49,6 +51,8 @@ import PayrollRunStepper, { PayrollRunStepId } from "@/components/payroll/Payrol
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Ban, CheckCircle2, FileText, Landmark, Lock, Mail, Play, ShieldCheck } from "lucide-react";
+import PeriodPayslipConflictDialog from "@/components/payslips/PeriodPayslipConflictDialog";
+import { calendarDateFromIso, payslipsForPayrollPeriod } from "@/lib/payroll-period-guard";
 
 const statusFlow: Record<PayrollRunStatus, PayrollRunStatus[]> = {
   Draft: ["Reviewed"],
@@ -86,6 +90,7 @@ const PayrollRunDetailPage: React.FC = () => {
   const { user } = useAuth();
   const {
     runPayrollProcess,
+    payslips,
     isMockDataEnabled,
     employees,
     timesheets,
@@ -107,6 +112,7 @@ const PayrollRunDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"workflow" | "items" | "audit">("workflow");
   const [paymentBatch, setPaymentBatch] = useState<PaymentBatch | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [periodConflictCount, setPeriodConflictCount] = useState(0);
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
 
@@ -213,17 +219,37 @@ const PayrollRunDetailPage: React.FC = () => {
     }
   };
 
-  const handleProcessPeriod = async () => {
+  const handleProcessPeriod = async (replaceExisting = false) => {
     if (!run || !id || !targetPeriod) return;
     if (isMockDataEnabled) {
       showError("Disable mock data to process and store run items.");
       return;
     }
-    const psToast = showLoading("Processing payslips for this period...") as string;
+    const start = calendarDateFromIso(run.periodStart);
+    const end = calendarDateFromIso(run.periodEnd);
+    const existing = payslipsForPayrollPeriod(payslips, start, end);
+    const alreadyGenerated = items.length > 0 || existing.length > 0;
+    if (alreadyGenerated && !replaceExisting) {
+      setPeriodConflictCount(Math.max(items.length, existing.length));
+      return;
+    }
+    const psToast = showLoading(
+      replaceExisting ? "Replacing payslips for this payroll run..." : "Processing payslips for this period..."
+    ) as string;
     try {
-      const start = targetPeriod.start;
-      const end = targetPeriod.end;
-      await runPayrollProcess(start, end);
+      if (replaceExisting) {
+        const payslipIds = new Set<string>();
+        items.forEach((item) => {
+          if (item.payslipId) payslipIds.add(item.payslipId);
+        });
+        existing.forEach((payslip) => payslipIds.add(payslip.id));
+        const idList = Array.from(payslipIds);
+        if (idList.length > 0) {
+          const cleared = (await deleteRunItemsForPayslips(idList)) && (await deletePayslipsByIds(idList));
+          if (!cleared) return;
+        }
+      }
+      await runPayrollProcess(start, end, { replaceExisting });
 
       const payslips = await fetchPayslipsFromSupabase();
       const periodStr = `${run.periodStart} - ${run.periodEnd}`;
@@ -242,11 +268,17 @@ const PayrollRunDetailPage: React.FC = () => {
         netPay: p.netPay,
       }));
 
-      const ok = await addRunItems(id, newItems);
+      const ok = alreadyGenerated
+        ? await replaceRunItems(id, newItems)
+        : await addRunItems(id, newItems);
       if (ok) {
         const refreshed = await fetchRunItems(id);
         setItems(refreshed);
-        showSuccess(`Added ${newItems.length} items to the run.`);
+        showSuccess(
+          alreadyGenerated
+            ? `Replaced this run with ${newItems.length} item${newItems.length === 1 ? "" : "s"}.`
+            : `Added ${newItems.length} items to the run.`
+        );
         await insertAuditLog("payroll_run", id, `Run items generated`, { count: newItems.length });
         setActiveTab("items");
       }
@@ -390,7 +422,7 @@ const PayrollRunDetailPage: React.FC = () => {
     const toastId = showLoading(`Locking ${list.length} timesheets...`) as string;
     try {
       for (const ts of list) {
-        await updateTimesheetStatus(ts.id, "Locked");
+        await updateTimesheetStatus(ts.id, "Locked", { silent: true });
       }
       showSuccess(`${list.length} timesheets locked.`);
       await insertAuditLog("payroll_run", id!, `Auto-lock timesheets`, { count: list.length });
@@ -584,7 +616,7 @@ const PayrollRunDetailPage: React.FC = () => {
                       <span className="font-semibold">{items.length}</span> item(s)
                     </div>
                     <Button
-                      onClick={handleProcessPeriod}
+                      onClick={() => void handleProcessPeriod(false)}
                       disabled={!canGenerateItems}
                       title={!canGenerateItems ? "Resolve error blockers before generating items." : ""}
                       size="sm"
@@ -905,6 +937,25 @@ const PayrollRunDetailPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PeriodPayslipConflictDialog
+        open={periodConflictCount > 0}
+        onOpenChange={(open) => {
+          if (!open) setPeriodConflictCount(0);
+        }}
+        title="This payroll run was already generated"
+        periodLabel={run ? `${run.periodStart} – ${run.periodEnd}` : ""}
+        existingCount={periodConflictCount}
+        description={
+          run
+            ? `This run already has ${periodConflictCount} item${periodConflictCount === 1 ? "" : "s"} for ${run.periodStart} – ${run.periodEnd}. Generate again would create a second set of payslips for the same period. Stop leaves this run as it is. Replace overwrites those payslips and run items with one set, and locks the timesheets.`
+            : undefined
+        }
+        onReplace={() => {
+          setPeriodConflictCount(0);
+          void handleProcessPeriod(true);
+        }}
+      />
 
       <Dialog open={voidDialogOpen} onOpenChange={(o) => !isVoiding && setVoidDialogOpen(o)}>
         <DialogContent>

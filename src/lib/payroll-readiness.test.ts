@@ -169,4 +169,43 @@ describe("computePayrollRunBlockers", () => {
     expect(canGeneratePayrollItems(blockers)).toBe(true);
     expect(canApprovePayrollRun(blockers)).toBe(false);
   });
+
+  it("does not warn about missing timesheets for weekly salary employees", () => {
+    const blockers = computePayrollRunBlockers({
+      employees: [
+        baseEmployee({
+          id: "salary-1",
+          firstName: "Glenore",
+          lastName: "Kanasachi",
+          payFrequency: "Weekly",
+          salary: 4500,
+          hourlyRate: 0,
+        }),
+      ],
+      timesheets: [],
+      companyDetails: company,
+      userTaxSettings: null,
+      periodStart,
+      periodEnd,
+      taxTables: { brackets: [{ min: 0, max: null, rate: 0.18, base: 0 }] } as never,
+      activeTaxYear: 2026,
+    });
+
+    expect(blockers.some((b) => b.type === "MISSING_TIMESHEET")).toBe(false);
+  });
+
+  it("still warns when an hourly employee has no timesheets", () => {
+    const blockers = computePayrollRunBlockers({
+      employees: [baseEmployee({ hourlyRate: 85, salary: 0, payFrequency: "Weekly" })],
+      timesheets: [],
+      companyDetails: company,
+      userTaxSettings: null,
+      periodStart,
+      periodEnd,
+      taxTables: { brackets: [{ min: 0, max: null, rate: 0.18, base: 0 }] } as never,
+      activeTaxYear: 2026,
+    });
+
+    expect(blockers.some((b) => b.type === "MISSING_TIMESHEET")).toBe(true);
+  });
 });

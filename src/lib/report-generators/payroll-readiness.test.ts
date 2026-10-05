@@ -90,6 +90,19 @@ describe("assessPayrollReadiness", () => {
     expect(result.employees[0]?.status).toBe("attention");
     expect(result.employees[0]?.issues[0]?.code).toBe("missing_timesheet");
   });
+
+  it("does not flag salary employees who have no timesheets", () => {
+    const result = assessPayrollReadiness({
+      employees: [baseEmployee({ salary: 4500, hourlyRate: 0, payFrequency: "Weekly" })],
+      companyDetails: company,
+      timesheets: [],
+      selectedDate: new Date("2026-07-15"),
+      periodType: "monthly",
+    });
+
+    expect(result.employees[0]?.issues.some((issue) => issue.code === "missing_timesheet")).toBe(false);
+    expect(result.employees[0]?.status).toBe("ready");
+  });
 });
 
 describe("generatePayrollReadinessReportContent", () => {

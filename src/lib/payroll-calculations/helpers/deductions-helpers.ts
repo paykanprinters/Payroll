@@ -191,6 +191,18 @@ export const buildDeductions = (
   loans.forEach((loan) => {
     if (loan.employeeId !== emp.id || loan.status === "completed" || new Date(loan.startDate) > periodEnd) return;
 
+    // A repeat payroll run must not deduct the same loan twice or move the balance again.
+    const alreadyPosted = (loan.deductionHistory || []).find((entry) =>
+      entry.notes?.includes(`pay period ${payPeriodString}`)
+    );
+    if (alreadyPosted) {
+      if (alreadyPosted.type === "deduction" && alreadyPosted.amount > 0) {
+        deductionsBreakdown.push({ name: "Loan Repayment", amount: alreadyPosted.amount });
+        totalDeductions += alreadyPosted.amount;
+      }
+      return;
+    }
+
     const freezeStart = loan.freezeStartDate ? parseISO(loan.freezeStartDate) : null;
     const freezeEnd = loan.freezeEndDate ? parseISO(loan.freezeEndDate) : null;
 

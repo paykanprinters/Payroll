@@ -87,7 +87,7 @@ export const batchUpsertPayslipsToSupabase = async (payslipsToUpsert: MockPaysli
 
   const { error } = await supabase
     .from('payslips')
-    .upsert(snakeCasePayloads, { onConflict: 'employee_id, pay_period' }); // Conflict on employee_id and pay_period for payslips
+    .upsert(snakeCasePayloads, { onConflict: 'id' });
 
   if (error) {
     logger.error("payslip-queries: error batch upserting live payslips:", toLogError(error));

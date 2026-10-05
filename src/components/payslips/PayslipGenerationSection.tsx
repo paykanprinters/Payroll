@@ -23,6 +23,8 @@ import { useZipDownload } from "@/hooks/use-zip-download";
 // Modular panels
 import IndividualActionsPanel from "./IndividualActionsPanel";
 import GenerationButtonsPanel from "./GenerationButtonsPanel";
+import PeriodPayslipConflictDialog from "./PeriodPayslipConflictDialog";
+import { payslipsForPayrollPeriod } from "@/lib/payroll-period-guard";
 
 interface PayslipGenerationSectionProps {
   employees: MockEmployee[];
@@ -52,6 +54,11 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
   const [selectedPayPeriodDate, setSelectedPayPeriodDate] = React.useState<Date | undefined>(new Date());
   const [bulkGenerationMode, setBulkGenerationMode] = React.useState<"monthly" | "weekly">("monthly");
   const [auditLevel, setAuditLevel] = React.useState<"minimal" | "standard" | "detailed">("standard");
+  const [periodConflict, setPeriodConflict] = React.useState<{
+    periodStart: Date;
+    periodEnd: Date;
+    existingCount: number;
+  } | null>(null);
 
   const { payCycleSettings, runPayrollProcess, refetchPayslips } = usePayrollProcessor();
   const { downloadPdf, openPdf } = usePdfVector();
@@ -125,9 +132,23 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
       periodEnd = endOfMonth(selectedPayPeriodDate);
     }
 
+    const existing = payslipsForPayrollPeriod(payslips, periodStart, periodEnd);
+    if (existing.length > 0) {
+      setPeriodConflict({ periodStart, periodEnd, existingCount: existing.length });
+      return;
+    }
+
     await runPayrollProcess(periodStart, periodEnd);
     refetchPayslips?.();
-  }, [selectedPayPeriodDate, bulkGenerationMode, payCycleSettings, runPayrollProcess, refetchPayslips]);
+  }, [selectedPayPeriodDate, bulkGenerationMode, payCycleSettings, payslips, runPayrollProcess, refetchPayslips]);
+
+  const handleReplaceExistingPeriod = React.useCallback(async () => {
+    if (!periodConflict) return;
+    const { periodStart, periodEnd } = periodConflict;
+    setPeriodConflict(null);
+    await runPayrollProcess(periodStart, periodEnd, { replaceExisting: true });
+    refetchPayslips?.();
+  }, [periodConflict, runPayrollProcess, refetchPayslips]);
 
   const handlePrintOrDownloadAll = React.useCallback(async (action: 'print' | 'download', mode: "monthly" | "weekly", level: "minimal" | "standard" | "detailed") => {
     if (!selectedPayPeriodDate) {
@@ -611,8 +632,21 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     [selectedPayPeriodDate, payCycleSettings, payslips, allEmployees, smsOnePayslip]
   );
 
+  const conflictLabel = periodConflict
+    ? `${format(periodConflict.periodStart, "yyyy-MM-dd")} – ${format(periodConflict.periodEnd, "yyyy-MM-dd")}`
+    : "";
+
   return (
     <div className="space-y-6">
+      <PeriodPayslipConflictDialog
+        open={periodConflict !== null}
+        onOpenChange={(open) => {
+          if (!open) setPeriodConflict(null);
+        }}
+        periodLabel={conflictLabel}
+        existingCount={periodConflict?.existingCount ?? 0}
+        onReplace={handleReplaceExistingPeriod}
+      />
       {/* Row 1: Employee & payslip selection + actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
         {/* Left: selectors */}
