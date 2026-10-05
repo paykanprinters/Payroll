@@ -53,6 +53,7 @@ import { cn } from "@/lib/utils";
 import { AlertTriangle, Ban, CheckCircle2, FileText, Landmark, Lock, Mail, Play, ShieldCheck } from "lucide-react";
 import PeriodPayslipConflictDialog from "@/components/payslips/PeriodPayslipConflictDialog";
 import RunBulkPayslipMenu from "@/components/payroll/RunBulkPayslipMenu";
+import CountersignApprovalDialog from "@/components/payroll/CountersignApprovalDialog";
 import { calendarDateFromIso, payslipsForPayrollPeriod } from "@/lib/payroll-period-guard";
 import { userDisplayName, type UserLabel } from "@/lib/user-display";
 import { fetchUserLabels } from "@/integrations/supabase/user-queries";
@@ -115,6 +116,7 @@ const PayrollRunDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"workflow" | "items" | "audit">("workflow");
   const [paymentBatch, setPaymentBatch] = useState<PaymentBatch | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [countersignOpen, setCountersignOpen] = useState(false);
   const [periodConflictCount, setPeriodConflictCount] = useState(0);
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
@@ -232,6 +234,37 @@ const PayrollRunDetailPage: React.FC = () => {
     } finally {
       dismissToast(toastId);
     }
+  };
+
+  const handleCountersignApproved = async (approver: { id: string; name: string; approvedAt: string }) => {
+    if (!run || !id) return;
+    setRun({
+      ...run,
+      status: "Approved",
+      approvedBy: approver.id,
+      approvedAt: approver.approvedAt,
+    });
+    showSuccess(`Run approved by ${approver.name}.`);
+
+    if (taxTables) {
+      const snapshotData = { taxTables, overtimeRules: overtimeRules || null };
+      const snapOk = await createRunSnapshot(id, "Approved", snapshotData);
+      if (snapOk) {
+        await insertAuditLog("payroll_run", id, "Snapshot created (Approved)", {
+          snapshotType: "Approved",
+        });
+      }
+    }
+
+    await insertAuditLog("payroll_run", id, "Status updated to Approved", {
+      by: approver.id,
+      countersign: true,
+    });
+    setAudits(await fetchAuditLogsForEntity("payroll_run", id));
+    await logAuditEvent(`Run ${id} status updated to Approved`, "payroll_run", id, {
+      by: approver.id,
+      countersign: true,
+    });
   };
 
   const handleProcessPeriod = async (replaceExisting = false) => {
@@ -853,6 +886,21 @@ const PayrollRunDetailPage: React.FC = () => {
                       )}
                     </Button>
                   ))}
+                  {run.status === "Reviewed" && run.reviewedBy && user?.id === run.reviewedBy && (
+                    <Button
+                      variant="outline"
+                      disabled={!canApproveRun}
+                      title={
+                        !canApproveRun
+                          ? "Resolve error blockers and timesheet issues before approval."
+                          : "Someone else signs in here to approve. You stay logged in."
+                      }
+                      onClick={() => setCountersignOpen(true)}
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      Sign in to approve
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -986,6 +1034,14 @@ const PayrollRunDetailPage: React.FC = () => {
           setPeriodConflictCount(0);
           void handleProcessPeriod(true);
         }}
+      />
+
+      <CountersignApprovalDialog
+        open={countersignOpen}
+        onOpenChange={setCountersignOpen}
+        runId={run.id}
+        periodLabel={`${run.periodStart} – ${run.periodEnd}`}
+        onApproved={(approver) => void handleCountersignApproved(approver)}
       />
 
       <Dialog open={voidDialogOpen} onOpenChange={(o) => !isVoiding && setVoidDialogOpen(o)}>
