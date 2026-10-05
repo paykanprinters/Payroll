@@ -23,31 +23,47 @@ export const convertUserTaxSettingsKeysToSnakeCase = (
   obj: Partial<UserTaxSettings>
 ): Record<string, unknown> => keysToSnakeCase(obj);
 
+const normalizeUserTaxSettings = (row: unknown): UserTaxSettings => {
+  const camelCaseData = convertUserTaxSettingsKeysToCamelCase(row);
+  if (camelCaseData.proRateUifCapByFrequency === undefined) {
+    camelCaseData.proRateUifCapByFrequency = false;
+  }
+  if (camelCaseData.applyMedicalAidTaxCredit === undefined) {
+    camelCaseData.applyMedicalAidTaxCredit = true;
+  }
+  return camelCaseData;
+};
+
 export const fetchUserTaxSettingsFromSupabase = async (userId: string): Promise<UserTaxSettings | null> => {
   logger.debug("user-tax-settings-queries: fetching live user tax settings");
   const { data, error } = await supabase
     .from('user_tax_settings')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") { // PGRST116 means no rows found
+  if (error) {
     logger.error("user-tax-settings-queries: error fetching live user tax settings:", toLogError(error));
     showError("Failed to load live user tax settings.");
     return null;
-  } else if (data) {
-    const camelCaseData = convertUserTaxSettingsKeysToCamelCase(data);
-    // Ensure new field has a default when missing
-    if (camelCaseData.proRateUifCapByFrequency === undefined) {
-      camelCaseData.proRateUifCapByFrequency = false;
-    }
-    // Medical scheme tax credit defaults ON (statutory) when not yet configured.
-    if (camelCaseData.applyMedicalAidTaxCredit === undefined) {
-      camelCaseData.applyMedicalAidTaxCredit = true;
-    }
-    return camelCaseData;
   }
-  return null;
+  if (data) return normalizeUserTaxSettings(data);
+
+  // Company payroll flags are stored once. A manager who has not saved their
+  // own copy still has to calculate pay with those flags.
+  const { data: companyRow, error: companyError } = await supabase
+    .from('user_tax_settings')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (companyError) {
+    logger.error("user-tax-settings-queries: error fetching company tax settings:", toLogError(companyError));
+    showError("Failed to load live user tax settings.");
+    return null;
+  }
+  return companyRow ? normalizeUserTaxSettings(companyRow) : null;
 };
 
 export const upsertUserTaxSettingsToSupabase = async (settingsData: UserTaxSettings): Promise<UserTaxSettings | null> => {

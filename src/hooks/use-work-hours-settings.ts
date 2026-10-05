@@ -40,13 +40,29 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: ownRow, error } = await supabase
         .from('work_hours_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
+      let data = ownRow;
+      if (!error && !data) {
+        const { data: companyRow, error: companyError } = await supabase
+          .from('work_hours_settings')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (companyError) {
+          showError("Failed to load work hours settings.");
+          setWorkHoursSettings(null);
+          return;
+        }
+        data = companyRow;
+      }
+
+      if (error) {
         showError("Failed to load work hours settings.");
         setWorkHoursSettings(null);
       } else if (data) {
