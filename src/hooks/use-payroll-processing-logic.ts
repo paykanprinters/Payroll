@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import {
   endOfDay,
+  format,
   isWithinInterval,
   parseISO,
   startOfDay,
@@ -52,14 +53,14 @@ export const usePayrollProcessingLogic = (
   companyDetails: MockCompanyDetails | null,
   setPayslips: React.Dispatch<React.SetStateAction<MockPayslip[]>>,
   updateLoan: (loan: Loan) => Promise<void>,
-  updateSavingPlan: (plan: SavingPlan) => Promise<void>,
+  updateSavingPlan: (plan: SavingPlan) => Promise<void | boolean>,
   updateTimesheetStatus: (
     id: string,
     newStatus: TimesheetEntry["status"],
     options?: { silent?: boolean }
   ) => Promise<boolean>,
   batchUpsertPayslips: (payslips: MockPayslip[]) => Promise<boolean>,
-  recordSavingsPayment: (planId: string, amount: number) => Promise<void>,
+  recordSavingsPayment: (planId: string, amount: number, payPeriod?: string | null) => Promise<void>,
   isMockDataEnabled: boolean,
   // Phase 3 inputs (forwarded to generator)
   earningComponents?: EarningComponent[],
@@ -194,7 +195,7 @@ export const usePayrollProcessingLogic = (
 
       if (!isMockDataEnabled && !options?.replaceExisting) {
         for (const payment of savingPaymentsToRecord) {
-          await recordSavingsPayment(payment.planId, payment.amount);
+          await recordSavingsPayment(payment.planId, payment.amount, format(periodEnd, "yyyy-MM-dd"));
         }
       }
 

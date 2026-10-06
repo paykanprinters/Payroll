@@ -83,10 +83,12 @@ const SavingsPlansTable: React.FC<SavingsPlansTableProps> = ({
                 )}
               </TableCell>
               <TableCell>
-                {entry ? (
-                  `R ${entry.remainingBalance.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`
-                ) : (
+                {!entry ? (
                   <span className="text-muted-foreground">—</span>
+                ) : entry.goalAmount == null ? (
+                  <span className="text-muted-foreground">No goal</span>
+                ) : (
+                  `R ${(entry.remainingBalance ?? 0).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`
                 )}
               </TableCell>
               <TableCell>

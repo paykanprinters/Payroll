@@ -39,7 +39,7 @@ const Savings: React.FC = () => {
     refetchPayrollSavingsEntries,
   } = usePayrollProcessor();
 
-  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan, deleteSavingPlan } =
+  const { savingPlans, getEmployeeName, getEmployeeCustomId, addSavingPlan, updateSavingPlan, deleteSavingPlan } =
     useSavingPlansData({
       initialSavingPlans,
       employees,
@@ -177,7 +177,7 @@ const Savings: React.FC = () => {
                   </span>
                   Remaining balance
                 </CardTitle>
-                <CardDescription className="text-xs">Outstanding on tracked savings entries</CardDescription>
+                <CardDescription className="text-xs">Still to reach on plans that have a savings goal</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatMoney(summary.totalRemaining)}</div>
@@ -306,8 +306,8 @@ const Savings: React.FC = () => {
             <CardHeader>
               <CardTitle>Savings plans</CardTitle>
               <CardDescription>
-                Plan schedules plus payroll tracking. Use Manage to record payments, pause deductions, or set
-                overrides.
+                Plan schedules plus payroll tracking. Use Manage to set a savings goal, record a payment for a
+                pay period, or pause the deduction.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -335,16 +335,21 @@ const Savings: React.FC = () => {
         onOpenChange={handleManagerOpenChange}
         plan={selectedPlan}
         employeeName={selectedPlan ? getEmployeeName(selectedPlan.employeeId) : ""}
+        onUpdatePlan={async (plan) => {
+          const saved = await updateSavingPlan(plan);
+          if (saved) setSelectedPlan(plan);
+          return saved;
+        }}
       />
 
       <Card className="border-dashed bg-muted/30">
         <CardContent className="py-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">How savings deductions work</p>
           <p className="mt-2">
-            Plans define the recurring schedule. Payroll applies deductions when payslips are processed, matching
-            employee pay frequency. Open <strong>Manage</strong> on a plan to create its tracking entry, record
-            payments, pause deductions, or set an override amount. Until Manage is used once, deductions still run
-            but collected amounts may show as &quot;Not tracked&quot;.
+            Plans define the recurring deduction. Payroll takes that amount when payslips are processed.
+            Pending means recorded payments have not reached a savings goal yet. Open <strong>Manage</strong> to
+            set the goal, edit the schedule, and record each payment against a pay period. Until Manage is used
+            once, deductions still run but collected amounts may show as &quot;Not tracked&quot;.
           </p>
         </CardContent>
       </Card>

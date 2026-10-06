@@ -29,4 +29,20 @@ test.describe("manager role smoke", () => {
     await page.getByLabel("Search payslips").fill("KAN");
     await expect(page).toHaveURL(/search=KAN/, { timeout: 10_000 });
   });
+
+  test("savings manage shows a goal and a pay period", async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+
+    await page.goto("/savings", { waitUntil: "networkidle" });
+    expect(page.url()).not.toMatch(/\/(login|unauthorized)/);
+    await expect(page.getByText("No goal").first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Manage" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("Savings goal (optional)")).toBeVisible();
+    await expect(dialog.getByLabel("Pay period")).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Save plan" })).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
 });

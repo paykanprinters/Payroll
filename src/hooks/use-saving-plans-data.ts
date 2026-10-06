@@ -57,7 +57,7 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
     }
   }, []);
 
-  const upsertLiveSavingPlan = useCallback(async (savingPlanData: SavingPlan) => {
+  const upsertLiveSavingPlan = useCallback(async (savingPlanData: SavingPlan): Promise<boolean> => {
     const toastId = showLoading(savingPlanData.id ? "Updating saving plan..." : "Adding new saving plan...") as string;
     setIsLoadingSavingPlans(true);
     try {
@@ -72,6 +72,7 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
       if (error) {
         logger.error("useSavingPlansData: error upserting live saving plan:", toLogError(error));
         showError(`Failed to save saving plan: ${toLogError(error)}`);
+        return false;
       } else if (data && data.length > 0) {
         const camelCaseData = convertSavingPlanKeysToCamelCase(data[0]);
         setSavingPlans(prev => {
@@ -83,14 +84,17 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
           }
         });
         showSuccess("Savings plan saved successfully!");
+        return true;
       } else {
         logger.warn("useSavingPlansData: upsert succeeded but returned no data. Refetching to ensure consistency.");
         showError("Savings plan saved, but data could not be retrieved. Please refresh.");
         fetchLiveSavingPlans();
+        return false;
       }
     } catch (err) {
       logger.error("useSavingPlansData: unhandled error upserting live saving plan:", toLogError(err));
       showError("An unexpected error occurred while saving saving plan data.");
+      return false;
     } finally {
       dismissToast(toastId);
       setIsLoadingSavingPlans(false);
@@ -147,7 +151,7 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
     }
   }, [isMockDataEnabled, upsertLiveSavingPlan]);
 
-  const updateSavingPlan = useCallback(async (updatedPlan: SavingPlan) => {
+  const updateSavingPlan = useCallback(async (updatedPlan: SavingPlan): Promise<boolean> => {
     if (isMockDataEnabled) {
       setSavingPlans(prevPlans => {
         const updatedPlans = prevPlans.map(plan =>
@@ -158,9 +162,9 @@ export const useSavingPlansData = ({ initialSavingPlans, employees, isMockDataEn
         showSuccess("Savings plan updated successfully!");
         return updatedPlans;
       });
-    } else {
-      await upsertLiveSavingPlan(updatedPlan);
+      return true;
     }
+    return upsertLiveSavingPlan(updatedPlan);
   }, [isMockDataEnabled, upsertLiveSavingPlan]);
 
   const deleteSavingPlan = useCallback(async (plan: SavingPlan) => {

@@ -2,7 +2,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { isRecord, type UnknownRecord } from "@/lib/case-converters";
-import { PayrollSavingsEntry, SavingsStatus, updateStatusClient } from "@/lib/savings-types";
+import { PayrollSavingsEntry, SavingsPayment, SavingsStatus, updateStatusClient } from "@/lib/savings-types";
 import { showError } from "@/utils/toast";
 import { logger, toLogError } from "@/lib/logger";
 
@@ -19,8 +19,9 @@ const toCamel = (value: unknown): PayrollSavingsEntry => {
     planId: row.plan_id as string,
     originalAmount: Number(row.original_amount),
     overrideAmount: row.override_amount !== null ? Number(row.override_amount) : null,
+    goalAmount: row.goal_amount != null ? Number(row.goal_amount) : null,
     amountPaid: Number(row.amount_paid),
-    remainingBalance: Number(row.remaining_balance),
+    remainingBalance: row.remaining_balance != null ? Number(row.remaining_balance) : null,
     status: row.status as SavingsStatus,
     paused: !!row.paused,
     pauseStartDate: row.pause_start_date as string | null,
@@ -38,6 +39,7 @@ const toSnake = (partial: Partial<PayrollSavingsEntry>): UnknownRecord => {
   if ("planId" in partial) out.plan_id = partial.planId;
   if ("originalAmount" in partial) out.original_amount = partial.originalAmount;
   if ("overrideAmount" in partial) out.override_amount = partial.overrideAmount ?? null;
+  if ("goalAmount" in partial) out.goal_amount = partial.goalAmount ?? null;
   if ("amountPaid" in partial) out.amount_paid = partial.amountPaid;
   if ("status" in partial) out.status = partial.status;
   if ("paused" in partial) out.paused = partial.paused;
@@ -95,9 +97,77 @@ export async function setOverrideAmount(planId: string, overrideAmount: number |
   return updated;
 }
 
-export async function recordPayment(planId: string, amount: number): Promise<PayrollSavingsEntry | null> {
+export async function setGoalAmount(planId: string, goalAmount: number | null): Promise<PayrollSavingsEntry | null> {
   const current = await getEntryByPlanId(planId);
   if (!current) return null;
+  const next = { ...current, goalAmount };
+  updateStatusClient(next);
+  return upsertEntry({
+    id: current.id,
+    planId,
+    employeeId: current.employeeId,
+    goalAmount,
+    status: next.status,
+    paused: next.paused,
+  });
+}
+
+export async function syncDeductionAmount(planId: string, amount: number): Promise<PayrollSavingsEntry | null> {
+  const current = await getEntryByPlanId(planId);
+  if (!current) return null;
+  return upsertEntry({
+    id: current.id,
+    planId,
+    employeeId: current.employeeId,
+    originalAmount: amount,
+  });
+}
+
+export async function listPaymentsForPlan(planId: string): Promise<SavingsPayment[]> {
+  const { data, error } = await supabase
+    .from("payroll_savings_payments")
+    .select("*")
+    .eq("plan_id", planId)
+    .order("pay_period", { ascending: false });
+
+  if (error) {
+    logger.error("listPaymentsForPlan error:", toLogError(error));
+    showError("Failed to load savings payments.");
+    return [];
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    planId: row.plan_id as string,
+    employeeId: row.employee_id as string,
+    amount: Number(row.amount),
+    payPeriod: row.pay_period as string,
+    createdAt: row.created_at as string,
+  }));
+}
+
+export async function recordPayment(
+  planId: string,
+  amount: number,
+  payPeriod?: string | null
+): Promise<PayrollSavingsEntry | null> {
+  const current = await getEntryByPlanId(planId);
+  if (!current) return null;
+
+  if (payPeriod) {
+    const { error } = await supabase.from("payroll_savings_payments").insert({
+      plan_id: planId,
+      employee_id: current.employeeId,
+      amount,
+      pay_period: payPeriod,
+    });
+    if (error) {
+      logger.error("recordPayment history error:", toLogError(error));
+      showError("Failed to record the savings payment.");
+      return null;
+    }
+  }
+
   const next = { ...current, amountPaid: Math.max(0, current.amountPaid + amount) };
   updateStatusClient(next);
   const updated = await upsertEntry({

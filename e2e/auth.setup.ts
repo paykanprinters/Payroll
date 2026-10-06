@@ -10,19 +10,21 @@ const managerAuthFile = path.join(AUTH_DIR, "manager.json");
 const staffAuthFile = path.join(AUTH_DIR, "staff.json");
 
 async function signInConsole(page: import("@playwright/test").Page, email: string, password: string) {
-  await page.goto("/login");
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.goto("/login", { waitUntil: "networkidle" });
+  const form = page.locator("#auth-sign-in");
+  await form.locator("#email").fill(email);
+  await form.locator("#password").fill(password);
+  await form.getByRole("button", { name: /sign in/i }).click();
   await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 30_000 });
   await expect(page).not.toHaveURL(/\/login/);
 }
 
 async function signInStaff(page: import("@playwright/test").Page, email: string, password: string) {
-  await page.goto("/staff/login");
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.goto("/staff/login", { waitUntil: "networkidle" });
+  const form = page.locator("#auth-sign-in");
+  await form.locator("#email").fill(email);
+  await form.locator("#password").fill(password);
+  await form.getByRole("button", { name: /sign in/i }).click();
   await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 30_000 });
   await expect(page).toHaveURL(/\/staff(?!\/login)/);
 }

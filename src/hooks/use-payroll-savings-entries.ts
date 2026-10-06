@@ -40,8 +40,9 @@ export function usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, i
         planId: row.plan_id,
         originalAmount: Number(row.original_amount),
         overrideAmount: row.override_amount !== null ? Number(row.override_amount) : null,
+        goalAmount: row.goal_amount != null ? Number(row.goal_amount) : null,
         amountPaid: Number(row.amount_paid),
-        remainingBalance: Number(row.remaining_balance),
+        remainingBalance: row.remaining_balance != null ? Number(row.remaining_balance) : null,
         status: row.status,
         paused: !!row.paused,
         pauseStartDate: row.pause_start_date,
@@ -59,9 +60,9 @@ export function usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, i
     fetchEntries();
   }, [fetchEntries]);
 
-  const recordSavingsPayment = useCallback(async (planId: string, amount: number) => {
+  const recordSavingsPayment = useCallback(async (planId: string, amount: number, payPeriod?: string | null) => {
     if (isMockDataEnabled) return; // no-op in mock
-    await recordPayment(planId, amount);
+    await recordPayment(planId, amount, payPeriod);
     // Refresh entries after payment
     await fetchEntries();
   }, [isMockDataEnabled, fetchEntries]);

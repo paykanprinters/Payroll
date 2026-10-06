@@ -8,8 +8,10 @@ export interface PayrollSavingsEntry {
   planId: string;
   originalAmount: number;
   overrideAmount?: number | null;
+  /** Total the employee is saving toward. The weekly or monthly deduction stays on the plan. */
+  goalAmount?: number | null;
   amountPaid: number;
-  remainingBalance: number; // generated in DB
+  remainingBalance: number | null; // generated in DB from the goal
   status: SavingsStatus;
   paused: boolean;
   pauseStartDate?: string | null; // yyyy-MM-dd
@@ -17,6 +19,15 @@ export interface PayrollSavingsEntry {
   pauseReason?: string | null;
   lastUpdated: string; // ISO
   createdAt: string; // ISO
+}
+
+export interface SavingsPayment {
+  id: string;
+  planId: string;
+  employeeId: string;
+  amount: number;
+  payPeriod: string;
+  createdAt: string;
 }
 
 export const statusColorMap: Record<SavingsStatus, string> = {
@@ -27,8 +38,6 @@ export const statusColorMap: Record<SavingsStatus, string> = {
 };
 
 export function updateStatusClient(entry: PayrollSavingsEntry): SavingsStatus {
-  const override = entry.overrideAmount ?? entry.originalAmount;
-
   // Optional auto-unpause: if nextPaymentDate reached, clear paused
   if (entry.paused && entry.nextPaymentDate) {
     const now = new Date();
@@ -38,7 +47,8 @@ export function updateStatusClient(entry: PayrollSavingsEntry): SavingsStatus {
     }
   }
 
-  if (entry.amountPaid >= override) {
+  const goal = entry.goalAmount;
+  if (goal != null && goal > 0 && entry.amountPaid >= goal) {
     entry.status = "paid";
     entry.paused = false;
   } else if (entry.paused) {
