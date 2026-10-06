@@ -20,6 +20,7 @@ const toCamel = (value: unknown): PayrollSavingsEntry => {
     originalAmount: Number(row.original_amount),
     overrideAmount: row.override_amount !== null ? Number(row.override_amount) : null,
     goalAmount: row.goal_amount != null ? Number(row.goal_amount) : null,
+    openingBalance: row.opening_balance != null ? Number(row.opening_balance) : 0,
     amountPaid: Number(row.amount_paid),
     remainingBalance: row.remaining_balance != null ? Number(row.remaining_balance) : null,
     status: row.status as SavingsStatus,
@@ -40,6 +41,7 @@ const toSnake = (partial: Partial<PayrollSavingsEntry>): UnknownRecord => {
   if ("originalAmount" in partial) out.original_amount = partial.originalAmount;
   if ("overrideAmount" in partial) out.override_amount = partial.overrideAmount ?? null;
   if ("goalAmount" in partial) out.goal_amount = partial.goalAmount ?? null;
+  if ("openingBalance" in partial) out.opening_balance = partial.openingBalance ?? 0;
   if ("amountPaid" in partial) out.amount_paid = partial.amountPaid;
   if ("status" in partial) out.status = partial.status;
   if ("paused" in partial) out.paused = partial.paused;
@@ -85,7 +87,7 @@ export async function setOverrideAmount(planId: string, overrideAmount: number |
   const current = await getEntryByPlanId(planId);
   if (!current) return null;
   const next = { ...current, overrideAmount };
-  updateStatusClient(next);
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
   const updated = await upsertEntry({
     id: current.id,
     planId,
@@ -97,11 +99,24 @@ export async function setOverrideAmount(planId: string, overrideAmount: number |
   return updated;
 }
 
+async function endDateForPlan(planId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("saving_plans")
+    .select("end_date")
+    .eq("id", planId)
+    .maybeSingle();
+  if (error) {
+    logger.error("endDateForPlan error:", toLogError(error));
+    return null;
+  }
+  return (data?.end_date as string | null) ?? null;
+}
+
 export async function setGoalAmount(planId: string, goalAmount: number | null): Promise<PayrollSavingsEntry | null> {
   const current = await getEntryByPlanId(planId);
   if (!current) return null;
   const next = { ...current, goalAmount };
-  updateStatusClient(next);
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
   return upsertEntry({
     id: current.id,
     planId,
@@ -142,6 +157,7 @@ export async function listPaymentsForPlan(planId: string): Promise<SavingsPaymen
     employeeId: row.employee_id as string,
     amount: Number(row.amount),
     payPeriod: row.pay_period as string,
+    entryType: row.entry_type === "withdrawal" ? "withdrawal" : "payment",
     createdAt: row.created_at as string,
   }));
 }
@@ -160,6 +176,7 @@ export async function recordPayment(
       employee_id: current.employeeId,
       amount,
       pay_period: payPeriod,
+      entry_type: "payment",
     });
     if (error) {
       logger.error("recordPayment history error:", toLogError(error));
@@ -169,7 +186,7 @@ export async function recordPayment(
   }
 
   const next = { ...current, amountPaid: Math.max(0, current.amountPaid + amount) };
-  updateStatusClient(next);
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
   const updated = await upsertEntry({
     id: current.id,
     planId,
@@ -191,7 +208,7 @@ export async function pauseEntry(planId: string, reason: string | null, nextPaym
     pauseStartDate: new Date().toISOString().slice(0, 10),
     nextPaymentDate,
   };
-  updateStatusClient(next);
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
   const updated = await upsertEntry({
     id: current.id,
     planId,
@@ -209,7 +226,7 @@ export async function unpauseEntry(planId: string): Promise<PayrollSavingsEntry 
   const current = await getEntryByPlanId(planId);
   if (!current) return null;
   const next = { ...current, paused: false };
-  updateStatusClient(next);
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
   const updated = await upsertEntry({
     id: current.id,
     planId,
@@ -218,6 +235,87 @@ export async function unpauseEntry(planId: string): Promise<PayrollSavingsEntry 
     status: next.status,
   });
   return updated;
+}
+
+export async function setOpeningBalance(planId: string, openingBalance: number): Promise<PayrollSavingsEntry | null> {
+  if (isNaN(openingBalance) || openingBalance < 0) {
+    showError("Already saved must be zero or more.");
+    return null;
+  }
+  const current = await getEntryByPlanId(planId);
+  if (!current) return null;
+  const previous = current.openingBalance ?? 0;
+  const next = {
+    ...current,
+    openingBalance,
+    amountPaid: Math.max(0, current.amountPaid - previous + openingBalance),
+  };
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
+  return upsertEntry({
+    id: current.id,
+    planId,
+    employeeId: current.employeeId,
+    openingBalance,
+    amountPaid: next.amountPaid,
+    status: next.status,
+    paused: next.paused,
+  });
+}
+
+export async function recordWithdrawal(
+  planId: string,
+  amount: number,
+  payPeriod: string
+): Promise<PayrollSavingsEntry | null> {
+  const current = await getEntryByPlanId(planId);
+  if (!current) return null;
+  if (!(amount > 0)) {
+    showError("Enter a withdrawal amount greater than 0.");
+    return null;
+  }
+  if (Math.round(amount * 100) > Math.round(current.amountPaid * 100)) {
+    showError("Withdrawal cannot be more than the saved balance.");
+    return null;
+  }
+
+  const { error } = await supabase.from("payroll_savings_payments").insert({
+    plan_id: planId,
+    employee_id: current.employeeId,
+    amount,
+    pay_period: payPeriod,
+    entry_type: "withdrawal",
+  });
+  if (error) {
+    logger.error("recordWithdrawal error:", toLogError(error));
+    showError("Failed to record the withdrawal.");
+    return null;
+  }
+
+  const next = { ...current, amountPaid: Math.max(0, current.amountPaid - amount) };
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
+  return upsertEntry({
+    id: current.id,
+    planId,
+    employeeId: current.employeeId,
+    amountPaid: next.amountPaid,
+    status: next.status,
+    paused: next.paused,
+  });
+}
+
+export async function refreshTrackingStatus(planId: string): Promise<PayrollSavingsEntry | null> {
+  const current = await getEntryByPlanId(planId);
+  if (!current) return null;
+  const next = { ...current };
+  updateStatusClient(next, { endDate: await endDateForPlan(planId) });
+  if (next.status === current.status && next.paused === current.paused) return next;
+  return upsertEntry({
+    id: current.id,
+    planId,
+    employeeId: current.employeeId,
+    status: next.status,
+    paused: next.paused,
+  });
 }
 
 export async function ensureEntryForPlan(plan: { id: string; employeeId: string; amount: number }): Promise<PayrollSavingsEntry | null> {

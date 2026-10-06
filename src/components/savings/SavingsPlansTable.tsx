@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { PauseCircle } from "lucide-react";
 import { format } from "date-fns";
 import { AdminSavingsPlanRow } from "@/lib/savings-admin-summary";
-import { statusColorMap } from "@/lib/savings-types";
+import { savingsTrackingStatus, statusColorMap } from "@/lib/savings-types";
 
 interface SavingsPlansTableProps {
   rows: AdminSavingsPlanRow[];
@@ -55,8 +55,8 @@ const SavingsPlansTable: React.FC<SavingsPlansTableProps> = ({
       <TableBody>
         {rows.map((row) => {
           const { plan, entry } = row;
-          const isPaused = !!entry?.paused && plan.status === "active";
-          const trackingStatus = entry?.status;
+          const trackingStatus = entry ? savingsTrackingStatus(entry, plan.endDate) : undefined;
+          const isPaused = trackingStatus === "paused";
 
           return (
             <TableRow key={plan.id}>

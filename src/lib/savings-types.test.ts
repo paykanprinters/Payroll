@@ -40,4 +40,19 @@ describe("updateStatusClient", () => {
     const row = entry({ goalAmount: 1000, amountPaid: 250, paused: true });
     expect(updateStatusClient(row)).toBe("paused");
   });
+
+  it("stays pending on the end date when no goal has been reached", () => {
+    const row = entry({ amountPaid: 0 });
+    expect(updateStatusClient(row, { endDate: "2026-12-15", today: "2026-12-15" })).toBe("pending");
+  });
+
+  it("turns paid the day after the end date even when no goal is set", () => {
+    const row = entry({ amountPaid: 0 });
+    expect(updateStatusClient(row, { endDate: "2026-12-15", today: "2026-12-16" })).toBe("paid");
+  });
+
+  it("stays pending for an open-ended plan with no goal", () => {
+    const row = entry({ amountPaid: 500 });
+    expect(updateStatusClient(row, { endDate: null, today: "2026-12-16" })).toBe("pending");
+  });
 });

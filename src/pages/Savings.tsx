@@ -346,10 +346,11 @@ const Savings: React.FC = () => {
         <CardContent className="py-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">How savings deductions work</p>
           <p className="mt-2">
-            Plans define the recurring deduction. Payroll takes that amount when payslips are processed.
-            Pending means recorded payments have not reached a savings goal yet. Open <strong>Manage</strong> to
-            set the goal, edit the schedule, and record each payment against a pay period. Until Manage is used
-            once, deductions still run but collected amounts may show as &quot;Not tracked&quot;.
+            Plans define the weekly or monthly deduction between the start and end dates. Payroll takes that
+            amount on each run inside those dates. Pending means the plan is still collecting. It turns paid when
+            the end date has passed, or sooner when the saved total reaches a savings goal. Open <strong>Manage</strong> to
+            record money already saved, a withdrawal, or a payment for a pay period. Until Manage is used once,
+            deductions still run but collected amounts may show as &quot;Not tracked&quot;.
           </p>
         </CardContent>
       </Card>

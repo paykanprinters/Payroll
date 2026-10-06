@@ -41,6 +41,7 @@ export function usePayrollSavingsEntries({ isMockDataEnabled, isAuthenticated, i
         originalAmount: Number(row.original_amount),
         overrideAmount: row.override_amount !== null ? Number(row.override_amount) : null,
         goalAmount: row.goal_amount != null ? Number(row.goal_amount) : null,
+        openingBalance: row.opening_balance != null ? Number(row.opening_balance) : 0,
         amountPaid: Number(row.amount_paid),
         remainingBalance: row.remaining_balance != null ? Number(row.remaining_balance) : null,
         status: row.status,

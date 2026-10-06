@@ -22,7 +22,10 @@ import {
   listPaymentsForPlan,
   pauseEntry,
   recordPayment,
+  recordWithdrawal,
+  refreshTrackingStatus,
   setGoalAmount,
+  setOpeningBalance,
   setOverrideAmount,
   syncDeductionAmount,
   unpauseEntry,
@@ -51,9 +54,12 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
   const [planStatus, setPlanStatus] = useState<SavingPlan["status"]>("active");
 
   const [goalAmount, setGoalAmountState] = useState("");
+  const [openingBalance, setOpeningBalanceState] = useState("");
   const [overrideAmount, setOverrideAmountState] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentPeriod, setPaymentPeriod] = useState("");
+  const [withdrawalAmount, setWithdrawalAmount] = useState("");
+  const [withdrawalDate, setWithdrawalDate] = useState("");
   const [pauseReason, setPauseReason] = useState("");
   const [nextPaymentDate, setNextPaymentDate] = useState("");
 
@@ -66,6 +72,8 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
     setPlanStatus(plan.status);
     setPaymentAmount("");
     setPaymentPeriod("");
+    setWithdrawalAmount("");
+    setWithdrawalDate("");
     setLoading(true);
     (async () => {
       const ensured = await ensureEntryForPlan({
@@ -84,9 +92,10 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
       ]);
       if (latest) {
         const tmp = { ...latest };
-        updateStatusClient(tmp);
+        updateStatusClient(tmp, { endDate: plan.endDate });
         setEntry(tmp);
         setGoalAmountState(tmp.goalAmount != null ? String(tmp.goalAmount) : "");
+        setOpeningBalanceState(tmp.openingBalance ? String(tmp.openingBalance) : "");
         setOverrideAmountState(tmp.overrideAmount != null ? String(tmp.overrideAmount) : "");
         setPauseReason(tmp.pauseReason ?? "");
         setNextPaymentDate(tmp.nextPaymentDate ?? "");
@@ -131,7 +140,8 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
     };
     const saved = await onUpdatePlan(nextPlan);
     if (!saved) return;
-    const updated = await syncDeductionAmount(plan.id, amount);
+    await syncDeductionAmount(plan.id, amount);
+    const updated = await refreshTrackingStatus(plan.id);
     if (updated) setEntry(updated);
   };
 
@@ -146,6 +156,20 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
     if (updated) {
       setEntry(updated);
       showSuccess(amt == null ? "Savings goal cleared." : "Savings goal saved.");
+    }
+  };
+
+  const handleSaveOpeningBalance = async () => {
+    if (!plan || entry == null) return;
+    const amt = openingBalance.trim() === "" ? 0 : Number(openingBalance);
+    if (isNaN(amt) || amt < 0) {
+      showError("Already saved must be zero or more.");
+      return;
+    }
+    const updated = await setOpeningBalance(plan.id, amt);
+    if (updated) {
+      setEntry(updated);
+      showSuccess("Opening balance saved.");
     }
   };
 
@@ -180,6 +204,26 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
       setPaymentAmount("");
       setPayments(await listPaymentsForPlan(plan.id));
       showSuccess("Payment recorded.");
+    }
+  };
+
+  const handleRecordWithdrawal = async () => {
+    if (!plan || entry == null) return;
+    const amt = Number(withdrawalAmount);
+    if (isNaN(amt) || amt <= 0) {
+      showError("Enter a withdrawal amount greater than 0.");
+      return;
+    }
+    if (!withdrawalDate) {
+      showError("Choose the date of the withdrawal.");
+      return;
+    }
+    const updated = await recordWithdrawal(plan.id, amt, withdrawalDate);
+    if (updated) {
+      setEntry(updated);
+      setWithdrawalAmount("");
+      setPayments(await listPaymentsForPlan(plan.id));
+      showSuccess("Withdrawal recorded.");
     }
   };
 
@@ -222,13 +266,14 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
                 <div className="text-sm text-muted-foreground">Tracking status</div>
                 {statusBadge}
                 <p className="max-w-[240px] text-xs text-muted-foreground">
-                  Pending until recorded payments reach the savings goal. With no goal, the deduction stays open.
+                  Pending while this plan is still collecting. It turns paid after the end date, or sooner if the saved total reaches a goal.
                 </p>
               </div>
               <div className="text-right text-sm">
                 <div>Deduction: {money(plan.amount)}</div>
                 <div>Override: {entry.overrideAmount != null ? money(entry.overrideAmount) : "None"}</div>
                 <div>Goal: {entry.goalAmount != null ? money(entry.goalAmount) : "None"}</div>
+                <div>Already saved: {money(entry.openingBalance ?? 0)}</div>
                 <div>Paid: {money(entry.amountPaid)}</div>
                 <div>
                   Remaining:{" "}
@@ -288,7 +333,7 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
               </div>
               <Button type="button" onClick={handleSavePlan}>Save plan</Button>
               <p className="text-xs text-muted-foreground">
-                This is the amount payroll deducts each period. Completed plans stop being deducted.
+                Payroll deducts this amount on each run from the start date through the end date. After the end date the deduction stops and tracking turns paid.
               </p>
             </div>
 
@@ -310,6 +355,27 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
               </div>
               <p className="text-xs text-muted-foreground">
                 Leave blank for an open-ended deduction. When payments reach this total, tracking becomes paid.
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <Label htmlFor="openingBalance">Already saved</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="openingBalance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={openingBalance}
+                  onChange={(e) => setOpeningBalanceState(e.target.value)}
+                />
+                <Button type="button" onClick={handleSaveOpeningBalance}>Save</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Money saved before this system. Added once to the balance. It does not change the weekly deduction.
               </p>
             </div>
 
@@ -365,12 +431,50 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
                 <ul className="space-y-1 text-sm">
                   {payments.map((payment) => (
                     <li key={payment.id} className="flex justify-between gap-3">
-                      <span>{format(parseISO(payment.payPeriod), "dd MMM yyyy")}</span>
-                      <span>{money(payment.amount)}</span>
+                      <span>
+                        {payment.entryType === "withdrawal" ? "Withdrawal" : "Payment"}
+                        {" · "}
+                        {format(parseISO(payment.payPeriod), "dd MMM yyyy")}
+                      </span>
+                      <span>
+                        {payment.entryType === "withdrawal" ? `− ${money(payment.amount)}` : money(payment.amount)}
+                      </span>
                     </li>
                   ))}
                 </ul>
               )}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <Label htmlFor="withdrawalAmount">Withdraw</Label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="withdrawalAmount">Amount (R)</Label>
+                  <Input
+                    id="withdrawalAmount"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={withdrawalAmount}
+                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="withdrawalDate">Date</Label>
+                  <Input
+                    id="withdrawalDate"
+                    type="date"
+                    value={withdrawalDate}
+                    onChange={(e) => setWithdrawalDate(e.target.value)}
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={handleRecordWithdrawal}>Withdraw</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Reduces the saved balance. It cannot be more than the amount already saved.
+              </p>
             </div>
 
             <Separator />

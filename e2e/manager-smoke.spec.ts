@@ -41,7 +41,9 @@ test.describe("manager role smoke", () => {
     await page.getByRole("button", { name: "Manage" }).first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("Savings goal (optional)")).toBeVisible();
+    await expect(dialog.getByLabel("Already saved")).toBeVisible();
     await expect(dialog.getByLabel("Pay period")).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Withdraw" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Save plan" })).toBeVisible();
     expect(pageErrors).toEqual([]);
   });

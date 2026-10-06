@@ -1,5 +1,5 @@
 import { MockEmployee, MockPayslip, SavingPlan } from "@/lib/mock-data-interfaces";
-import { PayrollSavingsEntry, SavingsStatus } from "@/lib/savings-types";
+import { PayrollSavingsEntry, SavingsStatus, savingsTrackingStatus } from "@/lib/savings-types";
 
 export type StaffSavingsDisplayStatus =
   | "active"
@@ -56,11 +56,11 @@ function resolveDisplayStatus(
   entry: PayrollSavingsEntry | null
 ): StaffSavingsDisplayStatus {
   if (plan.status === "completed") return "completed";
-  if (entry?.paused) return "paused";
-  if (entry?.status === "paid") return "paid";
-  if (plan.status === "active") {
-    return entry?.status === "pending" ? "pending" : "active";
-  }
+  if (!entry) return plan.status === "active" ? "active" : "completed";
+  const tracking = savingsTrackingStatus(entry, plan.endDate);
+  if (tracking === "paid") return "paid";
+  if (tracking === "paused") return "paused";
+  if (plan.status === "active") return "pending";
   return "completed";
 }
 

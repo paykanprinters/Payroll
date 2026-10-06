@@ -1,5 +1,5 @@
 import { SavingPlan } from "@/lib/mock-data-interfaces";
-import { PayrollSavingsEntry, SavingsStatus } from "@/lib/savings-types";
+import { PayrollSavingsEntry, SavingsStatus, savingsTrackingStatus } from "@/lib/savings-types";
 import { computeSavingsStatusSummary } from "@/lib/dashboard-metrics";
 
 export interface AdminSavingsPlanRow {
@@ -40,9 +40,12 @@ export function buildAdminSavingsSummary(
   const completedPlanCount = rows.filter((row) => row.plan.status === "completed").length;
 
   const scopedEntries =
-    payrollSavingsEntries?.filter((entry) =>
-      plans.some((plan) => plan.id === entry.planId)
-    ) ?? [];
+    payrollSavingsEntries
+      ?.filter((entry) => plans.some((plan) => plan.id === entry.planId))
+      .map((entry) => {
+        const plan = plans.find((item) => item.id === entry.planId);
+        return { ...entry, status: savingsTrackingStatus(entry, plan?.endDate) };
+      }) ?? [];
 
   const totalSaved = scopedEntries.reduce((sum, entry) => sum + (entry.amountPaid || 0), 0);
   const totalRemaining = scopedEntries.reduce(

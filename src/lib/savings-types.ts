@@ -10,6 +10,8 @@ export interface PayrollSavingsEntry {
   overrideAmount?: number | null;
   /** Total the employee is saving toward. The weekly or monthly deduction stays on the plan. */
   goalAmount?: number | null;
+  /** Money already saved before this system started taking deductions. */
+  openingBalance?: number;
   amountPaid: number;
   remainingBalance: number | null; // generated in DB from the goal
   status: SavingsStatus;
@@ -27,7 +29,20 @@ export interface SavingsPayment {
   employeeId: string;
   amount: number;
   payPeriod: string;
+  entryType: "payment" | "withdrawal";
   createdAt: string;
+}
+
+export function localDateString(date = new Date()): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** The end date is the last day the plan still collects. The next day it is finished. */
+export function savingsScheduleFinished(endDate: string | null | undefined, today = localDateString()): boolean {
+  if (!endDate) return false;
+  return endDate.slice(0, 10) < today;
 }
 
 export const statusColorMap: Record<SavingsStatus, string> = {
@@ -37,7 +52,10 @@ export const statusColorMap: Record<SavingsStatus, string> = {
   paid: "bg-green-100 text-green-700 border-green-200",
 };
 
-export function updateStatusClient(entry: PayrollSavingsEntry): SavingsStatus {
+export function updateStatusClient(
+  entry: PayrollSavingsEntry,
+  schedule?: { endDate?: string | null; today?: string }
+): SavingsStatus {
   // Optional auto-unpause: if nextPaymentDate reached, clear paused
   if (entry.paused && entry.nextPaymentDate) {
     const now = new Date();
@@ -47,8 +65,11 @@ export function updateStatusClient(entry: PayrollSavingsEntry): SavingsStatus {
     }
   }
 
+  const today = schedule?.today ?? localDateString();
   const goal = entry.goalAmount;
-  if (goal != null && goal > 0 && entry.amountPaid >= goal) {
+  const goalReached = goal != null && goal > 0 && entry.amountPaid >= goal;
+  const scheduleFinished = savingsScheduleFinished(schedule?.endDate, today);
+  if (goalReached || scheduleFinished) {
     entry.status = "paid";
     entry.paused = false;
   } else if (entry.paused) {
@@ -57,4 +78,12 @@ export function updateStatusClient(entry: PayrollSavingsEntry): SavingsStatus {
     entry.status = "pending";
   }
   return entry.status;
+}
+
+export function savingsTrackingStatus(
+  entry: PayrollSavingsEntry,
+  endDate?: string | null,
+  today?: string
+): SavingsStatus {
+  return updateStatusClient({ ...entry }, { endDate, today });
 }
