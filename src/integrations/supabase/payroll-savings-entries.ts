@@ -70,11 +70,12 @@ export async function getEntryByPlanId(planId: string): Promise<PayrollSavingsEn
 
 export async function upsertEntry(partial: Partial<PayrollSavingsEntry>): Promise<PayrollSavingsEntry | null> {
   const payload = toSnake(partial);
-  const { data, error } = await supabase
-    .from("payroll_savings_entries")
-    .upsert(payload, { onConflict: "plan_id" })
-    .select()
-    .maybeSingle();
+  // An upsert still inserts a proposed row, so omitted required columns (the deduction amount) fail the
+  // not-null check even when the plan already has an entry. Update the existing row instead.
+  const write = partial.id
+    ? supabase.from("payroll_savings_entries").update(payload).eq("id", partial.id)
+    : supabase.from("payroll_savings_entries").insert(payload);
+  const { data, error } = await write.select().maybeSingle();
 
   if (error) {
     logger.error("upsertEntry error:", toLogError(error));
