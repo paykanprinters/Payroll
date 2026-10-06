@@ -37,7 +37,7 @@ export const usePayCycleSettings = ({ isMockDataEnabled, isAuthenticated, isLoad
 
     setIsLoading(true);
     try {
-      const data = await fetchPayCycleSettingsFromSupabase(user.id);
+      const data = await fetchPayCycleSettingsFromSupabase();
       setPayCycleSettings(data);
     } finally {
       setIsLoading(false);
@@ -48,6 +48,10 @@ export const usePayCycleSettings = ({ isMockDataEnabled, isAuthenticated, isLoad
     if (!user?.id) {
       logger.error("usePayCycleSettings: saveLiveSettings - no user ID, cannot save settings.");
       showError("User not authenticated. Cannot save pay cycle settings.");
+      return null;
+    }
+    if (user.role !== "Admin") {
+      showError("Only an Admin can change the company pay cycle.");
       return null;
     }
 

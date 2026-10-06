@@ -20,32 +20,34 @@ export const convertPayCycleSettingsKeysToSnakeCase = (
   obj: Partial<PayCycleSettings>
 ): Record<string, unknown> => keysToSnakeCase(obj);
 
-export const fetchPayCycleSettingsFromSupabase = async (userId: string): Promise<PayCycleSettings | null> => {
-  logger.debug("pay-cycle-queries: fetching live pay cycle settings");
+export const fetchPayCycleSettingsFromSupabase = async (): Promise<PayCycleSettings | null> => {
+  logger.debug("pay-cycle-queries: fetching company pay cycle settings");
   const { data, error } = await supabase
-    .from('pay_cycle_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+    .from("pay_cycle_settings")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") { // PGRST116 means no rows found
+  if (error) {
     logger.error("pay-cycle-queries: error fetching live pay cycle settings:", toLogError(error));
     showError("Failed to load live pay cycle settings.");
     return null;
-  } else if (data) {
-    const camelCaseData = convertPayCycleSettingsKeysToCamelCase(data);
-    return camelCaseData;
   }
-  return null;
+  return data ? convertPayCycleSettingsKeysToCamelCase(data) : null;
 };
 
 export const upsertPayCycleSettingsToSupabase = async (settingsData: PayCycleSettings): Promise<PayCycleSettings | null> => {
-  const snakeCasePayload = convertPayCycleSettingsKeysToSnakeCase(settingsData);
+  const existing = await fetchPayCycleSettingsFromSupabase();
+  const companySettings: PayCycleSettings = existing
+    ? { ...settingsData, id: existing.id, userId: existing.userId }
+    : settingsData;
+  const snakeCasePayload = convertPayCycleSettingsKeysToSnakeCase(companySettings);
   logger.debug("pay-cycle-queries: upserting live pay cycle settings");
 
   const { data, error } = await supabase
-    .from('pay_cycle_settings')
-    .upsert(snakeCasePayload, { onConflict: 'user_id' }) // Upsert based on user_id
+    .from("pay_cycle_settings")
+    .upsert(snakeCasePayload, { onConflict: "id" })
     .select()
     .single();
 

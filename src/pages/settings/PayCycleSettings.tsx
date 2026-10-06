@@ -58,6 +58,10 @@ const PayCycleSettingsPage: React.FC = () => {
   }, [payCycleSettings, isLoadingPayCycleSettings, form]);
 
   const onSubmit = async (data: PayCycleFormValues) => {
+    if (user?.role !== "Admin") {
+      showError("Only an Admin can change the company pay cycle.");
+      return;
+    }
     if (user?.id) {
       const settingsToSave: Omit<PayCycleSettings, 'id' | 'userId'> & { id?: string } = {
         id: payCycleSettings?.id, // Pass existing ID for update
@@ -98,7 +102,9 @@ const PayCycleSettingsPage: React.FC = () => {
       <CardHeader>
         <CardTitle>Pay Cycle Settings</CardTitle>
         <CardDescription>
-          Define your company's payroll cycle, including the type, cut-off day, and payment offset.
+          {canEdit
+            ? "Define your company's payroll cycle, including the type, cut-off day, and payment offset."
+            : "This is the company pay cycle. An Admin sets it, and your payroll uses it."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -164,7 +170,7 @@ const PayCycleSettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <Button type="submit" disabled={!canEdit}>Save Pay Cycle Settings</Button>
+          {canEdit && <Button type="submit">Save Pay Cycle Settings</Button>}
         </form>
       </CardContent>
     </Card>
