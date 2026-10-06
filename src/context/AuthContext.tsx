@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isRefreshingRef = useRef<boolean>(false);
   const lastRefreshTsRef = useRef<number>(0);
   const userRef = useRef<AuthUser | null>(null);
+  const pathnameRef = useRef(location.pathname);
+  const navigateRef = useRef(navigate);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
@@ -48,20 +50,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const redirectAfterLogin = useCallback(() => {
+    const path = pathnameRef.current;
+    const go = navigateRef.current;
     const onAuthPages =
-      location.pathname === "/login" ||
-      location.pathname === "/employee" ||
-      location.pathname === STAFF_LOGIN_PATH;
+      path === "/login" ||
+      path === "/employee" ||
+      path === STAFF_LOGIN_PATH;
 
     if (!onAuthPages) return;
 
-    if (location.pathname === STAFF_LOGIN_PATH || location.pathname === "/employee") {
-      navigate(staffPortalPath(), { replace: true });
+    if (path === STAFF_LOGIN_PATH || path === "/employee") {
+      go(staffPortalPath(), { replace: true });
       return;
     }
 
-    navigate("/dashboard", { replace: true });
-  }, [location.pathname, navigate]);
+    go("/dashboard", { replace: true });
+  }, []);
 
   const refreshSession = useCallback(
     async (opts?: { silent?: boolean; force?: boolean }) => {
@@ -115,7 +119,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const applySession = (sessionUser: { id: string; email?: string }, event?: string) => {
       void (async () => {
-        setIsLoadingAuth(true);
+        // A repeat session event (route change, token refresh) must not replace the page with a spinner.
+        const blockUi = !userRef.current;
+        if (blockUi) setIsLoadingAuth(true);
         try {
           const dbProfile = await fetchProfile(sessionUser.id);
           if (!dbProfile) {
@@ -132,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               userId: dbProfile.id,
               email: dbProfile.email,
               role: dbProfile.role,
-              portal: isStaffPortalPath(location.pathname) ? "staff" : "admin",
+              portal: isStaffPortalPath(pathnameRef.current) ? "staff" : "admin",
             });
             redirectAfterLogin();
           } else if (event === "INITIAL_SESSION") {
@@ -144,7 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           setIsAuthenticated(false);
         } finally {
-          setIsLoadingAuth(false);
+          if (blockUi) setIsLoadingAuth(false);
         }
       })();
     };
@@ -164,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 userId: signedOutUser.id,
                 email: signedOutUser.email,
                 role: signedOutUser.role,
-                portal: isStaffPortalPath(location.pathname) ? "staff" : "admin",
+                portal: isStaffPortalPath(pathnameRef.current) ? "staff" : "admin",
               });
             }
           }
@@ -172,11 +178,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsAuthenticated(false);
           setIsLoadingAuth(false);
           if (event === "SIGNED_OUT") {
-            const target = isStaffPortalPath(location.pathname) ? STAFF_LOGIN_PATH : "/login";
-            if (location.pathname !== target) {
-              navigate(target, { replace: true });
+            const path = pathnameRef.current;
+            const target = isStaffPortalPath(path) ? STAFF_LOGIN_PATH : "/login";
+            if (path !== target) {
+              navigateRef.current(target, { replace: true });
             }
           }
+          return;
+        }
+
+        if (event === "TOKEN_REFRESHED" && userRef.current?.id === session.user.id) {
           return;
         }
 
@@ -186,8 +197,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
-        if (location.pathname !== "/login" && location.pathname !== STAFF_LOGIN_PATH) {
-          navigate(isStaffPortalPath(location.pathname) ? STAFF_LOGIN_PATH : "/login", {
+        const path = pathnameRef.current;
+        if (path !== "/login" && path !== STAFF_LOGIN_PATH) {
+          navigateRef.current(isStaffPortalPath(path) ? STAFF_LOGIN_PATH : "/login", {
             replace: true,
           });
         }
@@ -232,11 +244,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchProfile, location.pathname, navigate, redirectAfterLogin]);
+  }, [fetchProfile, redirectAfterLogin]);
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+  }, [location.pathname]);
+
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
 
   useEffect(() => {
     // Safety: never allow auth loading to block the app forever
