@@ -219,6 +219,9 @@ const PayslipPdfDocument: React.FC<Props> = ({
                   <View style={styles.ytdRow}><Text>YTD Deductions</Text><Text>{currency(p.ytdTotalDeductions || 0)}</Text></View>
                 </>
               )}
+              {payslipDesignSettings.showSavingsBalance && p?.savingsBalance != null && (
+                <View style={styles.ytdRow}><Text>Savings already saved</Text><Text>{currency(p.savingsBalance)}</Text></View>
+              )}
               <View style={styles.hr} />
               <View style={styles.summaryRow}>
                 <Text style={{ fontSize: 12, fontWeight: 700 }}>Net Pay</Text>

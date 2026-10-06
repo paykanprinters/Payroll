@@ -197,6 +197,8 @@ export interface MockPayslip {
   leaveSummary: { annual: number; sick: number; unpaid: number; family?: number };
   ytdGrossEarnings: number;
   ytdTotalDeductions: number;
+  /** Savings held after this payslip, including this period's deduction. Not part of total deductions. */
+  savingsBalance?: number | null;
 
   // Snapshot branding for RLS-safe rendering
   companyName?: string;
@@ -236,6 +238,8 @@ export interface PayslipDesignSettings {
   showLeaveSummary: boolean;
   showBankDetails: boolean;
   showYTD: boolean;
+  /** When on, the payslip shows the savings total already saved. It is not another deduction. */
+  showSavingsBalance?: boolean;
   showHourlyRate: boolean; // existing
   // NEW visibility toggles
   showEmployeeIdNumber?: boolean;

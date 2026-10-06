@@ -60,6 +60,24 @@ export function savingsDeductionBase(
   return entry.overrideAmount;
 }
 
+/**
+ * Total already saved once this payslip's savings deduction is included.
+ * amountPaid is the balance before this period is recorded.
+ * Returns null when the employee has no savings balance and no deduction this period.
+ */
+export function savingsSavedToDate(
+  entries: Pick<PayrollSavingsEntry, "employeeId" | "amountPaid">[] | null | undefined,
+  employeeId: string,
+  periodSavingsDeduction: number
+): number | null {
+  const savedBefore = (entries ?? [])
+    .filter((entry) => entry.employeeId === employeeId)
+    .reduce((sum, entry) => sum + (Number(entry.amountPaid) || 0), 0);
+  const period = Number(periodSavingsDeduction) || 0;
+  if (savedBefore === 0 && period === 0) return null;
+  return Math.round((savedBefore + period) * 100) / 100;
+}
+
 /** The end date is the last day the plan still collects. The next day it is finished. */
 export function savingsScheduleFinished(endDate: string | null | undefined, today = localDateString()): boolean {
   if (!endDate) return false;

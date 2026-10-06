@@ -15,6 +15,7 @@ type DbRow = {
   show_leave_summary: boolean | null;
   show_bank_details: boolean | null;
   show_ytd: boolean | null;
+  show_savings_balance: boolean | null;
   show_hourly_rate: boolean | null;
   show_employee_id_number: boolean | null;
   show_employee_tax_ref_number: boolean | null;
@@ -39,6 +40,7 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
   showLeaveSummary: true,
   showBankDetails: true,
   showYTD: true,
+  showSavingsBalance: false,
   showHourlyRate: true,
   showEmployeeIdNumber: false,
   showEmployeeTaxRefNumber: false,
@@ -72,6 +74,7 @@ function toDomain(row: DbRow): PayslipDesignSettings {
     showLeaveSummary: row.show_leave_summary ?? DEFAULT_SETTINGS.showLeaveSummary,
     showBankDetails: row.show_bank_details ?? DEFAULT_SETTINGS.showBankDetails,
     showYTD: row.show_ytd ?? DEFAULT_SETTINGS.showYTD,
+    showSavingsBalance: row.show_savings_balance ?? DEFAULT_SETTINGS.showSavingsBalance,
     showHourlyRate: row.show_hourly_rate ?? DEFAULT_SETTINGS.showHourlyRate,
     showEmployeeIdNumber: row.show_employee_id_number ?? DEFAULT_SETTINGS.showEmployeeIdNumber,
     showEmployeeTaxRefNumber: row.show_employee_tax_ref_number ?? DEFAULT_SETTINGS.showEmployeeTaxRefNumber,
@@ -97,6 +100,7 @@ function fromDomain(settings: PayslipDesignSettings, userId: string): Omit<DbRow
     show_leave_summary: settings.showLeaveSummary,
     show_bank_details: settings.showBankDetails,
     show_ytd: settings.showYTD,
+    show_savings_balance: settings.showSavingsBalance ?? false,
     show_hourly_rate: settings.showHourlyRate,
     show_employee_id_number: settings.showEmployeeIdNumber ?? false,
     show_employee_tax_ref_number: settings.showEmployeeTaxRefNumber ?? false,

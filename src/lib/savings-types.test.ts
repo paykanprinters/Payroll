@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PayrollSavingsEntry, savingsDeductionBase, updateStatusClient } from "@/lib/savings-types";
+import { PayrollSavingsEntry, savingsDeductionBase, savingsSavedToDate, updateStatusClient } from "@/lib/savings-types";
 
 function entry(partial: Partial<PayrollSavingsEntry>): PayrollSavingsEntry {
   return {
@@ -18,6 +18,20 @@ function entry(partial: Partial<PayrollSavingsEntry>): PayrollSavingsEntry {
     ...partial,
   };
 }
+
+describe("savingsSavedToDate", () => {
+  it("adds this period's deduction to the amount already saved", () => {
+    expect(savingsSavedToDate([entry({ amountPaid: 3500 })], "emp-1", 250)).toBe(3750);
+  });
+
+  it("ignores another employee's balance", () => {
+    expect(savingsSavedToDate([entry({ employeeId: "emp-2", amountPaid: 3500 })], "emp-1", 150)).toBe(150);
+  });
+
+  it("returns null when nothing has been saved and nothing is deducted", () => {
+    expect(savingsSavedToDate([entry({ amountPaid: 0 })], "emp-1", 0)).toBeNull();
+  });
+});
 
 describe("savingsDeductionBase", () => {
   const entry = {

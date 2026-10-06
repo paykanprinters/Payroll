@@ -13,7 +13,7 @@ import {
   MockPayslip,
   TimesheetEntry,
 } from "../mock-data-interfaces";
-import { PayrollSavingsEntry } from "@/lib/savings-types";
+import { PayrollSavingsEntry, savingsSavedToDate } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { bankersRound } from "@/lib/utils";
@@ -231,6 +231,10 @@ export const generatePayslipsForPeriod = (
       earningsResult.unpaidLeaveDaysInPeriod
     );
 
+    const periodSavings = finalDeductions
+      .filter((line) => (line.name || "").trim() === "Savings")
+      .reduce((sum, line) => sum + (line.amount || 0), 0);
+
     payslipsForPeriod.push({
       id: uuidv4(),
       employeeId: emp.id,
@@ -245,6 +249,7 @@ export const generatePayslipsForPeriod = (
       leaveSummary,
       ytdGrossEarnings: 0,
       ytdTotalDeductions: 0,
+      savingsBalance: savingsSavedToDate(payrollSavingsEntries, emp.id, periodSavings),
     });
   });
 

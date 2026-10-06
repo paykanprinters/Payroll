@@ -70,6 +70,7 @@ const IndividualPayslipCard: React.FC<Props> = ({
     showLeaveSummary,
     showBankDetails,
     showYTD,
+    showSavingsBalance,
     // new toggles
     showEmployeeIdNumber,
     showEmployeeTaxRefNumber,
@@ -387,6 +388,13 @@ const IndividualPayslipCard: React.FC<Props> = ({
                 </span>
               </div>
             </>
+          ) : null}
+
+          {showSavingsBalance && payslip.savingsBalance != null ? (
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-sm font-medium">Savings already saved</span>
+              <span className="text-sm">{currency(payslip.savingsBalance)}</span>
+            </div>
           ) : null}
 
           <Separator className="my-3" />

@@ -27,6 +27,7 @@ const defaultPayslipSettings: PayslipDesignSettings = {
   showLeaveSummary: true,
   showBankDetails: true,
   showYTD: true,
+  showSavingsBalance: false,
   showHourlyRate: true,
   showEmployeeIdNumber: false,
   showEmployeeTaxRefNumber: false,
@@ -229,6 +230,7 @@ const PayslipDesign: React.FC = () => {
     },
     ytdGrossEarnings: 157500.00,
     ytdTotalDeductions: 43877.12,
+    savingsBalance: 3500,
   };
 
   return (
