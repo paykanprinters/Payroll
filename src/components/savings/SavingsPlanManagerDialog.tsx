@@ -56,6 +56,7 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
   const [goalAmount, setGoalAmountState] = useState("");
   const [openingBalance, setOpeningBalanceState] = useState("");
   const [overrideAmount, setOverrideAmountState] = useState("");
+  const [overrideEndDate, setOverrideEndDate] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentPeriod, setPaymentPeriod] = useState("");
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
@@ -97,6 +98,7 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
         setGoalAmountState(tmp.goalAmount != null ? String(tmp.goalAmount) : "");
         setOpeningBalanceState(tmp.openingBalance ? String(tmp.openingBalance) : "");
         setOverrideAmountState(tmp.overrideAmount != null ? String(tmp.overrideAmount) : "");
+        setOverrideEndDate(tmp.overrideEndDate ? tmp.overrideEndDate.slice(0, 10) : "");
         setPauseReason(tmp.pauseReason ?? "");
         setNextPaymentDate(tmp.nextPaymentDate ?? "");
       }
@@ -180,9 +182,10 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
       showError("Override amount must be a non-negative number.");
       return;
     }
-    const updated = await setOverrideAmount(plan.id, amt);
+    const updated = await setOverrideAmount(plan.id, amt, overrideEndDate || null);
     if (updated) {
       setEntry(updated);
+      setOverrideEndDate(updated.overrideEndDate ? updated.overrideEndDate.slice(0, 10) : "");
       showSuccess("Deduction override saved.");
     }
   };
@@ -247,8 +250,8 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto p-0 sm:max-w-[640px]">
-        <DialogHeader className="space-y-2 border-b px-6 py-5 text-left">
+      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 space-y-2 border-b px-6 py-5 text-left">
           <DialogTitle>Manage savings plan</DialogTitle>
           <DialogDescription>
             {plan
@@ -260,33 +263,50 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
         {!plan || loading || !entry ? (
           <div className="px-6 py-10 text-center text-muted-foreground">Loading plan details…</div>
         ) : (
-          <div className="space-y-6 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Tracking status</div>
-                {statusBadge}
-                <p className="max-w-[240px] text-xs text-muted-foreground">
-                  Pending while this plan is still collecting. It turns paid after the end date, or sooner if the saved total reaches a goal.
-                </p>
+          <div className="space-y-4 overflow-y-auto px-6 py-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="rounded-md border px-3 py-2">
+                <div className="text-xs text-muted-foreground">Tracking status</div>
+                <div className="mt-1">{statusBadge}</div>
               </div>
-              <div className="text-right text-sm">
-                <div>Deduction: {money(plan.amount)}</div>
-                <div>Override: {entry.overrideAmount != null ? money(entry.overrideAmount) : "None"}</div>
-                <div>Goal: {entry.goalAmount != null ? money(entry.goalAmount) : "None"}</div>
-                <div>Already saved: {money(entry.openingBalance ?? 0)}</div>
-                <div>Paid: {money(entry.amountPaid)}</div>
-                <div>
-                  Remaining:{" "}
+              <div className="rounded-md border px-3 py-2 text-sm">
+                <div className="text-xs text-muted-foreground">Deduction</div>
+                <div className="mt-1 font-medium">{money(plan.amount)}</div>
+              </div>
+              <div className="rounded-md border px-3 py-2 text-sm">
+                <div className="text-xs text-muted-foreground">Already saved</div>
+                <div className="mt-1 font-medium">{money(entry.openingBalance ?? 0)}</div>
+              </div>
+              <div className="rounded-md border px-3 py-2 text-sm">
+                <div className="text-xs text-muted-foreground">Paid</div>
+                <div className="mt-1 font-medium">{money(entry.amountPaid)}</div>
+              </div>
+              <div className="rounded-md border px-3 py-2 text-sm">
+                <div className="text-xs text-muted-foreground">Goal</div>
+                <div className="mt-1 font-medium">{entry.goalAmount != null ? money(entry.goalAmount) : "None"}</div>
+              </div>
+              <div className="rounded-md border px-3 py-2 text-sm">
+                <div className="text-xs text-muted-foreground">Remaining</div>
+                <div className="mt-1 font-medium">
                   {entry.goalAmount == null ? "No goal" : money(entry.remainingBalance ?? 0)}
                 </div>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Pending while this plan is still collecting. It turns paid after the end date, or sooner if the saved total reaches a goal.
+              {entry.overrideAmount != null
+                ? ` Override ${money(entry.overrideAmount)}${entry.overrideEndDate ? ` until ${format(parseISO(entry.overrideEndDate), "dd MMM yyyy")}` : ""}.`
+                : ""}
+            </p>
 
             <Separator />
 
             <div className="space-y-3">
-              <Label>Plan schedule</Label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label>Plan schedule</Label>
+                <Button type="button" onClick={handleSavePlan}>Save plan</Button>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="space-y-2">
                   <Label htmlFor="deductionAmount">Deduction amount (R)</Label>
                   <Input
@@ -331,7 +351,6 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
                   </Select>
                 </div>
               </div>
-              <Button type="button" onClick={handleSavePlan}>Save plan</Button>
               <p className="text-xs text-muted-foreground">
                 Payroll deducts this amount on each run from the start date through the end date. After the end date the deduction stops and tracking turns paid.
               </p>
@@ -339,6 +358,7 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
 
             <Separator />
 
+            <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-3">
               <Label htmlFor="goalAmount">Savings goal (optional)</Label>
               <div className="flex gap-2">
@@ -358,8 +378,6 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
               </p>
             </div>
 
-            <Separator />
-
             <div className="space-y-3">
               <Label htmlFor="openingBalance">Already saved</Label>
               <div className="flex gap-2">
@@ -378,31 +396,43 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
                 Money saved before this system. Added once to the balance. It does not change the weekly deduction.
               </p>
             </div>
-
-            <Separator />
-
-            <div className="space-y-3">
-              <Label htmlFor="overrideAmount">Deduction override (optional)</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="overrideAmount"
-                  type="number"
-                  step="0.01"
-                  value={overrideAmount}
-                  onChange={(e) => setOverrideAmountState(e.target.value)}
-                />
-                <Button type="button" onClick={handleSaveOverride}>Save</Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Replaces the deduction on the payslip. It does not change the savings goal.
-              </p>
             </div>
 
             <Separator />
 
+            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-3">
+              <Label htmlFor="overrideAmount">Deduction override (optional)</Label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="overrideAmount">Amount (R)</Label>
+                  <Input
+                    id="overrideAmount"
+                    type="number"
+                    step="0.01"
+                    value={overrideAmount}
+                    onChange={(e) => setOverrideAmountState(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="overrideEndDate">Ends on</Label>
+                  <Input
+                    id="overrideEndDate"
+                    type="date"
+                    value={overrideEndDate}
+                    onChange={(e) => setOverrideEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button type="button" onClick={handleSaveOverride}>Save</Button>
+              <p className="text-xs text-muted-foreground">
+                Replaces the plan deduction until this date. It is not added on top of it. Leave the date blank and the override stays until you clear the amount.
+              </p>
+            </div>
+
             <div className="space-y-3">
               <Label htmlFor="paymentAmount">Record payment</Label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="paymentAmount">Amount (R)</Label>
                   <Input
@@ -423,8 +453,8 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
                     onChange={(e) => setPaymentPeriod(e.target.value)}
                   />
                 </div>
-                <Button type="button" onClick={handleRecordPayment}>Record</Button>
               </div>
+              <Button type="button" onClick={handleRecordPayment}>Record</Button>
               {payments.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No payments recorded yet.</p>
               ) : (
@@ -445,11 +475,9 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
               )}
             </div>
 
-            <Separator />
-
             <div className="space-y-3">
               <Label htmlFor="withdrawalAmount">Withdraw</Label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="withdrawalAmount">Amount (R)</Label>
                   <Input
@@ -470,11 +498,12 @@ const SavingsPlanManagerDialog: React.FC<Props> = ({ open, onOpenChange, plan, e
                     onChange={(e) => setWithdrawalDate(e.target.value)}
                   />
                 </div>
-                <Button type="button" variant="secondary" onClick={handleRecordWithdrawal}>Withdraw</Button>
               </div>
+              <Button type="button" variant="secondary" onClick={handleRecordWithdrawal}>Withdraw</Button>
               <p className="text-xs text-muted-foreground">
                 Reduces the saved balance. It cannot be more than the amount already saved.
               </p>
+            </div>
             </div>
 
             <Separator />

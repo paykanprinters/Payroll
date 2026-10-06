@@ -8,6 +8,8 @@ export interface PayrollSavingsEntry {
   planId: string;
   originalAmount: number;
   overrideAmount?: number | null;
+  /** Last day the override replaces the plan deduction. Blank means it stays until cleared. */
+  overrideEndDate?: string | null;
   /** Total the employee is saving toward. The weekly or monthly deduction stays on the plan. */
   goalAmount?: number | null;
   /** Money already saved before this system started taking deductions. */
@@ -37,6 +39,25 @@ export function localDateString(date = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * Amount payroll deducts for one period.
+ * An override replaces the plan amount. It is not added to it.
+ * A pay period that starts after the override end date uses the plan amount again.
+ */
+export function savingsDeductionBase(
+  planAmount: number,
+  entry: Pick<PayrollSavingsEntry, "originalAmount" | "overrideAmount" | "overrideEndDate"> | null,
+  periodStart: string
+): number {
+  if (!entry) return planAmount;
+  const planDeduction = Number.isFinite(entry.originalAmount) ? entry.originalAmount : planAmount;
+  if (entry.overrideAmount == null) return planDeduction;
+  if (entry.overrideEndDate && periodStart.slice(0, 10) > entry.overrideEndDate.slice(0, 10)) {
+    return planDeduction;
+  }
+  return entry.overrideAmount;
 }
 
 /** The end date is the last day the plan still collects. The next day it is finished. */

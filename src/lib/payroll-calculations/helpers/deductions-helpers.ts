@@ -1,6 +1,6 @@
 import { format, differenceInYears, parseISO, isSameMonth, differenceInCalendarDays } from "date-fns";
 import { MockEmployee, Loan, SavingPlan, LoanDeductionHistoryEntry } from "@/lib/mock-data-interfaces";
-import { PayrollSavingsEntry } from "@/lib/savings-types";
+import { PayrollSavingsEntry, savingsDeductionBase } from "@/lib/savings-types";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { bankersRound } from "@/lib/utils";
@@ -301,9 +301,7 @@ export const buildDeductions = (
 
     if (entryForPlan?.paused === true) return;
 
-    const baseAmount = entryForPlan
-      ? (entryForPlan.overrideAmount ?? entryForPlan.originalAmount)
-      : plan.amount;
+    const baseAmount = savingsDeductionBase(plan.amount, entryForPlan, format(periodStart, "yyyy-MM-dd"));
 
     let deductionAmount = 0;
     if (plan.frequency === employeePayFrequency.toLowerCase()) {

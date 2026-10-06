@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PayrollSavingsEntry, updateStatusClient } from "@/lib/savings-types";
+import { PayrollSavingsEntry, savingsDeductionBase, updateStatusClient } from "@/lib/savings-types";
 
 function entry(partial: Partial<PayrollSavingsEntry>): PayrollSavingsEntry {
   return {
@@ -18,6 +18,26 @@ function entry(partial: Partial<PayrollSavingsEntry>): PayrollSavingsEntry {
     ...partial,
   };
 }
+
+describe("savingsDeductionBase", () => {
+  const entry = {
+    originalAmount: 250,
+    overrideAmount: 100,
+    overrideEndDate: "2026-10-31",
+  };
+
+  it("replaces the plan deduction and does not add the override to it", () => {
+    expect(savingsDeductionBase(250, entry, "2026-10-06")).toBe(100);
+  });
+
+  it("uses the plan deduction once the pay period starts after the override end date", () => {
+    expect(savingsDeductionBase(250, entry, "2026-11-02")).toBe(250);
+  });
+
+  it("keeps the override on a pay period that starts on the end date", () => {
+    expect(savingsDeductionBase(250, entry, "2026-10-31")).toBe(100);
+  });
+});
 
 describe("updateStatusClient", () => {
   it("stays pending when payments only cover the weekly deduction and no goal is set", () => {

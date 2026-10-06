@@ -19,6 +19,7 @@ const toCamel = (value: unknown): PayrollSavingsEntry => {
     planId: row.plan_id as string,
     originalAmount: Number(row.original_amount),
     overrideAmount: row.override_amount !== null ? Number(row.override_amount) : null,
+    overrideEndDate: (row.override_end_date as string | null) ?? null,
     goalAmount: row.goal_amount != null ? Number(row.goal_amount) : null,
     openingBalance: row.opening_balance != null ? Number(row.opening_balance) : 0,
     amountPaid: Number(row.amount_paid),
@@ -40,6 +41,7 @@ const toSnake = (partial: Partial<PayrollSavingsEntry>): UnknownRecord => {
   if ("planId" in partial) out.plan_id = partial.planId;
   if ("originalAmount" in partial) out.original_amount = partial.originalAmount;
   if ("overrideAmount" in partial) out.override_amount = partial.overrideAmount ?? null;
+  if ("overrideEndDate" in partial) out.override_end_date = partial.overrideEndDate ?? null;
   if ("goalAmount" in partial) out.goal_amount = partial.goalAmount ?? null;
   if ("openingBalance" in partial) out.opening_balance = partial.openingBalance ?? 0;
   if ("amountPaid" in partial) out.amount_paid = partial.amountPaid;
@@ -82,17 +84,22 @@ export async function upsertEntry(partial: Partial<PayrollSavingsEntry>): Promis
   return data ? toCamel(data) : null;
 }
 
-export async function setOverrideAmount(planId: string, overrideAmount: number | null): Promise<PayrollSavingsEntry | null> {
-  // Fetch current, compute status based on new override
+export async function setOverrideAmount(
+  planId: string,
+  overrideAmount: number | null,
+  overrideEndDate: string | null = null
+): Promise<PayrollSavingsEntry | null> {
   const current = await getEntryByPlanId(planId);
   if (!current) return null;
-  const next = { ...current, overrideAmount };
+  const endDate = overrideAmount == null ? null : overrideEndDate;
+  const next = { ...current, overrideAmount, overrideEndDate: endDate };
   updateStatusClient(next, { endDate: await endDateForPlan(planId) });
   const updated = await upsertEntry({
     id: current.id,
     planId,
     employeeId: current.employeeId,
     overrideAmount,
+    overrideEndDate: endDate,
     status: next.status,
     paused: next.paused,
   });

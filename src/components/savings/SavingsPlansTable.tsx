@@ -69,9 +69,10 @@ const SavingsPlansTable: React.FC<SavingsPlansTableProps> = ({
                   R {plan.amount.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-xs capitalize text-muted-foreground">{plan.frequency}</p>
-                {entry?.overrideAmount != null && entry.overrideAmount !== entry.originalAmount && (
+                {entry?.overrideAmount != null && (
                   <p className="text-xs text-amber-700">
                     Override: R {entry.overrideAmount.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+                    {entry.overrideEndDate ? ` until ${format(new Date(entry.overrideEndDate), "dd MMM yyyy")}` : ""}
                   </p>
                 )}
               </TableCell>
