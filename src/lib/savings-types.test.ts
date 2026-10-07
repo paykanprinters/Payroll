@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { PayrollSavingsEntry, savingsDeductionBase, savingsSavedToDate, updateStatusClient } from "@/lib/savings-types";
+import {
+  employeeIdsWithSavingsAlreadyPosted,
+  PayrollSavingsEntry,
+  savingsDeductionBase,
+  savingsSavedToDate,
+  updateStatusClient,
+} from "@/lib/savings-types";
 
 function entry(partial: Partial<PayrollSavingsEntry>): PayrollSavingsEntry {
   return {
@@ -34,6 +40,19 @@ describe("savingsSavedToDate", () => {
 
   it("does not add this week again when the balance already includes it", () => {
     expect(savingsSavedToDate([entry({ amountPaid: 3750 })], "emp-1", 250, true)).toBe(3750);
+  });
+});
+
+describe("employeeIdsWithSavingsAlreadyPosted", () => {
+  it("keeps every employee on a replacement so the week is not added again", () => {
+    const posted = employeeIdsWithSavingsAlreadyPosted(["lynn", "selwyn"], true, new Set());
+    expect(posted.has("lynn")).toBe(true);
+    expect(posted.has("selwyn")).toBe(true);
+  });
+
+  it("adds the week on a new run only for employees who do not already have that payment", () => {
+    const posted = employeeIdsWithSavingsAlreadyPosted(["lynn", "selwyn"], false, new Set(["lynn"]));
+    expect([...posted]).toEqual(["lynn"]);
   });
 });
 

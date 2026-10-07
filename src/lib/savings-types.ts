@@ -80,6 +80,20 @@ export function savingsSavedToDate(
   return Math.round((savedBefore + period) * 100) / 100;
 }
 
+/**
+ * Employees whose savings tab already includes this period.
+ * A replacement never adds the week again, even when the payment lookup is empty.
+ * A new run adds it only for people who do not already have a payment for that period.
+ */
+export function employeeIdsWithSavingsAlreadyPosted(
+  employeeIds: readonly string[],
+  replaceExisting: boolean,
+  postedThisPeriod: ReadonlySet<string>
+): Set<string> {
+  if (replaceExisting) return new Set(employeeIds);
+  return new Set(postedThisPeriod);
+}
+
 /** The end date is the last day the plan still collects. The next day it is finished. */
 export function savingsScheduleFinished(endDate: string | null | undefined, today = localDateString()): boolean {
   if (!endDate) return false;

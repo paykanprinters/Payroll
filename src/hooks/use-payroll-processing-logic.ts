@@ -27,7 +27,7 @@ import { TaxTables } from "./use-tax-tables";
 import type { TaxTableValidationResult } from "@/lib/tax-tables-validation";
 import { getTaxTableBlockingMessage } from "@/lib/tax-tables-validation";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
-import { PayrollSavingsEntry } from "@/lib/savings-types";
+import { employeeIdsWithSavingsAlreadyPosted, PayrollSavingsEntry } from "@/lib/savings-types";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import type { OvertimePremiumRules } from "@/lib/payroll-calculations/helpers/earnings-helpers";
@@ -96,9 +96,15 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
-      const savingsAlreadyPosted = isMockDataEnabled
-        ? new Set<string>()
-        : await listEmployeeIdsWithSavingsPaymentForPeriod(format(periodEnd, "yyyy-MM-dd"));
+      const postedThisPeriod =
+        options?.replaceExisting || isMockDataEnabled
+          ? new Set<string>()
+          : await listEmployeeIdsWithSavingsPaymentForPeriod(format(periodEnd, "yyyy-MM-dd"));
+      const savingsAlreadyPosted = employeeIdsWithSavingsAlreadyPosted(
+        employees.map((employee) => employee.id),
+        Boolean(options?.replaceExisting) && !isMockDataEnabled,
+        postedThisPeriod
+      );
       const { payslips: newPayslips, updatedLoans, updatedSavingPlans, savingPaymentsToRecord } = generatePayslipsForPeriod(
         employees,
         loans,
