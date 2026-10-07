@@ -88,7 +88,7 @@ const PayslipVisibilityOptions: React.FC<PayslipVisibilityOptionsProps> = ({
         />
       </div>
       <div className="flex items-center justify-between">
-        <Label htmlFor="showLoan">Show Loan Deduction and Balance</Label>
+        <Label htmlFor="showLoan">Show Loan Outstanding</Label>
         <Switch
           id="showLoan"
           checked={!!settings.showLoan}

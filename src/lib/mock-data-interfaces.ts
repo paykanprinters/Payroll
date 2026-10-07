@@ -244,7 +244,7 @@ export interface PayslipDesignSettings {
   showYTD: boolean;
   /** When on, the payslip shows the savings total already saved. It is not another deduction. */
   showSavingsBalance?: boolean;
-  /** When on, the payslip shows this period's loan deduction and the balance still outstanding. */
+  /** When on, the payslip shows the loan balance still outstanding. The repayment itself stays in deductions. */
   showLoan?: boolean;
   showHourlyRate: boolean; // existing
   // NEW visibility toggles

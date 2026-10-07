@@ -391,13 +391,6 @@ const IndividualPayslipCard: React.FC<Props> = ({
             </>
           ) : null}
 
-          {showLoan && payslip.loanDeduction != null ? (
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-sm font-medium">Loan deduction</span>
-              <span className="text-sm">{currency(payslip.loanDeduction)}</span>
-            </div>
-          ) : null}
-
           {showLoan && payslip.loanBalance != null ? (
             <div className="flex items-center justify-between mt-2">
               <span className="text-sm font-medium">Loan outstanding</span>

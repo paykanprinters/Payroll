@@ -211,8 +211,8 @@ const PayslipDesign: React.FC = () => {
     payPeriod: "01/07/2024 - 31/07/2024",
     payDate: "25/07/2024",
     grossEarnings: 22500.00,
-    totalDeductions: 4877.12,
-    netPay: 17622.88,
+    totalDeductions: 5377.12,
+    netPay: 17122.88,
     earningsBreakdown: [
       { name: "Basic Salary", amount: 20000.00 },
       { name: "Travel Allowance", amount: 2000.00 },
@@ -223,6 +223,7 @@ const PayslipDesign: React.FC = () => {
       { name: "UIF", amount: 177.12 },
       { name: "SDL", amount: 200.00 },
       { name: "Provident Fund", amount: 1500.00 },
+      { name: "Loan Repayment", amount: 500.00 },
     ],
     leaveSummary: {
       annual: 15,
