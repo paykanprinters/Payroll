@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS: PayslipDesignSettings = {
   showBankDetails: true,
   showYTD: true,
   showSavingsBalance: false,
+  showLoan: false,
   showHourlyRate: true,
   // New toggles default to false
   showEmployeeIdNumber: false,

@@ -199,6 +199,10 @@ export interface MockPayslip {
   ytdTotalDeductions: number;
   /** Savings held after this payslip, including this period's deduction. Not part of total deductions. */
   savingsBalance?: number | null;
+  /** Loan amount taken off this payslip. Already included in total deductions. */
+  loanDeduction?: number | null;
+  /** Loan balance still outstanding after this payslip. Not another deduction. */
+  loanBalance?: number | null;
 
   // Snapshot branding for RLS-safe rendering
   companyName?: string;
@@ -240,6 +244,8 @@ export interface PayslipDesignSettings {
   showYTD: boolean;
   /** When on, the payslip shows the savings total already saved. It is not another deduction. */
   showSavingsBalance?: boolean;
+  /** When on, the payslip shows this period's loan deduction and the balance still outstanding. */
+  showLoan?: boolean;
   showHourlyRate: boolean; // existing
   // NEW visibility toggles
   showEmployeeIdNumber?: boolean;

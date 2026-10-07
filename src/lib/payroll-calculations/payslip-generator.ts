@@ -14,6 +14,7 @@ import {
   TimesheetEntry,
 } from "../mock-data-interfaces";
 import { PayrollSavingsEntry, savingsSavedToDate } from "@/lib/savings-types";
+import { loanPayslipFigures } from "@/lib/payroll-calculations/helpers/loan-payslip";
 import { TaxTables } from "@/hooks/use-tax-tables";
 import { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
 import { bankersRound } from "@/lib/utils";
@@ -234,6 +235,10 @@ export const generatePayslipsForPeriod = (
     const periodSavings = finalDeductions
       .filter((line) => (line.name || "").trim() === "Savings")
       .reduce((sum, line) => sum + (line.amount || 0), 0);
+    const periodLoan = finalDeductions
+      .filter((line) => (line.name || "").trim() === "Loan Repayment")
+      .reduce((sum, line) => sum + (line.amount || 0), 0);
+    const loanFigures = loanPayslipFigures(processingLoans, emp.id, periodLoan);
 
     payslipsForPeriod.push({
       id: uuidv4(),
@@ -250,6 +255,8 @@ export const generatePayslipsForPeriod = (
       ytdGrossEarnings: 0,
       ytdTotalDeductions: 0,
       savingsBalance: savingsSavedToDate(payrollSavingsEntries, emp.id, periodSavings),
+      loanDeduction: loanFigures.loanDeduction,
+      loanBalance: loanFigures.loanBalance,
     });
   });
 
