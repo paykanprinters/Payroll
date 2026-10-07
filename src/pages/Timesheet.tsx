@@ -6,7 +6,6 @@ import { showError, showSuccess } from "@/utils/toast";
 import { createPayrollRun, fetchPayrollRuns } from "@/integrations/supabase/payroll-run-queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Clock, CheckCircle2, FileClock, Lock } from "lucide-react";
-import { useTimesheetData } from "@/hooks/use-timesheet-data";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import TimesheetEntryDialog from "@/components/timesheet/TimesheetEntryDialog";
@@ -31,39 +30,24 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
 
   const {
     employees,
-    leaveRecords,
     isMockDataEnabled,
-    timesheets: initialTimesheets,
-    isAuthenticated,
-    isLoadingAuth,
     workHoursSettings,
     isLoadingEmployees,
     companyDetails,
     payCycleSettings,
-  } = usePayrollProcessor();
-
-  const {
     timesheets,
-    isEditing,
+    isEditingTimesheet: isEditing,
     editingTimesheet,
     getEmployeeName,
     addOrUpdateTimesheet,
     deleteTimesheet,
     updateTimesheetStatus,
-    startEditing,
-    cancelEditing,
+    startEditingTimesheet: startEditing,
+    cancelEditingTimesheet: cancelEditing,
     isLeaveDay,
     addTimesheetBatch,
     isLoadingTimesheets,
-  } = useTimesheetData({
-    initialTimesheets,
-    employees,
-    leaveRecords,
-    isMockDataEnabled,
-    isAuthenticated,
-    isLoadingAuth,
-    workHoursSettings,
-  });
+  } = usePayrollProcessor();
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
   const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = React.useState(false);

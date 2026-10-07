@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { format, parse, isWithinInterval, addDays } from "date-fns";
 import { MockEmployee, TimesheetEntry, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
@@ -41,6 +41,8 @@ export const useTimesheetData = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetEntry | null>(null);
   const [isLoadingTimesheets, setIsLoadingTimesheets] = useState(true);
+  const [timesheetsLoaded, setTimesheetsLoaded] = useState(false);
+  const fetchSeq = useRef(0);
 
   const weeklyThreshold = (workHoursSettings?.overtimeThresholdHours && workHoursSettings.overtimeThresholdHours > 0)
     ? workHoursSettings.overtimeThresholdHours
@@ -51,12 +53,15 @@ export const useTimesheetData = ({
   const workDays = (workHoursSettings?.workDays || []).map(d => d.toLowerCase());
 
   const fetchLiveTimesheets = useCallback(async () => {
+    const seq = ++fetchSeq.current;
     setIsLoadingTimesheets(true);
     try {
       const data = await fetchTimesheetsFromSupabase();
+      if (seq !== fetchSeq.current) return;
       setTimesheets(data);
+      setTimesheetsLoaded(true);
     } finally {
-      setIsLoadingTimesheets(false);
+      if (seq === fetchSeq.current) setIsLoadingTimesheets(false);
     }
   }, []);
 
@@ -126,11 +131,13 @@ export const useTimesheetData = ({
     if (isMockDataEnabled) {
       setTimesheets(initialTimesheets);
       setIsLoadingTimesheets(false);
+      setTimesheetsLoaded(true);
     } else if (isAuthenticated) {
       fetchLiveTimesheets();
     } else {
       setTimesheets([]);
       setIsLoadingTimesheets(false);
+      setTimesheetsLoaded(true);
     }
   }, [isMockDataEnabled, isAuthenticated, isLoadingAuth, initialTimesheets, fetchLiveTimesheets]);
 
@@ -462,7 +469,16 @@ export const useTimesheetData = ({
           const success = await batchUpsertTimesheetsToSupabase(toUpsert);
           if (success) {
             showSuccess(`${toUpsert.length} timesheet entries imported as Approved.`);
-            fetchLiveTimesheets();
+            // Keep these rows in the shared list immediately. A refetch started
+            // before the save must not replace them with the older result.
+            fetchSeq.current += 1;
+            setTimesheets((prev) => {
+              const byId = new Map(prev.map((ts) => [ts.id, ts]));
+              for (const row of toUpsert) byId.set(row.id, row);
+              return Array.from(byId.values());
+            });
+            setTimesheetsLoaded(true);
+            setIsLoadingTimesheets(false);
             return true;
           }
           return false;
@@ -472,7 +488,7 @@ export const useTimesheetData = ({
       }
       return false;
     }
-  }, [employees, isMockDataEnabled, fetchLiveTimesheets, timesheets, weeklyThreshold, currentMetricOpts, cutOffDay, workDays]);
+  }, [employees, isMockDataEnabled, timesheets, weeklyThreshold, currentMetricOpts, cutOffDay, workDays]);
 
   const deleteTimesheet = useCallback(async (id: string) => {
     if (isMockDataEnabled) {
@@ -558,5 +574,7 @@ export const useTimesheetData = ({
     isLeaveDay: checkIsLeaveDay,
     addTimesheetBatch,
     isLoadingTimesheets,
+    timesheetsLoaded,
+    refetchTimesheets: fetchLiveTimesheets,
   };
 };

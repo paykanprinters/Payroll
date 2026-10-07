@@ -98,6 +98,7 @@ const PayrollRunDetailPage: React.FC = () => {
     isMockDataEnabled,
     employees,
     timesheets,
+    timesheetsLoaded,
     companyDetails,
     userTaxSettings,
     taxTables,
@@ -153,28 +154,29 @@ const PayrollRunDetailPage: React.FC = () => {
     };
   }, [run]);
 
+  const awaitingTimesheets = !timesheetsLoaded;
+
   useEffect(() => {
-    if (run && targetPeriod) {
-      const b = computeBlockers(
-        employees || [],
-        timesheets || [],
-        companyDetails || null,
-        userTaxSettings || null,
-        targetPeriod.start,
-        targetPeriod.end,
-        taxTables,
-        activeTaxYearForCalculations
-      );
-      setBlockers(b);
-    }
-  }, [run, employees, timesheets, companyDetails, userTaxSettings, taxTables, activeTaxYearForCalculations, computeBlockers, targetPeriod]);
+    if (!run || !targetPeriod || awaitingTimesheets) return;
+    const b = computeBlockers(
+      employees || [],
+      timesheets || [],
+      companyDetails || null,
+      userTaxSettings || null,
+      targetPeriod.start,
+      targetPeriod.end,
+      taxTables,
+      activeTaxYearForCalculations
+    );
+    setBlockers(b);
+  }, [run, employees, timesheets, companyDetails, userTaxSettings, taxTables, activeTaxYearForCalculations, computeBlockers, targetPeriod, awaitingTimesheets]);
 
   const currentStep: PayrollRunStepId = useMemo(() => {
-    if (!run) return "readiness";
+    if (!run || awaitingTimesheets) return "readiness";
     // If there are blockers, show readiness as the primary step even if in Draft
     if (blockers.length > 0) return "readiness";
     return statusToStep[run.status] ?? "items";
-  }, [run, blockers.length]);
+  }, [run, blockers.length, awaitingTimesheets]);
 
   const handleTransition = async (next: PayrollRunStatus) => {
     if (!run || !id) return;
@@ -573,7 +575,7 @@ const PayrollRunDetailPage: React.FC = () => {
 
   const nextStatuses = statusFlow[run.status];
   const isCancelled = run.status === "Cancelled";
-  const canGenerateItems = canGeneratePayrollItems(blockers) && !isCancelled;
+  const canGenerateItems = canGeneratePayrollItems(blockers) && !isCancelled && !awaitingTimesheets;
   const canApproveRun = canApprovePayrollRun(blockers);
   const canVoid = VOIDABLE_STATUSES.includes(run.status) && !isMockDataEnabled;
 
@@ -668,7 +670,13 @@ const PayrollRunDetailPage: React.FC = () => {
                     <Button
                       onClick={() => void handleProcessPeriod(false)}
                       disabled={!canGenerateItems}
-                      title={!canGenerateItems ? "Resolve error blockers before generating items." : ""}
+                      title={
+                        awaitingTimesheets
+                          ? "Timesheets are still loading."
+                          : !canGenerateItems
+                            ? "Resolve error blockers before generating items."
+                            : ""
+                      }
                       size="sm"
                     >
                       <Play className="h-4 w-4" />
@@ -752,12 +760,16 @@ const PayrollRunDetailPage: React.FC = () => {
                       variant="outline"
                       className={cn(
                         "bg-white",
-                        blockers.length === 0
-                          ? "border-emerald-200 text-emerald-800"
-                          : "border-amber-200 text-amber-900"
+                        awaitingTimesheets || blockers.length > 0
+                          ? "border-amber-200 text-amber-900"
+                          : "border-emerald-200 text-emerald-800"
                       )}
                     >
-                      {blockers.length === 0 ? "No blockers" : `${blockers.length} blocker(s)`}
+                      {awaitingTimesheets
+                        ? "Checking timesheets…"
+                        : blockers.length === 0
+                          ? "No blockers"
+                          : `${blockers.length} blocker(s)`}
                     </Badge>
                   </div>
                 </div>
