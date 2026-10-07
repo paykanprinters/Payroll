@@ -283,9 +283,14 @@ export const usePayrollProcessingLogic = (
         return null;
       }
 
+      const periodLabel = formatPayrollPeriod(periodStart, periodEnd);
       const savingsAlreadyPosted = isMockDataEnabled
         ? new Set<string>()
-        : await listEmployeeIdsWithSavingsPaymentForPeriod(format(periodEnd, "yyyy-MM-dd"));
+        : new Set(
+            payslips
+              .filter((payslip) => payslip.payPeriod === periodLabel)
+              .map((payslip) => payslip.employeeId)
+          );
       const { payslips: previewPayslips } = generatePayslipsForPeriod(
         [employee],
         loans,
@@ -353,6 +358,7 @@ export const usePayrollProcessingLogic = (
       deductionComponents,
       assignments,
       overtimeRules,
+      isMockDataEnabled,
     ]
   );
 
