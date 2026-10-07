@@ -9,6 +9,7 @@ import { calculatePAYE } from "@/lib/payroll-calculations";
 import { computeMonthlyMedicalTaxCredit, getSarsMedicalTaxCredits } from "@/lib/sars-tax-tables";
 import { computeRetirementContribution } from "@/lib/retirement-fund";
 import { shouldTrackEmployeeTax } from "@/lib/employee-tax-tracking";
+import { calendarDateFromIso } from "@/lib/payroll-period-guard";
 
 const computeUIF = (
   grossEarnings: number,
@@ -189,7 +190,7 @@ export const buildDeductions = (
     trackTax && applySDLFlag ? bankersRound(grossEarnings * sdlRate, 2) : 0;
 
   loans.forEach((loan) => {
-    if (loan.employeeId !== emp.id || loan.status === "completed" || new Date(loan.startDate) > periodEnd) return;
+    if (loan.employeeId !== emp.id || loan.status === "completed" || calendarDateFromIso(loan.startDate) > periodEnd) return;
 
     // A repeat payroll run must not deduct the same loan twice or move the balance again.
     const alreadyPosted = (loan.deductionHistory || []).find((entry) =>
@@ -290,7 +291,7 @@ export const buildDeductions = (
   });
 
   savingPlans.forEach((plan) => {
-    if (plan.employeeId !== emp.id || plan.status !== "active" || new Date(plan.startDate) > periodEnd) return;
+    if (plan.employeeId !== emp.id || plan.status !== "active" || calendarDateFromIso(plan.startDate) > periodEnd) return;
     if (plan.endDate && new Date(plan.endDate) < periodStart) return;
 
     const employeePayFrequency = emp.payFrequency;

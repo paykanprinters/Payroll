@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildDeductions } from "@/lib/payroll-calculations/helpers/deductions-helpers";
+import { calendarDateFromIso } from "@/lib/payroll-period-guard";
 import type { TaxTables } from "@/hooks/use-tax-tables";
 import type { Loan, MockEmployee } from "@/lib/mock-data-interfaces";
 import type { UserTaxSettings } from "@/integrations/supabase/user-tax-settings-queries";
@@ -203,5 +204,37 @@ describe("buildDeductions — statutory", () => {
     expect(find(deductionsBreakdown, "Loan Repayment")).toBe(200);
     expect(loan.remainingBalance).toBe(800);
     expect(loan.deductionHistory).toHaveLength(1);
+  });
+
+  it("deducts a weekly loan that starts on the last day of the pay week", () => {
+    const loan = {
+      id: "loan-week",
+      employeeId: "E1",
+      loanType: "Personal",
+      loanAmount: 2200,
+      repaymentAmount: 100,
+      frequency: "weekly",
+      startDate: "2026-10-06",
+      remainingBalance: 2200,
+      status: "active",
+      paused: false,
+      deductionHistory: [],
+    } as Loan;
+
+    const { deductionsBreakdown } = buildDeductions(
+      { ...employee, payFrequency: "Weekly", salary: 0, hourlyRate: 39 },
+      1455.48,
+      [loan],
+      [],
+      taxTables,
+      taxSettings(false, false),
+      calendarDateFromIso("2026-09-30"),
+      calendarDateFromIso("2026-10-06"),
+      "2026-09-30 - 2026-10-06",
+      [],
+    );
+
+    expect(find(deductionsBreakdown, "Loan Repayment")).toBe(100);
+    expect(loan.remainingBalance).toBe(2100);
   });
 });

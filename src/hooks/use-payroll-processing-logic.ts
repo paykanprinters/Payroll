@@ -20,6 +20,7 @@ import {
 import { generatePayslipsForPeriod } from "@/lib/payroll-calculations/payslip-generator";
 import { formatPayrollPeriod, payslipsForPayrollPeriod } from "@/lib/payroll-period-guard";
 import { deletePayslipsByIds } from "@/integrations/supabase/payslip-queries";
+import { listEmployeeIdsWithSavingsPaymentForPeriod } from "@/integrations/supabase/payroll-savings-entries";
 import { deleteRunItemsForPayslips } from "@/integrations/supabase/payroll-run-queries";
 import { showError, showSuccess } from "@/utils/toast";
 import { TaxTables } from "./use-tax-tables";
@@ -95,6 +96,9 @@ export const usePayrollProcessingLogic = (
         return;
       }
 
+      const savingsAlreadyPosted = isMockDataEnabled
+        ? new Set<string>()
+        : await listEmployeeIdsWithSavingsPaymentForPeriod(format(periodEnd, "yyyy-MM-dd"));
       const { payslips: newPayslips, updatedLoans, updatedSavingPlans, savingPaymentsToRecord } = generatePayslipsForPeriod(
         employees,
         loans,
@@ -111,7 +115,8 @@ export const usePayrollProcessingLogic = (
         earningComponents || [],
         deductionComponents || [],
         assignments || [],
-        overtimeRules
+        overtimeRules,
+        savingsAlreadyPosted
       );
       const newPayslipsWithBranding = newPayslips.map(p => ({
         ...p,
@@ -278,6 +283,9 @@ export const usePayrollProcessingLogic = (
         return null;
       }
 
+      const savingsAlreadyPosted = isMockDataEnabled
+        ? new Set<string>()
+        : await listEmployeeIdsWithSavingsPaymentForPeriod(format(periodEnd, "yyyy-MM-dd"));
       const { payslips: previewPayslips } = generatePayslipsForPeriod(
         [employee],
         loans,
@@ -294,7 +302,8 @@ export const usePayrollProcessingLogic = (
         earningComponents || [],
         deductionComponents || [],
         assignments || [],
-        overtimeRules
+        overtimeRules,
+        savingsAlreadyPosted
       );
       const previewPayslipsWithBranding = previewPayslips.map(p => ({
         ...p,

@@ -170,6 +170,22 @@ export async function listPaymentsForPlan(planId: string): Promise<SavingsPaymen
   }));
 }
 
+/** Employees whose savings tab already includes a deduction for this pay-period end date. */
+export async function listEmployeeIdsWithSavingsPaymentForPeriod(payPeriod: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("payroll_savings_payments")
+    .select("employee_id")
+    .eq("pay_period", payPeriod)
+    .eq("entry_type", "payment");
+
+  if (error) {
+    logger.error("listEmployeeIdsWithSavingsPaymentForPeriod error:", toLogError(error));
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((row) => row.employee_id as string));
+}
+
 export async function recordPayment(
   planId: string,
   amount: number,

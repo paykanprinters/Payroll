@@ -31,6 +31,10 @@ describe("savingsSavedToDate", () => {
   it("returns null when nothing has been saved and nothing is deducted", () => {
     expect(savingsSavedToDate([entry({ amountPaid: 0 })], "emp-1", 0)).toBeNull();
   });
+
+  it("does not add this week again when the balance already includes it", () => {
+    expect(savingsSavedToDate([entry({ amountPaid: 3750 })], "emp-1", 250, true)).toBe(3750);
+  });
 });
 
 describe("savingsDeductionBase", () => {

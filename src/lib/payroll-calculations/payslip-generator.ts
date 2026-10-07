@@ -139,7 +139,8 @@ export const generatePayslipsForPeriod = (
     effectiveStart?: string | null;
     effectiveEnd?: string | null;
   }[] = [],
-  overtimeRules?: OvertimePremiumRules
+  overtimeRules?: OvertimePremiumRules,
+  savingsAlreadyPostedForEmployees: Set<string> = new Set()
 ): {
   payslips: MockPayslip[];
   updatedLoans: Loan[];
@@ -254,7 +255,12 @@ export const generatePayslipsForPeriod = (
       leaveSummary,
       ytdGrossEarnings: 0,
       ytdTotalDeductions: 0,
-      savingsBalance: savingsSavedToDate(payrollSavingsEntries, emp.id, periodSavings),
+      savingsBalance: savingsSavedToDate(
+        payrollSavingsEntries,
+        emp.id,
+        periodSavings,
+        savingsAlreadyPostedForEmployees.has(emp.id)
+      ),
       loanDeduction: loanFigures.loanDeduction,
       loanBalance: loanFigures.loanBalance,
     });

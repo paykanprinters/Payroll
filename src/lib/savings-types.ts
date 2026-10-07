@@ -68,13 +68,15 @@ export function savingsDeductionBase(
 export function savingsSavedToDate(
   entries: Pick<PayrollSavingsEntry, "employeeId" | "amountPaid">[] | null | undefined,
   employeeId: string,
-  periodSavingsDeduction: number
+  periodSavingsDeduction: number,
+  periodAlreadyIncluded = false
 ): number | null {
   const savedBefore = (entries ?? [])
     .filter((entry) => entry.employeeId === employeeId)
     .reduce((sum, entry) => sum + (Number(entry.amountPaid) || 0), 0);
   const period = Number(periodSavingsDeduction) || 0;
   if (savedBefore === 0 && period === 0) return null;
+  if (periodAlreadyIncluded) return Math.round(savedBefore * 100) / 100;
   return Math.round((savedBefore + period) * 100) / 100;
 }
 
