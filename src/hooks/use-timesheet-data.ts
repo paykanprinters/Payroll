@@ -18,8 +18,10 @@ import {
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import { usePayCycleSettings } from "@/hooks/use-pay-cycle-settings";
 
-const importAuditAction = (verb: "Created" | "Updated", e: ImportableTimesheetEntry) =>
-  e.leaveType ? `${verb} from approved ${e.leaveType} (Imported)` : `${verb} (Imported)`;
+const importAuditAction = (verb: "Created" | "Updated", e: ImportableTimesheetEntry) => {
+  const base = e.leaveType ? `${verb} from approved ${e.leaveType} (Imported)` : `${verb} (Imported)`;
+  return e.timeOutClampedFrom ? `${base}; Time Out clamped from ${e.timeOutClampedFrom} to ${e.timeOut}` : base;
+};
 
 interface UseTimesheetDataProps {
   initialTimesheets: TimesheetEntry[];
@@ -162,6 +164,7 @@ export const useTimesheetData = ({
     fridayStartTime: workHoursSettings?.fridayStartTime,
     fridayEndTime: workHoursSettings?.fridayEndTime,
     overtimeThresholdHours: workHoursSettings?.overtimeThresholdHours,
+    timeOutGraceMinutes: workHoursSettings?.timeOutGraceMinutes,
   }), [workHoursSettings]);
 
   const addOrUpdateTimesheet = useCallback(async (data: TimesheetFormValues) => {

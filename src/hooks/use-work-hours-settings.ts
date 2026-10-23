@@ -16,6 +16,8 @@ export interface WorkHoursSettings {
   workDays: string[];
   overtimeThresholdHours?: number;
   paidLunch?: boolean; // NEW: lunch time is paid (do not subtract breaks)
+  /** Clock-outs up to this many minutes after the end time are paid as ending on time. */
+  timeOutGraceMinutes?: number;
 }
 
 const LOCAL_STORAGE_KEY = "workHoursSettings";
@@ -78,6 +80,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
           overtimeThresholdHours: data.overtime_threshold_hours || undefined,
           // Column does not exist in DB; default to false in live mode
           paidLunch: false,
+          timeOutGraceMinutes: data.time_out_grace_minutes ?? 15,
         };
         setWorkHoursSettings(camelCaseData);
       } else {
@@ -107,6 +110,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
         break_duration_minutes: settings.breakDurationMinutes || null,
         work_days: settings.workDays,
         overtime_threshold_hours: settings.overtimeThresholdHours || null,
+        time_out_grace_minutes: settings.timeOutGraceMinutes ?? 15,
       };
 
       const { data, error } = await supabase
@@ -131,6 +135,7 @@ export const useWorkHoursSettings = ({ isMockDataEnabled, isAuthenticated, isLoa
           overtimeThresholdHours: data.overtime_threshold_hours || undefined,
           // Keep local paidLunch set (not stored in DB)
           paidLunch: settings.paidLunch ?? false,
+          timeOutGraceMinutes: data.time_out_grace_minutes ?? 15,
         };
         setWorkHoursSettings(camelCaseData);
         showSuccess("Work hours settings saved successfully!");

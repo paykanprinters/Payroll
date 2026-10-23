@@ -77,6 +77,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
       fridayStartTime: workHoursSettings.fridayStartTime,
       fridayEndTime: workHoursSettings.fridayEndTime,
       overtimeThresholdHours: workHoursSettings.overtimeThresholdHours,
+      timeOutGraceMinutes: workHoursSettings.timeOutGraceMinutes,
     };
   }, [workHoursSettings]);
 

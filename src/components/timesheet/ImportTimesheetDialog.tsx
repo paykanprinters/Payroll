@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
+import { format, isValid, parse } from "date-fns";
 import { UploadCloud, Eye, FileUp, Play } from "lucide-react";
 import { showError } from "@/utils/toast";
 import { LeaveEntry, MockEmployee } from "@/lib/mock-data-interfaces";
@@ -153,6 +153,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
       const idx = next.findIndex((r) => `${r.employeeId}|${r.date.replace(/\//g, "-")}` === key);
       if (idx === -1) return prev;
       const merged = { ...next[idx], ...updates };
+      if ("timeOut" in updates && !("timeOutClampedFrom" in updates)) merged.timeOutClampedFrom = undefined;
       if (merged.date) merged.date = merged.date.replace(/\//g, "-");
       const { isValid, errors } = validateRow(merged);
       merged._isValid = isValid;
@@ -270,6 +271,43 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
     employeesById,
   ]);
 
+  const scheduledEndFor = (isoDate: string) => {
+    const day = parse(isoDate, "yyyy-MM-dd", new Date());
+    const end =
+      isValid(day) && day.getDay() === 5 && workHoursSettings?.fridayEndTime
+        ? workHoursSettings.fridayEndTime
+        : workHoursSettings?.dailyEndTime || "17:00";
+    return end.padStart(5, "0").slice(0, 5);
+  };
+
+  const rowRunsPastEnd = (r: ParsedTimesheetRow) => {
+    if (r.leaveType || !hhmmRegex.test(r.timeOut)) return false;
+    const date = (r.date || "").replace(/\//g, "-");
+    return isoDateRegex.test(date) && r.timeOut.padStart(5, "0") > scheduledEndFor(date);
+  };
+
+  const clampTimeOutCount = filteredRows.filter(rowRunsPastEnd).length;
+
+  const clampTimeOutToEnd = () => {
+    const keys = new Set(
+      filteredRows.filter(rowRunsPastEnd).map((r) => `${r.employeeId}|${r.date.replace(/\//g, "-")}`)
+    );
+    setEditableRows((prev) =>
+      prev.map((r) => {
+        if (!keys.has(`${r.employeeId}|${r.date.replace(/\//g, "-")}`)) return r;
+        const updated = {
+          ...r,
+          timeOut: scheduledEndFor(r.date.replace(/\//g, "-")),
+          timeOutClampedFrom: r.timeOutClampedFrom || r.timeOut,
+        };
+        const { isValid: rowValid, errors } = validateRow(updated);
+        updated._isValid = rowValid;
+        updated._errors = errors;
+        return updated;
+      })
+    );
+  };
+
   const canImportFromCurrentView = useMemo(() => {
     const sourceRows = importFilteredOnly ? filteredRows : editableRows;
     return sourceRows.some((r) => r._isValid);
@@ -320,6 +358,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
       lunchStart: r.lunchStart || "",
       lunchEnd: r.lunchEnd || "",
       leaveType: r.leaveType,
+      timeOutClampedFrom: r.timeOutClampedFrom,
     }));
 
     let payrollPeriod: { periodStart: string; periodEnd: string } | undefined;
@@ -493,6 +532,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                 onNormalizeDates={bulkNormalizeDates}
                 onClampTimeIn={clampTimeInToStart}
                 onClearMissingBreaks={clearMissingBreaks}
+                onClampTimeOut={clampTimeOutToEnd}
+                clampTimeOutCount={clampTimeOutCount}
               />
 
               {/* Aggregation Errors with auto-dismiss */}

@@ -35,6 +35,10 @@ const workHoursSchema = z.object({
     z.number().min(0, "Overtime threshold cannot be negative").max(168, "Overtime threshold cannot exceed 168 hours").optional()
   ),
   paidLunch: z.boolean().default(false),
+  timeOutGraceMinutes: z.preprocess(
+    (val) => (val === "" || val === undefined || isNaN(Number(val))) ? undefined : Number(val),
+    z.number().int("Use whole minutes").min(0, "Grace cannot be negative").max(120, "Grace cannot exceed 120 minutes").optional()
+  ),
 }).superRefine((data, ctx) => {
   const startTimeInMinutes = timeToMinutes(data.dailyStartTime);
   const endTimeInMinutes = timeToMinutes(data.dailyEndTime);
@@ -91,6 +95,7 @@ const WorkHours: React.FC = () => {
       workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       overtimeThresholdHours: 40,
       paidLunch: false,
+      timeOutGraceMinutes: 15,
     },
   });
 
@@ -105,6 +110,7 @@ const WorkHours: React.FC = () => {
         workDays: workHoursSettings.workDays || [],
         overtimeThresholdHours: workHoursSettings.overtimeThresholdHours || 0,
         paidLunch: workHoursSettings.paidLunch ?? false,
+        timeOutGraceMinutes: workHoursSettings.timeOutGraceMinutes ?? 15,
       });
     } else if (!isLoadingWorkHoursSettings) {
       form.reset({
@@ -116,6 +122,7 @@ const WorkHours: React.FC = () => {
         workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         overtimeThresholdHours: 40,
         paidLunch: false,
+        timeOutGraceMinutes: 15,
       });
     }
   }, [workHoursSettings, isLoadingWorkHoursSettings, form]);
@@ -132,6 +139,7 @@ const WorkHours: React.FC = () => {
         workDays: data.workDays,
         overtimeThresholdHours: data.overtimeThresholdHours || undefined,
         paidLunch: data.paidLunch ?? false,
+        timeOutGraceMinutes: data.timeOutGraceMinutes ?? 0,
       };
       await saveWorkHoursSettings(settingsToSave);
       window.dispatchEvent(new Event('workHoursSettingsUpdated'));
@@ -273,6 +281,17 @@ const WorkHours: React.FC = () => {
               )}
               <p className="text-xs text-muted-foreground mt-1">
                 Hours worked above this threshold in a week will be considered overtime.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="timeOutGraceMinutes">Clock-out Grace (Minutes)</Label>
+              <Input id="timeOutGraceMinutes" type="number" step="1" min="0" {...form.register("timeOutGraceMinutes", { valueAsNumber: true })} className="mt-1" disabled={!canEdit} />
+              {form.formState.errors.timeOutGraceMinutes && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.timeOutGraceMinutes.message}</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Clocking out up to this many minutes after the end time is paid as finishing on time. Later clock-outs
+                keep their full time so authorised overtime is still paid. Use 0 to switch this off.
               </p>
             </div>
           </div>

@@ -26,6 +26,19 @@ type MetricOpts = {
   fridayStartTime?: string;
   fridayEndTime?: string;
   overtimeThresholdHours?: number;
+  timeOutGraceMinutes?: number;
+};
+
+const toMinutes = (time: string) => {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+};
+
+/** Clock-outs within the grace after the scheduled end are paid as ending at the scheduled end. */
+export const applyTimeOutGrace = (timeOut: string, expectedEnd: string, graceMinutes: number): string => {
+  if (!timeOut || !expectedEnd || graceMinutes <= 0) return timeOut;
+  const over = toMinutes(timeOut) - toMinutes(expectedEnd);
+  return over > 0 && over <= graceMinutes ? expectedEnd.padStart(5, "0").slice(0, 5) : timeOut;
 };
 
 /**
@@ -64,7 +77,8 @@ export const calculateTimesheetMetrics = (
     const actualTimeInDateForClamp = parse(timeIn, "HH:mm", new Date());
     const timeInEffective = isBefore(actualTimeInDateForClamp, earliestStartDate) ? earliestStartStr : timeIn;
 
-    const totalShiftDuration = calculateTimeDifferenceInHours(timeInEffective, timeOut);
+    const timeOutEffective = applyTimeOutGrace(timeOut, expectedEnd, opts?.timeOutGraceMinutes ?? 0);
+    const totalShiftDuration = calculateTimeDifferenceInHours(timeInEffective, timeOutEffective);
     const teaDuration = calculateTimeDifferenceInHours(data.teaStart || "", data.teaEnd || "");
     const lunchDuration = calculateTimeDifferenceInHours(data.lunchStart || "", data.lunchEnd || "");
 

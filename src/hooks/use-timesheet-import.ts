@@ -35,6 +35,8 @@ export interface ParsedTimesheetRow {
   lunchEnd?: string;
   timeOut: string;
   leaveType?: LeaveEntry["leaveType"];
+  /** Original clock-out when an admin clamped Time Out to the scheduled end. */
+  timeOutClampedFrom?: string;
   _isValid: boolean;
   _errors: string[];
 }

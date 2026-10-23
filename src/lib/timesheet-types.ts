@@ -10,7 +10,6 @@ export interface TimesheetFormValues {
   lunchStart?: string;
   lunchEnd?: string;
   timeOut: string;
-  leaveType?: LeaveEntry["leaveType"];
 }
 
 // Define the expected input type for batch imports
@@ -24,4 +23,5 @@ export interface ImportableTimesheetEntry {
   lunchEnd?: string;
   timeOut: string;
   leaveType?: LeaveEntry["leaveType"];
+  timeOutClampedFrom?: string;
 }
