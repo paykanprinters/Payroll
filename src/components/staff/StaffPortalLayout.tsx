@@ -4,6 +4,7 @@ import React, { Suspense } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Loader2, Sparkles, LogOut } from "lucide-react";
 import StaffPortalSidebar from "@/components/staff/StaffPortalSidebar";
+import StaffPayslipAlertsProvider from "@/components/staff/StaffPayslipAlertsProvider";
 import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { supabase } from "@/integrations/supabase/client";
 import { STAFF_LOGIN_PATH } from "@/lib/staff-portal";
@@ -31,6 +32,7 @@ const StaffPortalLayout: React.FC = () => {
   };
 
   return (
+    <StaffPayslipAlertsProvider>
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30">
       <StaffPortalSidebar onSignOut={handleSignOut} />
 
@@ -86,6 +88,7 @@ const StaffPortalLayout: React.FC = () => {
         </main>
       </div>
     </div>
+    </StaffPayslipAlertsProvider>
   );
 };
 

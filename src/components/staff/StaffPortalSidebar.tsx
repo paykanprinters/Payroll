@@ -22,6 +22,7 @@ import { staffPortalPath } from "@/lib/staff-portal";
 import BrandLogo from "@/components/brand/BrandLogo";
 import { getBranding } from "@/config/branding";
 import { useAuth } from "@/hooks/use-auth";
+import { useStaffPayslipAlerts } from "@/hooks/use-staff-payslip-alerts";
 
 const NAV_ITEMS = [
   { to: staffPortalPath(), icon: LayoutDashboard, label: "Home", end: true },
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
+  const unreadPayslips = useStaffPayslipAlerts().unseenPayslips.length;
 
   return (
     <nav className="grid gap-1">
@@ -61,6 +63,14 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
             <Link to={to}>
               <Icon className={cn("mr-3 h-5 w-5", active ? "text-white" : "text-cyan-700")} />
               {label}
+              {to === staffPortalPath("payslips") && unreadPayslips > 0 && (
+                <span
+                  className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fuchsia-600 px-1.5 text-[11px] font-semibold text-white"
+                  aria-label={`${unreadPayslips} new payslip${unreadPayslips === 1 ? "" : "s"}`}
+                >
+                  {unreadPayslips}
+                </span>
+              )}
             </Link>
           </Button>
         );
@@ -77,6 +87,7 @@ const StaffPortalSidebar: React.FC<StaffPortalSidebarProps> = ({ onSignOut }) =>
   const isMobile = useIsMobile();
   const brand = getBranding();
   const { user } = useAuth();
+  const hasUnreadPayslips = useStaffPayslipAlerts().unseenPayslips.length > 0;
 
   const sidebarBody = (
     <div className="flex h-full flex-col">
@@ -142,6 +153,9 @@ const StaffPortalSidebar: React.FC<StaffPortalSidebarProps> = ({ onSignOut }) =>
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5 text-cyan-700" />
+            {hasUnreadPayslips && (
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-fuchsia-600" />
+            )}
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">

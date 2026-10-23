@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import IndividualPayslipCard from "@/components/payslips/IndividualPayslipCard";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
+import { useStaffPayslipAlerts } from "@/hooks/use-staff-payslip-alerts";
+import { useSearchParams } from "react-router-dom";
 import usePayslipDesignSettings from "@/hooks/use-payslip-design-settings";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import { formatRand } from "@/lib/staff-portal";
@@ -20,7 +22,9 @@ const StaffPayslipsPage: React.FC = () => {
   const { payslips, employees, companyDetails, isLoadingPayslips } = usePayrollProcessor();
   const { settings: payslipDesignSettings } = usePayslipDesignSettings();
   const { downloadPdf } = usePdfVector();
-  const [selectedId, setSelectedId] = useState<string>("");
+  const [searchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string>(() => searchParams.get("id") ?? "");
+  const { isUnseen, markSeen } = useStaffPayslipAlerts();
 
   const myPayslips = useMemo(
     () =>
@@ -43,6 +47,15 @@ const StaffPayslipsPage: React.FC = () => {
   React.useEffect(() => {
     if (!selectedId && myPayslips[0]) setSelectedId(myPayslips[0].id);
   }, [myPayslips, selectedId]);
+
+  React.useEffect(() => {
+    const linkedId = searchParams.get("id");
+    if (linkedId) setSelectedId(linkedId);
+  }, [searchParams]);
+
+  React.useEffect(() => {
+    if (selectedPayslip) markSeen(selectedPayslip);
+  }, [selectedPayslip, markSeen]);
 
   const getEmployeeName = useCallback(
     (id: string) => {
@@ -123,8 +136,12 @@ const StaffPayslipsPage: React.FC = () => {
                     <p className="font-medium">{p.payPeriod}</p>
                     <p className="text-xs text-muted-foreground">Net {formatRand(p.netPay)}</p>
                   </div>
-                  {p.id === myPayslips[0]?.id && (
-                    <Badge className="bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-100">Latest</Badge>
+                  {isUnseen(p.id) ? (
+                    <Badge className="bg-fuchsia-600 text-white hover:bg-fuchsia-600">New</Badge>
+                  ) : (
+                    p.id === myPayslips[0]?.id && (
+                      <Badge className="bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-100">Latest</Badge>
+                    )
                   )}
                 </button>
               ))}
