@@ -68,12 +68,13 @@ export default defineConfig(() => ({
           "**/*PdfDocument-*.js",
         ],
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/downloads\//],
         runtimeCaching: [
           {
             // Prefer network for document navigations so CSP/security headers
             // from Vercel apply immediately (stale precached HTML blocked WASM).
-            urlPattern: ({ request }) => request.mode === "navigate",
+            urlPattern: ({ request, url }) =>
+              request.mode === "navigate" && !url.pathname.startsWith("/downloads/"),
             handler: "NetworkFirst",
             options: {
               cacheName: "pages",
