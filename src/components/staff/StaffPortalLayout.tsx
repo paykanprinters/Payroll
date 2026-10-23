@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Loader2, Sparkles, LogOut } from "lucide-react";
 import StaffPortalSidebar from "@/components/staff/StaffPortalSidebar";
@@ -8,6 +8,7 @@ import StaffPayslipAlertsProvider from "@/components/staff/StaffPayslipAlertsPro
 import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { supabase } from "@/integrations/supabase/client";
 import { STAFF_LOGIN_PATH } from "@/lib/staff-portal";
+import { initStaffPush, unregisterStaffPush } from "@/lib/staff-push";
 import { recordAuthEvent } from "@/lib/audit-trail";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +19,24 @@ const StaffPortalLayout: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    void initStaffPush({
+      onOpen: (url) => navigate(url),
+      onReceivedInForeground: () => window.dispatchEvent(new Event("appFocusRefresh")),
+    }).then((fn) => {
+      if (cancelled) fn();
+      else cleanup = fn;
+    });
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [navigate]);
+
   const handleSignOut = async () => {
+    await unregisterStaffPush();
     if (user) {
       await recordAuthEvent("signed_out", {
         userId: user.id,

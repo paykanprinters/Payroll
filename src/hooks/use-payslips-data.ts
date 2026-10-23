@@ -9,6 +9,16 @@ import {
   upsertPayslipToSupabase,
   batchUpsertPayslipsToSupabase,
 } from "@/integrations/supabase/payslip-queries";
+import { sendPayslipPush } from "@/integrations/supabase/notification-queries";
+import { logger } from "@/lib/logger";
+
+function notifyStaffOfPayslips(payslipIds: string[]) {
+  void sendPayslipPush(payslipIds)
+    .then((result) => {
+      if (!result.ok && !result.disabled) logger.warn("Payslip push not sent:", result.error);
+    })
+    .catch((err) => logger.warn("Payslip push not sent:", err));
+}
 
 interface UsePayslipsDataProps {
   initialPayslips: MockPayslip[];
@@ -47,6 +57,7 @@ export const usePayslipsData = ({ initialPayslips, isMockDataEnabled, isAuthenti
           }
         });
         showSuccess("Payslip saved successfully!");
+        notifyStaffOfPayslips([result.id]);
         return result;
       } else {
         showError("Payslip saved, but data could not be retrieved. Please refresh.");
@@ -66,6 +77,7 @@ export const usePayslipsData = ({ initialPayslips, isMockDataEnabled, isAuthenti
       const success = await batchUpsertPayslipsToSupabase(payslipsToUpsert);
       if (success) {
         showSuccess(`${payslipsToUpsert.length} payslips saved successfully!`);
+        notifyStaffOfPayslips(payslipsToUpsert.map((p) => p.id));
         fetchLivePayslips(); // Re-fetch all to update state
         return true;
       } else {

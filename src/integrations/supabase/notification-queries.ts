@@ -212,6 +212,19 @@ export async function sendSmsReminders(
   return { ok: false, error: result?.error ?? "Unknown error", disabled: result?.reason === "disabled" };
 }
 
+/** Phone push for newly saved payslips. Already-notified periods are skipped server-side. */
+export async function sendPayslipPush(payslipIds: string[]): Promise<SmsBatchResult> {
+  const ids = payslipIds.filter(Boolean);
+  if (ids.length === 0) return { ok: true, sent: 0, skipped: 0 };
+  const { data, error } = await supabase.functions.invoke("send-payslip-push", {
+    body: { payslipIds: ids },
+  });
+  if (error) return { ok: false, error: await parseFunctionError(error, data, { service: "generic" }) };
+  const result = data as SmsBatchResult & { reason?: string };
+  if (result?.ok) return { ok: true, sent: result.sent, skipped: result.skipped };
+  return { ok: false, error: result?.error ?? "Unknown error", disabled: result?.reason === "not_configured" };
+}
+
 export async function sendPayslipEmail(
   payload: PayslipEmailPayload,
   pdfBase64?: string

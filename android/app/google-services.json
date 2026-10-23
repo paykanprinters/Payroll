@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "149142580934",
+    "project_id": "kanprinters-payroll",
+    "storage_bucket": "kanprinters-payroll.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:149142580934:android:48ff9ecd97c03fe4c071c7",
+        "android_client_info": {
+          "package_name": "co.za.kanprinters.payroll.staff"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH_my0MklxBwDs_4mC54YJtpBPnIkaUmM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
