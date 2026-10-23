@@ -96,6 +96,15 @@ serve(async (req) => {
       continue;
     }
 
+    const { data: tokens } = await admin
+      .from("device_push_tokens")
+      .select("token")
+      .eq("employee_id", payslip.employee_id);
+    if (!tokens || tokens.length === 0) {
+      skipped++;
+      continue;
+    }
+
     const { data: claimed } = await admin
       .from("payslip_push_notifications")
       .upsert(
@@ -104,15 +113,6 @@ serve(async (req) => {
       )
       .select("employee_id");
     if (!claimed || claimed.length === 0) {
-      skipped++;
-      continue;
-    }
-
-    const { data: tokens } = await admin
-      .from("device_push_tokens")
-      .select("token")
-      .eq("employee_id", payslip.employee_id);
-    if (!tokens || tokens.length === 0) {
       skipped++;
       continue;
     }
