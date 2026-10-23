@@ -343,16 +343,9 @@ export const useTimesheetData = ({
               currentMetricOpts()
             );
 
-            const dayIdx = e.date.getDay(); // 0=Sun,6=Sat
-            const isSatNonWork = dayIdx === 6 && !workDays.includes("saturday");
-            const isSunNonWork = dayIdx === 0 && !workDays.includes("sunday");
-  
             let entryOvertime = 0;
             if (e.leaveType) {
               entryOvertime = 0;
-            } else if (isSatNonWork || isSunNonWork) {
-              entryOvertime = totalWorkHours;
-              // Do NOT add these hours to priorHours
             } else {
               const overtimeBefore = Math.max(0, priorHours - weeklyThreshold);
               const overtimeAfter = Math.max(0, priorHours + totalWorkHours - weeklyThreshold);
@@ -409,12 +402,6 @@ export const useTimesheetData = ({
           if (!isWithinInterval(tsDate, { start: weekStartDate, end: weekEndDate })) continue;
           if (datesInGroup.has(ts.date)) continue;
           if (ts.leaveType) continue;
-
-          const idx = tsDate.getDay(); // 0=Sun,6=Sat
-          const isSatNonWork = idx === 6 && !workDays.includes("saturday");
-          const isSunNonWork = idx === 0 && !workDays.includes("sunday");
-          if (isSatNonWork || isSunNonWork) continue; // exclude non-working weekend hours from priorHours
-
           priorHours += ts.totalWorkHours || 0;
         }
 
@@ -428,17 +415,10 @@ export const useTimesheetData = ({
             currentMetricOpts()
           );
 
-          // Treat non-working weekend hours as overtime immediately; exclude them from weekly threshold accumulation
-          const dayIdx = e.date.getDay(); // 0=Sun, 6=Sat
-          const isSatNonWork = dayIdx === 6 && !workDays.includes("saturday");
-          const isSunNonWork = dayIdx === 0 && !workDays.includes("sunday");
-
+          // Overtime only starts once the week's worked hours (weekends included) pass the weekly threshold.
           let entryOvertime = 0;
           if (e.leaveType) {
             entryOvertime = 0;
-          } else if (isSatNonWork || isSunNonWork) {
-            entryOvertime = totalWorkHours;
-            // Do NOT add these hours to priorHours (keeps weekly threshold clean)
           } else {
             const overtimeBefore = Math.max(0, priorHours - weeklyThreshold);
             const overtimeAfter = Math.max(0, priorHours + totalWorkHours - weeklyThreshold);
@@ -502,7 +482,7 @@ export const useTimesheetData = ({
       }
       return false;
     }
-  }, [employees, isMockDataEnabled, timesheets, weeklyThreshold, currentMetricOpts, cutOffDay, workDays]);
+  }, [employees, isMockDataEnabled, timesheets, weeklyThreshold, currentMetricOpts, cutOffDay]);
 
   const deleteTimesheet = useCallback(async (id: string) => {
     if (isMockDataEnabled) {

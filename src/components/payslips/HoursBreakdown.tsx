@@ -65,9 +65,9 @@ const HoursBreakdown: React.FC<Props> = ({
       const classification = leaveLabel
         ? `${leaveLabel} (paid, not worked)`
         : isSatNonWork
-        ? "Weekend (Sat @1.5x)"
+        ? "Weekend (Sat)"
         : isSunNonWork
-        ? "Weekend (Sun @2.0x)"
+        ? "Weekend (Sun)"
         : "Normal";
 
       return {
@@ -146,11 +146,11 @@ const HoursBreakdown: React.FC<Props> = ({
             <div className="font-semibold">{totals.normalPaid.toFixed(2)}h</div>
           </div>
           <div className="p-3 rounded-md bg-gray-50 dark:bg-gray-900/30">
-            <div className="text-xs text-muted-foreground">Sat premium</div>
+            <div className="text-xs text-muted-foreground">Saturday hours</div>
             <div className="font-semibold">{totals.satPrem.toFixed(2)}h</div>
           </div>
           <div className="p-3 rounded-md bg-gray-50 dark:bg-gray-900/30">
-            <div className="text-xs text-muted-foreground">Sun premium</div>
+            <div className="text-xs text-muted-foreground">Sunday hours</div>
             <div className="font-semibold">{totals.sunPrem.toFixed(2)}h</div>
           </div>
           <div className="p-3 rounded-md bg-gray-50 dark:bg-gray-900/30">

@@ -34,6 +34,34 @@ const week = [
   day("2026-03-06", 8.5, "Sick Leave"),
 ];
 
+describe("weekly overtime threshold", () => {
+  it("pays no overtime, even for Saturday or long days, until the week passes 41.25h", () => {
+    const shortWeek = [
+      day("2026-03-02", 10),
+      day("2026-03-03", 10),
+      day("2026-03-04", 10),
+      day("2026-03-05", 5),
+      day("2026-03-07", 5),
+    ];
+    const alloc = allocateOvertime(collectNonHolidayBuckets(hourly, shortWeek), 41.25);
+    expect(alloc.regularHours).toBe(40);
+    expect(alloc.overtimeWeekdayHours + alloc.overtimeSaturdayHours + alloc.overtimeSundayHours).toBe(0);
+  });
+
+  it("only the hours above 41.25 for the week become overtime", () => {
+    const fullWeek = [
+      day("2026-03-02", 8.53),
+      day("2026-03-03", 8.52),
+      day("2026-03-04", 7.27),
+      day("2026-03-05", 8.5),
+      day("2026-03-06", 8.52),
+    ];
+    const alloc = allocateOvertime(collectNonHolidayBuckets(hourly, fullWeek), 41.25);
+    expect(alloc.regularHours).toBe(41.25);
+    expect(alloc.overtimeWeekdayHours).toBeCloseTo(0.09);
+  });
+});
+
 describe("leave days in payroll", () => {
   it("keeps leave hours out of worked hours so they cannot create overtime", () => {
     const buckets = collectNonHolidayBuckets(hourly, week);
