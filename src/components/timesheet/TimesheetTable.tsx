@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
+import LeaveDayBadge from "@/components/timesheet/LeaveDayBadge";
 import {
   Pagination,
   PaginationContent,
@@ -155,7 +156,10 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                             {entry.timeIn || "—"} → {entry.timeOut || "—"}
                           </div>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap font-mono text-xs">{entry.date}</TableCell>
+                        <TableCell className="whitespace-nowrap font-mono text-xs">
+                          {entry.date}
+                          <LeaveDayBadge leaveType={entry.leaveType} className="ml-2 font-sans" />
+                        </TableCell>
                         <TableCell className="hidden sm:table-cell">{entry.timeIn || "—"}</TableCell>
                         <TableCell className="hidden sm:table-cell">{entry.timeOut || "—"}</TableCell>
                         <TableCell className="text-right">{entry.totalWorkHours.toFixed(2)}</TableCell>

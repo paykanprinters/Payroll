@@ -152,6 +152,7 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
     const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
     if (!isWithinInterval(tsDate, { start, end })) continue;
     if (excludeId && ts.id === excludeId) continue;
+    if (ts.leaveType) continue;
 
     const idx = tsDate.getDay();
     const isSatNonWork = idx === 6 && !workDaysSet.has("saturday");

@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { TimesheetEntry } from "@/lib/mock-data-interfaces";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
+import { leaveDayLabel } from "@/lib/leave-timesheet-rows";
 
 type Props = {
   employeeId: string;
@@ -60,7 +61,10 @@ const HoursBreakdown: React.FC<Props> = ({
       const breakDeducted = paidLunch ? 0 : fixedBreakHours;
       const paidHours = ts.totalWorkHours || 0;
 
-      const classification = isSatNonWork
+      const leaveLabel = leaveDayLabel(ts.leaveType);
+      const classification = leaveLabel
+        ? `${leaveLabel} (paid, not worked)`
+        : isSatNonWork
         ? "Weekend (Sat @1.5x)"
         : isSunNonWork
         ? "Weekend (Sun @2.0x)"
@@ -72,6 +76,7 @@ const HoursBreakdown: React.FC<Props> = ({
         breakDeducted,
         paidHours,
         classification,
+        isLeave: !!leaveLabel,
       };
     });
   }, [filtered, workDaysSet, fixedBreakHours, paidLunch]);
@@ -80,15 +85,17 @@ const HoursBreakdown: React.FC<Props> = ({
     let normalPaid = 0;
     let satPrem = 0;
     let sunPrem = 0;
+    let leavePaid = 0;
     rows.forEach((r) => {
-      if (r.classification === "Normal") normalPaid += r.paidHours;
+      if (r.isLeave) leavePaid += r.paidHours;
+      else if (r.classification === "Normal") normalPaid += r.paidHours;
       else if (r.classification.startsWith("Weekend (Sat")) satPrem += r.paidHours;
       else if (r.classification.startsWith("Weekend (Sun")) sunPrem += r.paidHours;
     });
     const totalPaid = normalPaid + satPrem + sunPrem;
     const regular = Math.min(totalPaid, weeklyThreshold);
     const weeklyOT = Math.max(0, totalPaid - weeklyThreshold);
-    return { normalPaid, satPrem, sunPrem, regular, weeklyOT };
+    return { normalPaid, satPrem, sunPrem, regular, weeklyOT, leavePaid };
   }, [rows, weeklyThreshold]);
 
   return (
@@ -154,6 +161,12 @@ const HoursBreakdown: React.FC<Props> = ({
             <div className="text-xs text-muted-foreground">Weekly OT</div>
             <div className="font-semibold">{totals.weeklyOT.toFixed(2)}h</div>
           </div>
+          {totals.leavePaid > 0 && (
+            <div className="p-3 rounded-md bg-gray-50 dark:bg-gray-900/30">
+              <div className="text-xs text-muted-foreground">Leave / sick paid</div>
+              <div className="font-semibold">{totals.leavePaid.toFixed(2)}h</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

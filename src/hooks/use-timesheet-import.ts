@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import type { ParseResult } from "papaparse";
 import { format, parse, isValid, isAfter, min, max } from "date-fns";
-import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { LeaveEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import { showError, showSuccess } from "@/utils/toast";
 
 // DEBUG: Hook init
@@ -34,6 +34,7 @@ export interface ParsedTimesheetRow {
   lunchStart?: string;
   lunchEnd?: string;
   timeOut: string;
+  leaveType?: LeaveEntry["leaveType"];
   _isValid: boolean;
   _errors: string[];
 }

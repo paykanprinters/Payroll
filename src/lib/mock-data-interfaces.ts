@@ -225,6 +225,8 @@ export interface TimesheetEntry {
   lateArrival: boolean; // Calculated
   earlyDeparture: boolean; // Calculated
   absent: boolean; // Calculated
+  /** Set when the day was filled from approved paid leave instead of clock punches. */
+  leaveType?: LeaveEntry["leaveType"] | null;
   status: "Draft" | "Submitted" | "Approved" | "Locked";
   submittedBy?: string;
   submittedAt?: string; // ISO string

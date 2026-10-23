@@ -1,3 +1,5 @@
+import type { LeaveEntry } from "@/lib/mock-data-interfaces";
+
 // Define the expected input type for adding/updating timesheets
 export interface TimesheetFormValues {
   employeeId: string;
@@ -8,6 +10,7 @@ export interface TimesheetFormValues {
   lunchStart?: string;
   lunchEnd?: string;
   timeOut: string;
+  leaveType?: LeaveEntry["leaveType"];
 }
 
 // Define the expected input type for batch imports
@@ -20,4 +23,5 @@ export interface ImportableTimesheetEntry {
   lunchStart?: string;
   lunchEnd?: string;
   timeOut: string;
+  leaveType?: LeaveEntry["leaveType"];
 }

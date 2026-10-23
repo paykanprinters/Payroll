@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { UploadCloud, Eye, FileUp, Play } from "lucide-react";
 import { showError } from "@/utils/toast";
-import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { LeaveEntry, MockEmployee } from "@/lib/mock-data-interfaces";
+import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import { useTimesheetImport, ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import ColumnMappingSection from "./ColumnMappingSection";
 import ValidatedDataTable from "./ValidatedDataTable";
@@ -45,6 +46,8 @@ interface ImportTimesheetDialogProps {
   employees: MockEmployee[];
   workHoursSettings?: WorkHoursSettings | null;
   biometricApiUrl?: string;
+  leaveRecords?: LeaveEntry[];
+  publicHolidays?: PublicHoliday[];
 }
 
 const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
@@ -55,6 +58,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
   employees,
   workHoursSettings,
   biometricApiUrl,
+  leaveRecords,
+  publicHolidays,
 }) => {
   const safeEmployees = useMemo(
     () => (Array.isArray(employees) ? employees : []),
@@ -314,6 +319,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
       teaEnd: r.teaEnd || "",
       lunchStart: r.lunchStart || "",
       lunchEnd: r.lunchEnd || "",
+      leaveType: r.leaveType,
     }));
 
     let payrollPeriod: { periodStart: string; periodEnd: string } | undefined;
@@ -359,7 +365,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
               <DialogTitle className="text-xl">Import clock times</DialogTitle>
               <DialogDescription>
                 Fetch attendance from your biometric API or upload a CSV. Earliest punch becomes Time In and latest
-                becomes Time Out per employee/day.
+                becomes Time Out per employee/day. Approved annual, sick, and family leave days are added as a full
+                day (07:45–17:00).
                 <div className="mt-1 text-xs text-muted-foreground">Time Out must be strictly later than Time In.</div>
               </DialogDescription>
             </div>
@@ -398,6 +405,9 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                 <TabsContent value="api" className="mt-4">
                   <BiometricImportSection
                     employees={safeEmployees}
+                    leaveRecords={leaveRecords}
+                    workDays={workHoursSettings?.workDays}
+                    holidays={publicHolidays}
                     apiUrl={biometricApiUrl}
                     onLoaded={(rows, _punchCount, period) => {
                       setEditableRows(rows);

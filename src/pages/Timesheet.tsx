@@ -47,6 +47,8 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
     isLeaveDay,
     addTimesheetBatch,
     isLoadingTimesheets,
+    leaveRecords,
+    publicHolidays,
   } = usePayrollProcessor();
 
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
@@ -361,6 +363,8 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
             employees={employees || []}
             workHoursSettings={workHoursSettings}
             biometricApiUrl={companyDetails?.biometricApiUrl}
+            leaveRecords={leaveRecords || []}
+            publicHolidays={publicHolidays || []}
           />
         </React.Suspense>
       )}

@@ -57,7 +57,7 @@ const isSameMonthDay = (isoA: string, isoB: string) => {
   return a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 };
 
-const dayIsHolidayForEmployee = (
+export const dayIsHolidayForEmployee = (
   dateISO: string,
   employee: MockEmployee,
   holidays: PublicHoliday[]
@@ -164,7 +164,7 @@ export const collectHolidayBuckets = (
     const isSelectedWorkDay = workDaysSet.has(dayName);
     if (!isSelectedWorkDay) return;
 
-    const entries = tsByDate[iso] || [];
+    const entries = (tsByDate[iso] || []).filter((e) => !e.leaveType);
     if (entries.length === 0) {
       buckets.holidayNonWorkedHours += scheduledHoursForDay(iso, settings);
     } else {
@@ -183,6 +183,7 @@ export const collectNonHolidayBuckets = (
   const res: NonHolidayHourBuckets = { weekdayPaidHours: 0, saturdayPaidHours: 0, sundayPaidHours: 0 };
 
   approvedTs.forEach((ts) => {
+    if (ts.leaveType) return;
     const isHoliday = !!dayIsHolidayForEmployee(ts.date, emp, holidays);
     if (isHoliday) return;
 
@@ -196,6 +197,41 @@ export const collectNonHolidayBuckets = (
   });
 
   return res;
+};
+
+/**
+ * Paid leave days carried on timesheets. Paid at the ordinary rate and kept out of
+ * worked hours, so they never push an employee over the overtime threshold.
+ */
+export const collectLeaveHours = (
+  emp: MockEmployee,
+  approvedTs: TimesheetEntry[],
+  holidays: PublicHoliday[] = []
+): { leaveType: NonNullable<TimesheetEntry["leaveType"]>; hours: number; days: number }[] => {
+  const byType = new Map<NonNullable<TimesheetEntry["leaveType"]>, { hours: number; days: number }>();
+  approvedTs.forEach((ts) => {
+    if (!ts.leaveType) return;
+    if (dayIsHolidayForEmployee(ts.date, emp, holidays)) return;
+    const current = byType.get(ts.leaveType) || { hours: 0, days: 0 };
+    current.hours += ts.totalWorkHours || 0;
+    current.days += 1;
+    byType.set(ts.leaveType, current);
+  });
+  return Array.from(byType.entries()).map(([leaveType, totals]) => ({ leaveType, ...totals }));
+};
+
+export const buildLeavePayLines = (
+  emp: MockEmployee,
+  leaveHours: ReturnType<typeof collectLeaveHours>,
+  hourlyRate: number
+): { name: string; amount: number }[] => {
+  if (!(emp.hourlyRate && emp.hourlyRate > 0) || hourlyRate <= 0) return [];
+  return leaveHours
+    .map(({ leaveType, hours, days }) => ({
+      name: `${leaveType} Pay (${days} day${days === 1 ? "" : "s"}, ${hours.toFixed(2)}h)`,
+      amount: bankersRound(hours * hourlyRate, 2),
+    }))
+    .filter((line) => line.amount > 0);
 };
 
 export type OvertimeAllocation = {

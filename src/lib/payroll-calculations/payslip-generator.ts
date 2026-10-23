@@ -38,7 +38,10 @@ import {
   computeOvertimeAmounts,
   buildEarningsBreakdown,
   applyAssignedEarnings,
+  collectLeaveHours,
+  buildLeavePayLines,
 } from "./helpers/earnings-helpers";
+import { sumMoney } from "@/lib/money";
 
 import { buildDeductions } from "./helpers/deductions-helpers";
 
@@ -112,6 +115,16 @@ const calculateEarnings = (
     },
     payPeriodStart
   );
+
+  const leavePayLines = buildLeavePayLines(
+    emp,
+    collectLeaveHours(emp, approvedTimesheetsForPeriod, holidays),
+    hourlyRate
+  );
+  if (leavePayLines.length > 0) {
+    const withLeave = [...earningsBreakdown, ...leavePayLines];
+    return { earningsBreakdown: withLeave, grossEarnings: sumMoney(withLeave.map((l) => l.amount)), unpaidLeaveDaysInPeriod };
+  }
 
   return { earningsBreakdown, grossEarnings, unpaidLeaveDaysInPeriod };
 };

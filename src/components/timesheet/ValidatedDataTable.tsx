@@ -13,6 +13,7 @@ import { calculateTimesheetMetrics } from "@/lib/timesheet-utils";
 import { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import { format, parse, isValid } from "date-fns";
 import type { ImportPreviewViewMode } from "@/components/timesheet/FiltersBar";
+import LeaveDayBadge from "@/components/timesheet/LeaveDayBadge";
 
 interface ValidatedDataTableProps {
   validatedData: ParsedTimesheetRow[];
@@ -198,8 +199,9 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <CardTitle className="text-base">{employeeName}</CardTitle>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="flex items-center gap-2 text-xs text-muted-foreground">
                     {format(parse(normalizeDate(row.date), "yyyy-MM-dd", new Date()), "EEE, dd MMM yyyy")}
+                    <LeaveDayBadge leaveType={row.leaveType} />
                   </p>
                 </div>
                 {renderStatusIcon(row)}
@@ -312,6 +314,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                             <div className="text-xs font-normal text-muted-foreground">
                               {format(parse(date, "yyyy-MM-dd", new Date()), "dd MMM")}
                             </div>
+                            <LeaveDayBadge leaveType={item?.row.leaveType} className="mt-1" />
                           </th>
                         );
                       })}
@@ -419,7 +422,10 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
               className="w-40"
             />
           ) : (
-            normalizeDate(row.date)
+            <div className="flex items-center gap-2">
+              {normalizeDate(row.date)}
+              <LeaveDayBadge leaveType={row.leaveType} />
+            </div>
           )}
         </TableCell>
         <TableCell className={cellClass}>

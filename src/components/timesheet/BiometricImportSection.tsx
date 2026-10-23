@@ -8,16 +8,21 @@ import { Label } from "@/components/ui/label";
 import { CalendarRange, DownloadCloud, Settings2 } from "lucide-react";
 import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
 import { invokeFetchBiometricLogs } from "@/lib/fetch-biometric-logs";
-import { MockEmployee } from "@/lib/mock-data-interfaces";
+import { LeaveEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import {
   biometricLogTextToTimesheetRows,
   validateBiometricTimesheetRow,
 } from "@/lib/biometric-attendance-parser";
+import { buildApprovedLeaveRows, mergeLeaveRowsIntoAttendance } from "@/lib/leave-timesheet-rows";
 import { ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import { getStoredBiometricApiUrl } from "@/hooks/use-biometric-api-settings";
+import type { PublicHoliday } from "@/hooks/use-public-holidays";
 
 interface BiometricImportSectionProps {
   employees: MockEmployee[];
+  leaveRecords?: LeaveEntry[];
+  workDays?: string[];
+  holidays?: PublicHoliday[];
   apiUrl?: string;
   onLoaded: (
     rows: ParsedTimesheetRow[],
@@ -29,6 +34,9 @@ interface BiometricImportSectionProps {
 
 const BiometricImportSection: React.FC<BiometricImportSectionProps> = ({
   employees,
+  leaveRecords = [],
+  workDays,
+  holidays = [],
   apiUrl,
   onLoaded,
   onErrors,
@@ -71,15 +79,29 @@ const BiometricImportSection: React.FC<BiometricImportSectionProps> = ({
         endDate
       );
 
+      const leaveRows = buildApprovedLeaveRows({
+        leaveRecords,
+        employees,
+        startDate,
+        endDate,
+        workDays,
+        holidays,
+      });
+      const leaveDayKeys = new Set(leaveRows.map((row) => `${row.csvPersonalId}|${row.date}`));
+
       onErrors(
-        errors.map((entry) => ({
-          personalIdAttempted: entry.personalIdAttempted,
-          dateAttempted: entry.dateAttempted,
-          error: entry.error,
-        }))
+        errors
+          .filter((entry) => !leaveDayKeys.has(`${entry.personalIdAttempted}|${entry.dateAttempted}`))
+          .map((entry) => ({
+            personalIdAttempted: entry.personalIdAttempted,
+            dateAttempted: entry.dateAttempted,
+            error: entry.error,
+          }))
       );
 
-      const validatedRows = aggregatedRows.map((row) => validateBiometricTimesheetRow(row, employees));
+      const validatedRows = mergeLeaveRowsIntoAttendance(aggregatedRows, leaveRows).map((row) =>
+        validateBiometricTimesheetRow(row, employees)
+      );
       onLoaded(validatedRows, punchCount, { start: startDate, end: endDate });
 
       dismissToast(toastId);
@@ -88,8 +110,9 @@ const BiometricImportSection: React.FC<BiometricImportSectionProps> = ({
         showError("No timesheet rows could be built from the attendance logs for that date range.");
       } else {
         const truncatedNote = payload.truncated ? " Response was truncated for safety." : "";
+        const leaveNote = leaveRows.length > 0 ? ` Includes ${leaveRows.length} approved leave/sick day(s).` : "";
         showSuccess(
-          `Loaded ${validatedRows.length} day row(s) from ${punchCount} punch(es) (${payload.lineCount ?? 0} raw log lines).${truncatedNote}`
+          `Loaded ${validatedRows.length} day row(s) from ${punchCount} punch(es) (${payload.lineCount ?? 0} raw log lines).${leaveNote}${truncatedNote}`
         );
       }
     } catch (err) {

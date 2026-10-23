@@ -175,7 +175,7 @@ export const useTimesheetData = ({
     );
     const formattedDate = format(data.date, "yyyy-MM-dd");
 
-    const entryOvertime = computeWeeklyIncrementalOvertimeForEntry(
+    const entryOvertime = editingTimesheet?.leaveType ? 0 : computeWeeklyIncrementalOvertimeForEntry(
       data.employeeId,
       formattedDate,
       parseFloat(totalWorkHours.toFixed(2)),
@@ -297,6 +297,7 @@ export const useTimesheetData = ({
       lateArrival: false,
       earlyDeparture: false,
       absent: false,
+      leaveType: e.leaveType ?? null,
       status: "Approved",
       approvedBy: "Import review",
       approvedAt: new Date().toISOString(),
@@ -322,6 +323,7 @@ export const useTimesheetData = ({
             const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
             if (!isWithinInterval(tsDate, { start: weekStartDate, end: weekEndDate })) continue;
             if (datesInGroup.has(ts.date)) continue;
+            if (ts.leaveType) continue;
             priorHours += ts.totalWorkHours || 0;
           }
 
@@ -340,7 +342,9 @@ export const useTimesheetData = ({
             const isSunNonWork = dayIdx === 0 && !workDays.includes("sunday");
   
             let entryOvertime = 0;
-            if (isSatNonWork || isSunNonWork) {
+            if (e.leaveType) {
+              entryOvertime = 0;
+            } else if (isSatNonWork || isSunNonWork) {
               entryOvertime = totalWorkHours;
               // Do NOT add these hours to priorHours
             } else {
@@ -398,6 +402,7 @@ export const useTimesheetData = ({
           const tsDate = parse(ts.date, "yyyy-MM-dd", new Date());
           if (!isWithinInterval(tsDate, { start: weekStartDate, end: weekEndDate })) continue;
           if (datesInGroup.has(ts.date)) continue;
+          if (ts.leaveType) continue;
 
           const idx = tsDate.getDay(); // 0=Sun,6=Sat
           const isSatNonWork = idx === 6 && !workDays.includes("saturday");
@@ -423,7 +428,9 @@ export const useTimesheetData = ({
           const isSunNonWork = dayIdx === 0 && !workDays.includes("sunday");
 
           let entryOvertime = 0;
-          if (isSatNonWork || isSunNonWork) {
+          if (e.leaveType) {
+            entryOvertime = 0;
+          } else if (isSatNonWork || isSunNonWork) {
             entryOvertime = totalWorkHours;
             // Do NOT add these hours to priorHours (keeps weekly threshold clean)
           } else {
@@ -447,6 +454,7 @@ export const useTimesheetData = ({
             lateArrival: false,
             earlyDeparture: false,
             absent: false,
+            leaveType: e.leaveType ?? null,
             status: "Approved",
             approvedBy: "Import review",
             approvedAt: new Date().toISOString(),
