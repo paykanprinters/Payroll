@@ -112,9 +112,13 @@ const StaffInstallPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>
+                Already have an older Kan Printers Staff app (before version 1.1.0)? Uninstall it first — the new
+                version will not install over it.
+              </li>
               <li>Download the APK using the button below (when available).</li>
               <li>Allow installs from your browser when Android prompts you.</li>
-              <li>Open Kan Printers Staff and sign in with your work email.</li>
+              <li>Open Kan Printers Staff, sign in with your work email, and tap Allow for notifications.</li>
             </ol>
             {apkExists ? (
               <Button asChild className="w-full bg-fuchsia-600 hover:bg-fuchsia-700">
