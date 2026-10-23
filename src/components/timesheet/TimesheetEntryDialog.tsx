@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { LeaveEntry, MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/lib/timesheet-types";
 import TimesheetForm from "@/components/timesheet/TimesheetForm";
 
@@ -18,7 +18,7 @@ interface TimesheetEntryDialogProps {
   employees: MockEmployee[];
   initialData?: TimesheetEntry | null;
   isEditing: boolean;
-  isLeaveDay: (employeeId: string, date: Date) => boolean;
+  getLeaveTypeForDay: (employeeId: string, date: Date) => LeaveEntry["leaveType"] | null;
   onSave: (data: TimesheetFormValues) => void;
   onCancelEdit: () => void;
 }
@@ -29,7 +29,7 @@ const TimesheetEntryDialog: React.FC<TimesheetEntryDialogProps> = ({
   employees,
   initialData,
   isEditing,
-  isLeaveDay,
+  getLeaveTypeForDay,
   onSave,
   onCancelEdit,
 }) => {
@@ -58,7 +58,7 @@ const TimesheetEntryDialog: React.FC<TimesheetEntryDialogProps> = ({
             onSave={handleSave}
             initialData={initialData}
             isEditing={isEditing}
-            isLeaveDay={isLeaveDay}
+            getLeaveTypeForDay={getLeaveTypeForDay}
             onCancelEdit={() => handleOpenChange(false)}
           />
         </div>

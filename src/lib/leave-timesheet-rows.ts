@@ -19,9 +19,17 @@ const DEFAULT_WORK_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday
 
 type LeaveRow = Omit<ParsedTimesheetRow, "_isValid" | "_errors">;
 
-export function leaveDayLabel(leaveType?: LeaveEntry["leaveType"] | null): "Sick" | "Leave" | null {
+const LEAVE_DAY_LABELS: Record<LeaveEntry["leaveType"], string> = {
+  "Annual Leave": "Leave",
+  "Sick Leave": "Sick",
+  "Family Responsibility Leave": "Family leave",
+  "Unpaid Leave": "Unpaid leave",
+  "Maternity Leave": "Maternity leave",
+};
+
+export function leaveDayLabel(leaveType?: LeaveEntry["leaveType"] | null): string | null {
   if (!leaveType) return null;
-  return leaveType === "Sick Leave" ? "Sick" : "Leave";
+  return LEAVE_DAY_LABELS[leaveType] ?? "Leave";
 }
 
 /**

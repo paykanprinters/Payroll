@@ -13,9 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, parse, isBefore, isAfter, parseISO, isValid } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { LeaveEntry, MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { formatEmployeePickerLabel } from "@/lib/employment-status";
-import { isLeaveDay as checkIsLeaveDayUtil } from "@/lib/timesheet-utils";
+import LeaveDayBadge from "@/components/timesheet/LeaveDayBadge";
 import { TimesheetFormValues } from "@/lib/timesheet-types"; // Import from new types file
 
 // Define the schema for form validation
@@ -76,7 +76,7 @@ interface TimesheetFormProps {
   onSave: (data: TimesheetFormValues) => void;
   initialData?: TimesheetEntry | null;
   isEditing: boolean;
-  isLeaveDay: (employeeId: string, date: Date) => boolean; // This prop is still expected from useTimesheetData
+  getLeaveTypeForDay: (employeeId: string, date: Date) => LeaveEntry["leaveType"] | null;
   onCancelEdit: () => void;
 }
 
@@ -85,7 +85,7 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
   onSave,
   initialData,
   isEditing,
-  isLeaveDay, // Use the prop passed from useTimesheetData
+  getLeaveTypeForDay,
   onCancelEdit,
 }) => {
   const form = useForm<TimesheetFormValues>({
@@ -155,7 +155,9 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
 
   const employeeId = form.watch("employeeId");
   const date = form.watch("date");
-  const isCurrentDayLeave = employeeId && date ? isLeaveDay(employeeId, date) : false;
+  const leaveType =
+    (isEditing ? initialData?.leaveType : null) ||
+    (employeeId && date && isValid(date) ? getLeaveTypeForDay(employeeId, date) : null);
 
   const watchedDate = form.watch("date");
 
@@ -220,10 +222,15 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
         )}
       </div>
 
-      {isCurrentDayLeave && (
+      {leaveType && (
         <div className="p-3 bg-yellow-100 text-yellow-800 rounded-md flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5" />
-          <span>This employee has approved leave on this date. Timesheet entry may not be required.</span>
+          <CalendarIcon className="h-5 w-5 shrink-0" />
+          <LeaveDayBadge leaveType={leaveType} />
+          <span>
+            {isEditing && initialData?.leaveType
+              ? `This day was filled from approved ${initialData.leaveType} and is paid as leave, not worked time.`
+              : `This employee has approved ${leaveType} on this date. Timesheet entry may not be required.`}
+          </span>
         </div>
       )}
 

@@ -15,11 +15,11 @@ import { Separator } from "@/components/ui/separator";
 import { format, eachDayOfInterval, parse, addDays, parseISO, isValid } from "date-fns";
 import { calculatePayPeriodDetails } from "@/lib/payroll-calculations";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
-import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { LeaveEntry, MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/lib/timesheet-types";
 import { showSuccess } from "@/utils/toast";
-import { Badge } from "@/components/ui/badge";
 import DayTimesheetForm from "./DayTimesheetForm";
+import LeaveDayBadge from "./LeaveDayBadge";
 import { CalendarRange } from "lucide-react";
 
 interface WeeklyTimesheetEditorDialogProps {
@@ -30,7 +30,7 @@ interface WeeklyTimesheetEditorDialogProps {
   allTimesheets: TimesheetEntry[];
   onSaveTimesheet: (data: TimesheetFormValues) => void;
   getEmployeeName: (employeeId: string) => string;
-  isLeaveDay: (employeeId: string, date: Date) => boolean;
+  getLeaveTypeForDay: (employeeId: string, date: Date) => LeaveEntry["leaveType"] | null;
   employees: MockEmployee[];
 }
 
@@ -42,7 +42,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
   allTimesheets,
   onSaveTimesheet,
   getEmployeeName,
-  isLeaveDay,
+  getLeaveTypeForDay,
   employees,
 }) => {
   const employee = employees.find((emp) => emp.id === employeeId);
@@ -105,7 +105,9 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
           <div className="space-y-6 py-4">
             {weekDays.map((dayDate) => {
               const day = parse(dayDate, "yyyy-MM-dd", new Date());
-              const isCurrentDayLeave = isLeaveDay(employeeId, day);
+              const existingEntry = allTimesheets.find((ts) => ts.employeeId === employeeId && ts.date === dayDate);
+              const leaveType = existingEntry?.leaveType || getLeaveTypeForDay(employeeId, day);
+              const isCurrentDayLeave = !!leaveType;
 
               return (
                 <div key={dayDate} className="rounded-2xl border bg-white p-4 space-y-3">
@@ -114,17 +116,18 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
                       {format(day, "EEEE")}
                       <span className="ml-2 font-normal text-muted-foreground">{format(day, "PPP")}</span>
                     </h3>
-                    {isCurrentDayLeave && (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
-                        On leave
-                      </Badge>
+                    {leaveType && (
+                      <div className="flex items-center gap-2">
+                        <LeaveDayBadge leaveType={leaveType} />
+                        <span className="text-xs text-muted-foreground">Approved {leaveType}</span>
+                      </div>
                     )}
                   </div>
                   <Separator />
                   <DayTimesheetForm
                     dayDate={dayDate}
                     employeeId={employeeId}
-                    existingEntry={allTimesheets.find((ts) => ts.employeeId === employeeId && ts.date === dayDate) || undefined}
+                    existingEntry={existingEntry}
                     isLeaveDay={isCurrentDayLeave}
                     onSave={(values: TimesheetFormValues) => {
                       onSaveTimesheet(values);

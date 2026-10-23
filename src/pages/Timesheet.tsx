@@ -44,7 +44,7 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
     updateTimesheetStatus,
     startEditingTimesheet: startEditing,
     cancelEditingTimesheet: cancelEditing,
-    isLeaveDay,
+    getLeaveTypeForDay,
     addTimesheetBatch,
     isLoadingTimesheets,
     leaveRecords,
@@ -375,7 +375,7 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
         employees={employees || []}
         initialData={editingTimesheet}
         isEditing={isEditing}
-        isLeaveDay={isLeaveDay}
+        getLeaveTypeForDay={getLeaveTypeForDay}
         onSave={addOrUpdateTimesheet}
         onCancelEdit={cancelEditing}
       />
@@ -388,7 +388,7 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
         allTimesheets={timesheets}
         onSaveTimesheet={addOrUpdateTimesheet}
         getEmployeeName={getEmployeeName}
-        isLeaveDay={isLeaveDay}
+        getLeaveTypeForDay={getLeaveTypeForDay}
         employees={employees || []}
       />
     </div>

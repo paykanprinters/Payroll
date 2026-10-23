@@ -207,6 +207,7 @@ export const usePayrollProcessorState = () => {
     startEditing: startEditingTimesheet,
     cancelEditing: cancelEditingTimesheet,
     isLeaveDay,
+    getLeaveTypeForDay,
   } = useTimesheetData({
     initialTimesheets: emptyTimesheets,
     employees,
@@ -349,6 +350,7 @@ export const usePayrollProcessorState = () => {
     startEditingTimesheet,
     cancelEditingTimesheet,
     isLeaveDay,
+    getLeaveTypeForDay,
     timesheetsLoaded,
     refetchTimesheets,
     toDos,

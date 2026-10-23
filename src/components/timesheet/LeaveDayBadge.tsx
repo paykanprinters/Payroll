@@ -15,9 +15,11 @@ const LeaveDayBadge: React.FC<{ leaveType?: LeaveEntry["leaveType"] | null; clas
       variant="outline"
       title={leaveType ?? undefined}
       className={cn(
-        label === "Sick"
+        leaveType === "Sick Leave"
           ? "border-rose-200 bg-rose-50 text-rose-700"
-          : "border-violet-200 bg-violet-50 text-violet-700",
+          : leaveType === "Unpaid Leave"
+            ? "border-slate-300 bg-slate-50 text-slate-700"
+            : "border-violet-200 bg-violet-50 text-violet-700",
         className
       )}
     >

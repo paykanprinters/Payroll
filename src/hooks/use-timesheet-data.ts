@@ -5,7 +5,7 @@ import { format, parse, isWithinInterval, addDays } from "date-fns";
 import { MockEmployee, TimesheetEntry, LeaveEntry } from "@/lib/mock-data-interfaces";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { v4 as uuidv4 } from 'uuid';
-import { calculateTimesheetMetrics, isLeaveDay, computeWeeklyIncrementalOvertimeForEntry, getWeeklyPeriodContaining } from "@/lib/timesheet-utils";
+import { calculateTimesheetMetrics, isLeaveDay, getLeaveTypeOnDay, computeWeeklyIncrementalOvertimeForEntry, getWeeklyPeriodContaining } from "@/lib/timesheet-utils";
 import { TimesheetFormValues, ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import {
   fetchTimesheetsFromSupabase,
@@ -17,6 +17,9 @@ import {
 } from "@/integrations/supabase/timesheet-queries";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import { usePayCycleSettings } from "@/hooks/use-pay-cycle-settings";
+
+const importAuditAction = (verb: "Created" | "Updated", e: ImportableTimesheetEntry) =>
+  e.leaveType ? `${verb} from approved ${e.leaveType} (Imported)` : `${verb} (Imported)`;
 
 interface UseTimesheetDataProps {
   initialTimesheets: TimesheetEntry[];
@@ -357,11 +360,11 @@ export const useTimesheetData = ({
             const key2 = `${e.employeeId}-${format(e.date, "yyyy-MM-dd")}`;
             const existing = map.get(key2);
             if (existing) {
-              const updatedAuditLog = [...(existing.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
+              const updatedAuditLog = [...(existing.auditLog || []), { action: importAuditAction("Updated", e), timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
               map.set(key2, { ...existing, ...buildBase(e, employee, totalWorkHours, entryOvertime), ...reviewedStatus(existing), id: existing.id, auditLog: updatedAuditLog });
             } else {
               const newId = `TS-${e.employeeId}-${format(e.date, "yyyy-MM-dd")}-${Date.now()}`;
-              const newAuditLog = [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
+              const newAuditLog = [{ action: importAuditAction("Created", e), timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }];
               map.set(key2, { ...buildBase(e, employee, totalWorkHours, entryOvertime), id: newId, auditLog: newAuditLog });
             }
           }
@@ -464,9 +467,9 @@ export const useTimesheetData = ({
           const key2 = `${e.employeeId}-${format(e.date, "yyyy-MM-dd")}`;
           const existing = existingTimesheetsMap.get(key2);
           if (existing) {
-            toUpsert.push({ ...existing, ...base, ...reviewedStatus(existing), auditLog: [...(existing.auditLog || []), { action: "Updated (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
+            toUpsert.push({ ...existing, ...base, ...reviewedStatus(existing), auditLog: [...(existing.auditLog || []), { action: importAuditAction("Updated", e), timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
           } else {
-            toUpsert.push({ ...base, id: uuidv4(), auditLog: [{ action: "Created (Imported)", timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
+            toUpsert.push({ ...base, id: uuidv4(), auditLog: [{ action: importAuditAction("Created", e), timestamp: new Date().toISOString(), user: "System (Import)", captureMethod: "Imported" as const }] });
           }
         }
       }
@@ -565,6 +568,10 @@ export const useTimesheetData = ({
     return isLeaveDay(employeeId, date, leaveRecords);
   }, [leaveRecords]);
 
+  const getLeaveTypeForDay = useCallback((employeeId: string, date: Date) => {
+    return getLeaveTypeOnDay(employeeId, date, leaveRecords);
+  }, [leaveRecords]);
+
   // Focus refresh is handled centrally in usePayrollProcessor.
 
   return {
@@ -580,6 +587,7 @@ export const useTimesheetData = ({
     startEditing,
     cancelEditing,
     isLeaveDay: checkIsLeaveDay,
+    getLeaveTypeForDay,
     addTimesheetBatch,
     isLoadingTimesheets,
     timesheetsLoaded,

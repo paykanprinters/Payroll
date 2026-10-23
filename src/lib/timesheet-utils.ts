@@ -174,13 +174,21 @@ export const computeWeeklyIncrementalOvertimeForEntry = (
 /**
  * Checks if a given date is a leave day for a specific employee.
  */
-export const isLeaveDay = (employeeId: string, date: Date, leaveRecords: LeaveEntry[]) => {
+export const getLeaveTypeOnDay = (
+  employeeId: string,
+  date: Date,
+  leaveRecords: LeaveEntry[]
+): LeaveEntry["leaveType"] | null => {
   const formattedDate = format(date, "yyyy-MM-dd");
-  return leaveRecords.some(
-    (record) =>
-      record.employeeId === employeeId &&
-      isLeaveEffectiveForPayroll(record) &&
-      record.startDate <= formattedDate &&
-      record.endDate >= formattedDate
+  const record = leaveRecords.find(
+    (r) =>
+      r.employeeId === employeeId &&
+      isLeaveEffectiveForPayroll(r) &&
+      r.startDate <= formattedDate &&
+      r.endDate >= formattedDate
   );
+  return record?.leaveType ?? null;
 };
+
+export const isLeaveDay = (employeeId: string, date: Date, leaveRecords: LeaveEntry[]) =>
+  getLeaveTypeOnDay(employeeId, date, leaveRecords) !== null;
