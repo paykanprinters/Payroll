@@ -47,6 +47,7 @@
     }
   },
   "dependencies": {
+    "@capacitor-community/file-opener": "^8.0.1",
     "@capacitor/android": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/filesystem": "^8.1.2",

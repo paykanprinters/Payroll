@@ -1,6 +1,54 @@
 import { Capacitor } from "@capacitor/core";
 
-export type BlobDownloadMethod = "native-share" | "web-share" | "web-anchor";
+export type BlobDownloadMethod = "native-saved" | "native-share" | "web-share" | "web-anchor";
+
+export const NATIVE_DOWNLOAD_FOLDER = "Kan Printers";
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf",
+  zip: "application/zip",
+  csv: "text/csv",
+  json: "application/json",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+
+function resolveMimeType(filename: string, mimeType: string): string {
+  if (mimeType && mimeType !== "application/octet-stream") return mimeType;
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  return MIME_BY_EXTENSION[ext] ?? mimeType;
+}
+
+/**
+ * Writes to the public Documents/Kan Printers folder so the file shows in the Files app.
+ * Falls back to a timestamped name when an older copy exists that this install can't overwrite.
+ */
+async function saveToDocuments(safeName: string, base64: string): Promise<string> {
+  const { Filesystem, Directory } = await import("@capacitor/filesystem");
+
+  const perms = await Filesystem.checkPermissions();
+  if (perms.publicStorage !== "granted") {
+    const requested = await Filesystem.requestPermissions();
+    if (requested.publicStorage !== "granted") throw new Error("Storage permission denied");
+  }
+
+  const write = (name: string) =>
+    Filesystem.writeFile({
+      path: `${NATIVE_DOWNLOAD_FOLDER}/${name}`,
+      data: base64,
+      directory: Directory.Documents,
+      recursive: true,
+    });
+
+  try {
+    return (await write(safeName)).uri;
+  } catch {
+    const dot = safeName.lastIndexOf(".");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const fallbackName =
+      dot > 0 ? `${safeName.slice(0, dot)}_${stamp}${safeName.slice(dot)}` : `${safeName}_${stamp}`;
+    return (await write(fallbackName)).uri;
+  }
+}
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -24,17 +72,16 @@ export function sanitizeDownloadFilename(filename: string): string {
 }
 
 /**
- * The Web Share API is desirable on phones/tablets (it offers "Save to Files",
- * messaging apps, etc.), but on desktop browsers it pops the OS share sheet
- * instead of a plain download. We only opt into web-share on touch mobile
- * devices so desktop users get a straightforward file download.
+ * iOS Safari has no real downloads folder, so the share sheet ("Save to Files")
+ * is the best option there. Android browsers and desktops download normally;
+ * on Android the share sheet only offers messaging apps, not saving.
  */
 function shouldUseWebShare(): boolean {
   if (typeof navigator === "undefined" || typeof File === "undefined" || !navigator.share) {
     return false;
   }
   const ua = navigator.userAgent || "";
-  const isMobileUa = /Android|iPhone|iPad|iPod/i.test(ua);
+  const isMobileUa = /iPhone|iPad|iPod/i.test(ua);
   // iPadOS reports as desktop Safari but exposes touch points.
   const isTouchTablet =
     /Macintosh/.test(ua) && typeof navigator.maxTouchPoints === "number" && navigator.maxTouchPoints > 1;
@@ -42,9 +89,9 @@ function shouldUseWebShare(): boolean {
 }
 
 /**
- * Save a blob on device. On Capacitor native shells, writes to cache and opens
- * the system share sheet (Save to Files / Drive / open in PDF viewer). On web,
- * uses the Web Share API when available, otherwise a download link.
+ * Save a blob on device. In the native app, saves to Documents/Kan Printers and
+ * opens it in the phone's viewer (older APKs without the opener use the share
+ * sheet). On web, iOS uses the Web Share API; everything else gets a download link.
  */
 export async function downloadBlob(
   blob: Blob,
@@ -54,10 +101,27 @@ export async function downloadBlob(
   const safeName = sanitizeDownloadFilename(filename);
 
   if (Capacitor.isNativePlatform()) {
+    const base64 = await blobToBase64(blob);
+
+    if (Capacitor.isPluginAvailable("FileOpener")) {
+      const savedUri = await saveToDocuments(safeName, base64).catch(() => null);
+      if (savedUri) {
+        try {
+          const { FileOpener } = await import("@capacitor-community/file-opener");
+          await FileOpener.open({
+            filePath: savedUri,
+            contentType: resolveMimeType(safeName, mimeType),
+            openWithDefault: true,
+          });
+        } catch {
+          // No viewer for this file type; it is still saved in Documents.
+        }
+        return "native-saved";
+      }
+    }
+
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
     const { Share } = await import("@capacitor/share");
-
-    const base64 = await blobToBase64(blob);
     const written = await Filesystem.writeFile({
       path: safeName,
       data: base64,
@@ -105,6 +169,8 @@ export async function downloadBlob(
 
 export function downloadSuccessMessage(filename: string, method: BlobDownloadMethod): string {
   switch (method) {
+    case "native-saved":
+      return `${filename} saved to Documents/${NATIVE_DOWNLOAD_FOLDER}.`;
     case "native-share":
     case "web-share":
       return `Choose where to save ${filename}.`;
