@@ -15,6 +15,12 @@ export const PAID_TIMESHEET_LEAVE_TYPES: LeaveEntry["leaveType"][] = [
   "Family Responsibility Leave",
 ];
 
+export function paidTimesheetLeaveType(
+  leaveType: LeaveEntry["leaveType"] | null | undefined
+): LeaveEntry["leaveType"] | null {
+  return leaveType && PAID_TIMESHEET_LEAVE_TYPES.includes(leaveType) ? leaveType : null;
+}
+
 const DEFAULT_WORK_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
 type LeaveRow = Omit<ParsedTimesheetRow, "_isValid" | "_errors">;

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildApprovedLeaveRows, mergeLeaveRowsIntoAttendance } from "@/lib/leave-timesheet-rows";
+import {
+  buildApprovedLeaveRows,
+  mergeLeaveRowsIntoAttendance,
+  paidTimesheetLeaveType,
+} from "@/lib/leave-timesheet-rows";
 import type { MockEmployee, LeaveEntry } from "@/lib/mock-data-interfaces";
 
 const employee = {
@@ -77,5 +81,15 @@ describe("mergeLeaveRowsIntoAttendance", () => {
     expect(merged).toHaveLength(2);
     expect(merged[0]).toMatchObject({ date: "2026-03-02", timeIn: "07:45", leaveType: "Annual Leave" });
     expect(merged[1]).toMatchObject({ date: "2026-03-03", timeIn: "07:40" });
+  });
+});
+
+describe("paidTimesheetLeaveType", () => {
+  it("keeps paid leave types and drops unpaid or UIF-funded ones", () => {
+    expect(paidTimesheetLeaveType("Sick Leave")).toBe("Sick Leave");
+    expect(paidTimesheetLeaveType("Annual Leave")).toBe("Annual Leave");
+    expect(paidTimesheetLeaveType("Unpaid Leave")).toBeNull();
+    expect(paidTimesheetLeaveType("Maternity Leave")).toBeNull();
+    expect(paidTimesheetLeaveType(null)).toBeNull();
   });
 });

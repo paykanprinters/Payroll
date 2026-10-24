@@ -20,6 +20,7 @@ import { TimesheetFormValues } from "@/lib/timesheet-types";
 import { showSuccess } from "@/utils/toast";
 import DayTimesheetForm from "./DayTimesheetForm";
 import LeaveDayBadge from "./LeaveDayBadge";
+import { paidTimesheetLeaveType } from "@/lib/leave-timesheet-rows";
 import { CalendarRange } from "lucide-react";
 
 interface WeeklyTimesheetEditorDialogProps {
@@ -106,8 +107,11 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
             {weekDays.map((dayDate) => {
               const day = parse(dayDate, "yyyy-MM-dd", new Date());
               const existingEntry = allTimesheets.find((ts) => ts.employeeId === employeeId && ts.date === dayDate);
-              const leaveType = existingEntry?.leaveType || getLeaveTypeForDay(employeeId, day);
-              const isCurrentDayLeave = !!leaveType;
+              const approvedLeaveType = getLeaveTypeForDay(employeeId, day);
+              const savedLeaveType = existingEntry
+                ? existingEntry.leaveType ?? null
+                : paidTimesheetLeaveType(approvedLeaveType);
+              const leaveType = savedLeaveType || approvedLeaveType;
 
               return (
                 <div key={dayDate} className="rounded-2xl border bg-white p-4 space-y-3">
@@ -119,7 +123,13 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
                     {leaveType && (
                       <div className="flex items-center gap-2">
                         <LeaveDayBadge leaveType={leaveType} />
-                        <span className="text-xs text-muted-foreground">Approved {leaveType}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {savedLeaveType
+                            ? `${savedLeaveType}: paid, not worked`
+                            : existingEntry
+                              ? `Approved ${approvedLeaveType}, but this day is saved as worked`
+                              : `Approved ${approvedLeaveType}`}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -128,7 +138,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
                     dayDate={dayDate}
                     employeeId={employeeId}
                     existingEntry={existingEntry}
-                    isLeaveDay={isCurrentDayLeave}
+                    defaultLeaveType={savedLeaveType}
                     onSave={(values: TimesheetFormValues) => {
                       onSaveTimesheet(values);
                       showSuccess(`Saved ${format(parse(dayDate, "yyyy-MM-dd", new Date()), "PPP")}.`);

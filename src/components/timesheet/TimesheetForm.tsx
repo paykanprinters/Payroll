@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { LeaveEntry, MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { formatEmployeePickerLabel } from "@/lib/employment-status";
 import LeaveDayBadge from "@/components/timesheet/LeaveDayBadge";
+import DayTypeSelect from "@/components/timesheet/DayTypeSelect";
+import { LEAVE_DAY_TIME_IN, LEAVE_DAY_TIME_OUT, paidTimesheetLeaveType } from "@/lib/leave-timesheet-rows";
 import { TimesheetFormValues } from "@/lib/timesheet-types"; // Import from new types file
 
 // Define the schema for form validation
@@ -139,8 +141,42 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
     }
   }, [initialData, form]);
 
+  const employeeId = form.watch("employeeId");
+  const date = form.watch("date");
+  const approvedLeaveType =
+    employeeId && date && isValid(date) ? getLeaveTypeForDay(employeeId, date) : null;
+  const [dayTypeOverride, setDayTypeOverride] = useState<LeaveEntry["leaveType"] | null | undefined>(undefined);
+  const dateKey = date && isValid(date) ? format(date, "yyyy-MM-dd") : "";
+  useEffect(() => setDayTypeOverride(undefined), [initialData, employeeId, dateKey]);
+  const dayType =
+    dayTypeOverride !== undefined
+      ? dayTypeOverride
+      : isEditing
+        ? initialData?.leaveType ?? null
+        : paidTimesheetLeaveType(approvedLeaveType);
+
+  const applyLeaveDayTimes = useCallback(() => {
+    form.setValue("timeIn", LEAVE_DAY_TIME_IN);
+    form.setValue("timeOut", LEAVE_DAY_TIME_OUT);
+    form.setValue("teaStart", "");
+    form.setValue("teaEnd", "");
+    form.setValue("lunchStart", "");
+    form.setValue("lunchEnd", "");
+  }, [form]);
+
+  useEffect(() => {
+    if (!isEditing && dayTypeOverride === undefined && paidTimesheetLeaveType(approvedLeaveType)) {
+      applyLeaveDayTimes();
+    }
+  }, [isEditing, dayTypeOverride, approvedLeaveType, applyLeaveDayTimes]);
+
+  const handleDayTypeChange = (next: LeaveEntry["leaveType"] | null) => {
+    setDayTypeOverride(next);
+    if (next && !isEditing) applyLeaveDayTimes();
+  };
+
   const onSubmit = (data: TimesheetFormValues) => {
-    onSave(data);
+    onSave({ ...data, leaveType: dayType });
     form.reset({
       employeeId: "",
       date: new Date(),
@@ -153,11 +189,7 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
     });
   };
 
-  const employeeId = form.watch("employeeId");
-  const date = form.watch("date");
-  const leaveType =
-    (isEditing ? initialData?.leaveType : null) ||
-    (employeeId && date && isValid(date) ? getLeaveTypeForDay(employeeId, date) : null);
+  const leaveType = dayType || approvedLeaveType;
 
   const watchedDate = form.watch("date");
 
@@ -227,12 +259,14 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
           <CalendarIcon className="h-5 w-5 shrink-0" />
           <LeaveDayBadge leaveType={leaveType} />
           <span>
-            {isEditing && initialData?.leaveType
-              ? `This day was filled from approved ${initialData.leaveType} and is paid as leave, not worked time.`
-              : `This employee has approved ${leaveType} on this date. Timesheet entry may not be required.`}
+            {dayType
+              ? `Saved as ${dayType}: paid as leave, not worked time. Change the day type below if the employee worked.`
+              : `This employee has approved ${approvedLeaveType} on this date, but this entry is saved as a worked day.`}
           </span>
         </div>
       )}
+
+      <DayTypeSelect id="dayType" value={dayType} onChange={handleDayTypeChange} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>

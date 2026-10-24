@@ -180,8 +180,20 @@ export const useTimesheetData = ({
       currentMetricOpts()
     );
     const formattedDate = format(data.date, "yyyy-MM-dd");
+    const existingForDay =
+      isEditing && editingTimesheet
+        ? editingTimesheet
+        : timesheets.find((ts) => ts.employeeId === data.employeeId && ts.date === formattedDate);
+    const leaveType = data.leaveType !== undefined ? data.leaveType : existingForDay?.leaveType ?? null;
+    const previousLeaveType = existingForDay?.leaveType ?? null;
+    const dayTypeNote =
+      existingForDay && leaveType !== previousLeaveType
+        ? ` (day type: ${previousLeaveType ?? "Worked"} → ${leaveType ?? "Worked"})`
+        : !existingForDay && leaveType
+          ? ` (${leaveType})`
+          : "";
 
-    const entryOvertime = editingTimesheet?.leaveType ? 0 : computeWeeklyIncrementalOvertimeForEntry(
+    const entryOvertime = leaveType ? 0 : computeWeeklyIncrementalOvertimeForEntry(
       data.employeeId,
       formattedDate,
       parseFloat(totalWorkHours.toFixed(2)),
@@ -189,7 +201,7 @@ export const useTimesheetData = ({
       weeklyThreshold,
       cutOffDay,
       workDays,
-      editingTimesheet?.id ?? undefined
+      existingForDay?.id ?? undefined
     );
 
     const baseTimesheet: Omit<TimesheetEntry, 'id'> = {
@@ -206,6 +218,7 @@ export const useTimesheetData = ({
       lateArrival,
       earlyDeparture,
       absent,
+      leaveType,
       status: "Draft",
       auditLog: [],
     };
@@ -214,7 +227,7 @@ export const useTimesheetData = ({
       setTimesheets(prevTimesheets => {
         let updatedTimesheets: TimesheetEntry[];
         if (isEditing && editingTimesheet) {
-          const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: "Updated", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
+          const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: `Updated${dayTypeNote}`, timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
           updatedTimesheets = prevTimesheets.map((ts) =>
             ts.id === editingTimesheet.id
               ? { ...ts, ...baseTimesheet, id: editingTimesheet.id, auditLog: updatedAuditLog }
@@ -227,7 +240,7 @@ export const useTimesheetData = ({
           );
           if (existingIndex !== -1) {
             const existingTs = prevTimesheets[existingIndex];
-            const updatedAuditLog = [...(existingTs.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
+            const updatedAuditLog = [...(existingTs.auditLog || []), { action: `Updated (Existing)${dayTypeNote}`, timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
             updatedTimesheets = prevTimesheets.map((ts, index) =>
               index === existingIndex
                 ? { ...ts, ...baseTimesheet, id: ts.id, auditLog: updatedAuditLog }
@@ -236,7 +249,7 @@ export const useTimesheetData = ({
             showSuccess("Existing timesheet updated successfully!");
           } else {
             const newId = `TS-${data.employeeId}-${formattedDate}-${Date.now()}`;
-            const newAuditLog = [{ action: "Created", timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
+            const newAuditLog = [{ action: `Created${dayTypeNote}`, timestamp: new Date().toISOString(), user: "Current User (Mock)", captureMethod: "Manual" as const }];
             updatedTimesheets = [...prevTimesheets, { ...baseTimesheet, id: newId, auditLog: newAuditLog }];
             showSuccess("Timesheet added successfully!");
           }
@@ -248,15 +261,15 @@ export const useTimesheetData = ({
     } else {
       let timesheetToUpsert: TimesheetEntry;
       if (isEditing && editingTimesheet) {
-        const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: "Updated", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
+        const updatedAuditLog = [...(editingTimesheet.auditLog || []), { action: `Updated${dayTypeNote}`, timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
         timesheetToUpsert = { ...editingTimesheet, ...baseTimesheet, auditLog: updatedAuditLog };
       } else {
         const existing = timesheets.find(ts => ts.employeeId === data.employeeId && ts.date === formattedDate);
         if (existing) {
-          const updatedAuditLog = [...(existing.auditLog || []), { action: "Updated (Existing)", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
+          const updatedAuditLog = [...(existing.auditLog || []), { action: `Updated (Existing)${dayTypeNote}`, timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }];
           timesheetToUpsert = { ...existing, ...baseTimesheet, auditLog: updatedAuditLog };
         } else {
-          timesheetToUpsert = { ...baseTimesheet, id: uuidv4(), auditLog: [{ action: "Created", timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }] };
+          timesheetToUpsert = { ...baseTimesheet, id: uuidv4(), auditLog: [{ action: `Created${dayTypeNote}`, timestamp: new Date().toISOString(), user: "Current User", captureMethod: "Manual" as const }] };
         }
       }
       await upsertLiveTimesheet(timesheetToUpsert);

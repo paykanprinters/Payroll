@@ -10,6 +10,8 @@ export interface TimesheetFormValues {
   lunchStart?: string;
   lunchEnd?: string;
   timeOut: string;
+  /** undefined keeps the existing row's day type; null marks it as a worked day. */
+  leaveType?: LeaveEntry["leaveType"] | null;
 }
 
 // Define the expected input type for batch imports

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { parse, isAfter, isBefore } from "date-fns";
-import { TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { LeaveEntry, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/lib/timesheet-types";
+import { LEAVE_DAY_TIME_IN, LEAVE_DAY_TIME_OUT } from "@/lib/leave-timesheet-rows";
+import DayTypeSelect from "./DayTypeSelect";
 
 const dailyTimesheetSchema = z
   .object({
@@ -145,7 +147,8 @@ interface DayTimesheetFormProps {
   dayDate: string; // yyyy-MM-dd
   employeeId: string;
   existingEntry?: TimesheetEntry | null;
-  isLeaveDay: boolean;
+  /** Saved row's leave type, or approved leave for the day when no row exists yet. */
+  defaultLeaveType: LeaveEntry["leaveType"] | null;
   onSave: (values: TimesheetFormValues) => void;
 }
 
@@ -153,9 +156,12 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
   dayDate,
   employeeId,
   existingEntry,
-  isLeaveDay,
+  defaultLeaveType,
   onSave,
 }) => {
+  const [leaveType, setLeaveType] = useState<LeaveEntry["leaveType"] | null>(defaultLeaveType);
+  useEffect(() => setLeaveType(defaultLeaveType), [defaultLeaveType]);
+
   const form = useForm<DailyTimesheetFormValues>({
     resolver: zodResolver(dailyTimesheetSchema),
     defaultValues: {
@@ -193,12 +199,22 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
       lunchStart: data.lunchStart || "",
       lunchEnd: data.lunchEnd || "",
       timeOut: data.timeOut || "",
+      leaveType,
     };
     onSave(payload);
   };
 
+  const handleDayTypeChange = (next: LeaveEntry["leaveType"] | null) => {
+    setLeaveType(next);
+    if (next && !form.getValues("timeIn") && !form.getValues("timeOut")) {
+      form.setValue("timeIn", LEAVE_DAY_TIME_IN, { shouldValidate: true });
+      form.setValue("timeOut", LEAVE_DAY_TIME_OUT, { shouldValidate: true });
+    }
+  };
+
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <DayTypeSelect id={`dayType-${dayDate}`} value={leaveType} onChange={handleDayTypeChange} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`timeIn-${dayDate}`}>Time In</Label>
@@ -210,7 +226,6 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
             max="23:59"
             {...form.register("timeIn")}
             className="mt-1"
-            disabled={isLeaveDay}
           />
           {errors.timeIn && <p className="text-red-500 text-sm mt-1">{errors.timeIn.message}</p>}
         </div>
@@ -224,7 +239,6 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
             max="23:59"
             {...form.register("timeOut")}
             className="mt-1"
-            disabled={isLeaveDay}
           />
           {errors.timeOut && <p className="text-red-500 text-sm mt-1">{errors.timeOut.message}</p>}
         </div>
@@ -241,7 +255,6 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
             max="23:59"
             {...form.register("teaStart")}
             className="mt-1"
-            disabled={isLeaveDay}
           />
           {errors.teaStart && <p className="text-red-500 text-sm mt-1">{errors.teaStart.message}</p>}
         </div>
@@ -255,7 +268,6 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
             max="23:59"
             {...form.register("teaEnd")}
             className="mt-1"
-            disabled={isLeaveDay}
           />
           {errors.teaEnd && <p className="text-red-500 text-sm mt-1">{errors.teaEnd.message}</p>}
         </div>
@@ -272,7 +284,6 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
             max="23:59"
             {...form.register("lunchStart")}
             className="mt-1"
-            disabled={isLeaveDay}
           />
           {errors.lunchStart && <p className="text-red-500 text-sm mt-1">{errors.lunchStart.message}</p>}
         </div>
@@ -286,13 +297,12 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
             max="23:59"
             {...form.register("lunchEnd")}
             className="mt-1"
-            disabled={isLeaveDay}
           />
           {errors.lunchEnd && <p className="text-red-500 text-sm mt-1">{errors.lunchEnd.message}</p>}
         </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLeaveDay}>
+      <Button type="submit" className="w-full">
         Save Day
       </Button>
     </form>
