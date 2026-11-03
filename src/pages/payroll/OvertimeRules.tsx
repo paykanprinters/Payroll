@@ -18,7 +18,7 @@ const OvertimeRulesPage: React.FC = () => {
     saturdayOtMultiplier: 1.5,
     sundayOtMultiplier: 2.0,
     holidayWorkedMultiplier: 2.0,
-    holidayNonWorkedMultiplier: 1.5,
+    holidayNonWorkedMultiplier: 1.0,
     nightShiftStart: "",
     nightShiftEnd: "",
     nightShiftMultiplier: 1.25,
@@ -31,7 +31,7 @@ const OvertimeRulesPage: React.FC = () => {
         saturdayOtMultiplier: rules.saturdayOtMultiplier ?? 1.5,
         sundayOtMultiplier: rules.sundayOtMultiplier ?? 2.0,
         holidayWorkedMultiplier: rules.holidayWorkedMultiplier ?? 2.0,
-        holidayNonWorkedMultiplier: rules.holidayNonWorkedMultiplier ?? 1.5,
+        holidayNonWorkedMultiplier: rules.holidayNonWorkedMultiplier ?? 1.0,
         nightShiftStart: rules.nightShiftStart || "",
         nightShiftEnd: rules.nightShiftEnd || "",
         nightShiftMultiplier: rules.nightShiftMultiplier ?? 1.25,
@@ -108,6 +108,9 @@ const OvertimeRulesPage: React.FC = () => {
                   setForm({ ...form, holidayNonWorkedMultiplier: parseFloat(e.target.value) || 0 })
                 }
               />
+              <p className="text-xs text-muted-foreground">
+                Hourly staff only. 1.0 is the BCEA minimum (a normal day&apos;s pay). Salaried staff get their normal salary.
+              </p>
             </div>
           </div>
 

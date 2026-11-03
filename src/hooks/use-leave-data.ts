@@ -13,7 +13,7 @@ import {
   deleteLeaveRecordFromSupabase,
 } from "@/integrations/supabase/leave-queries";
 import { recordAuditEvent } from "@/lib/audit-trail";
-import { validateLeaveAgainstBalance } from "@/lib/leave-accrual";
+import { formatLeaveBalance, validateLeaveAgainstBalance } from "@/lib/leave-accrual";
 
 interface UseLeaveDataProps {
   initialLeaveRecords: LeaveEntry[];
@@ -159,11 +159,18 @@ export const useLeaveData = ({
       const employee = employees.find((emp) => emp.id === record.employeeId);
       if (!employee) return true;
       const validation = validateLeaveAgainstBalance(employee, leaveRecords, record);
-      if (!validation.ok) {
-        showError(validation.message);
-        return false;
+      if (validation.ok) return true;
+      if (
+        validation.advanceAllowed &&
+        typeof window !== "undefined" &&
+        window.confirm(
+          `${validation.message}\n\nApprove as leave in advance? The balance will go to ${formatLeaveBalance(validation.balanceAfter)} and is recovered from future accrual.`
+        )
+      ) {
+        return true;
       }
-      return true;
+      showError(validation.message);
+      return false;
     },
     [employees, leaveRecords]
   );

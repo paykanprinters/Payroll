@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { LeaveEntry, MockEmployee } from "@/lib/mock-data-interfaces";
-import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
+import { computeEmployeeLeaveBalance, formatLeaveBalance } from "@/lib/leave-accrual";
 
 interface LeaveBalancesPanelProps {
   employees: MockEmployee[];
@@ -82,8 +82,10 @@ const LeaveBalancesPanel: React.FC<LeaveBalancesPanelProps> = ({
                   {format(parseISO(balance.annual.cycleStart), "dd MMM yyyy")} –{" "}
                   {format(parseISO(balance.annual.cycleEnd), "dd MMM yyyy")}
                 </TableCell>
-                <TableCell className="text-right font-medium">
-                  {balance.annual.remaining}
+                <TableCell
+                  className={`text-right font-medium ${balance.annual.remaining < 0 ? "text-red-600" : ""}`}
+                >
+                  {balance.annual.remaining < 0 ? formatLeaveBalance(balance.annual.remaining) : balance.annual.remaining}
                   <span className="block text-xs font-normal text-muted-foreground">
                     {balance.annual.taken} of {balance.annual.entitled} used
                   </span>

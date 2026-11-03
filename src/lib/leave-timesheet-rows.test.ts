@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildApprovedLeaveRows,
+  leaveDayTimes,
   mergeLeaveRowsIntoAttendance,
   paidTimesheetLeaveType,
 } from "@/lib/leave-timesheet-rows";
@@ -39,7 +40,7 @@ const build = (leaveRecords: LeaveEntry[], extra: Partial<Parameters<typeof buil
   });
 
 describe("buildApprovedLeaveRows", () => {
-  it("adds a full 07:45–17:00 day per approved leave work day in range", () => {
+  it("adds a full scheduled day per approved leave work day in range, with the shorter Friday", () => {
     const rows = build([leave({ leaveType: "Sick Leave", startDate: "2026-03-05", endDate: "2026-03-09" })]);
     expect(rows.map((r) => r.date)).toEqual(["2026-03-05", "2026-03-06"]);
     expect(rows[0]).toMatchObject({
@@ -49,6 +50,17 @@ describe("buildApprovedLeaveRows", () => {
       timeOut: "17:00",
       leaveType: "Sick Leave",
     });
+    expect(rows[1]).toMatchObject({ date: "2026-03-06", timeIn: "07:45", timeOut: "15:45" });
+  });
+
+  it("follows the configured work hours schedule", () => {
+    const rows = build([leave({ startDate: "2026-03-05", endDate: "2026-03-06" })], {
+      schedule: { dailyStartTime: "08:00", dailyEndTime: "16:30", fridayEndTime: "14:00" },
+    });
+    expect(rows.map((r) => [r.timeIn, r.timeOut])).toEqual([
+      ["08:00", "16:30"],
+      ["08:00", "14:00"],
+    ]);
   });
 
   it("ignores pending, rejected, unpaid, and maternity leave", () => {
@@ -81,6 +93,13 @@ describe("mergeLeaveRowsIntoAttendance", () => {
     expect(merged).toHaveLength(2);
     expect(merged[0]).toMatchObject({ date: "2026-03-02", timeIn: "07:45", leaveType: "Annual Leave" });
     expect(merged[1]).toMatchObject({ date: "2026-03-03", timeIn: "07:40" });
+  });
+});
+
+describe("leaveDayTimes", () => {
+  it("uses 07:45–17:00 Monday to Thursday and 07:45–15:45 on Friday by default", () => {
+    expect(leaveDayTimes("2026-12-14")).toEqual({ timeIn: "07:45", timeOut: "17:00" });
+    expect(leaveDayTimes("2026-12-18")).toEqual({ timeIn: "07:45", timeOut: "15:45" });
   });
 });
 

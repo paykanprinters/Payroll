@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { format, parseISO } from "date-fns";
 import {
+  annualLeaveAdvanceDays,
   BCEA_LEAVE_DEFAULTS,
   computeEmployeeLeaveBalance,
+  formatLeaveBalance,
   getAnnualLeaveCycle,
   getSickLeaveCycle,
   sumLeaveTakenInRange,
@@ -151,7 +153,39 @@ describe("validateLeaveAgainstBalance", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.message).toContain("Insufficient annual leave");
+      expect(result.advanceAllowed).toBe(true);
+      expect(result.balanceAfter).toBeLessThan(0);
     }
+
+    const advance = validateLeaveAgainstBalance(
+      baseEmployee,
+      records,
+      { leaveType: "Annual Leave", startDate: "2024-06-03", endDate: "2024-06-07", workingDays: 5 },
+      parseISO("2024-06-01"),
+      { allowAdvance: true }
+    );
+    expect(advance.ok).toBe(true);
+  });
+
+  it("lets the annual balance go negative when leave was granted in advance", () => {
+    const records = [
+      leave({ id: "closure", leaveType: "Annual Leave", startDate: "2024-02-01", endDate: "2024-02-20", workingDays: 14 }),
+    ];
+    const snapshot = computeEmployeeLeaveBalance(baseEmployee, records, parseISO("2024-03-01"));
+    expect(snapshot.annual.remaining).toBeLessThan(0);
+    expect(annualLeaveAdvanceDays(snapshot.annual.remaining)).toBe(round(14 - snapshot.annual.entitled));
+    expect(formatLeaveBalance(-2.5)).toBe("2.5 days in advance");
+  });
+
+  it("never allows sick leave in advance", () => {
+    const result = validateLeaveAgainstBalance(
+      baseEmployee,
+      [],
+      { leaveType: "Sick Leave", startDate: "2024-06-03", endDate: "2024-06-28", workingDays: 20 },
+      parseISO("2024-06-01"),
+      { allowAdvance: true }
+    );
+    expect(result.ok).toBe(false);
   });
 
   it("allows unpaid leave without balance checks", () => {

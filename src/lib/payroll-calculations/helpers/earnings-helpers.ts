@@ -357,17 +357,42 @@ export const applyAssignedEarnings = (
   return { earningsBreakdown: lines, grossEarnings: newGross };
 };
 
+export const holidayMultipliers = (rules?: OvertimePremiumRules) => ({
+  worked: rules?.holidayWorkedMultiplier ?? 2.0,
+  nonWorked: rules?.holidayNonWorkedMultiplier ?? 1.0,
+});
+
+export const overtimeMultipliers = (rules?: OvertimePremiumRules) => ({
+  weekday: rules?.weekdayOtMultiplier ?? 1.5,
+  saturday: rules?.saturdayOtMultiplier ?? 1.5,
+  sunday: rules?.sundayOtMultiplier ?? 2.0,
+});
+
+/**
+ * Salaried staff are already paid for public holidays through their salary, so a holiday off
+ * adds nothing and a holiday worked adds only the premium above the normal day (multiplier − 1).
+ */
 export const computeHolidayAmounts = (
   holidayWorkedHours: number,
   holidayNonWorkedHours: number,
   hourlyRate: number,
-  rules?: OvertimePremiumRules
+  rules?: OvertimePremiumRules,
+  options?: { salaried?: boolean }
 ) => {
-  const workedMult = rules?.holidayWorkedMultiplier ?? 2.0;
-  const nonWorkedMult = rules?.holidayNonWorkedMultiplier ?? 1.5;
+  const mult = holidayMultipliers(rules);
+  const salaried = options?.salaried === true;
+  const workedMult = salaried ? Math.max(0, mult.worked - 1) : mult.worked;
+  const nonWorkedMult = salaried ? 0 : mult.nonWorked;
   const workedAmount = bankersRound(hourlyRate > 0 ? holidayWorkedHours * hourlyRate * workedMult : 0, 2);
   const nonWorkedAmount = bankersRound(hourlyRate > 0 ? holidayNonWorkedHours * hourlyRate * nonWorkedMult : 0, 2);
-  return { workedAmount, nonWorkedAmount };
+  return { workedAmount, nonWorkedAmount, workedMultiplier: workedMult, nonWorkedMultiplier: nonWorkedMult };
+};
+
+export const isHourlyPaid = (emp: MockEmployee) => !!(emp.hourlyRate && emp.hourlyRate > 0);
+
+const formatMultiplier = (m: number) => {
+  const two = m.toFixed(2);
+  return `${two.endsWith("0") ? m.toFixed(1) : two}x`;
 };
 
 export const computeOvertimeAmounts = (
@@ -377,9 +402,7 @@ export const computeOvertimeAmounts = (
   overtimeSundayHours: number,
   rules?: OvertimePremiumRules
 ) => {
-  const wkMult = rules?.weekdayOtMultiplier ?? 1.5;
-  const satMult = rules?.saturdayOtMultiplier ?? 1.5;
-  const sunMult = rules?.sundayOtMultiplier ?? 2.0;
+  const { weekday: wkMult, saturday: satMult, sunday: sunMult } = overtimeMultipliers(rules);
   const weekdayAmount = bankersRound(hourlyRate > 0 ? overtimeWeekdayHours * hourlyRate * wkMult : 0, 2);
   const saturdayAmount = bankersRound(hourlyRate > 0 ? overtimeSaturdayHours * hourlyRate * satMult : 0, 2);
   const sundayAmount = bankersRound(hourlyRate > 0 ? overtimeSundayHours * hourlyRate * sunMult : 0, 2);
@@ -392,11 +415,19 @@ export const buildEarningsBreakdown = (
   basicSalary: number,
   overtimeAmounts: { weekdayAmount: number; saturdayAmount: number; sundayAmount: number },
   overtimeHours: { overtimeWeekdayHours: number; overtimeSaturdayHours: number; overtimeSundayHours: number },
-  holidayAmounts: { workedAmount: number; nonWorkedAmount: number },
+  holidayAmounts: { workedAmount: number; nonWorkedAmount: number; workedMultiplier?: number; nonWorkedMultiplier?: number },
   holidayHours: { holidayWorkedHours: number; holidayNonWorkedHours: number },
-  periodStart: Date
+  periodStart: Date,
+  rules?: OvertimePremiumRules
 ): { earningsBreakdown: { name: string; amount: number }[]; grossEarnings: number } => {
   const roundedBasic = bankersRound(basicSalary, 2);
+  const ot = overtimeMultipliers(rules);
+  const hol = holidayMultipliers(rules);
+  const holidayWorkedMult = holidayAmounts.workedMultiplier ?? hol.worked;
+  const holidayNonWorkedMult = holidayAmounts.nonWorkedMultiplier ?? hol.nonWorked;
+  const holidayWorkedLabel = isHourlyPaid(emp)
+    ? `@${formatMultiplier(holidayWorkedMult)}`
+    : `premium @${formatMultiplier(holidayWorkedMult)}`;
   const lines: { name: string; amount: number }[] = [
     {
       name: emp.hourlyRate && emp.hourlyRate > 0
@@ -408,32 +439,32 @@ export const buildEarningsBreakdown = (
 
   if (overtimeAmounts.weekdayAmount > 0) {
     lines.push({
-      name: `Overtime (Weekday ${overtimeHours.overtimeWeekdayHours.toFixed(2)}h @1.5x)`,
+      name: `Overtime (Weekday ${overtimeHours.overtimeWeekdayHours.toFixed(2)}h @${formatMultiplier(ot.weekday)})`,
       amount: overtimeAmounts.weekdayAmount,
     });
   }
   if (overtimeAmounts.saturdayAmount > 0) {
     lines.push({
-      name: `Weekend Overtime (Sat ${overtimeHours.overtimeSaturdayHours.toFixed(2)}h @1.5x)`,
+      name: `Weekend Overtime (Sat ${overtimeHours.overtimeSaturdayHours.toFixed(2)}h @${formatMultiplier(ot.saturday)})`,
       amount: overtimeAmounts.saturdayAmount,
     });
   }
   if (overtimeAmounts.sundayAmount > 0) {
     lines.push({
-      name: `Weekend Overtime (Sun ${overtimeHours.overtimeSundayHours.toFixed(2)}h @2.0x)`,
+      name: `Weekend Overtime (Sun ${overtimeHours.overtimeSundayHours.toFixed(2)}h @${formatMultiplier(ot.sunday)})`,
       amount: overtimeAmounts.sundayAmount,
     });
   }
 
   if (holidayAmounts.nonWorkedAmount > 0) {
     lines.push({
-      name: `Public Holiday (no timesheet ${holidayHours.holidayNonWorkedHours.toFixed(2)}h @1.5x)`,
+      name: `Public Holiday (not worked ${holidayHours.holidayNonWorkedHours.toFixed(2)}h @${formatMultiplier(holidayNonWorkedMult)})`,
       amount: holidayAmounts.nonWorkedAmount,
     });
   }
   if (holidayAmounts.workedAmount > 0) {
     lines.push({
-      name: `Public Holiday (worked ${holidayHours.holidayWorkedHours.toFixed(2)}h @2.0x)`,
+      name: `Public Holiday (worked ${holidayHours.holidayWorkedHours.toFixed(2)}h ${holidayWorkedLabel})`,
       amount: holidayAmounts.workedAmount,
     });
   }

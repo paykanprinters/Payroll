@@ -44,7 +44,16 @@ export type EmployeeLeaveBalanceSnapshot = {
 
 export type LeaveBalanceValidationResult =
   | { ok: true }
-  | { ok: false; message: string; remaining: number };
+  | { ok: false; message: string; remaining: number; advanceAllowed: boolean; balanceAfter: number };
+
+/** Days owed back to the employer when annual leave was taken in advance (0 when the balance is positive). */
+export function annualLeaveAdvanceDays(remaining: number): number {
+  return remaining < 0 ? roundLeaveDays(-remaining) : 0;
+}
+
+export function formatLeaveBalance(remaining: number): string {
+  return remaining < 0 ? `${roundLeaveDays(-remaining)} days in advance` : `${remaining} days`;
+}
 
 function roundLeaveDays(value: number): number {
   return Math.round(value * 100) / 100;
@@ -288,18 +297,20 @@ export function computeEmployeeLeaveBalance(
     entitled: number,
     taken: number,
     cycleStart: Date,
-    cycleEnd: Date
+    cycleEnd: Date,
+    allowNegative = false
   ): LeaveBalanceBucket => ({
     entitled: roundLeaveDays(entitled),
     taken: roundLeaveDays(taken),
-    remaining: roundLeaveDays(Math.max(0, entitled - taken)),
+    remaining: roundLeaveDays(allowNegative ? entitled - taken : Math.max(0, entitled - taken)),
     cycleStart: toIsoDate(cycleStart),
     cycleEnd: toIsoDate(cycleEnd),
   });
 
   return {
     asOfDate: toIsoDate(asOfDay),
-    annual: bucket(annualEntitled, annualTaken, annualCycle.cycleStart, annualCycle.cycleEnd),
+    // Annual leave may be granted in advance (e.g. a company closure), so its balance can go negative.
+    annual: bucket(annualEntitled, annualTaken, annualCycle.cycleStart, annualCycle.cycleEnd, true),
     sick: {
       ...bucket(
         sickEntitled,
@@ -331,7 +342,8 @@ export function validateLeaveAgainstBalance(
   leaveRecords: LeaveEntry[],
   proposed: Pick<LeaveEntry, "leaveType" | "workingDays" | "startDate" | "endDate"> &
     Partial<Pick<LeaveEntry, "id">>,
-  asOf: Date = new Date()
+  asOf: Date = new Date(),
+  options?: { allowAdvance?: boolean }
 ): LeaveBalanceValidationResult {
   if (!BALANCE_CHECKED_LEAVE_TYPES.includes(proposed.leaveType)) {
     return { ok: true };
@@ -343,7 +355,13 @@ export function validateLeaveAgainstBalance(
       : countWeekdaysBetween(parseISO(proposed.startDate), parseISO(proposed.endDate));
 
   if (daysRequested <= 0) {
-    return { ok: false, message: "Leave request must include at least one working day.", remaining: 0 };
+    return {
+      ok: false,
+      message: "Leave request must include at least one working day.",
+      remaining: 0,
+      advanceAllowed: false,
+      balanceAfter: 0,
+    };
   }
 
   const snapshot = computeEmployeeLeaveBalance(employee, leaveRecords, asOf, {
@@ -358,16 +376,19 @@ export function validateLeaveAgainstBalance(
         : snapshot.familyResponsibility;
 
   if (daysRequested > bucket.remaining) {
-    const label =
-      proposed.leaveType === "Annual Leave"
-        ? "annual leave"
-        : proposed.leaveType === "Sick Leave"
-          ? "sick leave"
-          : "family responsibility leave";
+    const isAnnual = proposed.leaveType === "Annual Leave";
+    if (isAnnual && options?.allowAdvance) return { ok: true };
+    const label = isAnnual
+      ? "annual leave"
+      : proposed.leaveType === "Sick Leave"
+        ? "sick leave"
+        : "family responsibility leave";
     return {
       ok: false,
-      message: `Insufficient ${label} balance. Requested ${daysRequested} day(s); ${bucket.remaining} remaining in the current cycle.`,
+      message: `Insufficient ${label} balance. Requested ${daysRequested} day(s); ${formatLeaveBalance(bucket.remaining)} remaining in the current cycle.`,
       remaining: bucket.remaining,
+      advanceAllowed: isAnnual,
+      balanceAfter: roundLeaveDays(bucket.remaining - daysRequested),
     };
   }
 

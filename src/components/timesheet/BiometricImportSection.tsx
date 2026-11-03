@@ -13,7 +13,7 @@ import {
   biometricLogTextToTimesheetRows,
   validateBiometricTimesheetRow,
 } from "@/lib/biometric-attendance-parser";
-import { buildApprovedLeaveRows, mergeLeaveRowsIntoAttendance } from "@/lib/leave-timesheet-rows";
+import { buildApprovedLeaveRows, mergeLeaveRowsIntoAttendance, type LeaveDaySchedule } from "@/lib/leave-timesheet-rows";
 import { ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import { getStoredBiometricApiUrl } from "@/hooks/use-biometric-api-settings";
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
@@ -22,6 +22,7 @@ interface BiometricImportSectionProps {
   employees: MockEmployee[];
   leaveRecords?: LeaveEntry[];
   workDays?: string[];
+  schedule?: LeaveDaySchedule | null;
   holidays?: PublicHoliday[];
   apiUrl?: string;
   onLoaded: (
@@ -36,6 +37,7 @@ const BiometricImportSection: React.FC<BiometricImportSectionProps> = ({
   employees,
   leaveRecords = [],
   workDays,
+  schedule,
   holidays = [],
   apiUrl,
   onLoaded,
@@ -86,6 +88,7 @@ const BiometricImportSection: React.FC<BiometricImportSectionProps> = ({
         endDate,
         workDays,
         holidays,
+        schedule,
       });
       const leaveDayKeys = new Set(leaveRows.map((row) => `${row.csvPersonalId}|${row.date}`));
 

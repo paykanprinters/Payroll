@@ -446,6 +446,7 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                     employees={safeEmployees}
                     leaveRecords={leaveRecords}
                     workDays={workHoursSettings?.workDays}
+                    schedule={workHoursSettings}
                     holidays={publicHolidays}
                     apiUrl={biometricApiUrl}
                     onLoaded={(rows, _punchCount, period) => {

@@ -40,6 +40,7 @@ import {
   applyAssignedEarnings,
   collectLeaveHours,
   buildLeavePayLines,
+  isHourlyPaid,
 } from "./helpers/earnings-helpers";
 import { sumMoney } from "@/lib/money";
 
@@ -87,7 +88,8 @@ const calculateEarnings = (
     holidayBuckets.holidayWorkedHours,
     holidayBuckets.holidayNonWorkedHours,
     hourlyRate,
-    overtimeRules
+    overtimeRules,
+    { salaried: !isHourlyPaid(emp) }
   );
 
   const overtimeAmounts = computeOvertimeAmounts(
@@ -113,7 +115,8 @@ const calculateEarnings = (
       holidayWorkedHours: holidayBuckets.holidayWorkedHours,
       holidayNonWorkedHours: holidayBuckets.holidayNonWorkedHours,
     },
-    payPeriodStart
+    payPeriodStart,
+    overtimeRules
   );
 
   const leavePayLines = buildLeavePayLines(

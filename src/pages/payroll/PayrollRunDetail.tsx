@@ -283,6 +283,16 @@ const PayrollRunDetailPage: React.FC = () => {
       setPeriodConflictCount(Math.max(items.length, existing.length));
       return;
     }
+    const advancePayslip = existing.find((p) => p.paidInAdvanceClosureId);
+    if (
+      replaceExisting &&
+      advancePayslip &&
+      !window.confirm(
+        "This week was already paid in advance as part of a company closure. Regenerate it anyway? The closure pay date is kept."
+      )
+    ) {
+      return;
+    }
     const psToast = showLoading(
       replaceExisting ? "Replacing payslips for this payroll run..." : "Processing payslips for this period..."
     ) as string;
@@ -299,7 +309,12 @@ const PayrollRunDetailPage: React.FC = () => {
           if (!cleared) return;
         }
       }
-      await runPayrollProcess(start, end, { replaceExisting });
+      await runPayrollProcess(start, end, {
+        replaceExisting,
+        ...(advancePayslip
+          ? { payDate: advancePayslip.payDate, paidInAdvanceClosureId: advancePayslip.paidInAdvanceClosureId }
+          : {}),
+      });
 
       const payslips = await fetchPayslipsFromSupabase();
       const periodStr = `${run.periodStart} - ${run.periodEnd}`;
@@ -578,6 +593,11 @@ const PayrollRunDetailPage: React.FC = () => {
   const canGenerateItems = canGeneratePayrollItems(blockers) && !isCancelled && !awaitingTimesheets;
   const canApproveRun = canApprovePayrollRun(blockers);
   const canVoid = VOIDABLE_STATUSES.includes(run.status) && !isMockDataEnabled;
+  const closureAdvancePayslip = payslipsForPayrollPeriod(
+    payslips,
+    calendarDateFromIso(run.periodStart),
+    calendarDateFromIso(run.periodEnd)
+  ).find((p) => p.paidInAdvanceClosureId);
 
   const paymentBadgeClass = (status: string) => {
     if (status === "Reconciled") return "bg-emerald-50 text-emerald-700 border-emerald-200";
@@ -590,6 +610,13 @@ const PayrollRunDetailPage: React.FC = () => {
   return (
     <div className="space-y-4">
       <PayrollRunHeader title={`Payroll Run`} subtitle={`Period ${run.periodStart} → ${run.periodEnd}`} />
+
+      {closureAdvancePayslip && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Company closure week, already paid in advance on {closureAdvancePayslip.payDate}. Pay it with the closure
+          payout, not again on its normal pay day.
+        </div>
+      )}
 
       <PayrollRunStepper
         current={currentStep}

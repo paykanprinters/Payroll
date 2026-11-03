@@ -1,15 +1,19 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { format, parseISO } from "date-fns";
 import {
   ReceiptText,
   HandCoins,
   PiggyBank,
   CalendarDays,
+  CalendarOff,
   ArrowRight,
   TrendingUp,
 } from "lucide-react";
+import { fetchClosures } from "@/integrations/supabase/closure-queries";
+import type { CompanyClosure } from "@/lib/company-closure";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +21,7 @@ import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { formatRand, staffPortalPath } from "@/lib/staff-portal";
 import { buildStaffSavingsSummary } from "@/lib/staff-savings-summary";
-import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
+import { computeEmployeeLeaveBalance, formatLeaveBalance } from "@/lib/leave-accrual";
 
 const StaffPortalHome: React.FC = () => {
   const { employee } = useStaffPortalContext();
@@ -50,6 +54,27 @@ const StaffPortalHome: React.FC = () => {
     [employee, leaveRecords]
   );
 
+  const [closures, setClosures] = useState<CompanyClosure[]>([]);
+  useEffect(() => {
+    let active = true;
+    void fetchClosures().then((list) => active && setClosures(list));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const closureNotice = useMemo(() => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const closure = closures
+      .filter((c) => c.status === "published" && c.endDate >= today && !c.excludedEmployeeIds.includes(employee.id))
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+    if (!closure) return null;
+    const leaveDays = leaveRecords
+      .filter((r) => r.closureId === closure.id && r.employeeId === employee.id)
+      .reduce((sum, r) => sum + (r.workingDays || 0), 0);
+    return { closure, leaveDays };
+  }, [closures, leaveRecords, employee.id]);
+
   const ytdNet = myPayslips.reduce((sum, p) => sum + (p.netPay || 0), 0);
 
   return (
@@ -67,6 +92,26 @@ const StaffPortalHome: React.FC = () => {
           </p>
         </div>
       </section>
+
+      {closureNotice && (
+        <Link
+          to={staffPortalPath("leave")}
+          className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 hover:bg-amber-100/70"
+        >
+          <CalendarOff className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-semibold">
+              Factory closed {format(parseISO(closureNotice.closure.startDate), "d MMM")} –{" "}
+              {format(parseISO(closureNotice.closure.endDate), "d MMM yyyy")}
+            </p>
+            <p>
+              {closureNotice.leaveDays} leave day{closureNotice.leaveDays === 1 ? "" : "s"} used,{" "}
+              {formatLeaveBalance(leaveBalance.annual.remaining)} left. The shutdown weeks are paid on{" "}
+              {format(parseISO(closureNotice.closure.payoutDate), "EEE d MMM")}.
+            </p>
+          </div>
+        </Link>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -92,7 +137,7 @@ const StaffPortalHome: React.FC = () => {
         />
         <StatCard
           title="Annual leave left"
-          value={`${leaveBalance.annual.remaining} days`}
+          value={formatLeaveBalance(leaveBalance.annual.remaining)}
           hint={`Sick: ${leaveBalance.sick.remaining} · Family: ${leaveBalance.familyResponsibility.remaining}`}
           icon={CalendarDays}
           accent="fuchsia"

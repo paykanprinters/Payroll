@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useStaffPortalContext } from "@/hooks/use-staff-portal-context";
 import { LeaveEntry } from "@/lib/mock-data-interfaces";
-import { computeEmployeeLeaveBalance } from "@/lib/leave-accrual";
+import { computeEmployeeLeaveBalance, formatLeaveBalance } from "@/lib/leave-accrual";
 import { format, parseISO } from "date-fns";
 import LeaveStatusBadge from "@/components/vacation-absence/LeaveStatusBadge";
 import LeaveRecordDialog from "@/components/vacation-absence/LeaveRecordDialog";
@@ -74,7 +74,9 @@ const StaffLeavePage: React.FC = () => {
             <CardTitle className="text-sm text-muted-foreground">Annual leave remaining</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-cyan-800">{leaveBalance.annual.remaining} days</p>
+            <p className={`text-3xl font-bold ${leaveBalance.annual.remaining < 0 ? "text-red-600" : "text-cyan-800"}`}>
+              {formatLeaveBalance(leaveBalance.annual.remaining)}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {leaveBalance.annual.taken} of {leaveBalance.annual.entitled} accrued this cycle
             </p>

@@ -71,7 +71,16 @@ export const usePayrollProcessingLogic = (
 ) => {
 
   const runPayrollProcess = useCallback(
-    async (periodStart: Date, periodEnd: Date, options?: { replaceExisting?: boolean }) => {
+    async (
+      periodStart: Date,
+      periodEnd: Date,
+      options?: {
+        replaceExisting?: boolean;
+        /** Overrides the pay date (dd/MM/yyyy), e.g. when a closure pays this week early. */
+        payDate?: string;
+        paidInAdvanceClosureId?: string | null;
+      }
+    ) => {
       if (!employees.length) {
         showError("No employees found to run payroll.");
         return;
@@ -126,6 +135,8 @@ export const usePayrollProcessingLogic = (
       );
       const newPayslipsWithBranding = newPayslips.map(p => ({
         ...p,
+        ...(options?.payDate ? { payDate: options.payDate } : {}),
+        paidInAdvanceClosureId: options?.paidInAdvanceClosureId ?? null,
         companyName: companyDetails ? (companyDetails.companyTradingName || companyDetails.companyLegalName) : undefined,
         companyAddress: companyDetails?.physicalAddress,
         companyLogoUrl: companyDetails?.logoUrl,

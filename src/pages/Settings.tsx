@@ -12,6 +12,7 @@ import ReportDesign from "./settings/ReportDesign";
 import WorkHours from "./settings/WorkHours";
 import UserControlPanel from "./settings/UserControlPanel";
 import PayCycleSettingsPage from "./settings/PayCycleSettings";
+import CompanyClosureSettings from "./settings/CompanyClosureSettings";
 import NotificationSettings from "./settings/NotificationSettings";
 import MessageTemplatesSettings from "./settings/MessageTemplatesSettings";
 import PrivacyCompliance from "./settings/PrivacyCompliance";
@@ -25,6 +26,7 @@ const Settings: React.FC = () => {
         <Route path="company-details" element={<CompanyDetails />} />
         <Route path="work-hours" element={<WorkHours />} />
         <Route path="pay-cycle-settings" element={<PayCycleSettingsPage />} />
+        <Route path="company-closure" element={<CompanyClosureSettings />} />
         <Route path="biometric-api" element={<BiometricApiSettings />} />
         <Route path="biometric-devices" element={<Navigate to="/settings/biometric-api" replace />} />
         <Route path="tax-liabilities" element={<TaxLiabilities />} />

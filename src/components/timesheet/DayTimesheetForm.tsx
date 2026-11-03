@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { parse, isAfter, isBefore } from "date-fns";
 import { LeaveEntry, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { TimesheetFormValues } from "@/lib/timesheet-types";
-import { LEAVE_DAY_TIME_IN, LEAVE_DAY_TIME_OUT } from "@/lib/leave-timesheet-rows";
+import { leaveDayTimes } from "@/lib/leave-timesheet-rows";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import DayTypeSelect from "./DayTypeSelect";
 
 const dailyTimesheetSchema = z
@@ -159,6 +160,7 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
   defaultLeaveType,
   onSave,
 }) => {
+  const { workHoursSettings } = usePayrollProcessor();
   const [leaveType, setLeaveType] = useState<LeaveEntry["leaveType"] | null>(defaultLeaveType);
   useEffect(() => setLeaveType(defaultLeaveType), [defaultLeaveType]);
 
@@ -207,8 +209,9 @@ const DayTimesheetForm: React.FC<DayTimesheetFormProps> = ({
   const handleDayTypeChange = (next: LeaveEntry["leaveType"] | null) => {
     setLeaveType(next);
     if (next && !form.getValues("timeIn") && !form.getValues("timeOut")) {
-      form.setValue("timeIn", LEAVE_DAY_TIME_IN, { shouldValidate: true });
-      form.setValue("timeOut", LEAVE_DAY_TIME_OUT, { shouldValidate: true });
+      const { timeIn, timeOut } = leaveDayTimes(dayDate, workHoursSettings);
+      form.setValue("timeIn", timeIn, { shouldValidate: true });
+      form.setValue("timeOut", timeOut, { shouldValidate: true });
     }
   };
 

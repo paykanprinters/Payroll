@@ -176,6 +176,8 @@ export interface LeaveEntry {
   reviewedByUserId?: string;
   rejectionReason?: string;
   source?: "admin" | "staff";
+  /** Set when the leave was booked by a company closure. */
+  closureId?: string | null;
 }
 
 export interface MockPayslip {
@@ -203,6 +205,8 @@ export interface MockPayslip {
   loanDeduction?: number | null;
   /** Loan balance still outstanding after this payslip. Not another deduction. */
   loanBalance?: number | null;
+  /** Set when this week was paid early as part of a company closure payout. */
+  paidInAdvanceClosureId?: string | null;
 
   // Snapshot branding for RLS-safe rendering
   companyName?: string;
@@ -227,6 +231,8 @@ export interface TimesheetEntry {
   absent: boolean; // Calculated
   /** Set when the day was filled from approved paid leave instead of clock punches. */
   leaveType?: LeaveEntry["leaveType"] | null;
+  /** Set when the row was created by a company closure. */
+  closureId?: string | null;
   status: "Draft" | "Submitted" | "Approved" | "Locked";
   submittedBy?: string;
   submittedAt?: string; // ISO string

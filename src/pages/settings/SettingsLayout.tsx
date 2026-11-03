@@ -11,6 +11,7 @@ const sidebarNavItems = [
   { title: "Company Details", href: "/settings/company-details" },
   { title: "Work Hours", href: "/settings/work-hours" },
   { title: "Pay Cycle Settings", href: "/settings/pay-cycle-settings" },
+  { title: "Company Closure", href: "/settings/company-closure" },
   { title: "Biometric API", href: "/settings/biometric-api" },
   { title: "Tax Liabilities", href: "/settings/tax-liabilities" },
   { title: "Payslip Design", href: "/settings/payslip-design" },

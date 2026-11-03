@@ -7,6 +7,29 @@ import { dayIsHolidayForEmployee } from "@/lib/payroll-calculations/helpers/earn
 
 export const LEAVE_DAY_TIME_IN = "07:45";
 export const LEAVE_DAY_TIME_OUT = "17:00";
+export const LEAVE_FRIDAY_TIME_OUT = "15:45";
+
+export type LeaveDaySchedule = {
+  dailyStartTime?: string;
+  dailyEndTime?: string;
+  fridayStartTime?: string;
+  fridayEndTime?: string;
+};
+
+const hhmm = (t: string) => t.padStart(5, "0").slice(0, 5);
+
+/** Scheduled start/end for a leave day, so leave pays the same hours as a normal day (Friday is shorter). */
+export function leaveDayTimes(date: string | Date, schedule?: LeaveDaySchedule | null): { timeIn: string; timeOut: string } {
+  const day = typeof date === "string" ? parseISO(date) : date;
+  const isFriday = day.getDay() === 5;
+  const dailyIn = schedule?.dailyStartTime || LEAVE_DAY_TIME_IN;
+  const dailyOut = schedule?.dailyEndTime || LEAVE_DAY_TIME_OUT;
+  if (!isFriday) return { timeIn: hhmm(dailyIn), timeOut: hhmm(dailyOut) };
+  return {
+    timeIn: hhmm(schedule?.fridayStartTime || dailyIn),
+    timeOut: hhmm(schedule?.fridayEndTime || (schedule?.dailyEndTime ? dailyOut : LEAVE_FRIDAY_TIME_OUT)),
+  };
+}
 
 /** Leave types the employer pays as a normal day. Unpaid leave is deducted elsewhere; maternity is UIF-funded. */
 export const PAID_TIMESHEET_LEAVE_TYPES: LeaveEntry["leaveType"][] = [
@@ -39,7 +62,7 @@ export function leaveDayLabel(leaveType?: LeaveEntry["leaveType"] | null): strin
 }
 
 /**
- * One full-day row (07:45–17:00) per employee per scheduled work day covered by approved paid leave.
+ * One full scheduled-day row per employee per work day covered by approved paid leave.
  * Public holidays are skipped because payroll already pays those days separately.
  */
 export function buildApprovedLeaveRows({
@@ -49,6 +72,7 @@ export function buildApprovedLeaveRows({
   endDate,
   workDays,
   holidays = [],
+  schedule,
 }: {
   leaveRecords: LeaveEntry[];
   employees: MockEmployee[];
@@ -56,6 +80,7 @@ export function buildApprovedLeaveRows({
   endDate: string;
   workDays?: string[];
   holidays?: PublicHoliday[];
+  schedule?: LeaveDaySchedule | null;
 }): LeaveRow[] {
   if (!startDate || !endDate || startDate > endDate) return [];
 
@@ -86,8 +111,7 @@ export function buildApprovedLeaveRows({
         employeeId: employee.id,
         csvPersonalId: employee.personalId || employee.customEmployeeId || "Unknown",
         date: iso,
-        timeIn: LEAVE_DAY_TIME_IN,
-        timeOut: LEAVE_DAY_TIME_OUT,
+        ...leaveDayTimes(iso, schedule),
         leaveType: record.leaveType,
       });
     }

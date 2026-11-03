@@ -146,9 +146,25 @@ const PayslipGenerationSection: React.FC<PayslipGenerationSectionProps> = ({
     if (!periodConflict) return;
     const { periodStart, periodEnd } = periodConflict;
     setPeriodConflict(null);
-    await runPayrollProcess(periodStart, periodEnd, { replaceExisting: true });
+    const advancePayslip = payslipsForPayrollPeriod(payslips, periodStart, periodEnd).find(
+      (p) => p.paidInAdvanceClosureId
+    );
+    if (
+      advancePayslip &&
+      !window.confirm(
+        "This week was already paid in advance as part of a company closure. Regenerate it anyway? The closure pay date is kept."
+      )
+    ) {
+      return;
+    }
+    await runPayrollProcess(periodStart, periodEnd, {
+      replaceExisting: true,
+      ...(advancePayslip
+        ? { payDate: advancePayslip.payDate, paidInAdvanceClosureId: advancePayslip.paidInAdvanceClosureId }
+        : {}),
+    });
     refetchPayslips?.();
-  }, [periodConflict, runPayrollProcess, refetchPayslips]);
+  }, [periodConflict, payslips, runPayrollProcess, refetchPayslips]);
 
   const handlePrintOrDownloadAll = React.useCallback(async (action: 'print' | 'download', mode: "monthly" | "weekly", level: "minimal" | "standard" | "detailed") => {
     if (!selectedPayPeriodDate) {

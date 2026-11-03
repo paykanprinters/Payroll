@@ -17,7 +17,8 @@ import { LeaveEntry, MockEmployee, TimesheetEntry } from "@/lib/mock-data-interf
 import { formatEmployeePickerLabel } from "@/lib/employment-status";
 import LeaveDayBadge from "@/components/timesheet/LeaveDayBadge";
 import DayTypeSelect from "@/components/timesheet/DayTypeSelect";
-import { LEAVE_DAY_TIME_IN, LEAVE_DAY_TIME_OUT, paidTimesheetLeaveType } from "@/lib/leave-timesheet-rows";
+import { leaveDayTimes, paidTimesheetLeaveType } from "@/lib/leave-timesheet-rows";
+import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { TimesheetFormValues } from "@/lib/timesheet-types"; // Import from new types file
 
 // Define the schema for form validation
@@ -155,20 +156,23 @@ const TimesheetForm: React.FC<TimesheetFormProps> = ({
         ? initialData?.leaveType ?? null
         : paidTimesheetLeaveType(approvedLeaveType);
 
+  const { workHoursSettings } = usePayrollProcessor();
   const applyLeaveDayTimes = useCallback(() => {
-    form.setValue("timeIn", LEAVE_DAY_TIME_IN);
-    form.setValue("timeOut", LEAVE_DAY_TIME_OUT);
+    const day = form.getValues("date");
+    const { timeIn, timeOut } = leaveDayTimes(day && isValid(day) ? day : new Date(), workHoursSettings);
+    form.setValue("timeIn", timeIn);
+    form.setValue("timeOut", timeOut);
     form.setValue("teaStart", "");
     form.setValue("teaEnd", "");
     form.setValue("lunchStart", "");
     form.setValue("lunchEnd", "");
-  }, [form]);
+  }, [form, workHoursSettings]);
 
   useEffect(() => {
     if (!isEditing && dayTypeOverride === undefined && paidTimesheetLeaveType(approvedLeaveType)) {
       applyLeaveDayTimes();
     }
-  }, [isEditing, dayTypeOverride, approvedLeaveType, applyLeaveDayTimes]);
+  }, [isEditing, dayTypeOverride, approvedLeaveType, applyLeaveDayTimes, dateKey]);
 
   const handleDayTypeChange = (next: LeaveEntry["leaveType"] | null) => {
     setDayTypeOverride(next);
