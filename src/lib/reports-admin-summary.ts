@@ -1,8 +1,45 @@
 import { format, isSameMonth, isSameYear, parseISO } from "date-fns";
 import type { LeaveEntry, MockPayslip } from "@/lib/mock-data-interfaces";
 
-export type ReportPeriodType = "monthly" | "yearly";
+export type ReportPeriodType = "weekly" | "monthly" | "yearly";
 export type ReportAuditLevel = "minimal" | "standard" | "detailed";
+
+export interface PayWeekOption {
+  /** yyyy-MM-dd */
+  start: string;
+  /** yyyy-MM-dd */
+  end: string;
+  label: string;
+}
+
+const isoDay = (d: Date) => format(d, "yyyy-MM-dd");
+
+export function formatPayWeekLabel(start: string, end: string): string {
+  return `${format(parseISO(start), "d MMM")} – ${format(parseISO(end), "d MMM yyyy")}`;
+}
+
+/** Pay weeks that have payslips, newest first. */
+export function listPayWeeks(payslips: MockPayslip[]): PayWeekOption[] {
+  const seen = new Map<string, PayWeekOption>();
+  for (const p of payslips) {
+    const [start, end] = (p.payPeriod ?? "").split(" - ");
+    if (!start || !end || seen.has(start)) continue;
+    seen.set(start, { start, end, label: formatPayWeekLabel(start, end) });
+  }
+  return Array.from(seen.values()).sort((a, b) => b.start.localeCompare(a.start));
+}
+
+/** The pay week (from existing payslips) containing the date. */
+export function payWeekForDate(payslips: MockPayslip[], date: Date): PayWeekOption | null {
+  const day = isoDay(date);
+  return listPayWeeks(payslips).find((w) => w.start <= day && day <= w.end) ?? null;
+}
+
+export function isPayslipInPayWeekOf(p: MockPayslip, date: Date): boolean {
+  const [start, end] = (p.payPeriod ?? "").split(" - ");
+  const day = isoDay(date);
+  return !!start && !!end && start <= day && day <= end;
+}
 
 export interface ReportsAdminSummary {
   payslipCount: number;
@@ -15,9 +52,14 @@ export interface ReportsAdminSummary {
 
 export function getReportPeriodLabel(
   selectedDate: Date | undefined,
-  periodType: ReportPeriodType
+  periodType: ReportPeriodType,
+  payslips: MockPayslip[] = []
 ): string {
   if (!selectedDate) return "All periods";
+  if (periodType === "weekly") {
+    const week = payWeekForDate(payslips, selectedDate);
+    return week ? `Pay week ${week.label}` : `Pay week of ${format(selectedDate, "d MMM yyyy")}`;
+  }
   return periodType === "monthly" ? format(selectedDate, "MMMM yyyy") : format(selectedDate, "yyyy");
 }
 
@@ -39,6 +81,10 @@ export function filterPayslipsForReportPeriod(
 ): MockPayslip[] {
   if (!selectedDate) return payslips;
 
+  if (periodType === "weekly") {
+    return payslips.filter((p) => isPayslipInPayWeekOf(p, selectedDate));
+  }
+
   return payslips.filter((p) => {
     const d = payslipPeriodStart(p);
     if (!d) return false;
@@ -52,9 +98,16 @@ export function filterPayslipsForReportPeriod(
 export function filterLeaveForReportPeriod(
   leaveRecords: LeaveEntry[],
   selectedDate: Date | undefined,
-  periodType: ReportPeriodType
+  periodType: ReportPeriodType,
+  payWeek?: Pick<PayWeekOption, "start" | "end"> | null
 ): LeaveEntry[] {
   if (!selectedDate) return leaveRecords;
+
+  if (periodType === "weekly") {
+    const start = payWeek?.start ?? isoDay(selectedDate);
+    const end = payWeek?.end ?? isoDay(selectedDate);
+    return leaveRecords.filter((record) => record.endDate >= start && record.startDate <= end);
+  }
 
   const monthStart = format(
     new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),

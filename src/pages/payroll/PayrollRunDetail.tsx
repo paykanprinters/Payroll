@@ -50,7 +50,7 @@ import PayrollRunHeader from "@/components/payroll/PayrollRunHeader";
 import PayrollRunStepper, { PayrollRunStepId } from "@/components/payroll/PayrollRunStepper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Ban, CheckCircle2, FileText, Landmark, Lock, Mail, Play, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Ban, BarChart3, CheckCircle2, FileText, Landmark, Lock, Mail, Play, ShieldCheck } from "lucide-react";
 import PeriodPayslipConflictDialog from "@/components/payslips/PeriodPayslipConflictDialog";
 import RunBulkPayslipMenu from "@/components/payroll/RunBulkPayslipMenu";
 import CountersignApprovalDialog from "@/components/payroll/CountersignApprovalDialog";
@@ -716,15 +716,27 @@ const PayrollRunDetailPage: React.FC = () => {
                   <div className="text-xs text-muted-foreground">Payslips</div>
                   <div className="mt-1 flex items-center justify-between gap-3">
                     <div className="text-sm text-muted-foreground">Open payslips filtered to this run period.</div>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate(`/payslips/overview?dateStart=${run.periodStart}&dateEnd=${run.periodEnd}`)}
-                      className="bg-white"
-                      size="sm"
-                    >
-                      <FileText className="h-4 w-4" />
-                      View
-                    </Button>
+                    <div className="flex shrink-0 flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/payslips/overview?dateStart=${run.periodStart}&dateEnd=${run.periodEnd}`)}
+                        className="bg-white"
+                        size="sm"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/reports?period=weekly&date=${run.periodStart}`)}
+                        className="bg-white"
+                        size="sm"
+                        title="Employee deductions and other reports for this pay week"
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                        Reports
+                      </Button>
+                    </div>
                   </div>
                 </div>
 

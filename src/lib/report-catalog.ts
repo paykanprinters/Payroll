@@ -16,7 +16,10 @@ import {
   generateTaxStatutoryReportContent,
   generateEmp201ReportContent,
   generateEmp501ReportContent,
+  generateEmployeeDeductionsReportContent,
+  employeeDeductionsCsv,
 } from "@/lib/report-generators";
+import { format } from "date-fns";
 
 export type ReportCategoryId = "payroll" | "statutory" | "hr" | "finance" | "compliance";
 
@@ -59,7 +62,12 @@ export interface ReportCatalogItem {
   externalHref?: string;
   externalLabel?: string;
   generate?: (ctx: ReportGenerateContext) => string;
+  csv?: (ctx: ReportGenerateContext) => { filename: string; content: string } | null;
 }
+
+/** For reports that only offer monthly and yearly views; they are hidden in the weekly view. */
+const monthOrYear = (ctx: ReportGenerateContext): "monthly" | "yearly" =>
+  ctx.periodType === "yearly" ? "yearly" : "monthly";
 
 export const REPORT_CATALOG: ReportCatalogItem[] = [
   {
@@ -76,7 +84,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.companyDetails,
         ctx.timesheets,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -92,7 +100,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType,
+        monthOrYear(ctx),
         ctx.auditLevel
       ),
   },
@@ -108,7 +116,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -124,8 +132,41 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.periodType === "yearly" ? (ctx.allPayslips ?? ctx.payslips) : ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
+        monthOrYear(ctx)
+      ),
+  },
+  {
+    id: "employee-deductions",
+    category: "statutory",
+    title: "Employee deductions for the accountant",
+    description:
+      "PAYE, UIF, loan repayments and savings per employee, with gross, net, and loan and savings balances.",
+    confidentiality: "sensitive",
+    periodTypes: ["weekly", "monthly", "yearly"],
+    requiresPayslips: true,
+    generate: (ctx) =>
+      generateEmployeeDeductionsReportContent(
+        ctx.periodType === "yearly" ? (ctx.allPayslips ?? ctx.payslips) : ctx.payslips,
+        ctx.employees,
+        ctx.selectedDate,
         ctx.periodType
       ),
+    csv: (ctx) => {
+      const content = employeeDeductionsCsv(
+        ctx.periodType === "yearly" ? (ctx.allPayslips ?? ctx.payslips) : ctx.payslips,
+        ctx.employees,
+        ctx.selectedDate,
+        ctx.periodType
+      );
+      if (!content) return null;
+      const stamp = ctx.selectedDate
+        ? format(
+            ctx.selectedDate,
+            ctx.periodType === "yearly" ? "yyyy" : ctx.periodType === "weekly" ? "yyyy-MM-dd" : "yyyy-MM"
+          )
+        : "all";
+      return { filename: `employee-deductions-${stamp}.csv`, content };
+    },
   },
   {
     id: "emp201",
@@ -140,7 +181,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -157,7 +198,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.allPayslips ?? ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType,
+        monthOrYear(ctx),
         ctx.companyDetails
       ),
   },
@@ -183,7 +224,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.leaveRecords,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -198,7 +239,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -213,7 +254,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -223,7 +264,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
     description: "Onboarding and separation activity within the reporting period.",
     periodTypes: ["monthly", "yearly"],
     generate: (ctx) =>
-      generateNewHiresTerminationsReportContent(ctx.employees, ctx.selectedDate, ctx.periodType),
+      generateNewHiresTerminationsReportContent(ctx.employees, ctx.selectedDate, monthOrYear(ctx)),
   },
   {
     id: "employee-demographics",
@@ -232,7 +273,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
     description: "Headcount by department, job title, and pay basis.",
     periodTypes: ["monthly", "yearly"],
     generate: (ctx) =>
-      generateEmployeeDemographicsReportContent(ctx.employees, ctx.selectedDate, ctx.periodType),
+      generateEmployeeDemographicsReportContent(ctx.employees, ctx.selectedDate, monthOrYear(ctx)),
   },
   {
     id: "bank-transfer",
@@ -247,7 +288,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -262,7 +303,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
         ctx.payslips,
         ctx.employees,
         ctx.selectedDate,
-        ctx.periodType
+        monthOrYear(ctx)
       ),
   },
   {
@@ -271,7 +312,7 @@ export const REPORT_CATALOG: ReportCatalogItem[] = [
     title: "Audit trail",
     description: "High-level log of payroll-related system events for the period.",
     periodTypes: ["monthly", "yearly"],
-    generate: (ctx) => generateAuditTrailReportContent(ctx.selectedDate, ctx.periodType, ctx.auditLogs),
+    generate: (ctx) => generateAuditTrailReportContent(ctx.selectedDate, monthOrYear(ctx), ctx.auditLogs),
   },
 ];
 

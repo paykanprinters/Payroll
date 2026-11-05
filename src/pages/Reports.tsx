@@ -15,11 +15,14 @@ import {
   filterLeaveForReportPeriod,
   filterPayslipsForReportPeriod,
   getReportPeriodLabel,
+  listPayWeeks,
+  payWeekForDate,
   type ReportAuditLevel,
   type ReportPeriodType,
 } from "@/lib/reports-admin-summary";
 import { fetchAuditLogs } from "@/integrations/supabase/audit-queries";
-import { format, endOfMonth, endOfYear, startOfMonth, startOfYear } from "date-fns";
+import { format, endOfMonth, endOfYear, parseISO, startOfMonth, startOfYear } from "date-fns";
+import { useSearchParams } from "react-router-dom";
 
 const Reports: React.FC = () => {
   const {
@@ -38,8 +41,25 @@ const Reports: React.FC = () => {
 
   const { settings: reportDesignSettings } = useReportDesignSettings();
 
-  const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(new Date());
-  const [reportPeriodType, setReportPeriodType] = useState<ReportPeriodType>("monthly");
+  const [searchParams] = useSearchParams();
+  const initialWeek = searchParams.get("period") === "weekly" ? searchParams.get("date") : null;
+  const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(() =>
+    initialWeek ? parseISO(initialWeek) : new Date()
+  );
+  const [reportPeriodType, setReportPeriodType] = useState<ReportPeriodType>(
+    initialWeek ? "weekly" : "monthly"
+  );
+  const payWeeks = useMemo(() => listPayWeeks(payslips), [payslips]);
+  const selectedPayWeek = useMemo(
+    () => (selectedReportDate ? payWeekForDate(payslips, selectedReportDate) : null),
+    [payslips, selectedReportDate]
+  );
+
+  useEffect(() => {
+    if (reportPeriodType === "weekly" && !selectedPayWeek && payWeeks.length > 0) {
+      setSelectedReportDate(parseISO(payWeeks[0].start));
+    }
+  }, [reportPeriodType, selectedPayWeek, payWeeks]);
   const [auditLevel, setAuditLevel] = useState<ReportAuditLevel>("standard");
   const [refreshTick, setRefreshTick] = useState(0);
   const [auditLogs, setAuditLogs] = useState<Awaited<ReturnType<typeof fetchAuditLogs>>>([]);
@@ -54,7 +74,11 @@ const Reports: React.FC = () => {
     }
     const load = async () => {
       const filters: Parameters<typeof fetchAuditLogs>[0] = { limit: 500 };
-      if (selectedReportDate) {
+      if (selectedReportDate && reportPeriodType === "weekly") {
+        const day = format(selectedReportDate, "yyyy-MM-dd");
+        filters.dateStart = selectedPayWeek?.start ?? day;
+        filters.dateEnd = selectedPayWeek?.end ?? day;
+      } else if (selectedReportDate) {
         const start =
           reportPeriodType === "monthly"
             ? startOfMonth(selectedReportDate)
@@ -69,7 +93,7 @@ const Reports: React.FC = () => {
       setAuditLogs(await fetchAuditLogs(filters));
     };
     void load();
-  }, [isMockDataEnabled, selectedReportDate, reportPeriodType, refreshTick]);
+  }, [isMockDataEnabled, selectedReportDate, reportPeriodType, selectedPayWeek, refreshTick]);
 
   const periodPayslips = useMemo(
     () => filterPayslipsForReportPeriod(payslips, selectedReportDate, reportPeriodType),
@@ -77,12 +101,13 @@ const Reports: React.FC = () => {
   );
 
   const periodLeave = useMemo(
-    () => filterLeaveForReportPeriod(leaveRecords || [], selectedReportDate, reportPeriodType),
-    [leaveRecords, selectedReportDate, reportPeriodType]
+    () =>
+      filterLeaveForReportPeriod(leaveRecords || [], selectedReportDate, reportPeriodType, selectedPayWeek),
+    [leaveRecords, selectedReportDate, reportPeriodType, selectedPayWeek]
   );
 
   const summary = useMemo(() => buildReportsAdminSummary(periodPayslips), [periodPayslips]);
-  const periodLabel = getReportPeriodLabel(selectedReportDate, reportPeriodType);
+  const periodLabel = getReportPeriodLabel(selectedReportDate, reportPeriodType, payslips);
 
   const handleRefresh = () => {
     setRefreshTick((n) => n + 1);
@@ -97,8 +122,9 @@ const Reports: React.FC = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Reporting period</CardTitle>
           <CardDescription>
-            All reports and KPIs use the selected month or year. Payroll summary detail level applies
-            to the summary report only.
+            All reports and KPIs use the selected pay week, month or year. The weekly view lists only
+            reports that support a single pay week. Payroll summary detail level applies to the summary
+            report only.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,6 +137,7 @@ const Reports: React.FC = () => {
             onAuditLevelChange={setAuditLevel}
             periodLabel={periodLabel}
             payslipCount={summary.payslipCount}
+            payWeeks={payWeeks}
           />
         </CardContent>
       </Card>

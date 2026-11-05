@@ -23,6 +23,10 @@ export { generateNewHiresTerminationsReportContent } from "./new-hires-terminati
 export { generateEmployeeDemographicsReportContent } from "./employee-demographics";
 export { generatePayrollReadinessReportContent } from "./payroll-readiness";
 export { generateBenefitDeductionsReportContent } from "./benefit-deductions";
+export {
+  generateEmployeeDeductionsReportContent,
+  employeeDeductionsCsv,
+} from "./employee-deductions";
 export { generateAuditTrailReportContent } from "./audit-trail";
 export { generateEmployeeProfileReportContent } from "./employee-profile";
 export { generateIrp5ExportContent, renderIrp5CertificateHtml } from "./irp5-export";

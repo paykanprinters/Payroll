@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Package,
   Loader2,
+  Download,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -39,6 +40,8 @@ import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
 import type { LeaveEntry, MockCompanyDetails, MockEmployee, MockPayslip, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import { buildPayrollPackItems } from "@/lib/payroll-pack";
 import { usePayrollPackDownload } from "@/hooks/use-payroll-pack-download";
+import { downloadBlob, downloadSuccessMessage } from "@/lib/native-blob-download";
+import { showError, showSuccess } from "@/utils/toast";
 
 const ReportPreviewDialog = lazy(() => import("@/components/reports/ReportPreviewDialog"));
 
@@ -55,6 +58,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "employee-demographics": Users,
   "bank-transfer": Banknote,
   "benefit-deductions": Wallet,
+  "employee-deductions": Wallet,
   "audit-trail": ScrollText,
 };
 
@@ -94,7 +98,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   const [previewContent, setPreviewContent] = useState("");
   const { downloadPayrollPack, isDownloading } = usePayrollPackDownload();
 
-  const periodLabel = getReportPeriodLabel(selectedReportDate, reportPeriodType);
+  const periodLabel = getReportPeriodLabel(selectedReportDate, reportPeriodType, allPayslips);
 
   const filteredReports = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -131,6 +135,24 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
     setPreviewTitle(report.title);
     setPreviewContent(wrapped);
     setIsPreviewOpen(true);
+  };
+
+  const downloadCsv = async (report: ReportCatalogItem) => {
+    const file = report.csv?.(generateContext);
+    if (!file) {
+      showError(`No payslips for ${periodLabel}.`);
+      return;
+    }
+    try {
+      const method = await downloadBlob(
+        new Blob([file.content], { type: "text/csv;charset=utf-8" }),
+        file.filename,
+        "text/csv"
+      );
+      showSuccess(downloadSuccessMessage(file.filename, method));
+    } catch {
+      showError("Could not download the CSV.");
+    }
   };
 
   const packPreviewCount = buildPayrollPackItems({
@@ -269,6 +291,17 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
                         >
                           Preview & export
                           <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      )}
+                      {report.csv && (
+                        <Button
+                          onClick={() => void downloadCsv(report)}
+                          variant="ghost"
+                          className="w-full rounded-full"
+                          disabled={needsPayslips}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download CSV (Excel)
                         </Button>
                       )}
                     </CardContent>

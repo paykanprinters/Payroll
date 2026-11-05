@@ -8,8 +8,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import type { ReportAuditLevel, ReportPeriodType } from "@/lib/reports-admin-summary";
+import { format, parseISO } from "date-fns";
+import type { PayWeekOption, ReportAuditLevel, ReportPeriodType } from "@/lib/reports-admin-summary";
 
 interface ReportsPeriodBarProps {
   periodType: ReportPeriodType;
@@ -20,6 +20,7 @@ interface ReportsPeriodBarProps {
   onAuditLevelChange: (value: ReportAuditLevel) => void;
   periodLabel: string;
   payslipCount: number;
+  payWeeks: PayWeekOption[];
 }
 
 const ReportsPeriodBar: React.FC<ReportsPeriodBarProps> = ({
@@ -31,7 +32,12 @@ const ReportsPeriodBar: React.FC<ReportsPeriodBarProps> = ({
   onAuditLevelChange,
   periodLabel,
   payslipCount,
+  payWeeks,
 }) => {
+  const selectedDay = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
+  const selectedWeekStart =
+    payWeeks.find((w) => w.start <= selectedDay && selectedDay <= w.end)?.start ?? "";
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -42,12 +48,34 @@ const ReportsPeriodBar: React.FC<ReportsPeriodBarProps> = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="weekly">Weekly (pay week)</SelectItem>
               <SelectItem value="monthly">Monthly</SelectItem>
               <SelectItem value="yearly">Yearly</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
+        {periodType === "weekly" ? (
+          <div className="space-y-1">
+            <Label htmlFor="report-pay-week">Pay week</Label>
+            <Select
+              value={selectedWeekStart}
+              onValueChange={(start) => onSelectedDateChange(parseISO(start))}
+              disabled={payWeeks.length === 0}
+            >
+              <SelectTrigger id="report-pay-week">
+                <SelectValue placeholder={payWeeks.length === 0 ? "No payslips yet" : "Select pay week"} />
+              </SelectTrigger>
+              <SelectContent>
+                {payWeeks.map((week) => (
+                  <SelectItem key={week.start} value={week.start}>
+                    {week.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
         <div className="space-y-1">
           <Label htmlFor="report-date-picker">
             {periodType === "monthly" ? "Month" : "Year"}
@@ -83,6 +111,7 @@ const ReportsPeriodBar: React.FC<ReportsPeriodBarProps> = ({
             </PopoverContent>
           </Popover>
         </div>
+        )}
 
         <div className="space-y-1">
           <Label htmlFor="report-audit-level">Payroll summary detail</Label>
