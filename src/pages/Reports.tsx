@@ -11,6 +11,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useReportDesignSettings } from "@/hooks/use-report-design-settings";
 import { useReportPeriod } from "@/hooks/use-report-period";
+import { useInitialLoading } from "@/hooks/use-initial-loading";
 
 const Reports: React.FC = () => {
   const {
@@ -31,6 +32,7 @@ const Reports: React.FC = () => {
 
   const isLoading =
     isLoadingEmployees || isLoadingPayslips || isLoadingLeaveRecords || isLoadingTimesheets;
+  const isInitialLoading = useInitialLoading(isLoading);
 
   return (
     <div className="flex flex-col gap-4">
@@ -60,7 +62,7 @@ const Reports: React.FC = () => {
         </CardContent>
       </Card>
 
-      {isLoading ? (
+      {isInitialLoading ? (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-cyan-700" aria-label="Loading reports data" />
           <p className="text-sm text-muted-foreground">Loading report data…</p>

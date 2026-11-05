@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useReportDesignSettings } from "@/hooks/use-report-design-settings";
 import { useReportPeriod } from "@/hooks/use-report-period";
+import { useInitialLoading } from "@/hooks/use-initial-loading";
 
 const AccountantHome: React.FC = () => {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ const AccountantHome: React.FC = () => {
 
   const isLoading =
     isLoadingEmployees || isLoadingPayslips || isLoadingLeaveRecords || isLoadingTimesheets;
+  const isInitialLoading = useInitialLoading(isLoading);
   const isAccountant = user?.role === "Accountant";
   const companyName =
     companyDetails?.companyTradingName || companyDetails?.companyLegalName || "the company";
@@ -114,7 +116,7 @@ const AccountantHome: React.FC = () => {
         </CardContent>
       </Card>
 
-      {isLoading ? (
+      {isInitialLoading ? (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-cyan-700" aria-label="Loading reports data" />
           <p className="text-sm text-muted-foreground">Loading payroll records…</p>
