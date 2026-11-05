@@ -5,9 +5,11 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from 'lucide-react';
 import { isStaffPortalPath, staffPortalPath } from '@/lib/staff-portal';
+import type { UserRole } from "@/context/auth-types";
+import AccountantSecurityGate from "@/components/auth/AccountantSecurityGate";
 
 interface ProtectedRouteProps {
-  allowedRoles?: ('Admin' | 'Manager' | 'Staff' | 'Viewer')[];
+  allowedRoles?: UserRole[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
@@ -61,6 +63,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     // User is authenticated but not authorized for this route
     return <Navigate to="/unauthorized" replace />;
+  }
+
+  // Only the outermost guard (no role list) runs the Accountant two-step check, so it mounts once.
+  if (!allowedRoles && user?.role === "Accountant") {
+    return (
+      <AccountantSecurityGate>
+        <Outlet />
+      </AccountantSecurityGate>
+    );
   }
 
   return <Outlet />;

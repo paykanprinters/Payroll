@@ -25,15 +25,24 @@ import {
   Package,
   Loader2,
   Download,
+  BookOpen,
+  HandCoins,
+  PiggyBank,
+  ShieldCheck,
+  History,
+  KeyRound,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
+  ACCOUNTANT_SECTION_LABELS,
   REPORT_CATALOG,
   REPORT_CATEGORY_LABELS,
   type ReportCatalogItem,
-  type ReportCategoryId,
   type ReportGenerateContext,
 } from "@/lib/report-catalog";
+import { useAccountantExtraData } from "@/hooks/use-accountant-extra-data";
+import { useAuth } from "@/hooks/use-auth";
+import { recordReportAccess, type ReportAccessAction } from "@/lib/audit-trail";
 import { getReportPeriodLabel, type ReportAuditLevel, type ReportPeriodType } from "@/lib/reports-admin-summary";
 import { wrapReportHtml } from "@/lib/report-html-styles";
 import type { ReportDesignSettings } from "@/lib/report-design-interfaces";
@@ -60,6 +69,12 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "benefit-deductions": Wallet,
   "employee-deductions": Wallet,
   "audit-trail": ScrollText,
+  "payroll-journal": BookOpen,
+  "loan-register": HandCoins,
+  "savings-register": PiggyBank,
+  "run-approvals": ShieldCheck,
+  "master-data-changes": History,
+  "user-access": KeyRound,
 };
 
 interface ReportsCatalogProps {
@@ -75,6 +90,9 @@ interface ReportsCatalogProps {
   auditLevel: ReportAuditLevel;
   periodPayslipCount: number;
   auditLogs?: import("@/integrations/supabase/audit-queries").AuditLogEntry[];
+  /** "accountant" groups reports by accountant section and hides internal operational reports. */
+  variant?: "admin" | "accountant";
+  isMockDataEnabled?: boolean;
 }
 
 const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
@@ -90,11 +108,21 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   auditLevel,
   periodPayslipCount,
   auditLogs,
+  variant = "admin",
+  isMockDataEnabled = false,
 }) => {
-  const [category, setCategory] = useState<ReportCategoryId | "all">("all");
+  const isAccountantView = variant === "accountant";
+  const [category, setCategory] = useState<string>("all");
+  const extra = useAccountantExtraData(!isMockDataEnabled);
+  const tabLabels: Record<string, string> = isAccountantView
+    ? ACCOUNTANT_SECTION_LABELS
+    : REPORT_CATEGORY_LABELS;
+  const reportGroup = (report: ReportCatalogItem) =>
+    isAccountantView ? report.accountantSection : report.category;
   const [search, setSearch] = useState("");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewTitle, setPreviewTitle] = useState("");
+  const [previewReport, setPreviewReport] = useState({ id: "", title: "" });
+  const { user } = useAuth();
   const [previewContent, setPreviewContent] = useState("");
   const { downloadPayrollPack, isDownloading } = usePayrollPackDownload();
 
@@ -103,13 +131,18 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
   const filteredReports = useMemo(() => {
     const q = search.trim().toLowerCase();
     return REPORT_CATALOG.filter((report) => {
-      if (category !== "all" && report.category !== category) return false;
+      const group = isAccountantView ? report.accountantSection : report.category;
+      if (!group) return false;
+      if (category !== "all" && group !== category) return false;
       if (!report.periodTypes.includes(reportPeriodType)) return false;
       if (!q) return true;
-      const hay = `${report.title} ${report.description} ${REPORT_CATEGORY_LABELS[report.category]}`.toLowerCase();
+      const labels: Record<string, string> = isAccountantView
+        ? ACCOUNTANT_SECTION_LABELS
+        : REPORT_CATEGORY_LABELS;
+      const hay = `${report.title} ${report.description} ${labels[group]}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [category, search, reportPeriodType]);
+  }, [category, search, reportPeriodType, isAccountantView]);
 
   const generateContext: ReportGenerateContext = {
     employees,
@@ -123,6 +156,18 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
     companyDetails,
     reportDesignSettings,
     auditLogs,
+    extra,
+  };
+
+  const logAccess = (report: Pick<ReportCatalogItem, "id" | "title">, action: ReportAccessAction) => {
+    if (isMockDataEnabled) return;
+    void recordReportAccess({
+      reportId: report.id,
+      reportTitle: report.title,
+      action,
+      periodLabel,
+      role: user?.role,
+    });
   };
 
   const openPreview = (report: ReportCatalogItem) => {
@@ -132,15 +177,16 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
       periodLabel,
       confidentiality: report.confidentiality,
     });
-    setPreviewTitle(report.title);
+    setPreviewReport({ id: report.id, title: report.title });
     setPreviewContent(wrapped);
     setIsPreviewOpen(true);
+    logAccess(report, "previewed");
   };
 
   const downloadCsv = async (report: ReportCatalogItem) => {
     const file = report.csv?.(generateContext);
     if (!file) {
-      showError(`No payslips for ${periodLabel}.`);
+      showError(`Nothing to export for ${periodLabel}.`);
       return;
     }
     try {
@@ -150,6 +196,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
         "text/csv"
       );
       showSuccess(downloadSuccessMessage(file.filename, method));
+      logAccess(report, "downloaded_csv");
     } catch {
       showError("Could not download the CSV.");
     }
@@ -180,7 +227,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
                 Choose a report for <strong>{periodLabel}</strong>. Preview, print, or download PDF.
               </CardDescription>
             </div>
-            <Button
+            {!isAccountantView && <Button
               type="button"
               variant="default"
               className="rounded-full shrink-0"
@@ -194,23 +241,23 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
                 <Package className="mr-2 h-4 w-4" />
               )}
               Download payroll pack
-            </Button>
+            </Button>}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <Tabs
               value={category}
-              onValueChange={(v) => setCategory(v as ReportCategoryId | "all")}
+              onValueChange={setCategory}
               className="w-full lg:max-w-3xl"
             >
               <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/60 p-1">
                 <TabsTrigger value="all" className="rounded-full text-xs sm:text-sm">
                   All
                 </TabsTrigger>
-                {(Object.keys(REPORT_CATEGORY_LABELS) as ReportCategoryId[]).map((key) => (
+                {Object.keys(tabLabels).map((key) => (
                   <TabsTrigger key={key} value={key} className="rounded-full text-xs sm:text-sm">
-                    {REPORT_CATEGORY_LABELS[key]}
+                    {tabLabels[key]}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -251,7 +298,7 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
                           <Icon className="h-5 w-5" />
                         </div>
                         <Badge variant="outline" className="shrink-0 bg-white text-xs">
-                          {REPORT_CATEGORY_LABELS[report.category]}
+                          {tabLabels[reportGroup(report) ?? ""]}
                         </Badge>
                       </div>
                       <div>
@@ -318,12 +365,15 @@ const ReportsCatalog: React.FC<ReportsCatalogProps> = ({
           <ReportPreviewDialog
             isOpen
             onClose={() => setIsPreviewOpen(false)}
-            reportTitle={previewTitle}
+            reportTitle={previewReport.title}
             reportContent={previewContent}
             companyDetails={companyDetails}
             reportDesignSettings={reportDesignSettings}
             documentType="report"
             periodLabel={periodLabel}
+            onExport={(action) =>
+              logAccess(previewReport, action === "print" ? "printed" : "downloaded_pdf")
+            }
           />
         </Suspense>
       )}

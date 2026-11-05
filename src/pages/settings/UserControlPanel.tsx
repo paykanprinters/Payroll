@@ -33,9 +33,20 @@ interface UserData {
   id: string;
   name: string;
   email: string;
-  role: "Admin" | "Manager" | "Staff" | "Viewer";
+  role: "Admin" | "Manager" | "Staff" | "Accountant";
   status: "Active" | "Inactive";
+  access_expires_at?: string | null;
 }
+
+/** Accountant access ends at the end of the chosen day, South African time. */
+const accessExpiryFromDate = (role: UserFormValues["role"], date?: string): string | null =>
+  role === "Accountant" && date ? `${date}T23:59:59+02:00` : null;
+
+const accessExpiryLabel = (iso?: string | null): string | null => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
+};
 
 const getFunctionErrorMessage = (value: unknown): string | undefined =>
   typeof value === "object" &&
@@ -49,7 +60,7 @@ const initialMockUsersForSeeding = [
   { id: "1", name: "Admin User", email: "admin@example.com", role: "Admin", status: "Active", password: "password" },
   { id: "2", name: "Manager Smith", email: "manager@example.com", role: "Manager", status: "Active", password: "password" },
   { id: "3", name: "Staff Johnson", email: "staff@example.com", role: "Staff", status: "Active", password: "password" },
-  { id: "4", name: "Viewer Brown", email: "viewer@example.com", role: "Viewer", status: "Active", password: "password" },
+  { id: "4", name: "Accountant Brown", email: "accountant@example.com", role: "Accountant", status: "Active", password: "password" },
   { id: "5", name: "Inactive User", email: "inactive@example.com", role: "Staff", status: "Inactive", password: "password" },
 ];
 
@@ -176,7 +187,16 @@ const UserControlPanel: React.FC = () => {
       showError("Cannot edit users in Supabase when mock data is enabled.");
       return;
     }
-    setEditingUser(user);
+    setEditingUser({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      accessEndDate: user.access_expires_at
+        ? new Date(user.access_expires_at).toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" })
+        : "",
+    });
     setIsUserFormOpen(true);
   };
 
@@ -187,6 +207,20 @@ const UserControlPanel: React.FC = () => {
     }
     setUserToDelete(user);
     setIsUserDeleteDialogOpen(true);
+  };
+
+  const handleResetMfa = async (user: UserData) => {
+    if (isMockDataEnabled) return;
+    if (!window.confirm(`Reset two-step sign-in for ${user.name}? They will set it up again at their next sign-in.`)) {
+      return;
+    }
+    const res = await supabase.functions.invoke('reset-user-mfa', { body: { userId: user.id } });
+    if (res.error || (res.data as { error?: string } | null)?.error) {
+      logger.error("Error resetting two-step sign-in:", toLogError(res.error));
+      showError("Failed to reset two-step sign-in.");
+      return;
+    }
+    showSuccess(`Two-step sign-in reset for ${user.name}.`);
   };
 
   const confirmDeleteUser = async () => {
@@ -229,7 +263,13 @@ const UserControlPanel: React.FC = () => {
     if (userData.id) {
       const { error } = await supabase
         .from('users')
-        .update({ name: userData.name, email: userData.email, role: userData.role, status: userData.status })
+        .update({
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          status: userData.status,
+          access_expires_at: accessExpiryFromDate(userData.role, userData.accessEndDate),
+        })
         .eq('id', userData.id);
 
       if (error) {
@@ -244,7 +284,11 @@ const UserControlPanel: React.FC = () => {
           message: `User updated: ${userData.name}`,
           entityType: "user",
           entityId: userData.id,
-          metadata: { role: userData.role, status: userData.status },
+          metadata: {
+            role: userData.role,
+            status: userData.status,
+            accessExpiresAt: accessExpiryFromDate(userData.role, userData.accessEndDate),
+          },
         });
         fetchUsers();
       }
@@ -299,6 +343,7 @@ const UserControlPanel: React.FC = () => {
             name: userData.name,
             role: userData.role,
             status: userData.status,
+            access_expires_at: accessExpiryFromDate(userData.role, userData.accessEndDate),
           })
           .eq('id', authData.user.id);
 
@@ -421,7 +466,7 @@ const UserControlPanel: React.FC = () => {
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Manager">Manager</SelectItem>
                   <SelectItem value="Staff">Staff</SelectItem>
-                  <SelectItem value="Viewer">Viewer</SelectItem>
+                  <SelectItem value="Accountant">Accountant</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -447,6 +492,13 @@ const UserControlPanel: React.FC = () => {
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{user.role}</Badge>
+                        {user.role === "Accountant" && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {accessExpiryLabel(user.access_expires_at)
+                              ? `${new Date(user.access_expires_at!) < new Date() ? "Access ended" : "Access until"} ${accessExpiryLabel(user.access_expires_at)}`
+                              : "No end date"}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge className={user.status === "Active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
@@ -469,6 +521,9 @@ const UserControlPanel: React.FC = () => {
                       <TableCell className="flex justify-center items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditUserClick(user)} disabled={isMockDataEnabled}>Edit</Button>
                         <Button variant="secondary" size="sm" onClick={() => openLinkDialog(user)} disabled={isMockDataEnabled}>Link Employee</Button>
+                        {user.role === "Accountant" && (
+                          <Button variant="outline" size="sm" onClick={() => void handleResetMfa(user)} disabled={isMockDataEnabled}>Reset two-step</Button>
+                        )}
                         <Button variant="destructive" size="sm" onClick={() => handleDeleteUserClick(user)} disabled={isMockDataEnabled}>Delete</Button>
                       </TableCell>
                     </TableRow>

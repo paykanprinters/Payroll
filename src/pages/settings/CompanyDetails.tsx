@@ -19,6 +19,7 @@ import StatutoryInfoForm from "@/components/settings/company-details/StatutoryIn
 import ContactDetailsForm from "@/components/settings/company-details/ContactDetailsForm";
 import BankingInfoForm from "@/components/settings/company-details/BankingInfoForm";
 import CompanyLogoUpload from "@/components/settings/company-details/CompanyLogoUpload";
+import JournalAccountCodesCard from "@/components/settings/company-details/JournalAccountCodesCard";
 import { seedKanBrandLogo } from "@/lib/seed-kan-logo";
 
 // Define the schema for form validation
@@ -190,6 +191,7 @@ const CompanyDetails: React.FC = () => {
   }
 
   return (
+    <div className="space-y-6">
     <Card>
       <CardHeader>
         <CardTitle>Company Details</CardTitle>
@@ -212,6 +214,8 @@ const CompanyDetails: React.FC = () => {
         </FormProvider>
       </CardContent>
     </Card>
+    <JournalAccountCodesCard canEdit={canEdit} isMockDataEnabled={isMockDataEnabled} />
+    </div>
   );
 };
 

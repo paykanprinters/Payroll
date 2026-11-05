@@ -98,8 +98,16 @@ export async function fetchReportDesignSettings(): Promise<ReportDesignSettings 
   }
 
   const row = data && data[0];
-  if (!row) return null;
-  return toDomain(row as DbRow);
+  if (row) return toDomain(row as DbRow);
+
+  // Accountants have no row of their own; use the company's latest saved design.
+  const { data: shared, error: sharedError } = await supabase
+    .from("report_design_settings")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  if (sharedError || !shared || !shared[0]) return null;
+  return toDomain(shared[0] as DbRow);
 }
 
 export async function upsertReportDesignSettings(settings: ReportDesignSettings): Promise<boolean> {

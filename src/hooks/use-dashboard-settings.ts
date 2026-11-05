@@ -86,10 +86,10 @@ const DEFAULT_WIDGET_VISIBILITY_BY_ROLE: Record<string, DashboardWidgetVisibilit
     savingsStatusChart: true,
     loansOverviewCard: true,
   },
-  Viewer: {
+  Accountant: {
     summaryCards: true,
     upcomingPayrollCard: true,
-    toDoListCard: true,
+    toDoListCard: false,
     monthlyPayrollOverviewChart: true,
     currentDateCalendar: true,
     employeeJobTitleDistributionChart: true,

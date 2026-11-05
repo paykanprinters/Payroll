@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import ReportsHeader from "@/components/reports/ReportsHeader";
@@ -10,25 +10,12 @@ import ReportsCatalog from "@/components/reports/ReportsCatalog";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { usePayrollProcessor } from "@/hooks/use-payroll-processor-context";
 import { useReportDesignSettings } from "@/hooks/use-report-design-settings";
-import {
-  buildReportsAdminSummary,
-  filterLeaveForReportPeriod,
-  filterPayslipsForReportPeriod,
-  getReportPeriodLabel,
-  listPayWeeks,
-  payWeekForDate,
-  type ReportAuditLevel,
-  type ReportPeriodType,
-} from "@/lib/reports-admin-summary";
-import { fetchAuditLogs } from "@/integrations/supabase/audit-queries";
-import { format, endOfMonth, endOfYear, parseISO, startOfMonth, startOfYear } from "date-fns";
-import { useSearchParams } from "react-router-dom";
+import { useReportPeriod } from "@/hooks/use-report-period";
 
 const Reports: React.FC = () => {
   const {
     employees,
     payslips,
-    leaveRecords,
     timesheets,
     companyDetails,
     isLoadingEmployees,
@@ -40,83 +27,14 @@ const Reports: React.FC = () => {
   } = usePayrollProcessor();
 
   const { settings: reportDesignSettings } = useReportDesignSettings();
-
-  const [searchParams] = useSearchParams();
-  const initialWeek = searchParams.get("period") === "weekly" ? searchParams.get("date") : null;
-  const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(() =>
-    initialWeek ? parseISO(initialWeek) : new Date()
-  );
-  const [reportPeriodType, setReportPeriodType] = useState<ReportPeriodType>(
-    initialWeek ? "weekly" : "monthly"
-  );
-  const payWeeks = useMemo(() => listPayWeeks(payslips), [payslips]);
-  const selectedPayWeek = useMemo(
-    () => (selectedReportDate ? payWeekForDate(payslips, selectedReportDate) : null),
-    [payslips, selectedReportDate]
-  );
-
-  useEffect(() => {
-    if (reportPeriodType === "weekly" && !selectedPayWeek && payWeeks.length > 0) {
-      setSelectedReportDate(parseISO(payWeeks[0].start));
-    }
-  }, [reportPeriodType, selectedPayWeek, payWeeks]);
-  const [auditLevel, setAuditLevel] = useState<ReportAuditLevel>("standard");
-  const [refreshTick, setRefreshTick] = useState(0);
-  const [auditLogs, setAuditLogs] = useState<Awaited<ReturnType<typeof fetchAuditLogs>>>([]);
+  const period = useReportPeriod();
 
   const isLoading =
     isLoadingEmployees || isLoadingPayslips || isLoadingLeaveRecords || isLoadingTimesheets;
 
-  useEffect(() => {
-    if (isMockDataEnabled) {
-      setAuditLogs([]);
-      return;
-    }
-    const load = async () => {
-      const filters: Parameters<typeof fetchAuditLogs>[0] = { limit: 500 };
-      if (selectedReportDate && reportPeriodType === "weekly") {
-        const day = format(selectedReportDate, "yyyy-MM-dd");
-        filters.dateStart = selectedPayWeek?.start ?? day;
-        filters.dateEnd = selectedPayWeek?.end ?? day;
-      } else if (selectedReportDate) {
-        const start =
-          reportPeriodType === "monthly"
-            ? startOfMonth(selectedReportDate)
-            : startOfYear(selectedReportDate);
-        const end =
-          reportPeriodType === "monthly"
-            ? endOfMonth(selectedReportDate)
-            : endOfYear(selectedReportDate);
-        filters.dateStart = format(start, "yyyy-MM-dd");
-        filters.dateEnd = format(end, "yyyy-MM-dd");
-      }
-      setAuditLogs(await fetchAuditLogs(filters));
-    };
-    void load();
-  }, [isMockDataEnabled, selectedReportDate, reportPeriodType, selectedPayWeek, refreshTick]);
-
-  const periodPayslips = useMemo(
-    () => filterPayslipsForReportPeriod(payslips, selectedReportDate, reportPeriodType),
-    [payslips, selectedReportDate, reportPeriodType]
-  );
-
-  const periodLeave = useMemo(
-    () =>
-      filterLeaveForReportPeriod(leaveRecords || [], selectedReportDate, reportPeriodType, selectedPayWeek),
-    [leaveRecords, selectedReportDate, reportPeriodType, selectedPayWeek]
-  );
-
-  const summary = useMemo(() => buildReportsAdminSummary(periodPayslips), [periodPayslips]);
-  const periodLabel = getReportPeriodLabel(selectedReportDate, reportPeriodType, payslips);
-
-  const handleRefresh = () => {
-    setRefreshTick((n) => n + 1);
-    window.dispatchEvent(new Event("appFocusRefresh"));
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      <ReportsHeader onRefresh={handleRefresh} isRefreshing={isLoading} />
+      <ReportsHeader onRefresh={period.refresh} isRefreshing={isLoading} />
 
       <Card className="rounded-xl border">
         <CardHeader className="pb-2">
@@ -129,15 +47,15 @@ const Reports: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ReportsPeriodBar
-            periodType={reportPeriodType}
-            onPeriodTypeChange={setReportPeriodType}
-            selectedDate={selectedReportDate}
-            onSelectedDateChange={setSelectedReportDate}
-            auditLevel={auditLevel}
-            onAuditLevelChange={setAuditLevel}
-            periodLabel={periodLabel}
-            payslipCount={summary.payslipCount}
-            payWeeks={payWeeks}
+            periodType={period.reportPeriodType}
+            onPeriodTypeChange={period.setReportPeriodType}
+            selectedDate={period.selectedReportDate}
+            onSelectedDateChange={period.setSelectedReportDate}
+            auditLevel={period.auditLevel}
+            onAuditLevelChange={period.setAuditLevel}
+            periodLabel={period.periodLabel}
+            payslipCount={period.summary.payslipCount}
+            payWeeks={period.payWeeks}
           />
         </CardContent>
       </Card>
@@ -149,22 +67,23 @@ const Reports: React.FC = () => {
         </div>
       ) : (
         <>
-          <ReportsStats summary={summary} periodLabel={periodLabel} />
+          <ReportsStats summary={period.summary} periodLabel={period.periodLabel} />
 
           <ErrorBoundary fallbackTitle="Reports catalog error">
             <ReportsCatalog
               employees={employees}
-              payslips={periodPayslips}
+              payslips={period.periodPayslips}
               allPayslips={payslips}
-              leaveRecords={periodLeave}
+              leaveRecords={period.periodLeave}
               timesheets={timesheets}
               companyDetails={companyDetails}
               reportDesignSettings={reportDesignSettings}
-              selectedReportDate={selectedReportDate}
-              reportPeriodType={reportPeriodType}
-              auditLevel={auditLevel}
-              periodPayslipCount={summary.payslipCount}
-              auditLogs={auditLogs}
+              selectedReportDate={period.selectedReportDate}
+              reportPeriodType={period.reportPeriodType}
+              auditLevel={period.auditLevel}
+              periodPayslipCount={period.summary.payslipCount}
+              auditLogs={period.auditLogs}
+              isMockDataEnabled={isMockDataEnabled}
             />
           </ErrorBoundary>
         </>

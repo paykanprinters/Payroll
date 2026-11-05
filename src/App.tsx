@@ -33,6 +33,7 @@ const AnalyticsStaff = lazy(() => import("./pages/AnalyticsStaff"));
 const Employees = lazy(() => import("./pages/Employees"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Reports = lazy(() => import("./pages/Reports"));
+const AccountantHome = lazy(() => import("./pages/accountant/AccountantHome"));
 const Settings = lazy(() => import("./pages/Settings"));
 const PaymentBatches = lazy(() => import("./pages/payroll/PaymentBatches"));
 const PaymentBatchDetail = lazy(() => import("./pages/payroll/PaymentBatchDetail"));
@@ -181,14 +182,14 @@ const App = () => {
                         <Route path="/analytics/staff" element={<AnalyticsStaff />} />
                       </Route>
 
-                      {/* Manager/Admin/Viewer insight routes */}
-                      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager', 'Viewer']} />}>
-                        <Route path="/analytics" element={<Analytics />} />
+                      <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager', 'Accountant']} />}>
+                        <Route path="/accountant" element={<AccountantHome />} />
                         <Route path="/reports" element={<Reports />} />
                       </Route>
 
                       {/* Manager/Admin-only routes */}
                       <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager']} />}>
+                        <Route path="/analytics" element={<Analytics />} />
                         <Route path="/employees" element={<Employees />} />
                         <Route path="/payroll/runs" element={<PayrollRuns />} />
                         <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />

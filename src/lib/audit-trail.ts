@@ -97,13 +97,13 @@ export async function recordAuditEvent(input: AuditEventInput): Promise<boolean>
     return false;
   }
 
-  let userId = input.userId ?? null;
+  let userId: string | null = input.userId ?? null;
   let userEmail: string | null = null;
 
-  if (userId === undefined) {
-    const { data } = await supabase.auth.getUser();
-    userId = data?.user?.id ?? null;
-    userEmail = data?.user?.email ?? null;
+  if (input.userId === undefined) {
+    const { data } = await supabase.auth.getSession();
+    userId = data?.session?.user?.id ?? null;
+    userEmail = data?.session?.user?.email ?? null;
   }
 
   const localRow: AuditLogRow = {
@@ -159,6 +159,33 @@ export async function recordAuthEvent(
       role: details.role,
       portal: details.portal,
     },
+  });
+}
+
+export type ReportAccessAction = "previewed" | "printed" | "downloaded_pdf" | "downloaded_csv";
+
+const REPORT_ACCESS_VERBS: Record<ReportAccessAction, string> = {
+  previewed: "viewed",
+  printed: "printed",
+  downloaded_pdf: "downloaded (PDF)",
+  downloaded_csv: "downloaded (CSV)",
+};
+
+export async function recordReportAccess(details: {
+  reportId: string;
+  reportTitle: string;
+  action: ReportAccessAction;
+  periodLabel: string;
+  role?: string;
+}) {
+  return recordAuditEvent({
+    severity: "info",
+    module: "reports",
+    action: details.action === "previewed" ? "report_viewed" : "report_downloaded",
+    message: `${details.reportTitle} ${REPORT_ACCESS_VERBS[details.action]} for ${details.periodLabel}`,
+    entityType: "report",
+    entityId: details.reportId,
+    metadata: { format: details.action, period: details.periodLabel, role: details.role },
   });
 }
 

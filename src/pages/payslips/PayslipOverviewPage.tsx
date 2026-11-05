@@ -28,6 +28,7 @@ import CalculatePaycheckDialog from "@/components/payroll/CalculatePaycheckDialo
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import { MockPayslip } from "@/lib/mock-data-interfaces";
 import { showError } from "@/utils/toast";
+import { recordReportAccess } from "@/lib/audit-trail";
 
 const PayslipOverviewPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -194,6 +195,15 @@ const PayslipOverviewPage: React.FC = () => {
         );
         const filename = `payslip-${getEmployeeCustomId(payslip.employeeId)}-${payslip.payPeriod.replace(/\s+/g, "")}.pdf`;
         await downloadPdf(doc, filename);
+        if (user?.role === "Accountant") {
+          void recordReportAccess({
+            reportId: `payslip:${payslip.id}`,
+            reportTitle: `Payslip for ${getEmployeeName(payslip.employeeId)}`,
+            action: "downloaded_pdf",
+            periodLabel: payslip.payPeriod,
+            role: user.role,
+          });
+        }
       } catch {
         showError("Unable to download payslip. Please try again.");
       } finally {
@@ -207,6 +217,7 @@ const PayslipOverviewPage: React.FC = () => {
       getEmployeeName,
       getEmployeeCustomId,
       downloadPdf,
+      user,
     ]
   );
 

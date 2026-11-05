@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfile = useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
       .from("users")
-      .select("id, email, name, role")
+      .select("id, email, name, role, status, access_expires_at")
       .eq("id", userId)
       .maybeSingle();
 
@@ -44,6 +44,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: profile.email as string,
       role: (profile.role || "Staff") as UserRole,
       name: (profile.name as string) ?? (profile.email as string),
+      accessExpiresAt: (profile.access_expires_at as string | null) ?? null,
+      status: (profile.status as string | null) ?? null,
     };
 
     return authUser;

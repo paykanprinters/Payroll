@@ -36,6 +36,7 @@ interface ReportPreviewDialogProps {
   reportDesignSettings: ReportDesignSettings;
   documentType: "payslip" | "report";
   periodLabel?: string;
+  onExport?: (action: "print" | "download") => void;
 }
 
 const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
@@ -47,6 +48,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
   reportDesignSettings,
   documentType,
   periodLabel,
+  onExport,
 }) => {
   const { isMockDataEnabled } = usePayrollProcessor();
   const { user } = useAuth();
@@ -70,6 +72,7 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
       orientation,
     };
     const filename = `${reportTitle.replace(/\s/g, "-")}.pdf`;
+    onExport?.(action);
 
     if (action === "download") {
       await downloadReportPdf({ ...payload, filename });
@@ -158,13 +161,15 @@ const ReportPreviewDialog: React.FC<ReportPreviewDialogProps> = ({
           <Button onClick={() => void handlePrintOrDownload("download")}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => void handleSaveToSupabase()}
-            disabled={isMockDataEnabled || !user?.id}
-          >
-            <Save className="mr-2 h-4 w-4" /> Save to Supabase
-          </Button>
+          {user?.role !== "Accountant" && (
+            <Button
+              variant="outline"
+              onClick={() => void handleSaveToSupabase()}
+              disabled={isMockDataEnabled || !user?.id}
+            >
+              <Save className="mr-2 h-4 w-4" /> Save to Supabase
+            </Button>
+          )}
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>

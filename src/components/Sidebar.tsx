@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   ClipboardList,
   HandCoins,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -118,6 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       title: "Workspace",
       items: [
+        { to: "/accountant", icon: FileSpreadsheet, label: "Accountant portal" },
         { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
         { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
       ],
@@ -170,15 +172,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   const filteredSections = navSections
     .map((section) => {
       const items = section.items.filter((item) => {
-        if (user?.role === "Viewer") {
-          const viewerAllowed =
-            item.to === "/dashboard" ||
+        if (user?.role === "Accountant") {
+          return (
+            item.to === "/accountant" ||
             item.to.startsWith("/payslips") ||
-            item.to === "/analytics" ||
             item.to === "/reports" ||
             item.to === "/profile" ||
-            item.to === "/docs";
-          return viewerAllowed;
+            item.to === "/docs"
+          );
+        }
+        if (item.to === "/accountant") {
+          return false;
         }
         // Admin/Manager-only
         if (

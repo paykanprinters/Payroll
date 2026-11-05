@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 import KanPageBanner from "@/components/KanPageBanner";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ReportsHeaderProps {
   onRefresh?: () => void;
@@ -14,6 +15,8 @@ interface ReportsHeaderProps {
 }
 
 const ReportsHeader: React.FC<ReportsHeaderProps> = ({ onRefresh, isRefreshing = false }) => {
+  const { user } = useAuth();
+  const canEditDesign = user?.role === "Admin";
   return (
     <KanPageBanner
       icon={FileText}
@@ -37,16 +40,18 @@ const ReportsHeader: React.FC<ReportsHeaderProps> = ({ onRefresh, isRefreshing =
               Refresh data
             </Button>
           )}
-          <Link
-            to="/settings/report-design"
-            className={cn(
-              buttonVariants({ size: "sm" }),
-              "rounded-full bg-white text-cyan-900 hover:bg-white/90"
-            )}
-          >
-            <Palette className="h-4 w-4" />
-            Report design
-          </Link>
+          {canEditDesign && (
+            <Link
+              to="/settings/report-design"
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                "rounded-full bg-white text-cyan-900 hover:bg-white/90"
+              )}
+            >
+              <Palette className="h-4 w-4" />
+              Report design
+            </Link>
+          )}
         </>
       }
     />

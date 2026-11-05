@@ -25,9 +25,11 @@ const userSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
-  role: z.enum(["Admin", "Manager", "Staff", "Viewer"], { message: "Role is required" }),
+  role: z.enum(["Admin", "Manager", "Staff", "Accountant"], { message: "Role is required" }),
   status: z.enum(["Active", "Inactive"]).default("Active"),
   password: z.string().min(8, "Password must be at least 8 characters long").optional(),
+  /** yyyy-MM-dd; Accountant only. Empty means no end date. */
+  accessEndDate: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (!data.id && !data.password) {
     ctx.addIssue({
@@ -212,7 +214,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
           <div className="space-y-1">
             <Label htmlFor="role">Role</Label>
-            <Select onValueChange={(value) => form.setValue("role", value as "Admin" | "Manager" | "Staff" | "Viewer")} value={form.watch("role")} disabled={isMockDataEnabled}>
+            <Select onValueChange={(value) => form.setValue("role", value as UserFormValues["role"])} value={form.watch("role")} disabled={isMockDataEnabled}>
               <SelectTrigger id="role" className="mt-1 w-full">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
@@ -220,11 +222,28 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 <SelectItem value="Admin">Admin</SelectItem>
                 <SelectItem value="Manager">Manager</SelectItem>
                 <SelectItem value="Staff">Staff</SelectItem>
-                <SelectItem value="Viewer">Viewer</SelectItem>
+                <SelectItem value="Accountant">Accountant (read-only)</SelectItem>
               </SelectContent>
             </Select>
             {form.formState.errors.role && (<p className="text-red-500 text-sm">{form.formState.errors.role.message}</p>)}
           </div>
+
+          {form.watch("role") === "Accountant" && (
+            <div className="space-y-1 rounded-md border border-sky-200 bg-sky-50 p-3">
+              <Label htmlFor="accessEndDate">Access ends on (optional)</Label>
+              <Input
+                id="accessEndDate"
+                type="date"
+                {...form.register("accessEndDate")}
+                disabled={isMockDataEnabled}
+                className="mt-1 w-full bg-white"
+              />
+              <p className="text-xs text-muted-foreground">
+                Read-only access to payroll data and reports. They must set up an authenticator app on first
+                sign-in. After this date they can still sign in but see no payroll data. Leave blank for no end date.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label htmlFor="status">Status</Label>

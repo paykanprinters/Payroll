@@ -6,7 +6,7 @@ const initialMockUsers = [
   { name: "Admin User", email: "admin@example.com", role: "Admin", status: "Active" },
   { name: "Manager Smith", email: "manager@example.com", role: "Manager", status: "Active" },
   { name: "Staff Johnson", email: "staff@example.com", role: "Staff", status: "Active" },
-  { name: "Viewer Brown", email: "viewer@example.com", role: "Viewer", status: "Active" },
+  { name: "Accountant Brown", email: "accountant@example.com", role: "Accountant", status: "Active" },
   { name: "Inactive User", email: "inactive@example.com", role: "Staff", status: "Inactive" },
 ];
 
