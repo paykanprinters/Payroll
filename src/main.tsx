@@ -19,6 +19,17 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// After a deploy, tabs still on the old build request page chunks that no longer exist.
+// Reload once to fetch the new build; the timestamp guard prevents a reload loop.
+window.addEventListener("vite:preloadError", (event) => {
+  const key = "kan:chunk-reload-at";
+  const last = Number(sessionStorage.getItem(key) || 0);
+  if (Date.now() - last < 10_000) return;
+  sessionStorage.setItem(key, String(Date.now()));
+  event.preventDefault();
+  window.location.reload();
+});
+
 async function initNativeStaffShell() {
   if (!Capacitor.isNativePlatform()) return;
 
