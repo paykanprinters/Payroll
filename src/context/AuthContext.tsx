@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const go = navigateRef.current;
     const onAuthPages =
       path === "/login" ||
+      path === "/accountant/login" ||
       path === "/employee" ||
       path === STAFF_LOGIN_PATH;
 

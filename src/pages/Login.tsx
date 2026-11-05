@@ -14,7 +14,7 @@ const Login: React.FC = () => {
     <AuthLayout
       title="Welcome back"
       subtitle="Sign in to access your payroll workspace."
-      panelSubtitle="Secure payroll access for admins, managers, and staff."
+      panelSubtitle="Secure payroll access for admins, managers, staff, and the company's accountant."
       footerNote="By signing in you agree to your organization's policies and acceptable use."
       features={[
         {
@@ -25,7 +25,7 @@ const Login: React.FC = () => {
         {
           icon: KeySquare,
           title: "Role-based controls",
-          description: "Admin, Manager, and Staff experiences built in.",
+          description: "Admin, Manager, Staff, and read-only Accountant experiences built in.",
         },
         {
           icon: ShieldCheck,
@@ -50,6 +50,15 @@ const Login: React.FC = () => {
           className="font-semibold text-[#00AEEF] underline-offset-2 hover:underline"
         >
           Go to the staff portal
+        </Link>
+      </p>
+      <p className="mt-2 text-center text-sm text-muted-foreground">
+        Accountant or auditor?{" "}
+        <Link
+          to="/accountant/login"
+          className="font-semibold text-[#00AEEF] underline-offset-2 hover:underline"
+        >
+          Sign in to the accountant portal
         </Link>
       </p>
     </AuthLayout>

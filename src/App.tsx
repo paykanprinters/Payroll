@@ -7,6 +7,7 @@ import MainLayout from "./components/MainLayout";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
 import StaffLogin from "./pages/StaffLogin";
+import AccountantLogin from "./pages/AccountantLogin";
 import StaffPortalGuard from "./components/staff/StaffPortalGuard";
 import StaffPortalLayout from "./components/staff/StaffPortalLayout";
 import { AuthProvider } from "./context/AuthContext";
@@ -95,6 +96,7 @@ const App = () => {
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/accountant/login" element={<AccountantLogin />} />
               <Route path="/employee" element={<Navigate to="/staff/login" replace />} />
               <Route path="/staff/login" element={<StaffLogin />} />
               <Route
