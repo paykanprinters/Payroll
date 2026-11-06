@@ -11,6 +11,7 @@ import {
   payWeekForDate,
   type ReportPeriodType,
 } from "@/lib/reports-admin-summary";
+import { isCashPaid, shouldTrackEmployeeTax } from "@/lib/employee-tax-tracking";
 
 export interface EmployeeDeductionRow {
   employeeId: string;
@@ -33,6 +34,8 @@ export interface EmployeeDeductionRow {
 export interface EmployeeDeductionsReport {
   periodDescription: string;
   rows: EmployeeDeductionRow[];
+  /** Cash-paid employees are not listed, but their PAYE and UIF are included in the totals. */
+  cash: { employeeCount: number; paye: number; uif: number };
   totals: Omit<EmployeeDeductionRow, "employeeId" | "name" | "idNumber" | "loanBalance" | "savingsBalance"> & {
     loanBalance: number;
     savingsBalance: number;
@@ -84,13 +87,25 @@ export function buildEmployeeDeductionsReport(
   periodType: ReportPeriodType
 ): EmployeeDeductionsReport {
   const selected = selectPayslipsForEmployeeDeductions(payslips, selectedDate, periodType);
+  const employeesById = new Map(employees.map((e) => [e.id, e]));
   const byEmployee = new Map<string, MockPayslip[]>();
+  const cashEmployees = new Set<string>();
+  let cashPaye = 0;
+  let cashUif = 0;
   for (const p of selected.payslips) {
+    const emp = employeesById.get(p.employeeId);
+    if (isCashPaid(emp)) {
+      if (shouldTrackEmployeeTax(emp)) {
+        cashEmployees.add(p.employeeId);
+        cashPaye += sumByName(p, "PAYE");
+        cashUif += sumByName(p, "UIF");
+      }
+      continue;
+    }
     const list = byEmployee.get(p.employeeId) ?? [];
     list.push(p);
     byEmployee.set(p.employeeId, list);
   }
-  const employeesById = new Map(employees.map((e) => [e.id, e]));
 
   const rows: EmployeeDeductionRow[] = Array.from(byEmployee.entries()).map(([employeeId, slips]) => {
     const emp = employeesById.get(employeeId);
@@ -131,11 +146,12 @@ export function buildEmployeeDeductionsReport(
   return {
     periodDescription: selected.periodDescription,
     rows,
+    cash: { employeeCount: cashEmployees.size, paye: round2(cashPaye), uif: round2(cashUif) },
     totals: {
       payslipCount: rows.reduce((s, r) => s + r.payslipCount, 0),
       gross: sum("gross"),
-      paye: sum("paye"),
-      uif: sum("uif"),
+      paye: round2(sum("paye") + cashPaye),
+      uif: round2(sum("uif") + cashUif),
       loan: sum("loan"),
       savings: sum("savings"),
       otherDeductions: sum("otherDeductions"),
@@ -152,6 +168,15 @@ const balance = (n: number | null) => (n == null ? "—" : money(n));
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+function cashNote(cash: EmployeeDeductionsReport["cash"]): string | null {
+  if (cash.employeeCount === 0) return null;
+  const who = cash.employeeCount === 1 ? "1 cash-paid employee" : `${cash.employeeCount} cash-paid employees`;
+  return (
+    `* Cash payment employees have not been captured in this report. The PAYE and UIF totals include ` +
+    `PAYE of R ${money(cash.paye)} and UIF of R ${money(cash.uif)} for ${who}.`
+  );
+}
+
 export const generateEmployeeDeductionsReportContent = (
   payslips: MockPayslip[],
   employees: MockEmployee[],
@@ -159,10 +184,12 @@ export const generateEmployeeDeductionsReportContent = (
   periodType: ReportPeriodType
 ): string => {
   const report = buildEmployeeDeductionsReport(payslips, employees, selectedDate, periodType);
-  if (report.rows.length === 0) {
+  if (report.rows.length === 0 && report.cash.employeeCount === 0) {
     return `<p>No payslip data available for ${report.periodDescription} to generate this report.</p>`;
   }
   const t = report.totals;
+  const note = cashNote(report.cash);
+  const star = note ? "*" : "";
   const cell = (v: string, right = true) =>
     `<td class="py-2 px-3${right ? " text-right" : ""}">${v}</td>`;
 
@@ -215,8 +242,8 @@ export const generateEmployeeDeductionsReportContent = (
           ${cell("Total", false)}
           ${cell(String(t.payslipCount))}
           ${cell(money(t.gross))}
-          ${cell(money(t.paye))}
-          ${cell(money(t.uif))}
+          ${cell(money(t.paye) + star)}
+          ${cell(money(t.uif) + star)}
           ${cell(money(t.loan))}
           ${cell(money(t.savings))}
           ${cell(money(t.otherDeductions))}
@@ -227,6 +254,7 @@ export const generateEmployeeDeductionsReportContent = (
         </tr>
       </tbody>
     </table>
+    ${note ? `<p class="text-sm text-muted-foreground" style="margin-top:8px">${note}</p>` : ""}
   `;
 };
 
@@ -237,7 +265,7 @@ export function employeeDeductionsCsv(
   periodType: ReportPeriodType
 ): string | null {
   const report = buildEmployeeDeductionsReport(payslips, employees, selectedDate, periodType);
-  if (report.rows.length === 0) return null;
+  if (report.rows.length === 0 && report.cash.employeeCount === 0) return null;
   const header = [
     "Employee",
     "ID number",
@@ -277,14 +305,16 @@ export function employeeDeductionsCsv(
       .join(",")
   );
   const t = report.totals;
+  const note = cashNote(report.cash);
+  const star = note ? "*" : "";
   lines.push(
     [
       "Total",
       "",
       String(t.payslipCount),
       num(t.gross),
-      num(t.paye),
-      num(t.uif),
+      num(t.paye) + star,
+      num(t.uif) + star,
       num(t.loan),
       num(t.savings),
       num(t.otherDeductions),
@@ -296,5 +326,6 @@ export function employeeDeductionsCsv(
       .map(escapeCsvField)
       .join(",")
   );
+  if (note) lines.push("", escapeCsvField(note));
   return `\uFEFF${[header.map(escapeCsvField).join(","), ...lines].join("\r\n")}`;
 }

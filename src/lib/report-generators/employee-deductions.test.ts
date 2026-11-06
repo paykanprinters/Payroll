@@ -113,6 +113,32 @@ describe("employee deductions output", () => {
     expect(lines[2].startsWith("Total")).toBe(true);
   });
 
+  it("leaves cash-paid employees out of the rows but adds their PAYE and UIF to the totals", () => {
+    const withCash = [
+      ...employees,
+      { id: "e3", firstName: "Cash", lastName: "Worker", paymentMode: "Cash" },
+      { id: "e4", firstName: "Untaxed", lastName: "Cash", paymentMode: "Cash", trackTax: false },
+    ] as MockEmployee[];
+    const slips = [...payslips, slip("e3", "2026-10-07 - 2026-10-13"), slip("e4", "2026-10-07 - 2026-10-13")];
+    const report = buildEmployeeDeductionsReport(slips, withCash, new Date(2026, 9, 1), "monthly");
+    expect(report.rows.map((r) => r.employeeId)).toEqual(["e1"]);
+    expect(report.cash).toEqual({ employeeCount: 1, paye: 100, uif: 20 });
+    expect(report.totals.paye).toBe(200);
+    expect(report.totals.uif).toBe(40);
+    expect(report.totals.gross).toBe(2000);
+    expect(report.totals.loan).toBe(50);
+
+    const html = generateEmployeeDeductionsReportContent(slips, withCash, new Date(2026, 9, 1), "monthly");
+    expect(html).not.toContain("Cash Worker");
+    expect(html).toMatch(/200[.,]00\*/);
+    expect(html).toContain("* Cash payment employees have not been captured");
+
+    const csv = employeeDeductionsCsv(slips, withCash, new Date(2026, 9, 1), "monthly")!;
+    expect(csv).not.toContain("Cash Worker");
+    expect(csv).toContain("200.00*");
+    expect(csv).toContain("Cash payment employees have not been captured");
+  });
+
   it("returns nothing when the period has no payslips", () => {
     expect(employeeDeductionsCsv(payslips, employees, new Date(2025, 0, 1), "monthly")).toBeNull();
   });
