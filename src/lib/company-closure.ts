@@ -3,7 +3,7 @@ import type { LeaveEntry, MockEmployee, TimesheetEntry } from "@/lib/mock-data-i
 import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import { dayIsHolidayForEmployee } from "@/lib/payroll-calculations/helpers/earnings-helpers";
 import { isLeaveEffectiveForPayroll } from "@/lib/leave-status";
-import { computeEmployeeLeaveBalance, getAnnualLeaveCycle } from "@/lib/leave-accrual";
+import { computeEmployeeLeaveBalance, getEmployeeAnnualLeaveCycle } from "@/lib/leave-accrual";
 import { isEmployeeActiveInPeriod } from "@/lib/employee-active-period";
 import { calculateTimesheetMetrics, getWeeklyPeriodContaining } from "@/lib/timesheet-utils";
 import { leaveDayTimes, type LeaveDaySchedule } from "@/lib/leave-timesheet-rows";
@@ -118,10 +118,9 @@ export type ClosurePreviewRow = {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function groupDaysByLeaveCycle(employee: MockEmployee, days: string[]) {
-  const anchor = parseISO(employee.leaveCycleStartDate || employee.startDate || days[0]);
   const groups = new Map<string, { cycleStart: Date; cycleEnd: Date; days: string[] }>();
   for (const day of days) {
-    const cycle = getAnnualLeaveCycle(parseISO(day), anchor);
+    const cycle = getEmployeeAnnualLeaveCycle(employee, parseISO(day));
     const key = iso(cycle.cycleStart);
     const group = groups.get(key) || { ...cycle, days: [] };
     group.days.push(day);
@@ -181,7 +180,7 @@ export function buildClosurePreview({
 
 /**
  * One Annual Leave record per employee per leave cycle, so a closure that crosses the
- * leave-cycle anniversary is deducted from the right cycle.
+ * start of a leave year (1 January, or the employee's own cycle date) is deducted from the right year.
  */
 export function buildClosureLeaveRecords({
   closure,

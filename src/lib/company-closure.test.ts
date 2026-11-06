@@ -65,7 +65,7 @@ describe("expandClosureDays", () => {
 describe("buildClosurePreview", () => {
   it("shows a balance that goes negative as leave in advance", () => {
     const [row] = buildClosurePreview({ closure, employees: [employee], leaveRecords: [], holidays });
-    // Cycle runs 1 Jan – 31 Dec 2026; the last closure leave day is 31 Dec, so the full 15 days have accrued.
+    // Company leave year 1 Jan – 31 Dec 2026 with the full 15 days available.
     expect(row.leaveDays).toBe(12);
     expect(row.segments).toHaveLength(1);
     expect(row.balanceBefore).toBeCloseTo(15, 1);
@@ -76,6 +76,18 @@ describe("buildClosurePreview", () => {
     const [late] = buildClosurePreview({ closure, employees: [lateStarter], leaveRecords: [], holidays });
     expect(late.balanceAfter).toBeLessThan(0);
     expect(late.advanceDays).toBeCloseTo(-late.balanceAfter, 2);
+  });
+
+  it("takes December days from this leave year and January days from the next", () => {
+    const shutdown = { ...closure, startDate: "2026-12-18", endDate: "2027-01-10" };
+    const longServing = { ...employee, startDate: "2004-10-16" };
+    const [row] = buildClosurePreview({ closure: shutdown, employees: [longServing], leaveRecords: [], holidays });
+    expect(row.leaveDays).toBe(14);
+    expect(row.segments.map((s) => [s.cycleStart, s.leaveDays, s.balanceAfter])).toEqual([
+      ["2026-01-01", 9, 6],
+      ["2027-01-01", 5, 10],
+    ]);
+    expect(row.advanceDays).toBe(0);
   });
 
   it("skips excluded employees", () => {

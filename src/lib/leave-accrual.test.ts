@@ -52,12 +52,24 @@ describe("getSickLeaveCycle", () => {
 });
 
 describe("computeEmployeeLeaveBalance", () => {
-  it("accrues annual leave pro-rata through mid-cycle", () => {
-    const snapshot = computeEmployeeLeaveBalance(baseEmployee, [], parseISO("2024-07-01"));
-    expect(snapshot.annual.entitled).toBeGreaterThan(7);
-    expect(snapshot.annual.entitled).toBeLessThan(8);
-    expect(snapshot.annual.taken).toBe(0);
-    expect(snapshot.annual.remaining).toBe(snapshot.annual.entitled);
+  it("gives the full annual entitlement from 1 January on the company leave year", () => {
+    const longServing = { ...baseEmployee, startDate: "2004-10-16" };
+    const snapshot = computeEmployeeLeaveBalance(longServing, [], parseISO("2027-01-08"));
+    expect(snapshot.annual.cycleStart).toBe("2027-01-01");
+    expect(snapshot.annual.cycleEnd).toBe("2027-12-31");
+    expect(snapshot.annual.entitled).toBe(15);
+    expect(snapshot.annual.remaining).toBe(15);
+  });
+
+  it("pro-rates annual leave in the year someone starts or leaves", () => {
+    const starter = { ...baseEmployee, startDate: "2026-07-01" };
+    expect(computeEmployeeLeaveBalance(starter, [], parseISO("2026-07-02")).annual.entitled).toBe(
+      round((184 / 365) * 15)
+    );
+    const leaver = { ...baseEmployee, terminationDate: "2024-03-31" };
+    expect(computeEmployeeLeaveBalance(leaver, [], parseISO("2024-03-15")).annual.entitled).toBe(
+      round((91 / 366) * 15)
+    );
   });
 
   it("reduces annual remaining when approved leave is taken in cycle", () => {
@@ -86,6 +98,20 @@ describe("computeEmployeeLeaveBalance", () => {
     expect(snapshot.sick.inQualifyingPeriod).toBe(true);
     expect(snapshot.sick.entitled).toBeGreaterThan(0);
     expect(snapshot.sick.entitled).toBeLessThan(5);
+  });
+
+  it("makes the full 30 sick days available after the first six months, less days already taken", () => {
+    const records = [
+      leave({ id: "s1", leaveType: "Sick Leave", startDate: "2024-03-04", endDate: "2024-03-05", workingDays: 2 }),
+    ];
+    const snapshot = computeEmployeeLeaveBalance(baseEmployee, records, parseISO("2024-08-01"));
+    expect(snapshot.sick.inQualifyingPeriod).toBe(false);
+    expect(snapshot.sick.entitled).toBe(30);
+    expect(snapshot.sick.remaining).toBe(28);
+
+    const nextCycle = computeEmployeeLeaveBalance(baseEmployee, records, parseISO("2027-01-04"));
+    expect(nextCycle.sick.cycleStart).toBe("2027-01-01");
+    expect(nextCycle.sick.remaining).toBe(30);
   });
 
   it("tracks family responsibility leave separately", () => {
@@ -169,11 +195,11 @@ describe("validateLeaveAgainstBalance", () => {
 
   it("lets the annual balance go negative when leave was granted in advance", () => {
     const records = [
-      leave({ id: "closure", leaveType: "Annual Leave", startDate: "2024-02-01", endDate: "2024-02-20", workingDays: 14 }),
+      leave({ id: "closure", leaveType: "Annual Leave", startDate: "2024-02-01", endDate: "2024-02-23", workingDays: 17 }),
     ];
     const snapshot = computeEmployeeLeaveBalance(baseEmployee, records, parseISO("2024-03-01"));
     expect(snapshot.annual.remaining).toBeLessThan(0);
-    expect(annualLeaveAdvanceDays(snapshot.annual.remaining)).toBe(round(14 - snapshot.annual.entitled));
+    expect(annualLeaveAdvanceDays(snapshot.annual.remaining)).toBe(round(17 - snapshot.annual.entitled));
     expect(formatLeaveBalance(-2.5)).toBe("2.5 days in advance");
   });
 

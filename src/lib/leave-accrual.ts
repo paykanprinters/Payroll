@@ -4,6 +4,7 @@ import {
   differenceInCalendarDays,
   differenceInMonths,
   eachDayOfInterval,
+  format,
   isWeekend,
   isWithinInterval,
   max,
@@ -69,11 +70,41 @@ function parseDate(value: string | undefined, fallback: Date): Date {
 }
 
 function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return format(date, "yyyy-MM-dd");
 }
 
 function getEmploymentAnchor(employee: MockEmployee): Date {
   return parseDate(employee.leaveCycleStartDate || employee.startDate, new Date());
+}
+
+function getEmploymentStart(employee: MockEmployee): Date {
+  return parseDate(employee.startDate || employee.leaveCycleStartDate, new Date());
+}
+
+/**
+ * Annual leave runs on the company leave year (1 January – 31 December) unless the employee
+ * has their own leave cycle start date.
+ */
+export function getEmployeeAnnualLeaveCycle(
+  employee: MockEmployee,
+  asOf: Date
+): { cycleStart: Date; cycleEnd: Date } {
+  if (employee.leaveCycleStartDate) {
+    return getAnnualLeaveCycle(asOf, parseDate(employee.leaveCycleStartDate, asOf));
+  }
+  const year = startOfDay(asOf).getFullYear();
+  return { cycleStart: new Date(year, 0, 1), cycleEnd: new Date(year, 11, 31) };
+}
+
+/** Full entitlement from the first day of the cycle, pro rata for the part of the cycle employed. */
+function cycleEntitlement(
+  cycleStart: Date,
+  cycleEnd: Date,
+  employee: MockEmployee,
+  fullEntitlement: number
+): number {
+  const termination = employee.terminationDate ? parseDate(employee.terminationDate, cycleEnd) : cycleEnd;
+  return proRataEntitlement(cycleStart, cycleEnd, min([cycleEnd, termination]), getEmploymentStart(employee), fullEntitlement);
 }
 
 function getAnnualEntitlementDays(employee: MockEmployee): number {
@@ -192,8 +223,9 @@ function countWeekdaysWorked(
   return Math.max(0, weekdays - unpaidLeave);
 }
 
-function isFirstAnnualCycle(cycleStart: Date, anchor: Date): boolean {
-  return cycleStart.getTime() === startOfDay(anchor).getTime();
+function isFirstAnnualCycle(cycleStart: Date, cycleEnd: Date, employmentStart: Date): boolean {
+  const start = startOfDay(employmentStart);
+  return start >= cycleStart && start <= cycleEnd;
 }
 
 function isFirstSickCycle(cycleStart: Date, anchor: Date): boolean {
@@ -208,22 +240,16 @@ export function computeEmployeeLeaveBalance(
 ): EmployeeLeaveBalanceSnapshot {
   const asOfDay = startOfDay(asOf);
   const employmentStart = getEmploymentAnchor(employee);
-  const annualCycle = getAnnualLeaveCycle(asOfDay, employmentStart);
+  const annualCycle = getEmployeeAnnualLeaveCycle(employee, asOfDay);
   const sickCycle = getSickLeaveCycle(asOfDay, employmentStart);
   const monthsEmployed = differenceInMonths(asOfDay, employmentStart);
   const inQualifyingPeriod = monthsEmployed < BCEA_LEAVE_DEFAULTS.sickQualifyingMonths;
 
   const annualFull = getAnnualEntitlementDays(employee);
-  let annualEntitled = proRataEntitlement(
-    annualCycle.cycleStart,
-    annualCycle.cycleEnd,
-    asOfDay,
-    employmentStart,
-    annualFull
-  );
+  let annualEntitled = cycleEntitlement(annualCycle.cycleStart, annualCycle.cycleEnd, employee, annualFull);
 
   if (
-    isFirstAnnualCycle(annualCycle.cycleStart, employmentStart) &&
+    isFirstAnnualCycle(annualCycle.cycleStart, annualCycle.cycleEnd, getEmploymentStart(employee)) &&
     employee.leaveOpeningAnnualBalance != null
   ) {
     annualEntitled = roundLeaveDays(annualEntitled + employee.leaveOpeningAnnualBalance);
@@ -245,13 +271,8 @@ export function computeEmployeeLeaveBalance(
       daysWorked / BCEA_LEAVE_DEFAULTS.daysWorkedDenominatorQualifying
     );
   } else {
-    sickEntitled = proRataEntitlement(
-      sickCycle.cycleStart,
-      sickCycle.cycleEnd,
-      asOfDay,
-      employmentStart,
-      BCEA_LEAVE_DEFAULTS.sickDaysPer36MonthCycle
-    );
+    // BCEA s22: the full six weeks' sick leave is available from the start of each 36-month cycle.
+    sickEntitled = BCEA_LEAVE_DEFAULTS.sickDaysPer36MonthCycle;
     if (
       isFirstSickCycle(sickCycle.cycleStart, employmentStart) &&
       employee.leaveOpeningSickBalance != null
@@ -278,7 +299,7 @@ export function computeEmployeeLeaveBalance(
   );
 
   if (
-    isFirstAnnualCycle(annualCycle.cycleStart, employmentStart) &&
+    isFirstAnnualCycle(annualCycle.cycleStart, annualCycle.cycleEnd, getEmploymentStart(employee)) &&
     employee.leaveOpeningFamilyBalance != null
   ) {
     familyEntitled = roundLeaveDays(familyEntitled + employee.leaveOpeningFamilyBalance);

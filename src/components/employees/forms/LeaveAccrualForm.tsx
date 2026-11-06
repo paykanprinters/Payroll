@@ -18,8 +18,9 @@ const LeaveAccrualForm: React.FC = () => {
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Leave accrual (BCEA)</CardTitle>
         <CardDescription>
-          Optional overrides for leave balances. Leave blank to use employment start date and default
-          entitlements ({BCEA_LEAVE_DEFAULTS.annualWorkingDaysPerCycle} annual days per cycle).
+          Optional overrides for leave balances. Leave blank to use the company leave year (1 January –
+          31 December) with {BCEA_LEAVE_DEFAULTS.annualWorkingDaysPerCycle} annual days, available from
+          1 January and pro rata in the year someone starts.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -28,7 +29,7 @@ const LeaveAccrualForm: React.FC = () => {
             <Label htmlFor="leaveCycleStartDate">Leave cycle start</Label>
             <Input id="leaveCycleStartDate" type="date" {...register("leaveCycleStartDate")} />
             <p className="text-xs text-muted-foreground">
-              Defaults to date of joining when empty.
+              Defaults to 1 January when empty.
             </p>
             {errors.leaveCycleStartDate && (
               <p className="text-sm text-red-500">{errors.leaveCycleStartDate.message as string}</p>
