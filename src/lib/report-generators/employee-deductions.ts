@@ -167,16 +167,6 @@ const money = (n: number) => n.toLocaleString("en-ZA", { minimumFractionDigits: 
 const balance = (n: number | null) => (n == null ? "—" : money(n));
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-function cashNote(cash: EmployeeDeductionsReport["cash"]): string | null {
-  if (cash.employeeCount === 0) return null;
-  const who = cash.employeeCount === 1 ? "1 cash-paid employee" : `${cash.employeeCount} cash-paid employees`;
-  return (
-    `* Cash payment employees have not been captured in this report. The PAYE and UIF totals include ` +
-    `PAYE of R ${money(cash.paye)} and UIF of R ${money(cash.uif)} for ${who}.`
-  );
-}
-
 export const generateEmployeeDeductionsReportContent = (
   payslips: MockPayslip[],
   employees: MockEmployee[],
@@ -188,8 +178,6 @@ export const generateEmployeeDeductionsReportContent = (
     return `<p>No payslip data available for ${report.periodDescription} to generate this report.</p>`;
   }
   const t = report.totals;
-  const note = cashNote(report.cash);
-  const star = note ? "*" : "";
   const cell = (v: string, right = true) =>
     `<td class="py-2 px-3${right ? " text-right" : ""}">${v}</td>`;
 
@@ -242,8 +230,8 @@ export const generateEmployeeDeductionsReportContent = (
           ${cell("Total", false)}
           ${cell(String(t.payslipCount))}
           ${cell(money(t.gross))}
-          ${cell(money(t.paye) + star)}
-          ${cell(money(t.uif) + star)}
+          ${cell(money(t.paye))}
+          ${cell(money(t.uif))}
           ${cell(money(t.loan))}
           ${cell(money(t.savings))}
           ${cell(money(t.otherDeductions))}
@@ -253,9 +241,7 @@ export const generateEmployeeDeductionsReportContent = (
           ${cell(money(t.savingsBalance))}
         </tr>
       </tbody>
-    </table>
-    ${note ? `<p class="text-sm text-muted-foreground" style="margin-top:8px">${note}</p>` : ""}
-  `;
+    </table>  `;
 };
 
 export function employeeDeductionsCsv(
@@ -305,16 +291,14 @@ export function employeeDeductionsCsv(
       .join(",")
   );
   const t = report.totals;
-  const note = cashNote(report.cash);
-  const star = note ? "*" : "";
   lines.push(
     [
       "Total",
       "",
       String(t.payslipCount),
       num(t.gross),
-      num(t.paye) + star,
-      num(t.uif) + star,
+      num(t.paye),
+      num(t.uif),
       num(t.loan),
       num(t.savings),
       num(t.otherDeductions),
@@ -326,6 +310,5 @@ export function employeeDeductionsCsv(
       .map(escapeCsvField)
       .join(",")
   );
-  if (note) lines.push("", escapeCsvField(note));
   return `\uFEFF${[header.map(escapeCsvField).join(","), ...lines].join("\r\n")}`;
 }

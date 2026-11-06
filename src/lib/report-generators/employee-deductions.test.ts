@@ -130,13 +130,15 @@ describe("employee deductions output", () => {
 
     const html = generateEmployeeDeductionsReportContent(slips, withCash, new Date(2026, 9, 1), "monthly");
     expect(html).not.toContain("Cash Worker");
-    expect(html).toMatch(/200[.,]00\*/);
-    expect(html).toContain("* Cash payment employees have not been captured");
+    expect(html).toMatch(/200[.,]00/);
+    expect(html).not.toContain("*");
+    expect(html).not.toContain("Cash payment employees");
 
     const csv = employeeDeductionsCsv(slips, withCash, new Date(2026, 9, 1), "monthly")!;
     expect(csv).not.toContain("Cash Worker");
-    expect(csv).toContain("200.00*");
-    expect(csv).toContain("Cash payment employees have not been captured");
+    expect(csv).toContain("200.00");
+    expect(csv).not.toContain("*");
+    expect(csv).not.toContain("Cash payment employees");
   });
 
   it("returns nothing when the period has no payslips", () => {
