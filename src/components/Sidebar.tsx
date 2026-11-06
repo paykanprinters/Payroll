@@ -14,6 +14,7 @@ import {
   Landmark,
   PiggyBank,
   CalendarDays,
+  CalendarRange,
   LineChart,
   Clock,
   ListTodo,
@@ -121,6 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { to: "/accountant", icon: FileSpreadsheet, label: "Accountant portal" },
         { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/calendar", icon: CalendarRange, label: "Calendar" },
         { to: "/todos", icon: ListTodo, label: "To-Dos", badgeCount: pendingToDosCount },
       ],
     },
@@ -187,6 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         // Admin/Manager-only
         if (
           item.to === "/employees" ||
+          item.to === "/calendar" ||
           item.to === "/vacation-absence" ||
           item.to === "/analytics" ||
           item.to === "/reports" ||

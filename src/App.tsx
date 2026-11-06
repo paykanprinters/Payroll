@@ -34,6 +34,7 @@ const AnalyticsStaff = lazy(() => import("./pages/AnalyticsStaff"));
 const Employees = lazy(() => import("./pages/Employees"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Reports = lazy(() => import("./pages/Reports"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const AccountantHome = lazy(() => import("./pages/accountant/AccountantHome"));
 const Settings = lazy(() => import("./pages/Settings"));
 const PaymentBatches = lazy(() => import("./pages/payroll/PaymentBatches"));
@@ -162,6 +163,7 @@ const App = () => {
                       <Route path="/settings/*" element={<Unauthorized />} />
                       <Route path="/loans-advancements" element={<Unauthorized />} />
                       <Route path="/todos" element={<Unauthorized />} />
+                      <Route path="/calendar" element={<Unauthorized />} />
                       <Route path="*" element={<NotFound />} />
                     </>
                   ) : (
@@ -192,6 +194,7 @@ const App = () => {
                       {/* Manager/Admin-only routes */}
                       <Route element={<ProtectedRoute allowedRoles={['Admin', 'Manager']} />}>
                         <Route path="/analytics" element={<Analytics />} />
+                        <Route path="/calendar" element={<CalendarPage />} />
                         <Route path="/employees" element={<Employees />} />
                         <Route path="/payroll/runs" element={<PayrollRuns />} />
                         <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
