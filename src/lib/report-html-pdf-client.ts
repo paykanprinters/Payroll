@@ -55,6 +55,16 @@ async function postRenderPdf(html: string, paperSize: string, orientation: Repor
   return res.blob();
 }
 
+/** Report PDF as a blob (for ZIP bundles). Throws when the PDF service is unavailable. */
+export async function renderReportHtmlPdfBlob(options: BuildReportPrintDocumentInput): Promise<Blob> {
+  const orientation = options.orientation ?? "portrait";
+  return postRenderPdf(
+    buildReportPrintDocumentHtml(options),
+    options.reportDesignSettings.defaultReportPaperSize,
+    orientation
+  );
+}
+
 /** Open the print-faithful HTML in a new window and invoke the browser print dialog. */
 export function printReportHtmlDocument(html: string, title: string): void {
   try {

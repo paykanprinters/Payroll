@@ -18,6 +18,11 @@ import { payslipsForPayrollRun } from "@/lib/payroll-run-payslips";
 import { buildPayslipEmailPayload } from "@/lib/email/build-payslip-email-payload";
 import { buildPayslipSmsPayload } from "@/lib/sms/build-payslip-sms-payload";
 import { getEmployeeName } from "@/lib/utils";
+import {
+  employeeDeductionsCsv,
+  generateEmployeeDeductionsReportContent,
+} from "@/lib/report-generators/employee-deductions";
+import { renderReportHtmlPdfBlob } from "@/lib/report-html-pdf-client";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import { useZipDownload } from "@/hooks/use-zip-download";
 import useReportDesignSettings from "@/hooks/use-report-design-settings";
@@ -99,6 +104,38 @@ const RunBulkPayslipMenu: React.FC<RunBulkPayslipMenuProps> = ({
     [payslips, employees, companyDetails, reportDesignSettings, payslipDesignSettings, periodDate, mode, nameFor, periodStart, periodEnd]
   );
 
+  /** "Employee deductions for the accountant" for this run's pay week (or month), as PDF and CSV. */
+  const buildEmployeeDeductionsFiles = useCallback(
+    async (slips: MockPayslip[], stamp: string): Promise<{ filename: string; blob: Blob }[]> => {
+      const source = payslips.length > 0 ? payslips : slips;
+      const files: { filename: string; blob: Blob }[] = [];
+      const csv = employeeDeductionsCsv(source, employees, periodDate, mode);
+      if (!csv) return files;
+      files.push({ filename: `employee-deductions-${stamp}.csv`, blob: new Blob([csv], { type: "text/csv;charset=utf-8" }) });
+      const report = {
+        reportTitle: "Employee deductions for the accountant",
+        reportContentHtml: generateEmployeeDeductionsReportContent(source, employees, periodDate, mode),
+        companyDetails,
+        reportDesignSettings,
+        orientation: "landscape" as const,
+      };
+      try {
+        files.push({ filename: `employee-deductions-${stamp}.pdf`, blob: await renderReportHtmlPdfBlob(report) });
+      } catch {
+        const [{ pdf: pdfRenderer }, { default: HtmlReportPdfDocument }] = await Promise.all([
+          import("@react-pdf/renderer"),
+          import("@/components/reports/HtmlReportPdfDocument"),
+        ]);
+        files.push({
+          filename: `employee-deductions-${stamp}.pdf`,
+          blob: await pdfRenderer(<HtmlReportPdfDocument {...report} />).toBlob(),
+        });
+      }
+      return files;
+    },
+    [payslips, employees, periodDate, mode, companyDetails, reportDesignSettings]
+  );
+
   const handleZip = async () => {
     const slips = await resolveSlips();
     if (slips.length === 0) {
@@ -107,18 +144,20 @@ const RunBulkPayslipMenu: React.FC<RunBulkPayslipMenuProps> = ({
     }
     try {
       const { pdfRenderer, reportsDoc, payslipsDoc, stamp } = await buildDocuments(slips);
-      const [reportsBlob, payslipsBlob] = await Promise.all([
+      const [reportsBlob, payslipsBlob, deductionFiles] = await Promise.all([
         pdfRenderer(reportsDoc).toBlob(),
         pdfRenderer(payslipsDoc).toBlob(),
+        buildEmployeeDeductionsFiles(slips, stamp),
       ]);
       await downloadZip(
         [
           { filename: `reports-${stamp}.pdf`, blob: reportsBlob },
           { filename: `payslips-${stamp}.pdf`, blob: payslipsBlob },
+          ...deductionFiles,
         ],
         `bulk-payslips-${stamp}.zip`
       );
-      showSuccess("Reports and payslips downloaded as a ZIP.");
+      showSuccess("Reports, payslips and the employee deductions report downloaded as a ZIP.");
     } catch (error: unknown) {
       showError(`Bulk download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
