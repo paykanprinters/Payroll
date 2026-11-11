@@ -20,6 +20,9 @@ import {
 import { cn } from "@/lib/utils";
 import { TimesheetEntry, MockEmployee } from "@/lib/mock-data-interfaces";
 import LeaveDayBadge from "@/components/timesheet/LeaveDayBadge";
+import PublicHolidayBadge from "@/components/timesheet/PublicHolidayBadge";
+import type { PublicHoliday } from "@/hooks/use-public-holidays";
+import { dayIsHolidayForEmployee } from "@/lib/payroll-calculations/helpers/earnings-helpers";
 import {
   Pagination,
   PaginationContent,
@@ -47,6 +50,7 @@ interface TimesheetTableProps {
   onDelete: (id: string) => void;
   onStatusChange: (id: string, newStatus: TimesheetEntry["status"]) => void;
   onEmployeeClick: (employeeId: string, date: string) => void;
+  holidays?: PublicHoliday[];
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -67,8 +71,20 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
   onDelete,
   onStatusChange,
   onEmployeeClick,
+  holidays = [],
 }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
+
+  const employeeRecordsById = React.useMemo(
+    () => new Map(employees.map((emp) => [emp.id, emp])),
+    [employees]
+  );
+
+  const holidayNameFor = (entry: TimesheetEntry) => {
+    const employee = employeeRecordsById.get(entry.employeeId);
+    if (!employee || holidays.length === 0) return null;
+    return dayIsHolidayForEmployee(entry.date, employee, holidays)?.name ?? null;
+  };
 
   const employeesById = React.useMemo(() => {
     const map = new Map<string, { name: string; customId: string }>();
@@ -159,6 +175,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                         <TableCell className="whitespace-nowrap font-mono text-xs">
                           {entry.date}
                           <LeaveDayBadge leaveType={entry.leaveType} className="ml-2 font-sans" />
+                          <PublicHolidayBadge name={holidayNameFor(entry)} className="ml-2 font-sans" />
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">{entry.timeIn || "—"}</TableCell>
                         <TableCell className="hidden sm:table-cell">{entry.timeOut || "—"}</TableCell>

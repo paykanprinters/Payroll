@@ -2,7 +2,7 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle, XCircle, PencilLine, Save, User } from "lucide-react";
+import { CheckCircle, XCircle, PencilLine, Save, User, CalendarDays } from "lucide-react";
 import { ParsedTimesheetRow } from "@/hooks/use-timesheet-import";
 import { MockEmployee } from "@/lib/mock-data-interfaces";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,10 @@ import { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import { format, parse, isValid } from "date-fns";
 import type { ImportPreviewViewMode } from "@/components/timesheet/FiltersBar";
 import LeaveDayBadge from "@/components/timesheet/LeaveDayBadge";
+import PublicHolidayBadge from "@/components/timesheet/PublicHolidayBadge";
+import type { PublicHoliday } from "@/hooks/use-public-holidays";
+import { dayIsHolidayForEmployee } from "@/lib/payroll-calculations/helpers/earnings-helpers";
+import { publicHolidayTitle, type HolidayPlaceholder } from "@/lib/timesheet-holidays";
 
 interface ValidatedDataTableProps {
   validatedData: ParsedTimesheetRow[];
@@ -26,6 +30,8 @@ interface ValidatedDataTableProps {
   onEditRow?: (key: string, updates: Partial<ParsedTimesheetRow>) => void;
   onResolveEmployee?: (key: string, employeeId: string) => void;
   externalIdLabel?: string;
+  holidays?: PublicHoliday[];
+  holidayPlaceholders?: HolidayPlaceholder[];
 }
 
 const normalizeDate = (d: string) => (d || "").replace(/\//g, "-");
@@ -58,6 +64,8 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
   onEditRow,
   onResolveEmployee,
   externalIdLabel = "Personal ID (from CSV)",
+  holidays = [],
+  holidayPlaceholders = [],
 }) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -66,6 +74,33 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
     employees.forEach((e) => map.set(e.id, e));
     return map;
   }, [employees]);
+
+  const holidayNameFor = useCallback(
+    (employeeId: string, date: string) => {
+      const employee = employeesById.get(employeeId);
+      if (!employee || holidays.length === 0) return null;
+      return dayIsHolidayForEmployee(normalizeDate(date), employee, holidays)?.name ?? null;
+    },
+    [employeesById, holidays]
+  );
+
+  const placeholdersByEmployee = useMemo(() => {
+    const map = new Map<string, HolidayPlaceholder[]>();
+    holidayPlaceholders.forEach((p) => {
+      const list = map.get(p.employeeId) || [];
+      list.push(p);
+      map.set(p.employeeId, list);
+    });
+    return map;
+  }, [holidayPlaceholders]);
+
+  const employeeLabel = useCallback(
+    (employeeId: string) => {
+      const employee = employeesById.get(employeeId);
+      return employee ? `${employee.firstName} ${employee.lastName}`.trim() : "Unknown employee";
+    },
+    [employeesById]
+  );
 
   const metricOpts = useMemo(() => {
     if (!workHoursSettings) return undefined;
@@ -128,6 +163,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
         customEmployeeId: string;
         csvPersonalId: string;
         items: (typeof indexedRows)[number][];
+        holidays: HolidayPlaceholder[];
       }
     >();
 
@@ -143,10 +179,26 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
           customEmployeeId,
           csvPersonalId: String(item.row.csvPersonalId || ""),
           items: [],
+          holidays: [],
         });
       }
       map.get(key)!.items.push(item);
     }
+
+    placeholdersByEmployee.forEach((list, employeeId) => {
+      if (!map.has(employeeId)) {
+        const employee = employeesById.get(employeeId);
+        map.set(employeeId, {
+          employeeId,
+          name: employeeLabel(employeeId),
+          customEmployeeId: employee?.customEmployeeId || "N/A",
+          csvPersonalId: employee?.personalId || "",
+          items: [],
+          holidays: [],
+        });
+      }
+      map.get(employeeId)!.holidays = [...list].sort((a, b) => a.date.localeCompare(b.date));
+    });
 
     const result = Array.from(map.values());
     result.sort((a, b) => a.name.localeCompare(b.name));
@@ -154,7 +206,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
       g.items.sort((a, b) => normalizeDate(a.row.date).localeCompare(normalizeDate(b.row.date)));
     });
     return result;
-  }, [indexedRows, employeesById]);
+  }, [indexedRows, employeesById, placeholdersByEmployee, employeeLabel]);
 
   if (validatedData.length === 0) return null;
 
@@ -186,6 +238,23 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
       </span>
     );
 
+  const renderHolidayIcon = (employeeId: string, date: string) => {
+    const name = holidayNameFor(employeeId, date);
+    if (!name) return "—";
+    return (
+      <span title={publicHolidayTitle(name)} className="inline-flex">
+        <CalendarDays className="h-4 w-4 text-amber-700" />
+      </span>
+    );
+  };
+
+  const renderHolidayNote = (holidayName: string) => (
+    <span>
+      <span className="font-medium">{publicHolidayTitle(holidayName)}</span>
+      <span className="text-muted-foreground"> · no clock times. Payroll handles the holiday pay; nothing is imported for this day.</span>
+    </span>
+  );
+
   const renderCardsView = () => (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {indexedRows.map(({ row, originalIndex, workHours, key }) => {
@@ -203,6 +272,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                   <p className="flex items-center gap-2 text-xs text-muted-foreground">
                     {format(parse(normalizeDate(row.date), "yyyy-MM-dd", new Date()), "EEE, dd MMM yyyy")}
                     <LeaveDayBadge leaveType={row.leaveType} />
+                    <PublicHolidayBadge name={holidayNameFor(row.employeeId, row.date)} />
                   </p>
                 </div>
                 {renderStatusIcon(row)}
@@ -265,13 +335,35 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
           </Card>
         );
       })}
+      {holidayPlaceholders.map((p) => (
+        <Card key={`holiday-${p.employeeId}|${p.date}`} className="border-amber-200 bg-amber-50/40">
+          <CardHeader className="space-y-2 pb-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">{employeeLabel(p.employeeId)}</CardTitle>
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {format(parse(p.date, "yyyy-MM-dd", new Date()), "EEE, dd MMM yyyy")}
+                  <PublicHolidayBadge name={p.holidayName} />
+                </p>
+              </div>
+              <CalendarDays className="h-4 w-4 text-amber-700" />
+            </div>
+          </CardHeader>
+          <CardContent className="text-sm text-amber-900">
+            {renderHolidayNote(p.holidayName)}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 
   const renderGridView = () => (
     <div className="space-y-6">
       {groups.map((group) => {
-        const dates = group.items.map((item) => normalizeDate(item.row.date));
+        const dates = [
+          ...group.items.map((item) => normalizeDate(item.row.date)),
+          ...group.holidays.map((h) => h.date),
+        ];
         const uniqueDates = [...new Set(dates)].sort();
         const fieldRows: { label: string; field: keyof ParsedTimesheetRow }[] = [
           { label: "Time in", field: "timeIn" },
@@ -293,7 +385,10 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                     {group.csvPersonalId ? ` · ${externalIdLabel}: ${group.csvPersonalId}` : ""}
                   </p>
                 </div>
-                <Badge variant="outline">{group.items.length} day(s)</Badge>
+                <Badge variant="outline">
+                  {group.items.length} day(s)
+                  {group.holidays.length > 0 ? ` · ${group.holidays.length} holiday` : ""}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -309,13 +404,16 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                         return (
                           <th
                             key={date}
-                            className={`min-w-[110px] px-2 py-2 text-center font-medium ${item?.row._isValid ? "" : "bg-red-50/80"}`}
+                            className={`min-w-[110px] px-2 py-2 text-center font-medium ${
+                              !item ? "bg-amber-50/80" : item.row._isValid ? "" : "bg-red-50/80"
+                            }`}
                           >
                             <div>{format(parse(date, "yyyy-MM-dd", new Date()), "EEE")}</div>
                             <div className="text-xs font-normal text-muted-foreground">
                               {format(parse(date, "yyyy-MM-dd", new Date()), "dd MMM")}
                             </div>
                             <LeaveDayBadge leaveType={item?.row.leaveType} className="mt-1" />
+                            <PublicHolidayBadge name={holidayNameFor(group.employeeId, date)} className="mt-1" />
                           </th>
                         );
                       })}
@@ -355,7 +453,11 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                         const item = rowByKey.get(`${group.employeeId}|${date}`);
                         return (
                           <td key={date} className="px-2 py-2 text-center font-medium">
-                            {item ? formatWorkHours(item.workHours) : "—"}
+                            {item ? (
+                              formatWorkHours(item.workHours)
+                            ) : (
+                              <span className="text-xs font-normal text-amber-800">Not worked</span>
+                            )}
                           </td>
                         );
                       })}
@@ -368,7 +470,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                         const item = rowByKey.get(`${group.employeeId}|${date}`);
                         return (
                           <td key={date} className="px-2 py-2 text-center">
-                            {item ? renderStatusIcon(item.row) : "—"}
+                            {item ? renderStatusIcon(item.row) : renderHolidayIcon(group.employeeId, date)}
                           </td>
                         );
                       })}
@@ -426,6 +528,7 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
             <div className="flex items-center gap-2">
               {normalizeDate(row.date)}
               <LeaveDayBadge leaveType={row.leaveType} />
+              <PublicHolidayBadge name={holidayNameFor(row.employeeId, row.date)} />
             </div>
           )}
         </TableCell>
@@ -477,6 +580,24 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
     );
   };
 
+  const renderHolidayRow = (p: HolidayPlaceholder) => (
+    <TableRow key={`holiday-${p.employeeId}|${p.date}`} className={`bg-amber-50/50 ${rowClass}`}>
+      <TableCell className={`${cellClass} text-center`}>{renderHolidayIcon(p.employeeId, p.date)}</TableCell>
+      <TableCell className={cellClass}>{employeesById.get(p.employeeId)?.personalId || "—"}</TableCell>
+      <TableCell className={cellClass}>{employeeLabel(p.employeeId)}</TableCell>
+      <TableCell className={cellClass}>
+        <div className="flex items-center gap-2">
+          {p.date}
+          <PublicHolidayBadge name={p.holidayName} />
+        </div>
+      </TableCell>
+      <TableCell colSpan={5} className={`${cellClass} text-amber-900`}>
+        {renderHolidayNote(p.holidayName)}
+      </TableCell>
+      <TableCell className={cellClass} />
+    </TableRow>
+  );
+
   const renderTableView = () => {
     const tableGroups = groupByEmployee ? groups : null;
 
@@ -516,10 +637,18 @@ const ValidatedDataTable: React.FC<ValidatedDataTableProps> = ({
                         </div>
                       </TableCell>
                     </TableRow>,
-                    ...g.items.map((i) => renderDataRow(i.row, i.originalIndex, i.workHours)),
+                    ...[
+                      ...g.items.map((i) => ({ date: normalizeDate(i.row.date), node: renderDataRow(i.row, i.originalIndex, i.workHours) })),
+                      ...g.holidays.map((h) => ({ date: h.date, node: renderHolidayRow(h) })),
+                    ]
+                      .sort((a, b) => a.date.localeCompare(b.date))
+                      .map((entry) => entry.node),
                   ];
                 })
-              : indexedRows.map((i) => renderDataRow(i.row, i.originalIndex, i.workHours))}
+              : [
+                  ...indexedRows.map((i) => renderDataRow(i.row, i.originalIndex, i.workHours)),
+                  ...holidayPlaceholders.map(renderHolidayRow),
+                ]}
           </TableBody>
         </Table>
       </div>

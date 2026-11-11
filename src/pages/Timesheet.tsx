@@ -5,7 +5,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { showError, showSuccess } from "@/utils/toast";
 import { createPayrollRun, fetchPayrollRuns } from "@/integrations/supabase/payroll-run-queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Clock, CheckCircle2, FileClock, Lock } from "lucide-react";
+import { Loader2, Clock, CheckCircle2, FileClock, Lock, CalendarDays } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { holidaysInRange, publicHolidayTitle } from "@/lib/timesheet-holidays";
 import TimesheetTable from "@/components/timesheet/TimesheetTable";
 import WeeklyTimesheetEditorDialog from "@/components/timesheet/WeeklyTimesheetEditorDialog";
 import TimesheetEntryDialog from "@/components/timesheet/TimesheetEntryDialog";
@@ -130,6 +132,15 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
     list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return list;
   }, [timesheets, statusFilter, employeeFilterId, dateStart, dateEnd, search, employeesById]);
+
+  const holidaysInView = React.useMemo(() => {
+    if (!publicHolidays?.length) return [];
+    const dates = filteredTimesheets.map((ts) => ts.date).sort();
+    const from = dateStart || dates[0];
+    const to = dateEnd || dates[dates.length - 1];
+    if (!from || !to) return [];
+    return holidaysInRange(publicHolidays, from, to).reverse();
+  }, [publicHolidays, filteredTimesheets, dateStart, dateEnd]);
 
   const summary = React.useMemo(
     () => buildTimesheetAdminSummary(filteredTimesheets),
@@ -325,8 +336,33 @@ const Timesheet: React.FC<{ staffEmployeeId?: string; staffView?: boolean }> = (
             </Card>
           </div>
 
+          {holidaysInView.length > 0 && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="space-y-1">
+                {holidaysInView.slice(0, 3).map((h) => (
+                  <p key={h.date}>
+                    <span className="font-medium">{format(parseISO(h.date), "EEE d MMM yyyy")}</span>
+                    {" · "}
+                    {h.names.map(publicHolidayTitle).join(", ")}
+                  </p>
+                ))}
+                {holidaysInView.length > 3 && (
+                  <p className="text-xs text-amber-800">
+                    and {holidaysInView.length - 3} more public holiday(s) in this view. Narrow the dates to see them.
+                  </p>
+                )}
+                <p className="text-xs text-amber-800">
+                  Staff who did not work a public holiday have no entry for that day; payroll handles the holiday pay.
+                  Worked holidays are tagged below.
+                </p>
+              </div>
+            </div>
+          )}
+
           <ErrorBoundary fallbackTitle="Timesheets error">
             <TimesheetTable
+              holidays={publicHolidays || []}
               timesheets={filteredTimesheets}
               employees={employees || []}
               listVersion={filterListVersion}

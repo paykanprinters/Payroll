@@ -42,6 +42,7 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
     payCycleSettings,
     timesheets,
     workHoursSettings,
+    publicHolidays,
   } = usePayrollProcessor();
   const { downloadPdf, openPdf } = usePdfVector();
 
@@ -212,6 +213,8 @@ const CalculatePaycheckDialog: React.FC<CalculatePaycheckDialogProps> = ({ isOpe
                 periodEnd={currentPeriodEnd}
                 workHoursSettings={workHoursSettings || null}
                 weeklyThreshold={(workHoursSettings?.overtimeThresholdHours && workHoursSettings.overtimeThresholdHours > 0) ? workHoursSettings.overtimeThresholdHours : 41.25}
+                employee={employees.find((emp) => emp.id === previewPayslip.employeeId)}
+                holidays={publicHolidays || []}
               />
 
               <div className="flex justify-end gap-2 mt-4">

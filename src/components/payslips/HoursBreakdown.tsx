@@ -2,9 +2,12 @@
 
 import React, { useMemo } from "react";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from "date-fns";
-import { TimesheetEntry } from "@/lib/mock-data-interfaces";
+import { MockEmployee, TimesheetEntry } from "@/lib/mock-data-interfaces";
 import type { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
+import type { PublicHoliday } from "@/hooks/use-public-holidays";
 import { leaveDayLabel } from "@/lib/leave-timesheet-rows";
+import { dayIsHolidayForEmployee } from "@/lib/payroll-calculations/helpers/earnings-helpers";
+import { buildHolidayPlaceholders, publicHolidayTitle } from "@/lib/timesheet-holidays";
 
 type Props = {
   employeeId: string;
@@ -13,6 +16,18 @@ type Props = {
   periodEnd: Date;
   workHoursSettings: WorkHoursSettings | null;
   weeklyThreshold?: number;
+  employee?: MockEmployee;
+  holidays?: PublicHoliday[];
+};
+
+type BreakdownRow = {
+  date: string;
+  onSiteHours: number;
+  breakDeducted: number;
+  paidHours: number;
+  classification: string;
+  isLeave: boolean;
+  isHoliday: boolean;
 };
 
 const HoursBreakdown: React.FC<Props> = ({
@@ -22,6 +37,8 @@ const HoursBreakdown: React.FC<Props> = ({
   periodEnd,
   workHoursSettings,
   weeklyThreshold = 41.25,
+  employee,
+  holidays = [],
 }) => {
   const workDaysSet = useMemo(
     () => new Set((workHoursSettings?.workDays || []).map((d) => d.toLowerCase())),
@@ -46,8 +63,8 @@ const HoursBreakdown: React.FC<Props> = ({
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [employeeId, periodStart, periodEnd, timesheets]);
 
-  const rows = useMemo(() => {
-    return filtered.map((ts) => {
+  const rows = useMemo((): BreakdownRow[] => {
+    const worked = filtered.map((ts): BreakdownRow => {
       const tsDate = parseISO(ts.date);
       const dow = tsDate.getDay(); // 0 Sun ... 6 Sat
       const isSatNonWork = dow === 6 && !workDaysSet.has("saturday");
@@ -62,8 +79,11 @@ const HoursBreakdown: React.FC<Props> = ({
       const paidHours = ts.totalWorkHours || 0;
 
       const leaveLabel = leaveDayLabel(ts.leaveType);
+      const holiday = !leaveLabel && employee ? dayIsHolidayForEmployee(ts.date, employee, holidays) : null;
       const classification = leaveLabel
         ? `${leaveLabel} (paid, not worked)`
+        : holiday
+        ? `${publicHolidayTitle(holiday.name)} (worked)`
         : isSatNonWork
         ? "Weekend (Sat)"
         : isSunNonWork
@@ -77,17 +97,43 @@ const HoursBreakdown: React.FC<Props> = ({
         paidHours,
         classification,
         isLeave: !!leaveLabel,
+        isHoliday: !!holiday,
       };
     });
-  }, [filtered, workDaysSet, fixedBreakHours, paidLunch]);
+
+    const notWorked = employee
+      ? buildHolidayPlaceholders({
+          holidays,
+          employees: [employee],
+          existingKeys: new Set(filtered.map((ts) => `${ts.employeeId}|${ts.date}`)),
+          from: format(periodStart, "yyyy-MM-dd"),
+          to: format(periodEnd, "yyyy-MM-dd"),
+          workDays: workHoursSettings?.workDays,
+        }).map(
+          (p): BreakdownRow => ({
+            date: p.date,
+            onSiteHours: 0,
+            breakDeducted: 0,
+            paidHours: 0,
+            classification: `${publicHolidayTitle(p.holidayName)} (not worked)`,
+            isLeave: false,
+            isHoliday: true,
+          })
+        )
+      : [];
+
+    return [...worked, ...notWorked].sort((a, b) => a.date.localeCompare(b.date));
+  }, [filtered, workDaysSet, fixedBreakHours, paidLunch, employee, holidays, periodStart, periodEnd, workHoursSettings?.workDays]);
 
   const totals = useMemo(() => {
     let normalPaid = 0;
     let satPrem = 0;
     let sunPrem = 0;
     let leavePaid = 0;
+    let holidayWorked = 0;
     rows.forEach((r) => {
-      if (r.isLeave) leavePaid += r.paidHours;
+      if (r.isHoliday) holidayWorked += r.paidHours;
+      else if (r.isLeave) leavePaid += r.paidHours;
       else if (r.classification === "Normal") normalPaid += r.paidHours;
       else if (r.classification.startsWith("Weekend (Sat")) satPrem += r.paidHours;
       else if (r.classification.startsWith("Weekend (Sun")) sunPrem += r.paidHours;
@@ -95,7 +141,7 @@ const HoursBreakdown: React.FC<Props> = ({
     const totalPaid = normalPaid + satPrem + sunPrem;
     const regular = Math.min(totalPaid, weeklyThreshold);
     const weeklyOT = Math.max(0, totalPaid - weeklyThreshold);
-    return { normalPaid, satPrem, sunPrem, regular, weeklyOT, leavePaid };
+    return { normalPaid, satPrem, sunPrem, regular, weeklyOT, leavePaid, holidayWorked };
   }, [rows, weeklyThreshold]);
 
   return (
@@ -128,7 +174,7 @@ const HoursBreakdown: React.FC<Props> = ({
               </tr>
             ) : (
               rows.map((r) => (
-                <tr key={r.date} className="border-t">
+                <tr key={r.date} className={r.isHoliday ? "border-t bg-amber-50/60" : "border-t"}>
                   <td className="py-2 pr-4">{format(parseISO(r.date), "EEE, yyyy-MM-dd")}</td>
                   <td className="py-2 pr-4">{r.onSiteHours.toFixed(2)}h</td>
                   <td className="py-2 pr-4">{r.breakDeducted.toFixed(2)}h</td>
@@ -161,6 +207,12 @@ const HoursBreakdown: React.FC<Props> = ({
             <div className="text-xs text-muted-foreground">Weekly OT</div>
             <div className="font-semibold">{totals.weeklyOT.toFixed(2)}h</div>
           </div>
+          {totals.holidayWorked > 0 && (
+            <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-900/30">
+              <div className="text-xs text-muted-foreground">Public holiday worked</div>
+              <div className="font-semibold">{totals.holidayWorked.toFixed(2)}h</div>
+            </div>
+          )}
           {totals.leavePaid > 0 && (
             <div className="p-3 rounded-md bg-gray-50 dark:bg-gray-900/30">
               <div className="text-xs text-muted-foreground">Leave / sick paid</div>

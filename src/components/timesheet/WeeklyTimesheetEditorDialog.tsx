@@ -22,6 +22,9 @@ import DayTimesheetForm from "./DayTimesheetForm";
 import LeaveDayBadge from "./LeaveDayBadge";
 import { paidTimesheetLeaveType } from "@/lib/leave-timesheet-rows";
 import { CalendarRange } from "lucide-react";
+import PublicHolidayBadge from "./PublicHolidayBadge";
+import { publicHolidayTitle } from "@/lib/timesheet-holidays";
+import { dayIsHolidayForEmployee } from "@/lib/payroll-calculations/helpers/earnings-helpers";
 
 interface WeeklyTimesheetEditorDialogProps {
   isOpen: boolean;
@@ -50,7 +53,7 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
   const employeeName = getEmployeeName(employeeId);
   const employeeCustomId = employee?.customEmployeeId || "N/A";
 
-  const { payCycleSettings } = usePayrollProcessor();
+  const { payCycleSettings, publicHolidays } = usePayrollProcessor();
   const currentWeeklyPeriod = useMemo(() => {
     const refDate = (() => {
       if (!initialDateInWeek) return new Date();
@@ -112,6 +115,10 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
                 ? existingEntry.leaveType ?? null
                 : paidTimesheetLeaveType(approvedLeaveType);
               const leaveType = savedLeaveType || approvedLeaveType;
+              const holidayName =
+                employee && publicHolidays?.length
+                  ? dayIsHolidayForEmployee(dayDate, employee, publicHolidays)?.name ?? null
+                  : null;
 
               return (
                 <div key={dayDate} className="rounded-2xl border bg-white p-4 space-y-3">
@@ -120,6 +127,15 @@ const WeeklyTimesheetEditorDialog: React.FC<WeeklyTimesheetEditorDialogProps> = 
                       {format(day, "EEEE")}
                       <span className="ml-2 font-normal text-muted-foreground">{format(day, "PPP")}</span>
                     </h3>
+                    {holidayName && (
+                      <div className="flex items-center gap-2">
+                        <PublicHolidayBadge name={holidayName} />
+                        <span className="text-xs text-muted-foreground">
+                          {publicHolidayTitle(holidayName)}
+                          {existingEntry ? " · worked" : " · not worked"}
+                        </span>
+                      </div>
+                    )}
                     {leaveType && (
                       <div className="flex items-center gap-2">
                         <LeaveDayBadge leaveType={leaveType} />

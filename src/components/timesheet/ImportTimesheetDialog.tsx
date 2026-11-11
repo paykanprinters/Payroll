@@ -29,6 +29,7 @@ import BiometricImportSection from "./BiometricImportSection";
 import { ImportableTimesheetEntry } from "@/lib/timesheet-types";
 import { WorkHoursSettings } from "@/hooks/use-work-hours-settings";
 import type { AggregationError } from "@/hooks/use-timesheet-import";
+import { buildHolidayPlaceholders } from "@/lib/timesheet-holidays";
 
 const hhmmRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -269,6 +270,47 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
     filterDateEnd,
     sortKey,
     employeesById,
+  ]);
+
+  const holidayPlaceholders = useMemo(() => {
+    if (editableRows.length === 0 || !publicHolidays?.length) return [];
+    const dates = editableRows
+      .map((r) => r.date.replace(/\//g, "-"))
+      .filter((d) => isoDateRegex.test(d))
+      .sort();
+    const from = checkedPeriod?.start || dates[0];
+    const to = checkedPeriod?.end || dates[dates.length - 1];
+    if (!from || !to) return [];
+
+    const nameQuery = filterEmployeeName.trim().toLowerCase();
+    const personalQuery = filterPersonalId.trim().toLowerCase();
+    const scopedEmployees = safeEmployees.filter((e) => {
+      if (filterEmployeeId && e.id !== filterEmployeeId) return false;
+      if (nameQuery && !(employeesById.get(e.id)?.name || "").toLowerCase().includes(nameQuery)) return false;
+      if (personalQuery && !String(e.personalId || "").toLowerCase().includes(personalQuery)) return false;
+      return true;
+    });
+
+    return buildHolidayPlaceholders({
+      holidays: publicHolidays,
+      employees: scopedEmployees,
+      existingKeys: new Set(editableRows.map((r) => `${r.employeeId}|${r.date.replace(/\//g, "-")}`)),
+      from: filterDateStart && filterDateStart > from ? filterDateStart : from,
+      to: filterDateEnd && filterDateEnd < to ? filterDateEnd : to,
+      workDays: workHoursSettings?.workDays,
+    });
+  }, [
+    editableRows,
+    publicHolidays,
+    checkedPeriod,
+    safeEmployees,
+    employeesById,
+    filterEmployeeId,
+    filterEmployeeName,
+    filterPersonalId,
+    filterDateStart,
+    filterDateEnd,
+    workHoursSettings?.workDays,
   ]);
 
   const scheduledEndFor = (isoDate: string) => {
@@ -567,6 +609,8 @@ const ImportTimesheetDialog: React.FC<ImportTimesheetDialogProps> = ({
                   onEditRow={updateRow}
                   onResolveEmployee={resolveEmployee}
                   externalIdLabel={importSource === "api" ? "Clock ID" : "Personal ID (from CSV)"}
+                  holidays={publicHolidays}
+                  holidayPlaceholders={holidayPlaceholders}
                 />
               )}
             </>
