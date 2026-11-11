@@ -19,10 +19,10 @@ import { buildPayslipEmailPayload } from "@/lib/email/build-payslip-email-payloa
 import { buildPayslipSmsPayload } from "@/lib/sms/build-payslip-sms-payload";
 import { getEmployeeName } from "@/lib/utils";
 import {
+  buildEmployeeDeductionsReport,
   employeeDeductionsCsv,
-  generateEmployeeDeductionsReportContent,
 } from "@/lib/report-generators/employee-deductions";
-import { renderReportHtmlPdfBlob } from "@/lib/report-html-pdf-client";
+import { getReportPeriodLabel } from "@/lib/reports-admin-summary";
 import { usePdfVector } from "@/hooks/use-pdf-vector";
 import { useZipDownload } from "@/hooks/use-zip-download";
 import useReportDesignSettings from "@/hooks/use-report-design-settings";
@@ -112,25 +112,19 @@ const RunBulkPayslipMenu: React.FC<RunBulkPayslipMenuProps> = ({
       const csv = employeeDeductionsCsv(source, employees, periodDate, mode);
       if (!csv) return files;
       files.push({ filename: `employee-deductions-${stamp}.csv`, blob: new Blob([csv], { type: "text/csv;charset=utf-8" }) });
-      const report = {
-        reportTitle: "Employee deductions for the accountant",
-        reportContentHtml: generateEmployeeDeductionsReportContent(source, employees, periodDate, mode),
-        companyDetails,
-        reportDesignSettings,
-        orientation: "landscape" as const,
-      };
-      try {
-        files.push({ filename: `employee-deductions-${stamp}.pdf`, blob: await renderReportHtmlPdfBlob(report) });
-      } catch {
-        const [{ pdf: pdfRenderer }, { default: HtmlReportPdfDocument }] = await Promise.all([
-          import("@react-pdf/renderer"),
-          import("@/components/reports/HtmlReportPdfDocument"),
-        ]);
-        files.push({
-          filename: `employee-deductions-${stamp}.pdf`,
-          blob: await pdfRenderer(<HtmlReportPdfDocument {...report} />).toBlob(),
-        });
-      }
+      const [{ pdf: pdfRenderer }, { default: EmployeeDeductionsPdfDocument }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("@/components/reports/EmployeeDeductionsPdfDocument"),
+      ]);
+      const blob = await pdfRenderer(
+        <EmployeeDeductionsPdfDocument
+          report={buildEmployeeDeductionsReport(source, employees, periodDate, mode)}
+          periodLabel={getReportPeriodLabel(periodDate, mode, source)}
+          companyDetails={companyDetails}
+          reportDesignSettings={reportDesignSettings}
+        />
+      ).toBlob();
+      files.push({ filename: `employee-deductions-${stamp}.pdf`, blob });
       return files;
     },
     [payslips, employees, periodDate, mode, companyDetails, reportDesignSettings]
